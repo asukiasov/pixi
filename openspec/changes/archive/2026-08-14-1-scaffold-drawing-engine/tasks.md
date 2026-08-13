@@ -62,6 +62,6 @@
 
 ## 7. Manual device verification
 
-- [ ] 7.1 Test draw/pan/pinch-zoom feel on an actual Android phone in Chrome
-- [ ] 7.2 Confirm `touch-action: none` suppresses native gesture handling on
+- [x] 7.1 Test draw/pan/pinch-zoom feel on an actual Android phone in Chrome
+- [x] 7.2 Confirm `touch-action: none` suppresses native gesture handling on
       that device

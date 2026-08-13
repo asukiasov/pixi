@@ -16,7 +16,9 @@ exportable to PNG, session-only (no persistence).
   **Workspace** (pencil, eraser, bucket, pixel-perfect line, fixed palette,
   undo/redo, single-button PNG export at native resolution)
 
-Status: proposed — `openspec/changes/1-scaffold-drawing-engine/`.
+Status: **done** — archived at
+`openspec/changes/archive/2026-08-14-1-scaffold-drawing-engine/`, specs live
+at `openspec/specs/canvas-creation/` and `openspec/specs/pixel-drawing-engine/`.
 
 ## Phase 2 — Layers, local persistence, and the full toolset
 

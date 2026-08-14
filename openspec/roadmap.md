@@ -50,12 +50,21 @@ proposed/implemented/archived before the next starts:
   - **2c3 — Full Export screen**: scale multiplier, transparent-background
     toggle (Phase 1 shipped only a single native-resolution export button).
 
+  - **2d — Canvas navigation and workspace layout**: zoom in/out (buttons
+    + Cmd/Ctrl +/-), 100% / Fit Screen / Fill Screen zoom presets, a
+    zoom-percentage readout, a Hand tool for panning while zoomed in, and
+    moving the Layers panel to a right-side sidebar with a way to hide the
+    whole panel. Raised after 2c1; not part of the original 2c split, but
+    fits alongside it (workspace chrome, not a new drawing tool) rather
+    than under Phase 3+.
+
 Status: **2a done** — archived at
 `openspec/changes/archive/2026-08-14-2a-layers/`, spec lives at
 `openspec/specs/layers/`. **2b done** — archived at
 `openspec/changes/archive/2026-08-14-2b-local-persistence-gallery/`, specs
 live at `openspec/specs/local-persistence/`, `openspec/specs/gallery/`,
-`openspec/specs/canvas-settings/`. **2c1 in progress**. 2c2/2c3 not started.
+`openspec/specs/canvas-settings/`. **2c1 in progress**. 2c2/2c3/2d not
+started.
 
 ## Phase 3 — Supabase Auth + sync
 

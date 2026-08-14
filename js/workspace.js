@@ -67,6 +67,9 @@ let paletteRow = null;
 let brushesPanel = null;
 let brushesPanelGrid = null;
 let deleteBrushButton = null;
+let layersPanel = null;
+let layersPanelToggle = null;
+let zoomReadout = null;
 
 // All available brushes: the built-ins plus whatever's been loaded from
 // IndexedDB. Module-level, not per-project — brushes are global, not
@@ -245,7 +248,18 @@ function buildLayerRow(layer, index, isActive, layerCount) {
     renderLayersPanel();
   });
 
-  row.append(visibilityButton, nameInput, opacityInput, blendSelect, upButton, downButton, deleteButton);
+  // Two sub-rows, not one flat row — the right-sidebar's 13rem width can't
+  // fit all six controls on one line the way the old full-width
+  // bottom-docked panel could (see style.css's .layer-row-top/-bottom).
+  const topRow = document.createElement('div');
+  topRow.className = 'layer-row-top';
+  topRow.append(visibilityButton, nameInput, deleteButton);
+
+  const bottomRow = document.createElement('div');
+  bottomRow.className = 'layer-row-bottom';
+  bottomRow.append(opacityInput, blendSelect, upButton, downButton);
+
+  row.append(topRow, bottomRow);
   return row;
 }
 
@@ -451,6 +465,9 @@ function bindDomOnce() {
       // Leaving the Brush tool mid-edit closes the editor rather than
       // leaving it open behind a now-hidden panel.
       if (state.currentTool !== 'brush') closeBrushEditor();
+      // Hand tool: single-pointer drag pans the canvas instead of drawing
+      // (see CanvasView#setPanMode). Every other tool leaves pan mode off.
+      state.canvasView.setPanMode(state.currentTool === 'hand');
     });
   });
 
@@ -526,24 +543,54 @@ function bindDomOnce() {
   addBrushButton.addEventListener('click', () => openBrushEditor());
   bindBrushEditorOnce();
 
+  // Layers panel: its own show/hide toggle, independent of the Brushes
+  // panel's tool-scoped visibility (toggling one never touches the other).
+  layersPanel = document.getElementById('layers-panel');
+  layersPanelToggle = document.getElementById('layers-panel-toggle');
+  layersPanelToggle.addEventListener('click', () => {
+    state.layersPanelVisible = !state.layersPanelVisible;
+    layersPanel.classList.toggle('hidden', !state.layersPanelVisible);
+    layersPanelToggle.classList.toggle('active', state.layersPanelVisible);
+  });
+
+  // Zoom: +/- buttons and the three presets all just call the CanvasView
+  // API directly - it owns all the actual zoom/pan math (see design.md).
+  zoomReadout = document.getElementById('zoom-readout');
+  document.getElementById('zoom-out-button').addEventListener('click', () => state.canvasView.zoomStep(-1));
+  document.getElementById('zoom-in-button').addEventListener('click', () => state.canvasView.zoomStep(1));
+  document.getElementById('zoom-preset-100').addEventListener('click', () => state.canvasView.setZoomPreset('100'));
+  document.getElementById('zoom-preset-fit').addEventListener('click', () => state.canvasView.setZoomPreset('fit'));
+  document.getElementById('zoom-preset-fill').addEventListener('click', () => state.canvasView.setZoomPreset('fill'));
+
   state.undoButton.addEventListener('click', performUndo);
   state.redoButton.addEventListener('click', performRedo);
 
   // Cmd+Z / Ctrl+Z to undo, Cmd+Shift+Z / Ctrl+Shift+Z (and Ctrl+Y, the
-  // common Windows alternative) to redo. Only while the Workspace screen is
-  // actually visible, so it doesn't fire from the Gallery or New Canvas.
+  // common Windows alternative) to redo; Cmd/Ctrl +/- (and the unshifted
+  // "=" key "+" lives on) to zoom in/out. Only while the Workspace screen
+  // is actually visible, so none of this fires from the Gallery or New
+  // Canvas screens.
   document.addEventListener('keydown', (e) => {
     if (!(e.metaKey || e.ctrlKey)) return;
-    const key = e.key.toLowerCase();
-    if (key !== 'z' && key !== 'y') return;
     if (document.getElementById('screen-workspace').classList.contains('hidden')) return;
+    const key = e.key.toLowerCase();
 
-    if (key === 'y' || (key === 'z' && e.shiftKey)) {
+    if (key === 'z' || key === 'y') {
       e.preventDefault();
-      performRedo();
-    } else if (key === 'z') {
+      if (key === 'y' || (key === 'z' && e.shiftKey)) {
+        performRedo();
+      } else {
+        performUndo();
+      }
+      return;
+    }
+
+    if (key === '=' || key === '+') {
       e.preventDefault();
-      performUndo();
+      state.canvasView.zoomStep(1);
+    } else if (key === '-' || key === '_') {
+      e.preventDefault();
+      state.canvasView.zoomStep(-1);
     }
   });
 
@@ -705,6 +752,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     brushPath: [],
     pixelPerfect: false,
     rectangleFilled: false,
+    layersPanelVisible: true,
     selection: null,
     dragStart: null,
     dragCurrent: null,
@@ -740,6 +788,11 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   document.getElementById('brush-spacing').value = '1';
   document.getElementById('brush-rotation').value = '0';
   pixelPerfectToggle.classList.remove('active');
+  layersPanel.classList.remove('hidden');
+  layersPanelToggle.classList.add('active');
+  // Hand tool is never the default (Pencil is) - every freshly opened
+  // project starts with single-pointer drag drawing, not panning.
+  canvasView.setPanMode(false);
 
   canvasSettingsControls.setCurrentSize(layerStack.width, layerStack.height);
   canvasSettingsControls.setCurrentName(projectName);
@@ -755,7 +808,19 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   updateUndoRedoButtons();
   renderLayersPanel();
 
+  // Sync immediately: on the very first project opened in a session,
+  // CanvasView's constructor + resetView() already ran (see app.js)
+  // before setHandlers below registers onZoomChange, so that first
+  // Fit Screen's zoom-change event has nowhere to land yet.
+  zoomReadout.textContent = `${canvasView.getZoomPercent()}%`;
+
   canvasView.setHandlers({
+    // Fires on every zoom change (buttons, shortcuts, presets, touch
+    // pinch, and the initial Fit Screen from resetView) — see design.md.
+    onZoomChange(percent) {
+      zoomReadout.textContent = `${percent}%`;
+    },
+
     onDrawStart(point) {
       const tool = state.currentTool;
 

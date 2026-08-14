@@ -17,7 +17,7 @@
        original range query pulled the full variable font (~4MB, ~30s on a
        slow connection, icons invisible until it finished); this is a few
        KB. Keep icon_names in sync with the icons used in this file. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,undo,redo,add,delete" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,undo,redo,add,remove,delete" />
 </head>
 <body>
   <main id="screen-gallery" class="screen">
@@ -83,6 +83,9 @@
       <button type="button" class="tool-button" data-tool="selection" title="Select">
         <span class="material-symbols-outlined">crop_free</span>
       </button>
+      <button type="button" class="tool-button" data-tool="hand" title="Hand (pan)">
+        <span class="material-symbols-outlined">back_hand</span>
+      </button>
     </aside>
 
     <div class="workspace-main">
@@ -110,14 +113,6 @@
         </div>
       </div>
 
-      <div id="layers-panel" class="layers-panel">
-        <div class="layers-panel-header">
-          <h2>Layers</h2>
-          <button type="button" id="add-layer-button" class="tool-button">+ Layer</button>
-        </div>
-        <div id="layers-panel-list" class="layers-panel-list"></div>
-      </div>
-
       <div id="palette-row" class="palette-row"></div>
 
       <div id="selection-controls" class="selection-controls hidden">
@@ -126,10 +121,24 @@
       </div>
 
       <nav class="bottom-bar">
+        <!-- 1. Zoom: bottom-left, per the canvas-navigation spec. -->
+        <div class="bottom-bar-group zoom-controls">
+          <button type="button" id="zoom-out-button" class="tool-button icon-button" title="Zoom out (Ctrl/Cmd -)">
+            <span class="material-symbols-outlined">remove</span>
+          </button>
+          <span id="zoom-readout" class="zoom-readout">100%</span>
+          <button type="button" id="zoom-in-button" class="tool-button icon-button" title="Zoom in (Ctrl/Cmd +)">
+            <span class="material-symbols-outlined">add</span>
+          </button>
+          <button type="button" id="zoom-preset-100" class="tool-button" title="Actual size">100%</button>
+          <button type="button" id="zoom-preset-fit" class="tool-button" title="Fit the canvas to the screen">Fit</button>
+          <button type="button" id="zoom-preset-fill" class="tool-button" title="Fill the screen with the canvas">Fill</button>
+        </div>
         <!-- 2. Additional: navigation, toggles, settings, export. -->
         <div class="bottom-bar-group">
           <button type="button" id="back-to-gallery-button" class="tool-button">Gallery</button>
           <button type="button" id="pixel-perfect-toggle" class="tool-button">Pixel-perfect</button>
+          <button type="button" id="layers-panel-toggle" class="tool-button active">Layers</button>
           <button type="button" id="canvas-settings-toggle" class="tool-button">Canvas Settings</button>
           <button type="button" id="export-button" class="tool-button">Export PNG</button>
         </div>
@@ -146,52 +155,63 @@
     </div>
 
     <!-- Separate right-hand sidebar, not part of workspace-main's vertical
-         stack — only relevant to the Brush tool, so it's scoped and shown/
-         hidden independently (see js/workspace.js). -->
-    <aside id="brushes-panel" class="brushes-panel">
-      <div class="brushes-panel-header">
-        <h2>Brushes</h2>
-      </div>
-      <div class="brushes-panel-row">
-        <label class="brushes-spacing-label">Spacing
-          <input type="number" id="brush-spacing" min="1" max="20" value="1" /> px
-        </label>
-      </div>
-      <div class="brushes-panel-row">
-        <label class="brushes-spacing-label">Rotation
-          <input type="number" id="brush-rotation" min="0" max="359" value="0" /> °
-        </label>
-      </div>
-      <div id="brushes-panel-grid" class="brushes-panel-grid"></div>
-      <div class="brushes-panel-toolbar">
-        <button type="button" id="add-brush-button" class="tool-button icon-button" title="Add brush">
-          <span class="material-symbols-outlined">add</span>
-        </button>
-        <button type="button" id="delete-brush-button" class="tool-button icon-button" disabled title="Delete selected brush">
-          <span class="material-symbols-outlined">delete</span>
-        </button>
+         stack. Layers is always relevant (shown/hidden by its own toggle,
+         see #layers-panel-toggle above); Brushes is scoped to the Brush
+         tool (see js/workspace.js) - both independent of each other. -->
+    <aside id="right-sidebar" class="right-sidebar">
+      <div id="layers-panel" class="layers-panel">
+        <div class="layers-panel-header">
+          <h2>Layers</h2>
+          <button type="button" id="add-layer-button" class="tool-button">+ Layer</button>
+        </div>
+        <div id="layers-panel-list" class="layers-panel-list"></div>
       </div>
 
-      <div id="brush-editor-panel" class="brush-editor-panel hidden">
-        <div class="brush-editor-row">
-          <h2>New Brush</h2>
+      <div id="brushes-panel" class="brushes-panel">
+        <div class="brushes-panel-header">
+          <h2>Brushes</h2>
         </div>
-        <div class="brush-editor-row">
-          <input type="text" id="brush-editor-name" placeholder="Brush name" />
-        </div>
-        <div class="brush-editor-row">
-          <label class="brush-editor-size-label">W
-            <input type="number" id="brush-editor-width" min="3" value="9" />
-          </label>
-          <label class="brush-editor-size-label">H
-            <input type="number" id="brush-editor-height" min="3" value="9" />
+        <div class="brushes-panel-row">
+          <label class="brushes-spacing-label">Spacing
+            <input type="number" id="brush-spacing" min="1" max="20" value="1" /> px
           </label>
         </div>
-        <div id="brush-editor-grid" class="brush-editor-grid"></div>
-        <div class="brush-editor-row">
-          <button type="button" id="brush-editor-clear" class="tool-button">Clear</button>
-          <button type="button" id="brush-editor-cancel" class="tool-button">Cancel</button>
-          <button type="button" id="brush-editor-save" class="tool-button">Save</button>
+        <div class="brushes-panel-row">
+          <label class="brushes-spacing-label">Rotation
+            <input type="number" id="brush-rotation" min="0" max="359" value="0" /> °
+          </label>
+        </div>
+        <div id="brushes-panel-grid" class="brushes-panel-grid"></div>
+        <div class="brushes-panel-toolbar">
+          <button type="button" id="add-brush-button" class="tool-button icon-button" title="Add brush">
+            <span class="material-symbols-outlined">add</span>
+          </button>
+          <button type="button" id="delete-brush-button" class="tool-button icon-button" disabled title="Delete selected brush">
+            <span class="material-symbols-outlined">delete</span>
+          </button>
+        </div>
+
+        <div id="brush-editor-panel" class="brush-editor-panel hidden">
+          <div class="brush-editor-row">
+            <h2>New Brush</h2>
+          </div>
+          <div class="brush-editor-row">
+            <input type="text" id="brush-editor-name" placeholder="Brush name" />
+          </div>
+          <div class="brush-editor-row">
+            <label class="brush-editor-size-label">W
+              <input type="number" id="brush-editor-width" min="3" value="9" />
+            </label>
+            <label class="brush-editor-size-label">H
+              <input type="number" id="brush-editor-height" min="3" value="9" />
+            </label>
+          </div>
+          <div id="brush-editor-grid" class="brush-editor-grid"></div>
+          <div class="brush-editor-row">
+            <button type="button" id="brush-editor-clear" class="tool-button">Clear</button>
+            <button type="button" id="brush-editor-cancel" class="tool-button">Cancel</button>
+            <button type="button" id="brush-editor-save" class="tool-button">Save</button>
+          </div>
         </div>
       </div>
     </aside>

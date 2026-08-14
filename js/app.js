@@ -32,6 +32,17 @@ function openWorkspace({ layerStack, projectId, projectName }) {
     canvasView = new CanvasView(canvasEl, containerEl, layerStack);
     canvasView.resetView();
     canvasView.render();
+    // One-shot re-fit after the browser's first real paint: the very first
+    // resetView() above can measure the container before web font loading
+    // finishes settling the Workspace screen's final layout (seen as a
+    // one-step-off Fit Screen/zoom-percent on the very first project
+    // opened in a session). A second resetView() next frame corrects it;
+    // harmless if nothing shifted, since resetView() is otherwise idempotent
+    // for an unchanged container size.
+    requestAnimationFrame(() => {
+      canvasView.resetView();
+      canvasView.render();
+    });
   } else {
     canvasView.setLayerStack(layerStack);
   }

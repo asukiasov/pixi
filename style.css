@@ -310,11 +310,25 @@ body {
   font-size: 0.9rem;
 }
 
-.layers-panel {
-  max-height: 9rem;
-  overflow-y: auto;
+/* Right-side sidebar (Layers + Brushes) — a fixed-width column, sibling of
+   workspace-main. Layers is always relevant (own show/hide toggle in the
+   bottom bar); Brushes is scoped to the Brush tool (js/workspace.js) —
+   each panel manages its own visibility and its own vertical scrolling. */
+.right-sidebar {
+  width: 13rem;
+  height: 100%;
+  flex: none;
+  display: flex;
+  flex-direction: column;
   background: #1c1c1e;
-  border-top: 1px solid #2c2c2e;
+  border-left: 1px solid #2c2c2e;
+  overflow: hidden;
+}
+
+.layers-panel {
+  max-height: 45%;
+  overflow-y: auto;
+  border-bottom: 1px solid #2c2c2e;
   flex: none;
 }
 
@@ -343,12 +357,22 @@ body {
   flex-direction: column;
 }
 
+/* Two sub-rows, not one flat row — the 13rem sidebar is too narrow to fit
+   visibility/name/opacity/blend/reorder/delete on a single line the way
+   the old full-width bottom-docked panel could. */
 .layer-row {
   display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  flex-direction: column;
+  gap: 0.25rem;
   padding: 0.35rem 0.5rem;
   border-top: 1px solid #2c2c2e;
+}
+
+.layer-row-top,
+.layer-row-bottom {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .layer-row.active {
@@ -382,8 +406,8 @@ body {
 }
 
 .layer-opacity-slider {
-  flex: none;
-  width: 3.5rem;
+  flex: 1 1 auto;
+  min-width: 2.5rem;
 }
 
 .layer-blend-select {
@@ -392,8 +416,8 @@ body {
   color: inherit;
   border: 1px solid #48484a;
   border-radius: 0.3rem;
-  font-size: 0.75rem;
-  max-width: 5.5rem;
+  font-size: 0.7rem;
+  max-width: 4rem;
 }
 
 .layer-reorder-button,
@@ -441,15 +465,13 @@ body {
 /* Brushes panel — Photoshop-Brushes-panel-style: title, spacing control,
    thumbnail grid, bottom toolbar with add/delete icon buttons. */
 
-/* Separate right-hand sidebar (not part of workspace-main's column), shown
-   only while the Brush tool is active — see js/workspace.js. */
+/* Second section of the right-sidebar (see .right-sidebar above), shown
+   only while the Brush tool is active — see js/workspace.js. flex:1 fills
+   whatever vertical space Layers isn't using. */
 .brushes-panel {
-  width: 13rem;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  background: #1c1c1e;
-  border-left: 1px solid #2c2c2e;
-  flex: none;
 }
 
 .brushes-panel-header {
@@ -644,6 +666,30 @@ body {
   padding: 0.6rem 0.8rem;
   font-size: 0.85rem;
   white-space: nowrap;
+}
+
+/* Zoom controls - bottom-left group: -/+ icon buttons flanking a live
+   percentage readout, plus the three preset buttons. */
+.zoom-controls {
+  align-items: center;
+}
+
+.zoom-controls .icon-button {
+  width: 2.2rem;
+  height: 2.2rem;
+}
+
+.zoom-controls .tool-button:not(.icon-button) {
+  padding: 0.5rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.zoom-readout {
+  min-width: 3.4rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  color: #d0d0d5;
 }
 
 /* Same specificity as the rule above, later in source order, so it wins:

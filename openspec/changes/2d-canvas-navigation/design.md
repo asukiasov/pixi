@@ -132,3 +132,14 @@ UI reset in that file.
   `setPanMode` call in the exact same two places (tool-click handler,
   per-project reset block) every other per-tool UI reset already lives,
   not a new code path to remember separately.
+- **The very first `resetView()` of a session can measure the container
+  before web-font loading finishes settling the Workspace screen's final
+  layout** → found during verification (the zoom-percent readout made
+  this newly *visible*, though the underlying fit-to-container timing
+  gap predates this change). One fitScale step of inaccuracy on the very
+  first project opened, self-correcting the moment any zoom action runs.
+  Mitigated with a one-shot follow-up `resetView()` scheduled via
+  `requestAnimationFrame` in `js/app.js`, only on the first-ever
+  `CanvasView` construction — not a general resize-observer (out of
+  scope; nothing else in the app reacts to window/container resizing
+  either), just a narrow fix for the one moment this change made visible.

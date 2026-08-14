@@ -3,7 +3,7 @@ import { saveProject, renameProject, createCustomBrush, listCustomBrushes, delet
 import { initCanvasSettings } from './canvas-settings.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
-import { bresenhamLine } from './engine.js';
+import { bresenhamLine, strokeFreehandThick } from './engine.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
 
@@ -70,6 +70,8 @@ let deleteBrushButton = null;
 let layersPanel = null;
 let layersPanelToggle = null;
 let zoomReadout = null;
+let pencilOptionsPanel = null;
+let pencilSizePreview = null;
 
 // All available brushes: the built-ins plus whatever's been loaded from
 // IndexedDB. Module-level, not per-project — brushes are global, not
@@ -126,6 +128,21 @@ function performRedo() {
 
 function colorForCurrentTool() {
   return state.currentTool === 'eraser' ? [0, 0, 0, 0] : state.currentColor;
+}
+
+/**
+ * Returns the per-pixel operation strokeFreehandThick should call for the
+ * current tool: Pencil blends the draw color at pencilOpacity
+ * (setPixelBlended), Eraser fades existing alpha at pencilOpacity
+ * (erasePixelBlended) instead - two different operations, not "blend
+ * toward a color" reused for both (see design.md's rationale). Shared by
+ * onDrawStart and onDrawMove so the two can't drift apart.
+ */
+function pencilOrEraserApplyPixel(engine) {
+  if (state.currentTool === 'eraser') {
+    return (x, y) => engine.erasePixelBlended(x, y, state.pencilOpacity);
+  }
+  return (x, y) => engine.setPixelBlended(x, y, state.currentColor, state.pencilOpacity);
 }
 
 function updateSelectionControls() {
@@ -534,6 +551,9 @@ function bindDomOnce() {
       // Hand tool: single-pointer drag pans the canvas instead of drawing
       // (see CanvasView#setPanMode). Every other tool leaves pan mode off.
       state.canvasView.setPanMode(state.currentTool === 'hand');
+      // Size/Opacity sliders: shared by Pencil and Eraser, hidden for
+      // every other tool - same tool-scoped-visibility pattern as Brushes.
+      pencilOptionsPanel.classList.toggle('hidden', state.currentTool !== 'pencil' && state.currentTool !== 'eraser');
     });
   });
 
@@ -542,6 +562,30 @@ function bindDomOnce() {
   pixelPerfectToggle.addEventListener('click', () => {
     state.pixelPerfect = !state.pixelPerfect;
     pixelPerfectToggle.classList.toggle('active', state.pixelPerfect);
+  });
+
+  // Pencil/Eraser Size + Opacity - shared sliders, live readouts, and a
+  // small preview swatch scaled (capped) to the current Size.
+  pencilOptionsPanel = document.getElementById('pencil-options');
+  pencilSizePreview = document.getElementById('pencil-size-preview');
+  const pencilSizeSlider = document.getElementById('pencil-size-slider');
+  const pencilSizeReadout = document.getElementById('pencil-size-readout');
+  const pencilOpacitySlider = document.getElementById('pencil-opacity-slider');
+  const pencilOpacityReadout = document.getElementById('pencil-opacity-readout');
+
+  pencilSizeSlider.addEventListener('input', () => {
+    const value = Number(pencilSizeSlider.value);
+    state.pencilSize = value;
+    pencilSizeReadout.textContent = `${value}px`;
+    const previewPx = Math.min(22, Math.max(4, value * 2));
+    pencilSizePreview.style.width = `${previewPx}px`;
+    pencilSizePreview.style.height = `${previewPx}px`;
+  });
+
+  pencilOpacitySlider.addEventListener('input', () => {
+    const value = Number(pencilOpacitySlider.value);
+    state.pencilOpacity = value / 100;
+    pencilOpacityReadout.textContent = `${value}%`;
   });
 
   PALETTE.forEach((hex, index) => {
@@ -853,6 +897,8 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     brushRotationStep: 0,
     brushPath: [],
     pixelPerfect: false,
+    pencilSize: 1,
+    pencilOpacity: 1,
     rectangleFilled: false,
     layersPanelVisible: true,
     selection: null,
@@ -892,6 +938,15 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   pixelPerfectToggle.classList.remove('active');
   layersPanel.classList.remove('hidden');
   layersPanelToggle.classList.add('active');
+  // Default tool is Pencil, so the panel starts visible; sliders/readout/
+  // preview reset to match state.pencilSize/pencilOpacity's defaults (1, 1).
+  pencilOptionsPanel.classList.remove('hidden');
+  document.getElementById('pencil-size-slider').value = '1';
+  document.getElementById('pencil-size-readout').textContent = '1px';
+  pencilSizePreview.style.width = '4px';
+  pencilSizePreview.style.height = '4px';
+  document.getElementById('pencil-opacity-slider').value = '100';
+  document.getElementById('pencil-opacity-readout').textContent = '100%';
   // Hand tool is never the default (Pencil is) - every freshly opened
   // project starts with single-pointer drag drawing, not panning.
   canvasView.setPanMode(false);
@@ -975,7 +1030,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
 
       // pencil / eraser
       state.strokePoints = [point];
-      activeEngine.strokeFreehand(state.strokePoints, colorForCurrentTool(), state.pixelPerfect);
+      strokeFreehandThick(state.strokePoints, state.pencilSize, state.pixelPerfect, pencilOrEraserApplyPixel(activeEngine));
       clipToSelection(activeEngine, state.strokeBackup, state.selection);
       state.canvasView.render();
     },
@@ -1013,13 +1068,15 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
 
       // pencil / eraser: redraw the whole stroke from a clean backup each
       // move so pixel-perfect corner removal (which depends on later
-      // points) stays correct. In-progress drawing, not a committed
-      // action, so it does NOT auto-save.
+      // points) stays correct, and so Opacity's per-stroke dedup (see
+      // design.md) always recomputes against the pristine backup rather
+      // than compounding onto an already-blended in-progress redraw. In-
+      // progress drawing, not a committed action, so it does NOT auto-save.
       const last = state.strokePoints[state.strokePoints.length - 1];
       if (last && last.x === point.x && last.y === point.y) return;
       state.strokePoints.push(point);
       state.strokeEngine.data.set(state.strokeBackup);
-      state.strokeEngine.strokeFreehand(state.strokePoints, colorForCurrentTool(), state.pixelPerfect);
+      strokeFreehandThick(state.strokePoints, state.pencilSize, state.pixelPerfect, pencilOrEraserApplyPixel(state.strokeEngine));
       clipToSelection(state.strokeEngine, state.strokeBackup, state.selection);
       state.canvasView.render();
     },

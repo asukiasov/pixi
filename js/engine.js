@@ -37,6 +37,48 @@ export class PixelEngine {
   }
 
   /**
+   * Alpha-composites `rgba` (its own alpha scaled by `opacity`, 0-1) over
+   * the existing pixel using the standard "source-over" formula, instead
+   * of setPixel's full overwrite. At opacity 1 with a fully-opaque rgba
+   * (the normal case for a draw color), this is pixel-identical to
+   * setPixel. Used by the Pencil tool's Opacity setting.
+   */
+  setPixelBlended(x, y, rgba, opacity) {
+    if (!this.#inBounds(x, y)) return;
+    const dst = this.getPixel(x, y);
+    const srcA = (rgba[3] / 255) * opacity;
+    const dstA = dst[3] / 255;
+    const outA = srcA + dstA * (1 - srcA);
+    let outR = 0;
+    let outG = 0;
+    let outB = 0;
+    if (outA > 0) {
+      outR = (rgba[0] * srcA + dst[0] * dstA * (1 - srcA)) / outA;
+      outG = (rgba[1] * srcA + dst[1] * dstA * (1 - srcA)) / outA;
+      outB = (rgba[2] * srcA + dst[2] * dstA * (1 - srcA)) / outA;
+    }
+    this.setPixel(x, y, [Math.round(outR), Math.round(outG), Math.round(outB), Math.round(outA * 255)]);
+  }
+
+  /**
+   * Reduces the existing pixel's alpha by `opacity` (0-1) instead of
+   * blending toward a color - "fading out" existing content, which is
+   * what a partial-opacity erase means (blending toward a transparent
+   * *color* via setPixelBlended would barely affect an opaque pixel at
+   * low source alpha, not the same thing). RGB is preserved unless the
+   * result is fully transparent, in which case it's zeroed to match the
+   * existing eraser's [0, 0, 0, 0] convention (see strokeFreehand with a
+   * [0,0,0,0] rgba). Used by the Eraser tool's Opacity setting.
+   */
+  erasePixelBlended(x, y, opacity) {
+    if (!this.#inBounds(x, y)) return;
+    const dst = this.getPixel(x, y);
+    const newAlpha = Math.round(dst[3] * (1 - opacity));
+    const rgb = newAlpha === 0 ? [0, 0, 0] : [dst[0], dst[1], dst[2]];
+    this.setPixel(x, y, [...rgb, newAlpha]);
+  }
+
+  /**
    * Draws a freehand stroke through `points` (grid coordinates, in order).
    * Consecutive points are connected with a Bresenham line so drags that
    * skip grid cells between pointer-move events still produce a continuous
@@ -45,18 +87,7 @@ export class PixelEngine {
    */
   strokeFreehand(points, rgba, pixelPerfect) {
     if (points.length === 0) return;
-
-    const rawPath = [];
-    let prev = null;
-    for (const point of points) {
-      const segment = prev ? bresenhamLine(prev.x, prev.y, point.x, point.y) : [point];
-      for (const p of segment) {
-        const last = rawPath[rawPath.length - 1];
-        if (!last || last.x !== p.x || last.y !== p.y) rawPath.push(p);
-      }
-      prev = point;
-    }
-
+    const rawPath = interpolatePath(points);
     const finalPath = pixelPerfect ? removeRedundantCorners(rawPath) : rawPath;
     for (const p of finalPath) this.setPixel(p.x, p.y, rgba);
   }
@@ -98,6 +129,26 @@ export class PixelEngine {
 
 function colorsEqual(a, b) {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
+}
+
+/**
+ * Connects consecutive `points` with Bresenham segments (so a drag that
+ * skips grid cells between pointer-move events still produces a
+ * continuous path) and dedupes back-to-back repeats. Shared by
+ * strokeFreehand and strokeFreehandThick.
+ */
+function interpolatePath(points) {
+  const rawPath = [];
+  let prev = null;
+  for (const point of points) {
+    const segment = prev ? bresenhamLine(prev.x, prev.y, point.x, point.y) : [point];
+    for (const p of segment) {
+      const last = rawPath[rawPath.length - 1];
+      if (!last || last.x !== p.x || last.y !== p.y) rawPath.push(p);
+    }
+    prev = point;
+  }
+  return rawPath;
 }
 
 /** Exported for reuse outside this module (e.g. the Stamps tool's dragged path). */
@@ -151,4 +202,69 @@ function removeRedundantCorners(path) {
     out.push(p);
   }
   return out;
+}
+
+const circleOffsetsCache = new Map();
+
+/**
+ * Returns (and caches) the [dx, dy] offsets of a filled circle of the
+ * given pixel diameter, centered on (0, 0) - membership by
+ * dx*dx + dy*dy <= (size/2)^2, generated procedurally rather than a
+ * stored pattern (Size is a continuous slider range, not a small fixed
+ * set of shapes the way Brush's predefined patterns are). At size 5 this
+ * happens to reproduce the same shape as brushes.js's built-in Circle
+ * brush pattern, a useful sanity check on the formula.
+ */
+export function circleOffsets(size) {
+  if (circleOffsetsCache.has(size)) return circleOffsetsCache.get(size);
+  const radius = size / 2;
+  const r2 = radius * radius;
+  const half = Math.floor(size / 2);
+  const offsets = [];
+  for (let dy = -half; dy < size - half; dy++) {
+    for (let dx = -half; dx < size - half; dx++) {
+      // dx/dy === 0 ? 0 : ... normalizes -0 (e.g. -half when half is 0)
+      // to plain 0 - Object.is/deepStrictEqual treat them as different
+      // values even though === and all the arithmetic above don't care.
+      if (dx * dx + dy * dy <= r2) offsets.push([dx === 0 ? 0 : dx, dy === 0 ? 0 : dy]);
+    }
+  }
+  circleOffsetsCache.set(size, offsets);
+  return offsets;
+}
+
+/**
+ * Like strokeFreehand, but stamps a circular area of the given `size`
+ * (diameter, in pixels) at every path point instead of a single pixel,
+ * and calls `applyPixel(x, y)` for the pixel operation instead of always
+ * overwriting with a fixed color - lets the caller choose blended-paint
+ * (Pencil) or alpha-reduction (Eraser) semantics (see PixelEngine's
+ * setPixelBlended/erasePixelBlended). Pixel-perfect corner removal only
+ * applies at size 1 - it has no meaning for a multi-pixel-wide stroke.
+ *
+ * Every unique pixel touched by ANY stamp along the path gets exactly
+ * one `applyPixel` call, computed by unioning every stamp's offsets
+ * before calling back - not one call per stamp placement. Without this,
+ * a slow/dense drag would place many overlapping stamps and compound an
+ * Opacity-style blend far past what a single pass at that Opacity should
+ * produce; a fast, sparse drag over the same path would look different
+ * purely from pointer-event timing. Deduping first makes the result
+ * depend only on the path's geometry and Size, not stroke speed.
+ */
+export function strokeFreehandThick(points, size, pixelPerfect, applyPixel) {
+  if (points.length === 0) return;
+  const rawPath = interpolatePath(points);
+  const finalPath = size === 1 && pixelPerfect ? removeRedundantCorners(rawPath) : rawPath;
+  const offsets = circleOffsets(size);
+  const touched = new Set();
+  for (const p of finalPath) {
+    for (const [dx, dy] of offsets) {
+      const x = p.x + dx;
+      const y = p.y + dy;
+      const key = `${x},${y}`;
+      if (touched.has(key)) continue;
+      touched.add(key);
+      applyPixel(x, y);
+    }
+  }
 }

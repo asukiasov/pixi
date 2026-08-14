@@ -86,6 +86,20 @@
       <button type="button" class="tool-button" data-tool="hand" aria-label="Hand (pan)" data-tooltip="Hand" data-shortcut="H">
         <span class="material-symbols-outlined">back_hand</span>
       </button>
+
+      <!-- Shown only while Pencil or Eraser is active (js/workspace.js),
+           same tool-scoped-visibility pattern the Brushes panel uses. -->
+      <div id="pencil-options" class="pencil-options hidden">
+        <div class="pencil-options-row">
+          <input type="range" id="pencil-size-slider" class="vertical-slider" min="1" max="20" value="1" aria-label="Size" />
+          <span id="pencil-size-readout" class="pencil-options-readout">1px</span>
+        </div>
+        <div id="pencil-size-preview" class="pencil-options-preview"></div>
+        <div class="pencil-options-row">
+          <input type="range" id="pencil-opacity-slider" class="vertical-slider" min="1" max="100" value="100" aria-label="Opacity" />
+          <span id="pencil-opacity-readout" class="pencil-options-readout">100%</span>
+        </div>
+      </div>
     </aside>
 
     <div class="workspace-main">

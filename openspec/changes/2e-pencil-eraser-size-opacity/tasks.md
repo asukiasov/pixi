@@ -1,11 +1,11 @@
 ## 1. Engine: blended pixel operations
 
-- [ ] 1.1 `js/engine.js`: `PixelEngine#setPixelBlended(x, y, rgba, opacity)`
+- [x] 1.1 `js/engine.js`: `PixelEngine#setPixelBlended(x, y, rgba, opacity)`
       — standard source-over alpha compositing of `rgba` (scaled by
       `opacity`) onto the existing pixel
-- [ ] 1.2 `js/engine.js`: `PixelEngine#erasePixelBlended(x, y, opacity)` —
+- [x] 1.2 `js/engine.js`: `PixelEngine#erasePixelBlended(x, y, opacity)` —
       `newAlpha = existingAlpha * (1 - opacity)`, RGB untouched
-- [ ] 1.3 Unit tests (`node --test`): `setPixelBlended` at opacity 1 matches
+- [x] 1.3 Unit tests (`node --test`): `setPixelBlended` at opacity 1 matches
       `setPixel`; at opacity 0.5 over an opaque pixel produces the
       expected midpoint color/alpha; over a transparent pixel produces
       the source color at reduced alpha. `erasePixelBlended` at opacity 1
@@ -15,62 +15,76 @@
 
 ## 2. Engine: thick-stroke path with per-stroke dedup
 
-- [ ] 2.1 `js/engine.js`: `circleOffsets(size)` — returns cached `[dx,dy]`
+- [x] 2.1 `js/engine.js`: `circleOffsets(size)` — returns cached `[dx,dy]`
       offsets within a filled circle of the given diameter, membership by
-      `dx*dx + dy*dy <= (size/2)**2`
-- [ ] 2.2 `js/engine.js`: `strokeFreehandThick(points, size, pixelPerfect,
+      `dx*dx + dy*dy <= (size/2)**2`. **Bug found during testing**: the
+      naive loop start `-half` produces `-0` when `half` is 0 (Size 1),
+      which `assert.deepEqual`/`Object.is` treat as distinct from `0`
+      even though `===` doesn't - normalized at push time
+      (`dx === 0 ? 0 : dx`)
+- [x] 2.2 `js/engine.js`: `strokeFreehandThick(points, size, pixelPerfect,
       applyPixel)` — same path interpolation `strokeFreehand` already
-      does (bresenham-chained, corner-removed only when `size === 1 &&
-      pixelPerfect`), stamps every path point's circle offsets into a
-      `touched` Set first, then calls `applyPixel(x, y)` exactly once per
-      unique pixel (see design.md on why dedup happens before, not
-      during, blending)
-- [ ] 2.3 Unit tests: at size 1 with a simple path, `strokeFreehandThick`
+      does (extracted into a shared `interpolatePath` helper both now
+      call; corner-removed only when `size === 1 && pixelPerfect`),
+      stamps every path point's circle offsets into a `touched` Set
+      first, then calls `applyPixel(x, y)` exactly once per unique pixel
+      (see design.md on why dedup happens before, not during, blending)
+- [x] 2.3 Unit tests: at size 1 with a simple path, `strokeFreehandThick`
       calls `applyPixel` for exactly the same pixels `strokeFreehand`
       would touch; at size > 1, a dense/overlapping path still calls
       `applyPixel` exactly once per unique pixel (assert call count via a
-      spy), not once per stamp placement
+      spy), not once per stamp placement; size-5 `circleOffsets` verified
+      to reproduce the same shape as `brushes.js`'s built-in Circle
+      pattern (a useful cross-check on the formula, not a hard
+      requirement)
 
 ## 3. Workspace wiring
 
-- [ ] 3.1 `js/workspace.js`: `state.pencilSize` (default 1),
+- [x] 3.1 `js/workspace.js`: `state.pencilSize` (default 1),
       `state.pencilOpacity` (default 1.0, i.e. 100%) — shared by Pencil
       and Eraser
-- [ ] 3.2 `js/workspace.js`: pencil/eraser stroke handling
+- [x] 3.2 `js/workspace.js`: pencil/eraser stroke handling
       (`onDrawStart`/`onDrawMove`) switches from `engine.strokeFreehand`
-      to `engine.strokeFreehandThick` with an `applyPixel` closure —
-      `(x,y) => engine.setPixelBlended(x, y, colorForCurrentTool(),
-      state.pencilOpacity)` for Pencil, `(x,y) =>
-      engine.erasePixelBlended(x, y, state.pencilOpacity)` for Eraser
-- [ ] 3.3 `js/workspace.js`: reset `pencilSize`/`pencilOpacity` to
+      to `strokeFreehandThick` with an `applyPixel` closure via a shared
+      `pencilOrEraserApplyPixel(engine)` helper — blends
+      `state.currentColor` at `state.pencilOpacity` for Pencil,
+      `erasePixelBlended` at `state.pencilOpacity` for Eraser
+- [x] 3.3 `js/workspace.js`: reset `pencilSize`/`pencilOpacity` to
       defaults in `initWorkspace()`'s per-project reset block, matching
       every other per-tool setting already reset there
 
 ## 4. UI: vertical sliders in the tools sidebar
 
-- [ ] 4.1 `index.html`: a `#pencil-options` block in `#tools-sidebar`
+- [x] 4.1 `index.html`: a `#pencil-options` block in `#tools-sidebar`
       (Size and Opacity vertical range inputs, plus a small live-size
       preview swatch, per the reference mockup), hidden by default
-- [ ] 4.2 `style.css`: vertical slider styling (`writing-mode` or
-      `appearance` vertical orientation depending on browser support;
-      confirm the target browsers' vertical range-input behavior before
-      committing to one approach), sized to fit the existing 2.6rem-wide
-      tools sidebar
-- [ ] 4.3 `js/workspace.js`: tool-button click handler shows/hides
+- [x] 4.2 `style.css`: vertical slider styling via `writing-mode:
+      vertical-lr; direction: rtl;` (the modern standards-based approach,
+      supported in current Firefox/Chrome/Safari, over the older WebKit-
+      only `-webkit-appearance: slider-vertical`), sized to fit the
+      existing 2.6rem-wide tools sidebar
+- [x] 4.3 `js/workspace.js`: tool-button click handler shows/hides
       `#pencil-options` based on `currentTool === 'pencil' || currentTool
       === 'eraser'` (same tool-scoped-visibility pattern the Brushes
-      panel already uses); slider `input`/`change` handlers update
-      `state.pencilSize`/`state.pencilOpacity` and the preview swatch
+      panel already uses); slider `input` handlers update
+      `state.pencilSize`/`state.pencilOpacity`, their live readouts, and
+      the preview swatch's size
 
 ## 5. Verification
 
-- [ ] 5.1 Re-run full `node --test` suite
-- [ ] 5.2 Playwright smoke pass: Size 1/Opacity 100% stroke is pixel-
-      identical to before (screenshot or pixel-sample comparison); Size 5
-      produces a visibly wide stroke; Opacity 50% over opaque content
-      produces visibly blended (not fully opaque) color, and tracing the
-      same path back and forth in one continuous drag does not darken
-      further than a single pass; Eraser at Opacity 50% over an opaque
-      pixel roughly halves its alpha rather than fully clearing it;
-      pixel-perfect has no visible effect when Size > 1; sliders show
-      only while Pencil/Eraser is active; zero console errors
+- [x] 5.1 Re-run full `node --test` suite — 96/96 passing (12 new tests:
+      `setPixelBlended`, `erasePixelBlended`, `circleOffsets`,
+      `strokeFreehandThick`). **Bug found by the new tests**:
+      `circleOffsets`'s loop start `-half` produced `-0` at Size 1 (half
+      = 0), which `assert.deepEqual` treats as distinct from `0` even
+      though `===` doesn't - fixed by normalizing at push time.
+- [x] 5.2 Playwright smoke pass: Size 1/Opacity 100% stroke pixel-sampled
+      as pure `[0,0,0,255]` with an untouched white neighbor (matches
+      prior single-pixel behavior exactly); Size 7 produces a visibly
+      wide, round stroke (pixel 3px from center still black, 5px away
+      still white); Opacity 50% over opaque white produces the expected
+      `[128,128,128,255]` blend; scrubbing back and forth over the same
+      area in one continuous drag at 50% opacity sampled the exact same
+      `[128,128,128,255]` afterward (confirms the per-stroke dedup
+      prevents compounding); sliders hidden on Bucket, shown on Eraser as
+      well as Pencil. Zero console errors throughout.

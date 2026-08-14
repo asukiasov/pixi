@@ -193,6 +193,55 @@ body {
   flex: none;
 }
 
+/* Pencil/Eraser Size + Opacity - vertical sliders, shown only while one
+   of those two tools is active (js/workspace.js). Sits at the bottom of
+   the tools sidebar itself, not the right-side panel column - it's tied
+   to the tool buttons directly above it, not a separate data panel like
+   Layers/Brushes. */
+.pencil-options {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid #2c2c2e;
+}
+
+.pencil-options-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* Vertical range input via writing-mode, the modern standards-based
+   approach (supported in current Firefox/Chrome/Safari) - not the older,
+   WebKit-only -webkit-appearance: slider-vertical. */
+.vertical-slider {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 0.9rem;
+  height: 5.5rem;
+  accent-color: #0a84ff;
+}
+
+.pencil-options-readout {
+  font-size: 0.65rem;
+  color: #a0a0a5;
+  white-space: nowrap;
+}
+
+/* Live preview of the current Size, roughly to scale, capped so a large
+   Size doesn't blow out the ~2.6rem-wide sidebar. */
+.pencil-options-preview {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: #f2f2f2;
+  flex: none;
+}
+
 .tools-sidebar .tool-button {
   width: 2.6rem;
   height: 2.6rem;

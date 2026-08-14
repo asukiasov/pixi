@@ -88,3 +88,17 @@
       `[128,128,128,255]` afterward (confirms the per-stroke dedup
       prevents compounding); sliders hidden on Bucket, shown on Eraser as
       well as Pencil. Zero console errors throughout.
+
+## 6. Revised per feedback: slider styling looked dated
+
+- [x] 6.1 `style.css`: replaced the OS-native-styled `.vertical-slider`
+      (`accent-color` on an otherwise-default range input) with a fully
+      custom track + thumb (`appearance: none` plus
+      `::-webkit-slider-runnable-track`/`::-webkit-slider-thumb` and the
+      Firefox `::-moz-range-track`/`::-moz-range-progress`/
+      `::-moz-range-thumb` equivalents) — thin 3px track, small circular
+      thumb, matching the app's flat dark theme instead of each browser's
+      default OS widget
+- [x] 6.2 Playwright: confirmed sliders still function identically after
+      the restyle (Size/Opacity `input` events still update
+      `state.pencilSize`/`pencilOpacity` and their readouts)

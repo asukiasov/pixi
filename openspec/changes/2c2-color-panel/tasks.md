@@ -96,3 +96,34 @@
       *active* selection to the first preset (black) — confirming the
       session-wide-list-but-per-project-selection pattern works exactly
       like it does for custom brushes. Zero console errors throughout.
+
+## 7. Revised per feedback: swatch tooltips, click-to-open picker, copy hex
+
+- [x] 7.1 Foreground/Background swatches lacked a proper styled tooltip
+      (only a native `title`) — converted from `<div>` to `<button>` with
+      `data-tooltip="Foreground color"`/`"Background color"`, picked up
+      automatically by the existing `bindTooltips()` (it queries all
+      `[data-tooltip]` elements, not just tool buttons)
+- [x] 7.2 **Behavior change**: the custom picker is no longer an
+      always-visible inline row — it's a popover (`#color-picker-popover`)
+      opened by clicking either the Foreground or Background swatch,
+      closed via an explicit close button, Escape, or an outside click.
+      This also directly fixes "no option to change background color":
+      clicking the Background swatch opens the same picker targeting
+      `state.backgroundColor` instead of `state.foregroundColor`, tracked
+      via a module-level `colorPickerTarget`. `setForegroundColor`/new
+      `setBackgroundColor` are both routed through a single
+      `applyPickedColor(rgba)` so the native/hex/RGB input handlers don't
+      need to know which target is active.
+- [x] 7.3 Double-click the hex field to copy it to the clipboard
+      (`navigator.clipboard.writeText`), with a brief "Copied!" message
+      next to the field that fades after ~1.2s. Single-click/typing in
+      the field is unaffected.
+- [x] 7.4 Playwright smoke pass: clicking Foreground/Background opens the
+      popover with the correct title and targets the right state field
+      (edited Background via hex while Foreground stayed unchanged,
+      verified by sampling both swatches' computed background-color);
+      close button and outside-click both hide the popover; double-click
+      on the hex field copies the exact value to the clipboard and shows
+      the confirmation message. Zero console errors. Full `node --test`
+      suite unaffected (96/96 — no engine logic touched).

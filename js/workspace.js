@@ -639,6 +639,42 @@ function setForegroundColor(rgba) {
   syncActiveSwatch();
 }
 
+/** Same idea as setForegroundColor, for the color-picker-popover's Background target. */
+function setBackgroundColor(rgba) {
+  state.backgroundColor = rgba;
+  updateColorPickerInputs(rgba);
+  updateFgBgSwatches();
+}
+
+// Which swatch the color-picker-popover is currently editing - set when
+// it's opened by clicking the Foreground or Background swatch.
+let colorPickerTarget = 'foreground';
+
+/** Routes a picked color (from the native input, hex field, or RGB fields) to whichever swatch opened the popover. */
+function applyPickedColor(rgba) {
+  if (colorPickerTarget === 'background') {
+    setBackgroundColor(rgba);
+  } else {
+    setForegroundColor(rgba);
+  }
+}
+
+function openColorPicker(target, anchorEl) {
+  colorPickerTarget = target;
+  document.getElementById('color-picker-popover-title').textContent =
+    target === 'background' ? 'Background Color' : 'Foreground Color';
+  updateColorPickerInputs(target === 'background' ? state.backgroundColor : state.foregroundColor);
+  const popover = document.getElementById('color-picker-popover');
+  const rect = anchorEl.getBoundingClientRect();
+  popover.style.left = `${rect.right + 12}px`;
+  popover.style.top = `${rect.top}px`;
+  popover.classList.remove('hidden');
+}
+
+function closeColorPicker() {
+  document.getElementById('color-picker-popover').classList.add('hidden');
+}
+
 function bindDomOnce() {
   toolButtons = document.querySelectorAll('.tool-button[data-tool]');
   pixelPerfectToggle = document.getElementById('pixel-perfect-toggle');
@@ -697,51 +733,87 @@ function bindDomOnce() {
   renderPaletteRow();
 
   // Custom color picker: native <input type="color"> + hex + RGB fields,
-  // all cross-synced through setForegroundColor/updateColorPickerInputs.
+  // in a popover opened by clicking the Foreground or Background swatch
+  // (colorPickerTarget tracks which one), all cross-synced through
+  // applyPickedColor/updateColorPickerInputs.
   const colorPickerNative = document.getElementById('color-picker-native');
   const colorPickerHex = document.getElementById('color-picker-hex');
+  const colorPickerCopied = document.getElementById('color-picker-copied');
   const colorPickerR = document.getElementById('color-picker-r');
   const colorPickerG = document.getElementById('color-picker-g');
   const colorPickerB = document.getElementById('color-picker-b');
   const colorPickerAdd = document.getElementById('color-picker-add');
+  const colorPickerPopover = document.getElementById('color-picker-popover');
 
   colorPickerNative.addEventListener('input', () => {
-    setForegroundColor(hexToRgba(colorPickerNative.value));
+    applyPickedColor(hexToRgba(colorPickerNative.value));
   });
 
   colorPickerHex.addEventListener('change', () => {
     const normalized = normalizeHex(colorPickerHex.value);
     // Malformed input is ignored (leaves prior state intact) rather than
     // crashing - just resync the field to the last valid color.
+    const current = colorPickerTarget === 'background' ? state.backgroundColor : state.foregroundColor;
     if (!normalized) {
-      colorPickerHex.value = rgbaToHex(state.foregroundColor);
+      colorPickerHex.value = rgbaToHex(current);
       return;
     }
-    setForegroundColor(hexToRgba(normalized));
+    applyPickedColor(hexToRgba(normalized));
+  });
+
+  // Double-click the hex field to copy it to the clipboard, with a brief
+  // "Copied!" confirmation - doesn't interfere with normal editing
+  // (single click/typing still works as usual).
+  let copiedTimer = null;
+  colorPickerHex.addEventListener('dblclick', () => {
+    navigator.clipboard?.writeText(colorPickerHex.value).then(() => {
+      colorPickerCopied.classList.remove('hidden');
+      clearTimeout(copiedTimer);
+      copiedTimer = setTimeout(() => colorPickerCopied.classList.add('hidden'), 1200);
+    });
   });
 
   function applyRgbFields() {
     const clamp = (v) => Math.max(0, Math.min(255, Number(v) || 0));
-    setForegroundColor([clamp(colorPickerR.value), clamp(colorPickerG.value), clamp(colorPickerB.value), 255]);
+    applyPickedColor([clamp(colorPickerR.value), clamp(colorPickerG.value), clamp(colorPickerB.value), 255]);
   }
   colorPickerR.addEventListener('change', applyRgbFields);
   colorPickerG.addEventListener('change', applyRgbFields);
   colorPickerB.addEventListener('change', applyRgbFields);
 
   colorPickerAdd.addEventListener('click', () => {
-    customSwatches.push(rgbaToHex(state.foregroundColor));
+    const current = colorPickerTarget === 'background' ? state.backgroundColor : state.foregroundColor;
+    customSwatches.push(rgbaToHex(current));
     renderPaletteRow();
   });
 
-  // Foreground/Background: swap and reset-to-black/white.
+  document.getElementById('color-picker-close').addEventListener('click', closeColorPicker);
+
+  // Close on outside click/Escape, not just the explicit close button -
+  // standard popover behavior.
+  document.addEventListener('pointerdown', (e) => {
+    if (colorPickerPopover.classList.contains('hidden')) return;
+    if (colorPickerPopover.contains(e.target)) return;
+    if (e.target.closest('#foreground-swatch, #background-swatch')) return;
+    closeColorPicker();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !colorPickerPopover.classList.contains('hidden')) closeColorPicker();
+  });
+
+  // Foreground/Background: click either swatch to open the popover
+  // targeting it; swap and reset-to-black/white.
   foregroundSwatchEl = document.getElementById('foreground-swatch');
   backgroundSwatchEl = document.getElementById('background-swatch');
+
+  foregroundSwatchEl.addEventListener('click', () => openColorPicker('foreground', foregroundSwatchEl));
+  backgroundSwatchEl.addEventListener('click', () => openColorPicker('background', backgroundSwatchEl));
 
   document.getElementById('fg-bg-swap').addEventListener('click', () => {
     const swapped = state.backgroundColor;
     state.backgroundColor = state.foregroundColor;
     state.foregroundColor = swapped;
-    updateColorPickerInputs(state.foregroundColor);
+    updateColorPickerInputs(colorPickerTarget === 'background' ? state.backgroundColor : state.foregroundColor);
     updateFgBgSwatches();
     syncActiveSwatch();
   });
@@ -749,7 +821,7 @@ function bindDomOnce() {
   document.getElementById('fg-bg-reset').addEventListener('click', () => {
     state.foregroundColor = hexToRgba('#000000');
     state.backgroundColor = hexToRgba('#ffffff');
-    updateColorPickerInputs(state.foregroundColor);
+    updateColorPickerInputs(colorPickerTarget === 'background' ? state.backgroundColor : state.foregroundColor);
     updateFgBgSwatches();
     syncActiveSwatch();
   });
@@ -1069,6 +1141,8 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   // Custom swatches (customSwatches) are session-wide and NOT reset here -
   // only which color is currently selected resets, back to the first
   // preset (matching state.foregroundColor's default above).
+  colorPickerTarget = 'foreground';
+  closeColorPicker();
   updateColorPickerInputs(state.foregroundColor);
   updateFgBgSwatches();
   syncActiveSwatch();

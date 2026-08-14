@@ -138,3 +138,20 @@
       and confirm the drawn content is still visibly present, not
       requiring a subsequent stroke to reappear; re-run full `node --test`
       suite
+
+## 8. Revised per feedback: move Gallery/Pixel-perfect/Layers/Settings/Export to a top bar
+
+- [x] 8.1 `index.html`: new `<header class="workspace-topbar">` above the
+      tool rail/canvas/panels row, containing icon-only versions of the
+      five buttons (Gallery=`home`, Pixel-perfect=`grid_on`,
+      Layers=`layers`, Canvas Settings=`settings`, Export=`download`) —
+      moved out of the bottom bar's "Additional" group (which is now just
+      Zoom + Undo/Redo). IDs unchanged, so no JS lookup needed updating.
+- [x] 8.2 `style.css`: `#screen-workspace` restructured from a single row
+      (tools/canvas/panels) into a column (`.workspace-topbar` then a new
+      `.workspace-body` row wrapper) - `.workspace-screen`'s old
+      row-direction override moved onto `.workspace-body`
+- [x] 8.3 Playwright: confirmed the Layers toggle's active state and
+      Pixel-perfect toggle still work correctly from their new top-bar
+      buttons (same IDs, same JS); full workspace layout (tools sidebar,
+      canvas, right sidebar) unaffected by the restructure

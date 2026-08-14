@@ -17,7 +17,7 @@
        original range query pulled the full variable font (~4MB, ~30s on a
        slow connection, icons invisible until it finished); this is a few
        KB. Keep icon_names in sync with the icons used in this file. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,colorize,undo,redo,add,remove,delete,visibility,visibility_off,restart_alt,swap_horiz" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,colorize,undo,redo,add,remove,delete,visibility,visibility_off,restart_alt,swap_horiz,close,home,grid_on,layers,settings,download" />
 </head>
 <body>
   <main id="screen-gallery" class="screen">
@@ -60,6 +60,27 @@
   </main>
 
   <main id="screen-workspace" class="screen workspace-screen hidden">
+    <!-- Top bar: navigation/toggles/settings/export, icon-only. Separate
+         from the tool rail below - these aren't drawing tools. -->
+    <header class="workspace-topbar">
+      <button type="button" id="back-to-gallery-button" class="tool-button icon-button" aria-label="Gallery" data-tooltip="Gallery">
+        <span class="material-symbols-outlined">home</span>
+      </button>
+      <button type="button" id="pixel-perfect-toggle" class="tool-button icon-button" aria-label="Pixel-perfect" data-tooltip="Pixel-perfect">
+        <span class="material-symbols-outlined">grid_on</span>
+      </button>
+      <button type="button" id="layers-panel-toggle" class="tool-button icon-button active" aria-label="Layers" data-tooltip="Layers">
+        <span class="material-symbols-outlined">layers</span>
+      </button>
+      <button type="button" id="canvas-settings-toggle" class="tool-button icon-button" aria-label="Canvas Settings" data-tooltip="Canvas Settings">
+        <span class="material-symbols-outlined">settings</span>
+      </button>
+      <button type="button" id="export-button" class="tool-button icon-button" aria-label="Export PNG" data-tooltip="Export PNG">
+        <span class="material-symbols-outlined">download</span>
+      </button>
+    </header>
+
+    <div class="workspace-body">
     <!-- 1. Tools: vertical icon rail, Photoshop-style. -->
     <aside id="tools-sidebar" class="tools-sidebar">
       <button type="button" class="tool-button" data-tool="pencil" aria-label="Pencil" data-tooltip="Pencil" data-shortcut="P">
@@ -138,24 +159,37 @@
             <span class="material-symbols-outlined">restart_alt</span>
           </button>
           <div class="fg-bg-swatch-stack">
-            <div id="background-swatch" class="fg-bg-swatch bg-swatch" title="Background color"></div>
-            <div id="foreground-swatch" class="fg-bg-swatch fg-swatch" title="Foreground color"></div>
+            <button type="button" id="background-swatch" class="fg-bg-swatch bg-swatch" aria-label="Background color" data-tooltip="Background color"></button>
+            <button type="button" id="foreground-swatch" class="fg-bg-swatch fg-swatch" aria-label="Foreground color" data-tooltip="Foreground color"></button>
           </div>
           <button type="button" id="fg-bg-swap" class="icon-button" aria-label="Swap colors" data-tooltip="Swap colors">
             <span class="material-symbols-outlined">swap_horiz</span>
           </button>
         </div>
+      </div>
 
-        <div class="color-picker">
-          <input type="color" id="color-picker-native" value="#000000" title="Custom color" />
-          <input type="text" id="color-picker-hex" class="color-picker-hex" value="#000000" maxlength="7" placeholder="#000000" aria-label="Hex" />
+      <!-- Popover opened by clicking either FG/BG swatch above - edits
+           whichever one was clicked (js/workspace.js tracks the target). -->
+      <div id="color-picker-popover" class="color-picker-popover hidden">
+        <div class="color-picker-popover-header">
+          <span id="color-picker-popover-title">Foreground Color</span>
+          <button type="button" id="color-picker-close" class="icon-button" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <input type="color" id="color-picker-native" value="#000000" title="Custom color" />
+        <div class="color-picker-hex-row">
+          <input type="text" id="color-picker-hex" class="color-picker-hex" value="#000000" maxlength="7" placeholder="#000000" aria-label="Hex" title="Double-click to copy" />
+          <span id="color-picker-copied" class="color-picker-copied hidden">Copied!</span>
+        </div>
+        <div class="color-picker-rgb-row">
           <input type="number" id="color-picker-r" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Red" />
           <input type="number" id="color-picker-g" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Green" />
           <input type="number" id="color-picker-b" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Blue" />
-          <button type="button" id="color-picker-add" class="tool-button icon-button" aria-label="Add to palette" data-tooltip="Add to palette">
-            <span class="material-symbols-outlined">add</span>
-          </button>
         </div>
+        <button type="button" id="color-picker-add" class="tool-button">
+          <span class="material-symbols-outlined">add</span> Add to palette
+        </button>
       </div>
 
       <div id="selection-controls" class="selection-controls hidden">
@@ -177,15 +211,7 @@
           <button type="button" id="zoom-preset-fit" class="tool-button" title="Fit the canvas to the screen">Fit</button>
           <button type="button" id="zoom-preset-fill" class="tool-button" title="Fill the screen with the canvas">Fill</button>
         </div>
-        <!-- 2. Additional: navigation, toggles, settings, export. -->
-        <div class="bottom-bar-group">
-          <button type="button" id="back-to-gallery-button" class="tool-button">Gallery</button>
-          <button type="button" id="pixel-perfect-toggle" class="tool-button">Pixel-perfect</button>
-          <button type="button" id="layers-panel-toggle" class="tool-button active">Layers</button>
-          <button type="button" id="canvas-settings-toggle" class="tool-button">Canvas Settings</button>
-          <button type="button" id="export-button" class="tool-button">Export PNG</button>
-        </div>
-        <!-- 3. Undo/redo. -->
+        <!-- 2. Undo/redo. -->
         <div class="bottom-bar-group">
           <button type="button" id="undo-button" class="tool-button icon-button" disabled title="Undo">
             <span class="material-symbols-outlined">undo</span>
@@ -258,6 +284,7 @@
         </div>
       </div>
     </aside>
+    </div>
   </main>
 
   <script type="module" src="js/app.js"></script>

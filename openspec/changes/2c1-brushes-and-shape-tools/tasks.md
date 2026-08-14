@@ -178,3 +178,21 @@
       height inputs clamp to [3, canvas size]; resize the editor grid and
       save a non-square (5×4) custom brush; confirm its picker thumbnail
       renders the pattern; re-run full `node --test` suite
+
+## 11. Move Brushes panel to a right-side sidebar
+
+- [x] 11.1 `index.html`: move `#brushes-panel` (and the nested brush
+      editor) out of `.workspace-main`'s vertical stack into its own
+      `<aside>`, a sibling of `.workspace-main` inside `.workspace-screen`
+      — a separate right-hand column, not stacked below Layers
+- [x] 11.2 `style.css`: `.brushes-panel` becomes a fixed-width (13rem)
+      full-height sidebar with a left border, instead of a bottom-docked,
+      height-capped panel; brush editor's Clear/Cancel/Save row wraps and
+      shrinks to fit the narrower column
+- [x] 11.3 `js/workspace.js`: brush editor grid's max pixel width reduced
+      to fit inside the narrower sidebar (was sized for the old
+      full-width bottom panel)
+- [x] 11.4 Playwright smoke pass: confirm the Brushes panel renders as a
+      right-side column (not below Layers) at the expected width, brush
+      placement on the canvas still works with the sidebar present, editor
+      buttons aren't clipped; re-run full `node --test` suite

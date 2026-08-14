@@ -305,7 +305,7 @@ function makeEmptyBrushEditorGrid(width, height) {
  * shrinks for bigger grids, caps out at 1.6rem-equivalent for small ones.
  */
 function brushEditorCellSizePx(width, height) {
-  const maxGridPx = 260;
+  const maxGridPx = 180; // fits inside the 13rem (~208px) Brushes sidebar
   const maxCellPx = 26; // ~1.6rem at the default 16px root font size
   return Math.max(4, Math.min(maxCellPx, Math.floor(maxGridPx / Math.max(width, height))));
 }

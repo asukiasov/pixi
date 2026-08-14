@@ -441,11 +441,14 @@ body {
 /* Brushes panel — Photoshop-Brushes-panel-style: title, spacing control,
    thumbnail grid, bottom toolbar with add/delete icon buttons. */
 
+/* Separate right-hand sidebar (not part of workspace-main's column), shown
+   only while the Brush tool is active — see js/workspace.js. */
 .brushes-panel {
-  max-height: 12rem;
+  width: 13rem;
+  height: 100%;
   overflow-y: auto;
   background: #1c1c1e;
-  border-top: 1px solid #2c2c2e;
+  border-left: 1px solid #2c2c2e;
   flex: none;
 }
 
@@ -540,6 +543,18 @@ body {
 
 .brush-editor-row:last-child {
   margin-bottom: 0;
+}
+
+/* Clear/Cancel/Save row - the 13rem sidebar is too narrow to fit three
+   default-padded tool-buttons on one line, so they wrap and shrink. */
+.brush-editor-row:last-child {
+  flex-wrap: wrap;
+}
+
+.brush-editor-row:last-child .tool-button {
+  flex: 1 1 auto;
+  padding: 0.5rem 0.4rem;
+  font-size: 0.85rem;
 }
 
 .brush-editor-row input[type="text"] {

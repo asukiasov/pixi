@@ -13,7 +13,10 @@ panel) rather than a bare unlabeled row; selecting one makes it the
 current brush. The system ships with two built-in shapes (Heart, Circle).
 The Brushes panel SHALL be visible only while the Brush tool is the
 current tool, the same way the Canvas Settings panel is scoped to its own
-toggle — other tools don't need it taking up space.
+toggle — other tools don't need it taking up space. The panel SHALL be a
+fixed-width sidebar on the right side of the workspace (its own column,
+not part of the canvas/Layers/palette column), distinct from the Layers
+panel and the bottom bar.
 
 #### Scenario: Selecting a brush
 - **WHEN** the user selects the Heart brush from the picker

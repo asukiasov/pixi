@@ -7,6 +7,7 @@ import {
   loadProject,
   listProjects,
   deleteProject,
+  renameProject,
   _clearAllForTests,
 } from '../js/persistence.js';
 import { LayerStack } from '../js/layers.js';
@@ -78,6 +79,19 @@ describe('saveProject', () => {
     // reference on the way back out — compare content instead.
     assert.equal(loaded.thumbnail.size, newThumbnail.size);
     assert.equal(loaded.thumbnail.type, newThumbnail.type);
+  });
+});
+
+describe('renameProject', () => {
+  test('updates the name and updatedAt, leaves layer data untouched', async () => {
+    const stack = new LayerStack(2, 2, 'transparent');
+    const created = await createProject(stack, 'Old Name');
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await renameProject(created.id, 'New Name');
+    const loaded = await loadProject(created.id);
+    assert.equal(loaded.name, 'New Name');
+    assert.ok(loaded.updatedAt >= created.updatedAt);
+    assert.equal(loaded.width, 2);
   });
 });
 

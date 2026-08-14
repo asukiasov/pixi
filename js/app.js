@@ -22,7 +22,7 @@ function showScreen(name) {
 // DOM/pointer listeners).
 let canvasView = null;
 
-function openWorkspace({ layerStack, projectId }) {
+function openWorkspace({ layerStack, projectId, projectName }) {
   const canvasEl = document.getElementById('workspace-canvas');
   const containerEl = document.getElementById('workspace-canvas-container');
 
@@ -38,6 +38,7 @@ function openWorkspace({ layerStack, projectId }) {
 
   initWorkspace({
     projectId,
+    projectName,
     layerStack,
     canvasView,
     onRequestGallery: () => {
@@ -52,13 +53,13 @@ const gallery = initGallery({
   async onOpenProject(id) {
     const record = await loadProject(id);
     const layerStack = LayerStack.fromProjectRecord(record);
-    openWorkspace({ layerStack, projectId: id });
+    openWorkspace({ layerStack, projectId: id, projectName: record.name });
   },
 });
 
 initNewCanvasScreen({
-  onCanvasCreated({ layerStack, projectId }) {
-    openWorkspace({ layerStack, projectId });
+  onCanvasCreated({ layerStack, projectId, projectName }) {
+    openWorkspace({ layerStack, projectId, projectName });
   },
 });
 

@@ -1,5 +1,5 @@
 import { UndoStack } from './undo.js';
-import { saveProject } from './persistence.js';
+import { saveProject, renameProject } from './persistence.js';
 import { initCanvasSettings } from './canvas-settings.js';
 
 const PALETTE = [
@@ -264,6 +264,10 @@ function bindDomOnce() {
       canvasSettingsControls.setCurrentSize(state.layerStack.width, state.layerStack.height);
       commit();
     },
+    onRename(name) {
+      state.projectName = name;
+      renameProject(state.projectId, name);
+    },
   });
 }
 
@@ -274,9 +278,10 @@ function bindDomOnce() {
  * project opened or created in a session) — DOM listeners bind only once;
  * subsequent calls just reset the drawing state for the new project.
  */
-export function initWorkspace({ projectId, layerStack, canvasView, onRequestGallery }) {
+export function initWorkspace({ projectId, projectName, layerStack, canvasView, onRequestGallery }) {
   state = {
     projectId,
+    projectName,
     layerStack,
     canvasView,
     onRequestGallery,
@@ -300,6 +305,7 @@ export function initWorkspace({ projectId, layerStack, canvasView, onRequestGall
   }
 
   canvasSettingsControls.setCurrentSize(layerStack.width, layerStack.height);
+  canvasSettingsControls.setCurrentName(projectName);
 
   // Baseline snapshot so the very first stroke can be undone back to
   // whatever state the project was in when opened.

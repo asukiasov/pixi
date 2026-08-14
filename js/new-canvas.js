@@ -50,6 +50,6 @@ export function initNewCanvasScreen({ onCanvasCreated }) {
     const layerStack = new LayerStack(width, height, background);
     const thumbnail = await layerStack.toPNGBlob();
     const record = await createProject(layerStack, undefined, thumbnail);
-    onCanvasCreated({ layerStack, projectId: record.id });
+    onCanvasCreated({ layerStack, projectId: record.id, projectName: record.name });
   });
 }

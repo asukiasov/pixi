@@ -55,6 +55,16 @@
 - [x] 4.3 Wire rotate to `layerStack.rotate90()` + `canvasView.resetView()`
       + `commit()`
 - [x] 4.4 Add a Workspace entry point (button) to open Canvas Settings
+- [x] 4.5 **Gap found post-verification**: proposal.md said rename "stays a
+      Workspace/Canvas-settings action for this slice" but it was never
+      built. Added a Name field to the Canvas Settings panel, wired to a new
+      `persistence.js` `renameProject(id, name)` (+ unit test), independent
+      of the undo stack (project name is metadata, not canvas content)
+- [x] 4.6 **Bug found on a real phone (narrow viewport)**: the 9-button tab
+      bar's `flex-wrap: wrap` made the "Gallery" back control hard to find/
+      reach. Changed `.tab-bar` to horizontal scroll (`nowrap` +
+      `overflow-x: auto`, matching the palette row) so Gallery, being first,
+      stays reachable at a fixed position
 
 ## 5. Gallery (`js/gallery.js`)
 

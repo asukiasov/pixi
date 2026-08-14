@@ -54,6 +54,11 @@ export async function saveProject(id, layerStack, thumbnail = null) {
   await db.projects.update(id, updates);
 }
 
+/** Renames an existing project. */
+export async function renameProject(id, name) {
+  await db.projects.update(id, { name, updatedAt: Date.now() });
+}
+
 /** Returns the raw stored record (or undefined), ready for LayerStack.fromProjectRecord(). */
 export async function loadProject(id) {
   return db.projects.get(id);

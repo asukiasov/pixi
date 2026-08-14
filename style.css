@@ -203,29 +203,53 @@ body {
   position: relative;
 }
 
-/* Custom tooltip, from data-tooltip - not the native title attribute
-   (which is slow to appear and can't be styled to match the app's dark
-   theme). A single shared element positioned via JS (js/workspace.js),
-   not a per-button ::after: .tools-sidebar's own overflow-y: auto
-   implicitly clips overflow-x too (a CSS overflow-pairing rule), which
-   would clip a ::after poking out to the right of the sidebar. */
+/* Custom tooltip, from data-tooltip/data-shortcut - not the native title
+   attribute (which is slow to appear and can't be styled to match the
+   app's dark theme). A single shared element positioned via JS
+   (js/workspace.js), not a per-button ::after: .tools-sidebar's own
+   overflow-y: auto implicitly clips overflow-x too (a CSS
+   overflow-pairing rule), which would clip a ::after poking out to the
+   right of the sidebar. Styled Figma-style: a dark pill, bold name, the
+   keyboard shortcut in dimmer gray, with a small triangle pointing back
+   at the button (left edge, since our toolbar is vertical - Figma's own
+   horizontal toolbar points down instead). */
 .tool-tooltip {
   position: fixed;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
   background: #2c2c2e;
   color: #f2f2f2;
-  border: 1px solid #48484a;
-  border-radius: 0.35rem;
-  padding: 0.3rem 0.6rem;
-  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 0.4rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.9rem;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.1s ease;
   z-index: 50;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
 .tool-tooltip.visible {
   opacity: 1;
+}
+
+.tool-tooltip::after {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0.3rem solid transparent;
+  border-right-color: #2c2c2e;
+}
+
+.tool-tooltip-shortcut {
+  color: #9a9a9e;
+  font-weight: 500;
+  font-size: 0.8rem;
 }
 
 .icon-button {
@@ -241,7 +265,12 @@ body {
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-width: 0;
+  /* A real floor, not 0 - the canvas and palette row need enough room to
+     stay usable even on a narrow window; .right-sidebar shrinks first
+     (see its clamp() above), and only once it's already at its own
+     minimum does workspace-main get this floor instead of continuing to
+     shrink toward zero. */
+  min-width: 12rem;
   height: 100%;
 }
 
@@ -341,7 +370,12 @@ body {
    bottom bar); Brushes is scoped to the Brush tool (js/workspace.js) —
    each panel manages its own visibility and its own vertical scrolling. */
 .right-sidebar {
-  width: 13rem;
+  /* Shrinks on narrower viewports instead of staying a fixed 13rem —
+     on a narrow window a fixed-width sidebar could squeeze
+     workspace-main (and the palette row inside it) down to almost
+     nothing. See .workspace-main's min-width below for the other half
+     of this fix. */
+  width: clamp(8rem, 22vw, 13rem);
   height: 100%;
   flex: none;
   display: flex;

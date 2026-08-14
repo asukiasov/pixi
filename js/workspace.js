@@ -469,9 +469,20 @@ function bindTooltips() {
     showTimer = setTimeout(() => {
       const text = target.dataset.tooltip;
       if (!text) return;
-      tooltipEl.textContent = text;
+      // Figma-style: bold name plus the keyboard shortcut (if any) in a
+      // dimmer gray, not folded into the name text itself.
+      tooltipEl.innerHTML = '';
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = text;
+      tooltipEl.appendChild(nameSpan);
+      if (target.dataset.shortcut) {
+        const shortcutSpan = document.createElement('span');
+        shortcutSpan.className = 'tool-tooltip-shortcut';
+        shortcutSpan.textContent = target.dataset.shortcut;
+        tooltipEl.appendChild(shortcutSpan);
+      }
       const rect = target.getBoundingClientRect();
-      tooltipEl.style.left = `${rect.right + 8}px`;
+      tooltipEl.style.left = `${rect.right + 12}px`;
       tooltipEl.style.top = `${rect.top + rect.height / 2}px`;
       tooltipEl.style.transform = 'translateY(-50%)';
       tooltipEl.classList.add('visible');
@@ -648,6 +659,24 @@ function bindDomOnce() {
     state.selection = null;
     state.canvasView.setSelectionRect(null);
     updateSelectionControls();
+  });
+
+  // Bare-letter tool shortcuts (P/E/G/B/L/R/M/H — see each button's
+  // data-shortcut), Figma/Photoshop-style: no modifier key, so they must
+  // NOT fire while the user is typing into a text field (layer name,
+  // brush name, hex input, etc.) or they'd hijack every keystroke.
+  document.addEventListener('keydown', (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (document.getElementById('screen-workspace').classList.contains('hidden')) return;
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable)) {
+      return;
+    }
+    const key = e.key.toLowerCase();
+    const button = [...toolButtons].find((b) => b.dataset.shortcut?.toLowerCase() === key);
+    if (!button) return;
+    e.preventDefault();
+    button.click();
   });
 
   state.exportButton.addEventListener('click', async () => {

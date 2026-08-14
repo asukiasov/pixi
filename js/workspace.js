@@ -64,6 +64,7 @@ let canvasSettingsControls = null;
 let toolButtons = null;
 let pixelPerfectToggle = null;
 let paletteRow = null;
+let brushesPanel = null;
 let brushesPanelGrid = null;
 let deleteBrushButton = null;
 
@@ -248,6 +249,26 @@ function buildLayerRow(layer, index, isActive, layerCount) {
   return row;
 }
 
+/**
+ * Draws a black-on-white preview of `brush`'s pattern (not its name) into a
+ * small canvas sized to the brush's own pixel dimensions, then scaled up by
+ * CSS with `image-rendering: pixelated` so it stays crisp at any swatch size.
+ */
+function buildBrushPreviewCanvas(brush) {
+  const canvas = document.createElement('canvas');
+  canvas.className = 'brush-swatch-preview';
+  canvas.width = brush.width;
+  canvas.height = brush.height;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, brush.width, brush.height);
+  ctx.fillStyle = '#000000';
+  for (const [x, y] of brush.pixels) {
+    ctx.fillRect(x, y, 1, 1);
+  }
+  return canvas;
+}
+
 /** Rebuilds the Brushes panel grid from `allBrushes`, marking the current one active. */
 function renderBrushesPanel() {
   brushesPanelGrid.innerHTML = '';
@@ -255,8 +276,8 @@ function renderBrushesPanel() {
     const swatch = document.createElement('button');
     swatch.type = 'button';
     swatch.className = 'brush-swatch' + (brush.id === state.currentBrush?.id ? ' active' : '');
-    swatch.textContent = brush.name;
     swatch.title = brush.name;
+    swatch.appendChild(buildBrushPreviewCanvas(brush));
     swatch.addEventListener('click', () => {
       state.currentBrush = brush;
       brushesPanelGrid.querySelectorAll('.brush-swatch').forEach((s) => s.classList.toggle('active', s === swatch));
@@ -274,41 +295,38 @@ async function loadCustomBrushes() {
   renderBrushesPanel();
 }
 
-function makeEmptyBrushEditorGrid() {
-  return Array.from({ length: BRUSH_EDITOR_SIZE }, () => Array(BRUSH_EDITOR_SIZE).fill(false));
+function makeEmptyBrushEditorGrid(width, height) {
+  return Array.from({ length: height }, () => Array(width).fill(false));
+}
+
+/**
+ * Largest cell size (px) that keeps the whole grid within a reasonable
+ * panel width regardless of how big the brush is (up to canvas size) —
+ * shrinks for bigger grids, caps out at 1.6rem-equivalent for small ones.
+ */
+function brushEditorCellSizePx(width, height) {
+  const maxGridPx = 260;
+  const maxCellPx = 26; // ~1.6rem at the default 16px root font size
+  return Math.max(4, Math.min(maxCellPx, Math.floor(maxGridPx / Math.max(width, height))));
 }
 
 let brushEditorGridState = null;
 let brushEditorPainting = false;
 let brushEditorPaintValue = true;
+let brushEditorWidth = BRUSH_EDITOR_SIZE;
+let brushEditorHeight = BRUSH_EDITOR_SIZE;
 
-function openBrushEditor() {
-  brushEditorGridState = makeEmptyBrushEditorGrid();
-  document.getElementById('brush-editor-name').value = '';
-  document.querySelectorAll('.brush-editor-cell').forEach((c) => c.classList.remove('on'));
-  document.getElementById('brush-editor-panel').classList.remove('hidden');
-}
-
-function closeBrushEditor() {
-  document.getElementById('brush-editor-panel').classList.add('hidden');
-}
-
-/**
- * Builds the fixed 9x9 editor grid once and wires paint/erase-by-drag.
- * Listens on the grid container (not per-cell pointerenter) and resolves
- * the cell under the pointer via elementFromPoint on every move — touch
- * pointers implicitly capture to their initial target element, so
- * pointerenter would never fire on sibling cells during a touch drag.
- */
-function bindBrushEditorOnce() {
+/** (Re)builds the editor grid's cells to match brushEditorWidth x brushEditorHeight, clearing any painted pixels. */
+function rebuildBrushEditorGrid() {
   const grid = document.getElementById('brush-editor-grid');
-  const nameInput = document.getElementById('brush-editor-name');
-  const clearButton = document.getElementById('brush-editor-clear');
-  const cancelButton = document.getElementById('brush-editor-cancel');
-  const saveButton = document.getElementById('brush-editor-save');
-
-  for (let y = 0; y < BRUSH_EDITOR_SIZE; y++) {
-    for (let x = 0; x < BRUSH_EDITOR_SIZE; x++) {
+  brushEditorGridState = makeEmptyBrushEditorGrid(brushEditorWidth, brushEditorHeight);
+  grid.innerHTML = '';
+  const cellPx = brushEditorCellSizePx(brushEditorWidth, brushEditorHeight);
+  grid.style.setProperty('--brush-editor-cols', String(brushEditorWidth));
+  grid.style.setProperty('--brush-editor-rows', String(brushEditorHeight));
+  grid.style.setProperty('--brush-editor-cell-size', `${cellPx}px`);
+  for (let y = 0; y < brushEditorHeight; y++) {
+    for (let x = 0; x < brushEditorWidth; x++) {
       const cell = document.createElement('button');
       cell.type = 'button';
       cell.className = 'brush-editor-cell';
@@ -317,6 +335,65 @@ function bindBrushEditorOnce() {
       grid.appendChild(cell);
     }
   }
+}
+
+/**
+ * Clamps a requested editor dimension to [3, the canvas's matching
+ * dimension] — a brush wider or taller than the canvas itself isn't
+ * meaningful, and anything under 3x3 isn't really a shape.
+ */
+function clampBrushEditorDimension(value, max) {
+  return Math.max(3, Math.min(max, Math.round(value) || 3));
+}
+
+function openBrushEditor() {
+  const widthInput = document.getElementById('brush-editor-width');
+  const heightInput = document.getElementById('brush-editor-height');
+  const maxWidth = state.layerStack.width;
+  const maxHeight = state.layerStack.height;
+  widthInput.max = String(maxWidth);
+  heightInput.max = String(maxHeight);
+  brushEditorWidth = clampBrushEditorDimension(BRUSH_EDITOR_SIZE, maxWidth);
+  brushEditorHeight = clampBrushEditorDimension(BRUSH_EDITOR_SIZE, maxHeight);
+  widthInput.value = String(brushEditorWidth);
+  heightInput.value = String(brushEditorHeight);
+  document.getElementById('brush-editor-name').value = '';
+  rebuildBrushEditorGrid();
+  document.getElementById('brush-editor-panel').classList.remove('hidden');
+}
+
+function closeBrushEditor() {
+  document.getElementById('brush-editor-panel').classList.add('hidden');
+}
+
+/**
+ * Wires the editor's width/height inputs and paint/erase-by-drag on the
+ * grid. Listens on the grid container (not per-cell pointerenter) and
+ * resolves the cell under the pointer via elementFromPoint on every move —
+ * touch pointers implicitly capture to their initial target element, so
+ * pointerenter would never fire on sibling cells during a touch drag.
+ */
+function bindBrushEditorOnce() {
+  const grid = document.getElementById('brush-editor-grid');
+  const nameInput = document.getElementById('brush-editor-name');
+  const widthInput = document.getElementById('brush-editor-width');
+  const heightInput = document.getElementById('brush-editor-height');
+  const clearButton = document.getElementById('brush-editor-clear');
+  const cancelButton = document.getElementById('brush-editor-cancel');
+  const saveButton = document.getElementById('brush-editor-save');
+
+  // Changing size re-grids from scratch (painting so far doesn't carry
+  // over) — simplest behavior, and this is a brand-new brush each time.
+  widthInput.addEventListener('change', () => {
+    brushEditorWidth = clampBrushEditorDimension(Number(widthInput.value), state.layerStack.width);
+    widthInput.value = String(brushEditorWidth);
+    rebuildBrushEditorGrid();
+  });
+  heightInput.addEventListener('change', () => {
+    brushEditorHeight = clampBrushEditorDimension(Number(heightInput.value), state.layerStack.height);
+    heightInput.value = String(brushEditorHeight);
+    rebuildBrushEditorGrid();
+  });
 
   function setCellFromEvent(clientX, clientY, isFirst) {
     const el = document.elementFromPoint(clientX, clientY);
@@ -343,7 +420,7 @@ function bindBrushEditorOnce() {
   });
 
   clearButton.addEventListener('click', () => {
-    brushEditorGridState = makeEmptyBrushEditorGrid();
+    brushEditorGridState = makeEmptyBrushEditorGrid(brushEditorWidth, brushEditorHeight);
     grid.querySelectorAll('.brush-editor-cell').forEach((c) => c.classList.remove('on'));
   });
 
@@ -353,7 +430,7 @@ function bindBrushEditorOnce() {
     const name = nameInput.value.trim() || 'Custom Brush';
     const pixels = pixelsFromGrid(brushEditorGridState);
     if (pixels.length === 0) return; // nothing drawn - no-op, stay open
-    await createCustomBrush(name, BRUSH_EDITOR_SIZE, BRUSH_EDITOR_SIZE, pixels);
+    await createCustomBrush(name, brushEditorWidth, brushEditorHeight, pixels);
     await loadCustomBrushes();
     closeBrushEditor();
   });
@@ -363,12 +440,17 @@ function bindDomOnce() {
   toolButtons = document.querySelectorAll('.tool-button[data-tool]');
   pixelPerfectToggle = document.getElementById('pixel-perfect-toggle');
   paletteRow = document.getElementById('palette-row');
+  brushesPanel = document.getElementById('brushes-panel');
   const backToGalleryButton = document.getElementById('back-to-gallery-button');
 
   toolButtons.forEach((button) => {
     button.addEventListener('click', () => {
       state.currentTool = button.dataset.tool;
       toolButtons.forEach((b) => b.classList.toggle('active', b === button));
+      brushesPanel.classList.toggle('hidden', state.currentTool !== 'brush');
+      // Leaving the Brush tool mid-edit closes the editor rather than
+      // leaving it open behind a now-hidden panel.
+      if (state.currentTool !== 'brush') closeBrushEditor();
     });
   });
 
@@ -627,6 +709,8 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   toolButtons.forEach((b) => b.classList.toggle('active', b.dataset.tool === state.currentTool));
   paletteRow.querySelectorAll('.palette-swatch').forEach((s, i) => s.classList.toggle('active', i === 0));
   renderBrushesPanel();
+  brushesPanel.classList.toggle('hidden', state.currentTool !== 'brush');
+  closeBrushEditor();
   document.getElementById('brush-spacing').value = '1';
   pixelPerfectToggle.classList.remove('active');
 

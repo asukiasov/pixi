@@ -152,3 +152,29 @@
       editor and place it; delete it and confirm it's gone from the picker;
       confirm a custom brush survives a project switch; set Spacing > 1 and
       confirm a sparser trail; re-run full `node --test` suite
+
+## 10. Brushes panel scoped to tool, thumbnail previews, custom brush sizing
+
+- [x] 10.1 `js/workspace.js`/`style.css`: Brushes panel visible only while
+      the Brush tool is selected (toggled alongside the existing tool
+      button `active` state, via the shared global `.hidden` utility
+      class); reset to hidden in `initWorkspace()`'s per-project state
+      reset (default tool is Pencil)
+- [x] 10.2 `js/workspace.js`: `renderBrushesPanel()` renders each swatch as
+      a small black-on-white `<canvas>` preview of `brush.pixels` at
+      `brush.width x brush.height` (CSS `image-rendering: pixelated` to
+      scale up crisply) instead of `brush.name` as text; name kept as the
+      `title` tooltip
+- [x] 10.3 `index.html`/`js/workspace.js`: brush editor gets Width/Height
+      number inputs (min 3, max = current canvas width/height
+      respectively) shown before the grid; changing either re-grids from
+      blank at the new size; grid cell size computed dynamically so large
+      custom sizes still fit the panel (`style.css` custom properties)
+- [x] 10.4 `js/persistence.js`/`createCustomBrush` unchanged (already took
+      width/height as parameters) — editor now passes the user-chosen size
+      instead of the fixed 9×9 default
+- [x] 10.5 Playwright smoke pass: confirm Brushes panel hidden on Pencil,
+      visible on Brush, hidden again after switching away; confirm width/
+      height inputs clamp to [3, canvas size]; resize the editor grid and
+      save a non-square (5×4) custom brush; confirm its picker thumbnail
+      renders the pattern; re-run full `node --test` suite

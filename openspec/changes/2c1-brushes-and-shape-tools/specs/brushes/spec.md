@@ -11,10 +11,28 @@ The Brush tool SHALL offer a picker of available brush shapes, presented
 as a titled panel (a thumbnail grid, similar in layout to the Layers
 panel) rather than a bare unlabeled row; selecting one makes it the
 current brush. The system ships with two built-in shapes (Heart, Circle).
+The Brushes panel SHALL be visible only while the Brush tool is the
+current tool, the same way the Canvas Settings panel is scoped to its own
+toggle — other tools don't need it taking up space.
 
 #### Scenario: Selecting a brush
 - **WHEN** the user selects the Heart brush from the picker
 - **THEN** Heart becomes the current brush for subsequent placements
+
+#### Scenario: Panel visibility follows tool selection
+- **WHEN** the user switches to a tool other than Brush
+- **THEN** the Brushes panel is hidden, and it reappears when the Brush
+  tool is selected again
+
+### Requirement: Brush thumbnails show the pattern, not the name
+Each entry in the Brush picker SHALL show a black-on-white pixel preview
+of the brush's own pattern (scaled up, crisp/unblurred) rather than its
+name as text. The name remains available as a tooltip/title.
+
+#### Scenario: Picker shows pattern previews
+- **WHEN** the Brushes panel is open
+- **THEN** each brush entry displays a small black-and-white rendering of
+  its pixel pattern instead of its name
 
 ### Requirement: Circle brush
 The system SHALL ship a built-in Circle brush, a filled 5×5 circular
@@ -122,17 +140,33 @@ regardless of whether Rainbow is currently selected.
   other drag, rather than continuing from where the previous drag left off
 
 ### Requirement: Custom brush creation
-The Brushes panel SHALL offer an "add brush" control that opens a small
-pixel-grid editor (a fixed-size grid the user clicks or drags across to
-toggle cells on/off, independent of any project's canvas). Saving with a
-name adds it to the brush picker as a new brush, usable exactly like a
-built-in one. Canceling discards it.
+The Brushes panel SHALL offer an "add brush" control that opens a
+pixel-grid editor (a grid the user clicks or drags across to toggle cells
+on/off, independent of any project's canvas). Before drawing, the editor
+SHALL let the user choose the grid's width and height, each independently
+constrained to a minimum of 3 and a maximum of the current project's
+canvas width/height respectively (so a brush can never be larger than the
+canvas it would be used on); changing the size re-grids from a blank
+pattern. Saving with a name adds it to the brush picker as a new brush,
+usable exactly like a built-in one. Canceling discards it.
 
 #### Scenario: Creating a custom brush
 - **WHEN** the user opens the brush editor, toggles a pattern of cells on,
   names it, and saves
 - **THEN** a new brush with that pattern and name appears in the picker and
   can be placed like Heart or Circle
+
+#### Scenario: Choosing a custom brush size
+- **WHEN** the user opens the brush editor on a 32×32 canvas and sets the
+  size to 5×12
+- **THEN** the editor grid becomes 5 cells wide and 12 cells tall, and the
+  saved brush uses that same size
+
+#### Scenario: Size is bounded by the canvas
+- **WHEN** the user attempts to set a dimension below 3 or above the
+  current canvas's matching dimension
+- **THEN** the value is clamped to the nearest valid size (3 at the low
+  end, the canvas's width/height at the high end)
 
 #### Scenario: Canceling brush creation
 - **WHEN** the user opens the brush editor and cancels instead of saving

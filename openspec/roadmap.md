@@ -44,14 +44,17 @@ proposed/implemented/archived before the next starts:
     a Rainbow color-cycling mode) plus line/shape/selection tools (beyond
     Phase 1's pencil/eraser/bucket).
   - **2c2 — Color panel**: custom color picker with RGB/hex entry and
-    "add to palette", alongside Phase 1's fixed 16-swatch row. Scoped
-    down from the original "color panel and symmetry/grid" description —
-    symmetry & grid tools (mirror axes, tile preview, grid overlay
-    density) weren't requested with the color picker and are unrelated
-    in implementation; still available to pull into a later 2c2-follow-up
-    or its own change when prioritized. "Saved palettes" (persisting
-    custom swatches across sessions) is also deferred — this slice is
-    session-only.
+    "add to palette", alongside Phase 1's fixed 16-swatch row; an
+    Eyedropper tool (sample a color from the canvas); Photoshop-style
+    Foreground/Background colors (two swatches, swap, reset-to-default),
+    with Background not yet wired into any tool's drawing behavior.
+    Scoped down from the original "color panel and symmetry/grid"
+    description — symmetry & grid tools (mirror axes, tile preview, grid
+    overlay density) weren't requested with the color picker and are
+    unrelated in implementation; still available to pull into a later
+    2c2-follow-up or its own change when prioritized. "Saved palettes"
+    (persisting custom swatches across sessions) is also deferred — this
+    slice is session-only.
   - **2c3 — Full Export screen**: scale multiplier, transparent-background
     toggle (Phase 1 shipped only a single native-resolution export button).
 

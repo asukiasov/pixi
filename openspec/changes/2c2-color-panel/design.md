@@ -26,6 +26,12 @@ resets to a sane default per-project" pattern already established for
   unrelated in implementation.
 - No change to how colors are drawn (`engine.js` untouched) — this is
   entirely about how `state.currentColor` gets set.
+- No drag/live-preview sampling for the Eyedropper — a single tap
+  samples once, matching Bucket's existing point-origin interaction
+  model; continuous live-sampling while dragging is a possible future
+  refinement, not required by what was asked.
+- No wiring of Background color into any tool's drawing behavior
+  (notably not Eraser) — see the dedicated Decision below.
 
 ## Decisions
 
@@ -67,6 +73,40 @@ preset swatch already does.** Reuses the existing mutual-exclusion logic
 (`state.brushRainbow = false` on any regular color pick) rather than
 introducing a second, parallel selection concept.
 
+**Eyedropper reads from `layerStack.composite()`, the same ImageData
+already used to render the canvas — not from the active layer alone.**
+"What color is this" should mean what the user visually sees (all
+visible layers, blend modes, and opacity already baked in), not one
+layer's raw pixel, which could differ wildly under Multiply/Screen/
+Overlay blending or reduced opacity. `composite()` already exists and is
+already called every render, so this is a read of already-computed data,
+not new compositing logic. The Eyedropper is a point-origin tool like
+Bucket (no drag/live-sample support in this slice - see Non-Goals) so it
+reuses the same `onDrawStart`-only dispatch pattern Bucket already has,
+just reading instead of writing.
+
+**Foreground/Background is a rename+extension of `state.currentColor`,
+not a new parallel field kept in sync with it.** `state.currentColor`
+becomes `state.foregroundColor` (every existing read site - Pencil,
+Bucket, Brush's non-Rainbow path, Line, Rectangle - already just wants
+"the current draw color," so this is a mechanical rename); a new
+`state.backgroundColor` is added alongside it, initialized to white.
+Swap exchanges the two array references; reset sets Foreground to black
+and Background to white. No new abstraction over "which one is active for
+drawing" - Foreground unconditionally is, so every call site keeps
+reading the same field it always did (just renamed).
+
+**Background does not plug into Eraser (or anything else) in this
+slice.** Tempting to wire Background into Eraser the way Photoshop does
+on a locked/non-transparent layer, but this app's Eraser has an existing,
+explicit spec requirement that it *always* erases to full transparency
+"regardless of the canvas's background setting" (referring to the New
+Canvas white/transparent background choice, a different concept, but the
+naming collision makes it worth being explicit): changing that now would
+modify a requirement nobody asked to change, for a workflow (erase-to-
+background-color on an opaque layer) this app's layer model does not
+obviously need. Left as a clearly-flagged Non-Goal instead of guessing.
+
 ## Risks / Trade-offs
 
 - **Native color picker UI is not stylable and looks different across
@@ -76,3 +116,12 @@ introducing a second, parallel selection concept.
   session** → accepted for this slice (matches Non-Goals: no
   save/delete/organize UI for custom swatches yet); revisit if it becomes
   a real usability problem once "saved palettes" is scoped.
+- **Renaming `state.currentColor` to `state.foregroundColor` touches
+  every existing call site that reads it** (Pencil, Bucket, Brush, Line,
+  Rectangle) → mechanical, low-risk rename, but every call site needs
+  updating in the same commit to avoid a half-renamed state; covered by
+  the existing full Playwright regression pass across all those tools.
+- **A user might expect Background to do something (erase-to-background,
+  new-layer-fill, etc.) since it's a Photoshop-familiar concept** →
+  explicitly scoped out (see Decisions); if requested later, it's an
+  additive follow-up, not a rework of this slice.

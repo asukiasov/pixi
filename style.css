@@ -107,11 +107,13 @@ body {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   touch-action: none;
-  /* Marks the canvas boundary even when its content is fully transparent —
-     otherwise a transparent canvas's checkerboard is visually identical to
-     the container's own checkered background and the edges disappear. */
-  outline: 2px solid rgba(0, 0, 0, 0.35);
-  outline-offset: -1px;
+  /* Shows through the canvas's own transparent pixels, so transparency in
+     the artwork itself reads as a checkerboard, distinct from the flat
+     #e2e2e2 area surrounding the canvas. background-size is set in
+     canvas-view.js to match the current per-pixel CSS scale, so each
+     checker square is exactly one artwork pixel. */
+  background-image: repeating-conic-gradient(#cfcfcf 0% 25%, #e8e8e8 0% 50%);
+  background-position: 0 0;
 }
 
 .layers-panel {

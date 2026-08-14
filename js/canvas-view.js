@@ -66,6 +66,9 @@ export class CanvasView {
     this.#baseScale = fitScale;
     this.#canvasEl.style.width = `${width * fitScale}px`;
     this.#canvasEl.style.height = `${height * fitScale}px`;
+    // Transparency checkerboard (see style.css): one checker square per
+    // artwork pixel, so a 2x2 checker tile spans 2 pixels' worth of CSS px.
+    this.#canvasEl.style.backgroundSize = `${fitScale * 2}px ${fitScale * 2}px`;
 
     this.#scale = 1;
     this.#panX = (containerRect.width - width * fitScale) / 2;

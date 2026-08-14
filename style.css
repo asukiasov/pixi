@@ -169,7 +169,53 @@ body {
 
 /* Workspace screen */
 
-#screen-workspace {
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.workspace-screen {
+  /* Overrides .screen's column direction: tools sidebar sits beside the
+     canvas/panels column, Photoshop-style, not stacked above it. */
+  flex-direction: row;
+  height: 100%;
+}
+
+.tools-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  background: #1c1c1e;
+  border-right: 1px solid #2c2c2e;
+  overflow-y: auto;
+  flex: none;
+}
+
+.tools-sidebar .tool-button {
+  width: 2.6rem;
+  height: 2.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  padding: 0;
+}
+
+.workspace-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
   height: 100%;
 }
 
@@ -421,21 +467,37 @@ body {
   flex: 1;
 }
 
-.tab-bar {
+.bottom-bar {
   display: flex;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  gap: 0.4rem;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
   padding: 0.5rem;
   background: #1c1c1e;
   border-top: 1px solid #2c2c2e;
+  overflow-x: auto;
 }
 
-.tab-bar .tool-button {
+.bottom-bar-group {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.4rem;
+  flex: none;
+}
+
+.bottom-bar-group .tool-button {
   flex: none;
   padding: 0.6rem 0.8rem;
   font-size: 0.85rem;
   white-space: nowrap;
+}
+
+/* Same specificity as the rule above, later in source order, so it wins:
+   undo/redo are icon-only, unlike the rest of the bottom bar's text buttons. */
+.bottom-bar-group .icon-button {
+  padding: 0;
+  width: 2.6rem;
+  height: 2.6rem;
 }
 
 .tool-button:disabled {

@@ -11,6 +11,8 @@
   <script type="importmap">
     { "imports": { "dexie": "https://esm.sh/dexie@4" } }
   </script>
+  <!-- Google Material Symbols, for tool/undo/redo icons (see style.css). -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 </head>
 <body>
   <main id="screen-gallery" class="screen">
@@ -52,63 +54,93 @@
     <button type="button" id="create-canvas-button" class="primary-button">Create</button>
   </main>
 
-  <main id="screen-workspace" class="screen hidden">
-    <div id="workspace-canvas-container" class="canvas-container">
-      <canvas id="workspace-canvas"></canvas>
+  <main id="screen-workspace" class="screen workspace-screen hidden">
+    <!-- 1. Tools: vertical icon rail, Photoshop-style. -->
+    <aside id="tools-sidebar" class="tools-sidebar">
+      <button type="button" class="tool-button" data-tool="pencil" title="Pencil">
+        <span class="material-symbols-outlined">edit</span>
+      </button>
+      <button type="button" class="tool-button" data-tool="eraser" title="Eraser">
+        <span class="material-symbols-outlined">ink_eraser</span>
+      </button>
+      <button type="button" class="tool-button" data-tool="bucket" title="Bucket">
+        <span class="material-symbols-outlined">format_color_fill</span>
+      </button>
+      <button type="button" class="tool-button" data-tool="brush" title="Brush">
+        <span class="material-symbols-outlined">brush</span>
+      </button>
+      <button type="button" class="tool-button" data-tool="line" title="Line">
+        <span class="material-symbols-outlined">horizontal_rule</span>
+      </button>
+      <button type="button" class="tool-button" data-tool="rectangle" title="Rectangle">
+        <span class="material-symbols-outlined">rectangle</span>
+      </button>
+      <button type="button" class="tool-button" data-tool="selection" title="Select">
+        <span class="material-symbols-outlined">crop_free</span>
+      </button>
+    </aside>
+
+    <div class="workspace-main">
+      <div id="workspace-canvas-container" class="canvas-container">
+        <canvas id="workspace-canvas"></canvas>
+      </div>
+
+      <div id="canvas-settings-panel" class="canvas-settings-panel hidden">
+        <div class="canvas-settings-row">
+          <h2>Canvas Settings</h2>
+        </div>
+        <div class="canvas-settings-row">
+          <label class="canvas-settings-name-label">Name
+            <input type="text" id="canvas-settings-name" placeholder="Untitled" />
+          </label>
+        </div>
+        <div class="canvas-settings-row">
+          <label>W <input type="number" id="canvas-settings-width" min="1" max="256" /></label>
+          <label>H <input type="number" id="canvas-settings-height" min="1" max="256" /></label>
+          <button type="button" id="canvas-settings-apply" class="tool-button">Resize</button>
+        </div>
+        <div class="canvas-settings-row">
+          <button type="button" id="canvas-settings-rotate-ccw" class="tool-button">Rotate ↺</button>
+          <button type="button" id="canvas-settings-rotate-cw" class="tool-button">Rotate ↻</button>
+        </div>
+      </div>
+
+      <div id="layers-panel" class="layers-panel">
+        <div class="layers-panel-header">
+          <h2>Layers</h2>
+          <button type="button" id="add-layer-button" class="tool-button">+ Layer</button>
+        </div>
+        <div id="layers-panel-list" class="layers-panel-list"></div>
+      </div>
+
+      <div id="brushes-row" class="brushes-row"></div>
+
+      <div id="palette-row" class="palette-row"></div>
+
+      <div id="selection-controls" class="selection-controls hidden">
+        <button type="button" id="selection-clear-button" class="tool-button">Clear selection</button>
+        <button type="button" id="selection-delete-button" class="tool-button">Delete</button>
+      </div>
+
+      <nav class="bottom-bar">
+        <!-- 2. Additional: navigation, toggles, settings, export. -->
+        <div class="bottom-bar-group">
+          <button type="button" id="back-to-gallery-button" class="tool-button">Gallery</button>
+          <button type="button" id="pixel-perfect-toggle" class="tool-button">Pixel-perfect</button>
+          <button type="button" id="canvas-settings-toggle" class="tool-button">Canvas Settings</button>
+          <button type="button" id="export-button" class="tool-button">Export PNG</button>
+        </div>
+        <!-- 3. Undo/redo. -->
+        <div class="bottom-bar-group">
+          <button type="button" id="undo-button" class="tool-button icon-button" disabled title="Undo">
+            <span class="material-symbols-outlined">undo</span>
+          </button>
+          <button type="button" id="redo-button" class="tool-button icon-button" disabled title="Redo">
+            <span class="material-symbols-outlined">redo</span>
+          </button>
+        </div>
+      </nav>
     </div>
-
-    <div id="canvas-settings-panel" class="canvas-settings-panel hidden">
-      <div class="canvas-settings-row">
-        <h2>Canvas Settings</h2>
-      </div>
-      <div class="canvas-settings-row">
-        <label class="canvas-settings-name-label">Name
-          <input type="text" id="canvas-settings-name" placeholder="Untitled" />
-        </label>
-      </div>
-      <div class="canvas-settings-row">
-        <label>W <input type="number" id="canvas-settings-width" min="1" max="256" /></label>
-        <label>H <input type="number" id="canvas-settings-height" min="1" max="256" /></label>
-        <button type="button" id="canvas-settings-apply" class="tool-button">Resize</button>
-      </div>
-      <div class="canvas-settings-row">
-        <button type="button" id="canvas-settings-rotate-ccw" class="tool-button">Rotate ↺</button>
-        <button type="button" id="canvas-settings-rotate-cw" class="tool-button">Rotate ↻</button>
-      </div>
-    </div>
-
-    <div id="layers-panel" class="layers-panel">
-      <div class="layers-panel-header">
-        <h2>Layers</h2>
-        <button type="button" id="add-layer-button" class="tool-button">+ Layer</button>
-      </div>
-      <div id="layers-panel-list" class="layers-panel-list"></div>
-    </div>
-
-    <div id="brushes-row" class="brushes-row"></div>
-
-    <div id="palette-row" class="palette-row"></div>
-
-    <div id="selection-controls" class="selection-controls hidden">
-      <button type="button" id="selection-clear-button" class="tool-button">Clear selection</button>
-      <button type="button" id="selection-delete-button" class="tool-button">Delete</button>
-    </div>
-
-    <nav class="tab-bar">
-      <button type="button" id="back-to-gallery-button" class="tool-button">Gallery</button>
-      <button type="button" class="tool-button" data-tool="pencil">Pencil</button>
-      <button type="button" class="tool-button" data-tool="eraser">Eraser</button>
-      <button type="button" class="tool-button" data-tool="bucket">Bucket</button>
-      <button type="button" class="tool-button" data-tool="brush">Brush</button>
-      <button type="button" class="tool-button" data-tool="line">Line</button>
-      <button type="button" class="tool-button" data-tool="rectangle">Rectangle</button>
-      <button type="button" class="tool-button" data-tool="selection">Select</button>
-      <button type="button" id="pixel-perfect-toggle" class="tool-button">Pixel-perfect</button>
-      <button type="button" id="canvas-settings-toggle" class="tool-button">Canvas Settings</button>
-      <button type="button" id="undo-button" class="tool-button" disabled>Undo</button>
-      <button type="button" id="redo-button" class="tool-button" disabled>Redo</button>
-      <button type="button" id="export-button" class="tool-button">Export PNG</button>
-    </nav>
   </main>
 
   <script type="module" src="js/app.js"></script>

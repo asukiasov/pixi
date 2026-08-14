@@ -1,6 +1,7 @@
 // Owns the workspace <canvas> element, its 2D context, and pointer-driven
-// draw/pan/zoom interaction. Reports grid-coordinate draw events upward via
-// handlers; knows nothing about tools, colors, or the undo stack.
+// draw/pan/zoom interaction. Renders a LayerStack's composited output;
+// reports grid-coordinate draw events upward via handlers. Knows nothing
+// about tools, colors, layers, or the undo stack.
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 8;
@@ -8,7 +9,7 @@ const MAX_SCALE = 8;
 export class CanvasView {
   #canvasEl;
   #containerEl;
-  #engine;
+  #layerStack;
   #ctx;
   #handlers = {};
 
@@ -23,10 +24,10 @@ export class CanvasView {
   #pinchMidpoint = null;
   #pinchDist = 0;
 
-  constructor(canvasEl, containerEl, engine) {
+  constructor(canvasEl, containerEl, layerStack) {
     this.#canvasEl = canvasEl;
     this.#containerEl = containerEl;
-    this.#engine = engine;
+    this.#layerStack = layerStack;
     this.#ctx = canvasEl.getContext('2d');
 
     // Required so Chrome/mobile browsers don't intercept two-finger
@@ -45,15 +46,15 @@ export class CanvasView {
     this.#handlers = handlers;
   }
 
-  setEngine(engine) {
-    this.#engine = engine;
+  setLayerStack(layerStack) {
+    this.#layerStack = layerStack;
     this.resetView();
     this.render();
   }
 
   /** Fits the canvas to the container and centers it at 1x zoom. */
   resetView() {
-    const { width, height } = this.#engine;
+    const { width, height } = this.#layerStack;
     this.#canvasEl.width = width;
     this.#canvasEl.height = height;
 
@@ -73,9 +74,7 @@ export class CanvasView {
   }
 
   render() {
-    const { width, height, data } = this.#engine;
-    const imageData = new ImageData(new Uint8ClampedArray(data), width, height);
-    this.#ctx.putImageData(imageData, 0, 0);
+    this.#ctx.putImageData(this.#layerStack.composite(), 0, 0);
   }
 
   #applyTransform() {
@@ -85,8 +84,8 @@ export class CanvasView {
 
   #toGridPoint(clientX, clientY) {
     const rect = this.#canvasEl.getBoundingClientRect();
-    const x = Math.floor(((clientX - rect.left) / rect.width) * this.#engine.width);
-    const y = Math.floor(((clientY - rect.top) / rect.height) * this.#engine.height);
+    const x = Math.floor(((clientX - rect.left) / rect.width) * this.#layerStack.width);
+    const y = Math.floor(((clientY - rect.top) / rect.height) * this.#layerStack.height);
     return { x, y };
   }
 

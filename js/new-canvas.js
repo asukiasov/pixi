@@ -1,4 +1,4 @@
-import { PixelEngine } from './engine.js';
+import { LayerStack } from './layers.js';
 
 const PRESETS = [16, 32, 64, 128];
 const MIN_SIZE = 1;
@@ -10,8 +10,8 @@ function clampSize(value) {
 
 /**
  * Wires up the New Canvas screen: size presets + custom size, background
- * choice, and a Create button that allocates a PixelEngine and hands it to
- * `onCanvasCreated`.
+ * choice, and a Create button that allocates a LayerStack (one starting
+ * layer at the chosen background) and hands it to `onCanvasCreated`.
  */
 export function initNewCanvasScreen({ onCanvasCreated }) {
   const presetButtons = document.querySelectorAll('#size-presets .preset-button');
@@ -44,7 +44,7 @@ export function initNewCanvasScreen({ onCanvasCreated }) {
     const height = clampSize(customHeight ?? selectedPreset);
     const background = currentBackground();
 
-    const engine = new PixelEngine(width, height, background);
-    onCanvasCreated(engine);
+    const layerStack = new LayerStack(width, height, background);
+    onCanvasCreated(layerStack);
   });
 }

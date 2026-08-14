@@ -20,22 +20,22 @@ showScreen('newCanvas');
 let canvasView = null;
 
 initNewCanvasScreen({
-  onCanvasCreated(engine) {
+  onCanvasCreated(layerStack) {
     const canvasEl = document.getElementById('workspace-canvas');
     const containerEl = document.getElementById('workspace-canvas-container');
 
     showScreen('workspace');
 
     if (!canvasView) {
-      canvasView = new CanvasView(canvasEl, containerEl, engine);
+      canvasView = new CanvasView(canvasEl, containerEl, layerStack);
       canvasView.resetView();
       canvasView.render();
     } else {
-      canvasView.setEngine(engine);
+      canvasView.setLayerStack(layerStack);
     }
 
     initWorkspace({
-      engine,
+      layerStack,
       canvasView,
       onRequestNewCanvas: () => showScreen('newCanvas'),
     });

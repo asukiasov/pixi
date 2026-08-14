@@ -109,6 +109,109 @@ body {
   touch-action: none;
 }
 
+.layers-panel {
+  max-height: 9rem;
+  overflow-y: auto;
+  background: #1c1c1e;
+  border-top: 1px solid #2c2c2e;
+  flex: none;
+}
+
+.layers-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.5rem;
+}
+
+.layers-panel-header h2 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #a0a0a5;
+  margin: 0;
+}
+
+.layers-panel-header .tool-button {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.layers-panel-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  border-top: 1px solid #2c2c2e;
+}
+
+.layer-row.active {
+  background: #2c2c2e;
+}
+
+.layer-visibility-toggle {
+  flex: none;
+  width: 1.6rem;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 1rem;
+  padding: 0;
+}
+
+.layer-name-input {
+  flex: 1 1 4rem;
+  min-width: 3rem;
+  background: transparent;
+  border: 1px solid transparent;
+  color: inherit;
+  font-size: 0.85rem;
+  padding: 0.15rem 0.3rem;
+  border-radius: 0.3rem;
+}
+
+.layer-name-input:focus {
+  border-color: #48484a;
+  outline: none;
+}
+
+.layer-opacity-slider {
+  flex: none;
+  width: 3.5rem;
+}
+
+.layer-blend-select {
+  flex: none;
+  background: #2c2c2e;
+  color: inherit;
+  border: 1px solid #48484a;
+  border-radius: 0.3rem;
+  font-size: 0.75rem;
+  max-width: 5.5rem;
+}
+
+.layer-reorder-button,
+.layer-delete-button {
+  flex: none;
+  width: 1.6rem;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 0.9rem;
+  padding: 0;
+}
+
+.layer-reorder-button:disabled,
+.layer-delete-button:disabled,
+.layer-visibility-toggle:disabled {
+  opacity: 0.3;
+}
+
 .palette-row {
   display: flex;
   gap: 0.35rem;

@@ -1,10 +1,19 @@
+# canvas-settings Specification
+
 ## Purpose
 
-Lets a user change an existing project's canvas dimensions or orientation
-after creation, instead of being locked into what they picked in New
-Canvas.
+Lets a user change an existing project's name, canvas dimensions, or
+orientation after creation, instead of being locked into what they picked
+in New Canvas.
 
-## ADDED Requirements
+## Requirements
+
+### Requirement: Rename project
+The user SHALL be able to change the current project's name.
+
+#### Scenario: Renaming a project
+- **WHEN** the user sets a new name in Canvas Settings
+- **THEN** the project's name updates and is reflected in the Gallery
 
 ### Requirement: Resize (crop/pad) canvas
 The user SHALL be able to change the current project's width and height

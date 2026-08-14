@@ -45,25 +45,19 @@ the newly allocated canvas ready to draw on.
 - **THEN** the app displays the Workspace screen with a canvas of the chosen
   size and background, containing no strokes yet
 
-### Requirement: Return to New Canvas from Workspace
-The Workspace screen SHALL offer a way back to the New Canvas screen so the
-user can start a different canvas. Since this slice has no persistence,
-leaving the current canvas SHALL require confirmation so in-progress work
-isn't discarded silently.
+### Requirement: Return to Gallery from Workspace
+The Workspace screen SHALL offer a way back to the Gallery so the user can
+open a different project or start a new one. Since every action auto-saves
+(see the `local-persistence` capability), leaving the current canvas SHALL
+NOT require confirmation — there is nothing to lose.
 
-#### Scenario: User navigates back to start a new canvas
-- **WHEN** the user taps the Workspace's "New" control and confirms leaving
-- **THEN** the app displays the New Canvas screen and the previous canvas's
-  pixel data is discarded
+#### Scenario: User navigates back to the Gallery
+- **WHEN** the user taps the Workspace's back control
+- **THEN** the app displays the Gallery, and the previous project's current
+  state remains saved exactly as it was
 
-#### Scenario: User cancels leaving
-- **WHEN** the user taps the Workspace's "New" control and declines to
-  confirm
-- **THEN** the app remains on the Workspace screen with the current canvas
-  unchanged
-
-#### Scenario: Creating a second canvas after returning
-- **WHEN** the user returns to New Canvas and creates another canvas
-- **THEN** the Workspace behaves identically to the first canvas (drawing,
-  undo/redo, palette, and export all work correctly, with no leftover state
-  or duplicated event handling from the previous canvas)
+#### Scenario: Opening a different project after returning
+- **WHEN** the user returns to the Gallery and opens a different project
+- **THEN** the Workspace behaves identically to the first project (drawing,
+  undo/redo, palette, layers, and export all work correctly, with no
+  leftover state or duplicated event handling from the previous project)

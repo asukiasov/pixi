@@ -43,8 +43,12 @@ proposed/implemented/archived before the next starts:
 
 Status: **2a done** — archived at
 `openspec/changes/archive/2026-08-14-2a-layers/`, spec lives at
-`openspec/specs/layers/`. **2b proposed** —
-`openspec/changes/2b-local-persistence-gallery/`. 2c not started.
+`openspec/specs/layers/`. **2b done** — archived at
+`openspec/changes/archive/2026-08-14-2b-local-persistence-gallery/`, specs
+live at `openspec/specs/local-persistence/`, `openspec/specs/gallery/`,
+`openspec/specs/canvas-settings/`. **2c not started** — full color/palette
+panel, symmetry & grid tools, line/shape/selection tools, full Export
+screen.
 
 ## Phase 3 — Supabase Auth + sync
 

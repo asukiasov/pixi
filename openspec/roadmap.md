@@ -41,9 +41,9 @@ proposed/implemented/archived before the next starts:
   **Export** screen (scale multiplier, transparent-background toggle — Phase
   1 shipped only a single native-resolution export button).
 
-Status: 2a in progress — `openspec/changes/2a-layers/`. 2b and 2c not
-started; not detailed further until 2a is done, since implementing layers
-may reveal constraints worth reflecting in their specs.
+Status: **2a done** — archived at
+`openspec/changes/archive/2026-08-14-2a-layers/`, spec lives at
+`openspec/specs/layers/`. 2b and 2c not started.
 
 ## Phase 3 — Supabase Auth + sync
 

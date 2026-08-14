@@ -629,7 +629,19 @@ function drawShapePreview() {
   state.strokeEngine.data.set(state.strokeBackup);
   const rgba = colorForCurrentTool();
   if (state.currentTool === 'line') {
-    state.strokeEngine.strokeFreehand([state.dragStart, state.dragCurrent], rgba, state.pixelPerfect);
+    if (state.brushRainbow) {
+      // Rainbow also applies to the Line tool: each pixel along the line
+      // gets the next color in the same cycling sequence Brush uses,
+      // stepping by index along the line's own rasterized path (a single
+      // straight segment, so no pixel-perfect corner removal is needed -
+      // that only matters for multi-segment freehand paths).
+      const path = bresenhamLine(state.dragStart.x, state.dragStart.y, state.dragCurrent.x, state.dragCurrent.y);
+      path.forEach((p, i) => {
+        state.strokeEngine.setPixel(p.x, p.y, rainbowColor(i * RAINBOW_HUE_STEP));
+      });
+    } else {
+      state.strokeEngine.strokeFreehand([state.dragStart, state.dragCurrent], rgba, state.pixelPerfect);
+    }
   } else if (state.currentTool === 'rectangle') {
     drawRectangle(
       state.strokeEngine,

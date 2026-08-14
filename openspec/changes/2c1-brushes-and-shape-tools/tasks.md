@@ -221,3 +221,16 @@
       Spacing 6, confirm each successive stamp along the trail is visibly
       rotated further than the last; confirm Rotation 0 keeps every stamp
       upright and identical; re-run full `node --test` suite
+
+## 13. Rainbow also applies to the Line tool
+
+- [x] 13.1 `js/workspace.js`: `drawShapePreview()`'s `'line'` branch — when
+      `state.brushRainbow` is set, rasterize the line via `bresenhamLine`
+      and `setPixel` each point with `rainbowColor(i * RAINBOW_HUE_STEP)`
+      instead of calling `strokeFreehand` with a fixed color (pixel-perfect
+      corner removal doesn't apply here - a single straight segment has no
+      multi-segment corners to remove)
+- [x] 13.2 Playwright smoke pass: draw a line with Rainbow selected and
+      confirm it renders with cycling colors along its length, matching
+      the same sequence Brush uses; confirm a regular color still draws a
+      solid-color line; re-run full `node --test` suite

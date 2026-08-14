@@ -144,28 +144,37 @@ color deselects the previous one. While Rainbow is the selected color,
 each brush placed (whether from a single tap or a dragged trail) SHALL use
 the next color in a cycling rainbow sequence instead of a fixed color; the
 sequence advances by a fixed hue step per brush placed and wraps around.
-Rainbow only affects the Brush tool: other tools (pencil, bucket, line,
-rectangle) SHALL keep using the last regular color that was selected,
-regardless of whether Rainbow is currently selected.
+Rainbow also applies to the Line tool: each pixel along a drawn line SHALL
+use the next color in the same cycling sequence, stepping once per pixel
+along the line. Rainbow does not affect any other tool (pencil, eraser,
+bucket, rectangle): they SHALL keep using the last regular color that was
+selected, regardless of whether Rainbow is currently selected.
 
 #### Scenario: Placing brushes with Rainbow selected
 - **WHEN** Rainbow is the selected color and the user drags the Brush tool
 - **THEN** consecutive brushes along the trail have different, cyclically
   progressing colors
 
+#### Scenario: Drawing a line with Rainbow selected
+- **WHEN** Rainbow is the selected color and the user draws with the Line
+  tool
+- **THEN** consecutive pixels along the drawn line have different,
+  cyclically progressing colors, the same sequence Brush uses
+
 #### Scenario: A regular color is selected instead
 - **WHEN** the user selects a regular palette color (deselecting Rainbow)
-- **THEN** every brush placed (single tap or dragged trail) uses that
-  color, as before
+- **THEN** every brush placed (single tap or dragged trail) and every line
+  drawn uses that color, as before
 
 #### Scenario: Rainbow selected has no effect on other tools
 - **WHEN** Rainbow is the selected color and the user draws with pencil,
-  eraser, bucket, line, or rectangle
+  eraser, bucket, or rectangle
 - **THEN** that tool uses the last regular color that was selected, not a
   rainbow-cycling color
 
-#### Scenario: Each new drag restarts the rainbow sequence
-- **WHEN** the user starts a new Brush drag while Rainbow is selected
+#### Scenario: Each new drag or line restarts the rainbow sequence
+- **WHEN** the user starts a new Brush drag, or draws a new line, while
+  Rainbow is selected
 - **THEN** the color sequence restarts from the same starting hue as any
   other drag, rather than continuing from where the previous drag left off
 

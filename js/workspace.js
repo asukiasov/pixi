@@ -1,8 +1,11 @@
 import { UndoStack } from './undo.js';
 import { saveProject, renameProject } from './persistence.js';
 import { initCanvasSettings } from './canvas-settings.js';
-import { STAMPS, placeStamp } from './stamps.js';
+import { BRUSHES, placeBrush, rainbowColor } from './brushes.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
+import { bresenhamLine } from './engine.js';
+
+const RAINBOW_HUE_STEP = 20; // degrees per brush placed, in Rainbow mode
 
 const PALETTE = [
   '#000000', '#ffffff', '#9d9d9d', '#4a4a4a',
@@ -21,7 +24,7 @@ function hexToRgba(hex) {
 /**
  * Whether a point is inside `selection` (or there's no active selection,
  * in which case everywhere counts as "inside"). Used to guard point-origin
- * tools (bucket, stamp): unlike a drag, which clips per-pixel regardless of
+ * tools (bucket, brush): unlike a drag, which clips per-pixel regardless of
  * where it starts, a single-tap tool must have literally no effect when
  * the tap itself lands outside the selection — bucket fill in particular
  * would otherwise spread through the whole connected region and only get
@@ -213,7 +216,7 @@ function bindDomOnce() {
   const pixelPerfectToggle = document.getElementById('pixel-perfect-toggle');
   const rectangleFillToggle = document.getElementById('rectangle-fill-toggle');
   const paletteRow = document.getElementById('palette-row');
-  const stampsRow = document.getElementById('stamps-row');
+  const brushesRow = document.getElementById('brushes-row');
   const backToGalleryButton = document.getElementById('back-to-gallery-button');
 
   toolButtons.forEach((button) => {
@@ -241,23 +244,40 @@ function bindDomOnce() {
     if (index === 0) swatch.classList.add('active');
     swatch.addEventListener('click', () => {
       state.currentColor = hexToRgba(hex);
+      // Picking a regular color deselects Rainbow, the same way it
+      // deselects any other previously-picked color.
+      state.brushRainbow = false;
       paletteRow.querySelectorAll('.palette-swatch').forEach((s) => s.classList.toggle('active', s === swatch));
     });
     paletteRow.appendChild(swatch);
   });
 
-  STAMPS.forEach((stamp, index) => {
+  // "Rainbow" lives in the same palette row as a selectable color, mutually
+  // exclusive with picking a regular one — not a separate toggle button.
+  // Only the Brush tool reads state.brushRainbow; every other tool just
+  // keeps using state.currentColor, which selecting Rainbow never touches.
+  const rainbowSwatch = document.createElement('button');
+  rainbowSwatch.type = 'button';
+  rainbowSwatch.className = 'palette-swatch rainbow-swatch';
+  rainbowSwatch.title = 'Rainbow (Brush tool only)';
+  rainbowSwatch.addEventListener('click', () => {
+    state.brushRainbow = true;
+    paletteRow.querySelectorAll('.palette-swatch').forEach((s) => s.classList.toggle('active', s === rainbowSwatch));
+  });
+  paletteRow.appendChild(rainbowSwatch);
+
+  BRUSHES.forEach((brush, index) => {
     const swatch = document.createElement('button');
     swatch.type = 'button';
-    swatch.className = 'stamp-swatch';
-    swatch.textContent = stamp.name;
-    swatch.title = stamp.name;
+    swatch.className = 'brush-swatch';
+    swatch.textContent = brush.name;
+    swatch.title = brush.name;
     if (index === 0) swatch.classList.add('active');
     swatch.addEventListener('click', () => {
-      state.currentStamp = stamp;
-      stampsRow.querySelectorAll('.stamp-swatch').forEach((s) => s.classList.toggle('active', s === swatch));
+      state.currentBrush = brush;
+      brushesRow.querySelectorAll('.brush-swatch').forEach((s) => s.classList.toggle('active', s === swatch));
     });
-    stampsRow.appendChild(swatch);
+    brushesRow.appendChild(swatch);
   });
 
   state.undoButton.addEventListener('click', () => {
@@ -380,7 +400,23 @@ function drawShapePreview() {
 }
 
 /**
- * Wires the Workspace tab bar, palette, stamps row, Layers panel, Canvas
+ * Redraws the entire accumulated Brush drag path from the pre-drag backup:
+ * one brush placement per point in `state.brushPath`, colored by rainbow
+ * hue (index-based, so redrawing from scratch each move naturally keeps
+ * the sequence deterministic — no persistent counter to reset between
+ * drags) when Rainbow mode is on, or the selected palette color otherwise.
+ */
+function redrawBrushPath() {
+  state.strokeEngine.data.set(state.strokeBackup);
+  state.brushPath.forEach((point, i) => {
+    const rgba = state.brushRainbow ? rainbowColor(i * RAINBOW_HUE_STEP) : state.currentColor;
+    placeBrush(state.strokeEngine, point.x, point.y, state.currentBrush, rgba);
+  });
+  clipToSelection(state.strokeEngine, state.strokeBackup, state.selection);
+}
+
+/**
+ * Wires the Workspace tab bar, palette, brushes row, Layers panel, Canvas
  * Settings panel, and selection controls to `layerStack` and `canvasView`,
  * and owns the undo/redo stack and auto-save for the current project. Safe
  * to call repeatedly (once per project opened or created in a session) —
@@ -397,7 +433,9 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     undoStack: new UndoStack(),
     currentTool: 'pencil',
     currentColor: hexToRgba(PALETTE[0]),
-    currentStamp: STAMPS[0],
+    currentBrush: BRUSHES[0],
+    brushRainbow: false,
+    brushPath: [],
     pixelPerfect: false,
     rectangleFilled: false,
     selection: null,
@@ -458,21 +496,25 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
         return;
       }
 
-      if (tool === 'stamp') {
-        if (!isPointInSelection(point, state.selection)) return;
-        const backup = activeEngine.data.slice();
-        placeStamp(activeEngine, point.x, point.y, state.currentStamp, state.currentColor);
-        clipToSelection(activeEngine, backup, state.selection);
-        state.canvasView.render();
-        commit();
-        return;
-      }
-
       // Captured once per stroke/drag: if the active layer changes mid-
       // gesture (shouldn't normally happen, but guards against it), it
       // keeps targeting the layer it started on.
       state.strokeEngine = activeEngine;
       state.strokeBackup = activeEngine.data.slice();
+
+      if (tool === 'brush') {
+        if (!isPointInSelection(point, state.selection)) {
+          // No pixels change if the drag doesn't even start inside an
+          // active selection — same reasoning as Bucket's origin guard.
+          state.strokeEngine = null;
+          state.strokeBackup = null;
+          return;
+        }
+        state.brushPath = [point];
+        redrawBrushPath();
+        state.canvasView.render();
+        return;
+      }
 
       if (tool === 'line' || tool === 'rectangle') {
         state.dragStart = point;
@@ -508,6 +550,18 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
         return;
       }
 
+      if (tool === 'brush') {
+        const last = state.brushPath[state.brushPath.length - 1];
+        if (last.x === point.x && last.y === point.y) return;
+        // Interpolate so a fast drag that jumps several pixels between
+        // move events doesn't skip brush placements along the way.
+        const segment = bresenhamLine(last.x, last.y, point.x, point.y);
+        for (const p of segment.slice(1)) state.brushPath.push(p);
+        redrawBrushPath();
+        state.canvasView.render();
+        return;
+      }
+
       // pencil / eraser: redraw the whole stroke from a clean backup each
       // move so pixel-perfect corner removal (which depends on later
       // points) stays correct. In-progress drawing, not a committed
@@ -537,6 +591,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
       state.strokeEngine = null;
       state.strokeBackup = null;
       state.strokePoints = [];
+      state.brushPath = [];
       state.dragStart = null;
       state.dragCurrent = null;
       commit();
@@ -559,6 +614,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
       state.strokeEngine = null;
       state.strokeBackup = null;
       state.strokePoints = [];
+      state.brushPath = [];
       state.dragStart = null;
       state.dragCurrent = null;
     },

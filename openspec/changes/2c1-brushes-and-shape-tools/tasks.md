@@ -1,8 +1,8 @@
-## 1. Stamps (`js/stamps.js`)
+## 1. Brushes (`js/brushes.js`)
 
-- [x] 1.1 Define the stamp pattern registry (`{ id, name, width, height,
+- [x] 1.1 Define the brush pattern registry (`{ id, name, width, height,
       pixels }`); implement the Heart pattern (9×8, per design.md)
-- [x] 1.2 Implement `placeStamp(engine, centerX, centerY, stamp, rgba)`:
+- [x] 1.2 Implement `placeBrush(engine, centerX, centerY, brush, rgba)`:
       centers on the point, relies on `setPixel`'s existing bounds check
       for edge clipping
 - [x] 1.3 Unit tests (`node --test`): placement centering, edge clipping
@@ -27,9 +27,10 @@
 - [x] 3.2 Add Rectangle tool (with an outline/filled toggle): same
       backup/restore/preview/commit pattern as Line, using
       `drawRectangle()`
-- [x] 3.3 Add Stamps tool: `onDrawStart` backs up, calls `placeStamp()`,
+- [x] 3.3 Add Brush tool: `onDrawStart` backs up, calls `placeBrush()`,
       applies selection clip (if active), `commit()`; ignores
-      `onDrawMove`/`onDrawEnd`
+      `onDrawMove`/`onDrawEnd`. **Superseded by section 7** — the Brushes
+      tool now supports continuous placement while dragging
 - [x] 3.4 Add Selection tool: `onDrawStart` captures start point,
       `onDrawMove` updates `canvasView.setSelectionRect()` with the current
       drag rect (no pixel writes), `onDrawEnd` finalizes
@@ -53,7 +54,7 @@
 
 ## 5. HTML/CSS
 
-- [x] 5.1 `index.html`: Stamps picker row (mirroring the palette row), Line/
+- [x] 5.1 `index.html`: Brushes picker row (mirroring the palette row), Line/
       Rectangle/Selection tool buttons, outline/filled toggle, Clear
       selection + Delete controls. **Revised**: the selection overlay
       element is created dynamically in `canvas-view.js`'s constructor
@@ -63,9 +64,9 @@
 
 ## 6. Verification
 
-- [x] 6.1 Playwright smoke pass: place the Heart stamp (including near an
+- [x] 6.1 Playwright smoke pass: place the Heart brush (including near an
       edge), draw a line, draw outline and filled rectangles, make a
-      selection and confirm pencil/bucket/stamp are clipped to it, delete a
+      selection and confirm pencil/bucket/brush are clipped to it, delete a
       selection's contents, undo each action type
 - [x] 6.2 Re-run the full `node --test` suite to confirm no regressions
 - [x] 6.3 **Bug found during verification**: clicking Bucket *outside* an
@@ -74,9 +75,50 @@
       before `clipToSelection` runs, so a click outside a selection on a
       uniform-color canvas filled the selection anyway, violating "drawing
       outside a selection has no effect." Fixed by adding an explicit
-      `isPointInSelection` origin guard on Bucket and Stamp (point-origin
+      `isPointInSelection` origin guard on Bucket and Brush (point-origin
       tools) that no-ops the whole operation if the tap point itself is
       outside the selection — before even computing the fill/placement.
       Drag-based tools (pencil/eraser/line/rectangle) didn't need this: their
       existing per-pixel `clipToSelection` already correctly handles a drag
       that starts outside and enters the selection.
+
+## 7. Continuous brush placement + Rainbow color mode
+
+- [x] 7.1 `js/engine.js`: export the existing (previously private)
+      `bresenhamLine` helper for reuse — no behavior change
+- [x] 7.2 `js/brushes.js`: implement `rainbowColor(hue)` — HSL(hue, 100%,
+      50%) to the engine's RGBA array format
+- [x] 7.3 `js/workspace.js`: rework the Brush tool to handle
+      `onDrawMove`/`onDrawEnd`: `onDrawStart` seeds `state.brushPath` with
+      the first point; `onDrawMove` appends the new point plus every
+      intermediate pixel since the last one (via `bresenhamLine`, so fast
+      drags don't skip brushes), then calls `redrawBrushPath()`; `onDrawEnd`
+      commits the whole trail as one undo step
+- [x] 7.4 Implement `redrawBrushPath()`: restores the pre-drag backup, then
+      places one brush per point in `state.brushPath`, colored
+      `state.brushRainbow ? rainbowColor(i * RAINBOW_HUE_STEP) :
+      state.currentColor` (`i` = point index), then applies the selection
+      clip
+- [x] 7.5 Add Rainbow as a selectable entry in the color palette row
+      (`index.html`/`style.css`/`js/workspace.js`), not a separate toggle
+      button — **revised per feedback after initial toggle-button
+      implementation**. Mutually exclusive with picking a regular color
+      (picking either deselects the other); sets `state.brushRainbow`,
+      read only by the Brush tool — every other tool keeps using
+      `state.currentColor`, which selecting Rainbow never touches
+- [x] 7.6 Unit tests (`node --test`) for `rainbowColor`: known hue → RGB
+      values, wraps correctly past 360°
+
+## 8. Verification (continuous brushes + rainbow)
+
+- [x] 8.1 Playwright smoke pass: drag the Brush tool with Rainbow off
+      (confirm a same-color trail, not just one brush), drag with Rainbow
+      on (confirm visibly different colors along the trail), undo a dragged
+      trail (confirm it reverts as one action, not brush-by-brush), confirm
+      the trail still respects an active selection
+- [x] 8.2 Re-run the full `node --test` suite to confirm no regressions
+- [x] 8.3 Mid-implementation rename: "Stamps" → "Brushes" throughout (files,
+      code, tests, UI, specs) per feedback, to avoid an awkward name once
+      more shapes/custom brushes exist. Custom (user-drawn) brush creation
+      noted in `openspec/roadmap.md`'s "Not yet scheduled" section, not
+      built in this slice per explicit direction

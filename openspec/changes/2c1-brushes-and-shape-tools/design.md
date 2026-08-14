@@ -12,7 +12,7 @@ pattern already established for pencil's pixel-perfect mode.
 ## Goals / Non-Goals
 
 **Goals:**
-- Stamps: one shipped shape (Heart), but adding a second shape later is
+- Brushes: one shipped shape (Heart), but adding a second shape later is
   purely a data addition.
 - Line/Rectangle: live preview while dragging, reusing existing engine
   primitives wherever possible.
@@ -21,13 +21,13 @@ pattern already established for pencil's pixel-perfect mode.
 
 **Non-Goals:**
 - Moving, cutting, or copying a selection's contents.
-- Stamp rotation, flipping, or resizing; more than one shipped stamp.
+- Brush rotation, flipping, or resizing; more than one shipped brush.
 - Any change to `engine.js`'s public API.
 
 ## Decisions
 
-**Stamps are a plain pattern registry, no engine changes.**
-`js/stamps.js` exports a list of `{ id, name, width, height, pixels }`,
+**Brushes are a plain pattern registry, no engine changes.**
+`js/brushes.js` exports a list of `{ id, name, width, height, pixels }`,
 where `pixels` is an array of `[dx, dy]` offsets (relative to the pattern's
 top-left) that are "on". Heart is defined as a fixed bitmap (9 wide × 8
 tall — an approximation of the reference image's proportions, easy to
@@ -44,7 +44,7 @@ XXXXXXXXX
 ....X....
 ```
 
-Placement (`placeStamp(engine, centerX, centerY, stamp, rgba)`): top-left =
+Placement (`placeBrush(engine, centerX, centerY, brush, rgba)`): top-left =
 `(centerX - floor(width/2), centerY - floor(height/2))`; for every "on"
 offset, `engine.setPixel(topLeftX + dx, topLeftY + dy, rgba)` —
 `setPixel`'s existing bounds check silently drops out-of-canvas pixels, so
@@ -65,10 +65,10 @@ need `strokeFreehand`).
 `engine.js`.** A selection is `{ x, y, width, height }` in grid coords,
 held in `workspace.js`'s module state only — per the spec, making/clearing
 a selection is not itself a canvas edit and isn't part of undo history.
-Every committed draw operation (stroke end, bucket fill, stamp placement,
+Every committed draw operation (stroke end, bucket fill, brush placement,
 line, rectangle) already has (or gains) a full pre-operation backup of the
 active layer's buffer — pencil/eraser already capture one for the
-pixel-perfect live-redraw; bucket/stamp/line/rectangle gain the same. After
+pixel-perfect live-redraw; bucket/brush/line/rectangle gain the same. After
 the operation writes its pixels, one new step runs if a selection is
 active: `clipToSelection(engine, backup, selection)` — for every pixel
 *outside* the selection rect, copy that pixel's value back from `backup`,
@@ -100,10 +100,29 @@ backup-restore-redraw pattern, generalized to different "what to draw"
 logic per tool — no `canvas-view.js` changes needed for the drag mechanics
 themselves.
 
-**Stamp tool ignores `onDrawMove`/`onDrawEnd`.** Like bucket, a stamp
-places on `onDrawStart` only; dragging with the Stamps tool active has no
-effect (no live preview in this slice — noted as a nice-to-have, not
-required by the spec).
+**Revised: Brush tool now handles `onDrawMove`/`onDrawEnd` too, for
+continuous placement.** Originally brush only placed on `onDrawStart`
+(bucket-like, single tap). It now accumulates a path of brush-center points
+across the whole drag (`onDrawStart` seeds it with the first point;
+`onDrawMove` appends the new point plus every intermediate pixel between it
+and the last recorded one, via `engine.js`'s existing Bresenham line
+helper — now exported as `bresenhamLine`, reused rather than duplicated —
+so a fast drag that jumps several pixels between move events doesn't skip
+any brushes). Each move redraws the *entire* accumulated path from the
+pre-drag backup (same pattern as pencil's live redraw), placing one brush
+per path point; `onDrawEnd` commits the whole trail as a single undo step.
+
+**Rainbow color cycling is per-placement, tracked by an index into the
+path, not global mutable state.** `redrawBrushPath()` walks
+`state.brushPath` and computes each brush's color as
+`state.brushRainbow ? rainbowColor(i * RAINBOW_HUE_STEP) : state.currentColor`
+(`i` = the point's index in the path). Because the whole path is redrawn
+from a clean backup on every move (not incrementally advanced), a fixed
+per-index hue step naturally satisfies "each new drag restarts the
+sequence" — there's no persistent hue counter to reset. `rainbowColor(hue)`
+(`js/brushes.js`) converts an HSL(hue, 100%, 50%) color to the engine's RGBA
+array format; `RAINBOW_HUE_STEP = 20` degrees per brush (18-ish visibly
+distinct steps around the wheel before repeating).
 
 ## Risks / Trade-offs
 
@@ -113,19 +132,23 @@ required by the spec).
   teaching `floodFill` about a bounds predicate.
 - [Heart's exact pixel shape is an approximation of the reference image,
   not a pixel-for-pixel trace] → Acceptable; easy to retune the bitmap
-  later since it's just data in `stamps.js`.
-- [No live preview for stamp placement] → Consistent with bucket's existing
-  no-preview behavior; can be added later without restructuring.
+  later since it's just data in `brushes.js`.
+- [No live preview for brush placement] → Superseded: brush now has a live
+  preview by construction, since the whole dragged path redraws every move.
+- [Redrawing the whole accumulated brush path from backup on every move is
+  O(path length) per move, not O(1)] → Fine at these canvas sizes and
+  typical drag lengths; matches the cost profile pencil's live redraw
+  already has for pixel-perfect mode.
 
 ## Testing
 
-- `js/stamps.js`: DOM-free, tested with `node --test` — placement math
+- `js/brushes.js`: DOM-free, tested with `node --test` — placement math
   (centering, edge clipping), pattern registry shape.
 - `js/shape-tools.js`: DOM-free — rectangle (outline/filled) pixel
   correctness, selection-clip logic (`clipToSelection`).
 - Line needs no new tests beyond what `engine.strokeFreehand` already has,
   since it's a direct reuse.
-- Playwright smoke pass (as used for 2a/2b): place a stamp near an edge;
+- Playwright smoke pass (as used for 2a/2b): place a brush near an edge;
   draw a line and a filled/outline rectangle; make a selection and confirm
-  pencil/bucket/stamp are clipped to it; delete a selection's contents;
+  pencil/bucket/brush are clipped to it; delete a selection's contents;
   undo each action type.

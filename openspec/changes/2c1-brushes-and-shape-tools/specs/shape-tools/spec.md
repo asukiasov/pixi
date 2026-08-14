@@ -52,7 +52,7 @@ the active layer. A selection persists across tool switches until cleared.
   canvas again
 
 ### Requirement: Drawing is clipped to an active selection
-While a selection is active, pencil, eraser, bucket, stamp, line, and
+While a selection is active, pencil, eraser, bucket, brush, line, and
 rectangle SHALL only affect pixels within the selection; attempts to draw
 outside it SHALL have no effect.
 

@@ -100,7 +100,8 @@ function colorsEqual(a, b) {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
 }
 
-function bresenhamLine(x0, y0, x1, y1) {
+/** Exported for reuse outside this module (e.g. the Stamps tool's dragged path). */
+export function bresenhamLine(x0, y0, x1, y1) {
   const points = [];
   let dx = Math.abs(x1 - x0);
   let dy = -Math.abs(y1 - y0);

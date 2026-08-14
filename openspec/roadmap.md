@@ -35,13 +35,14 @@ proposed/implemented/archived before the next starts:
   projects, thumbnails, "+" new canvas) and **Canvas settings** screen
   (resize/crop/rotate an existing project).
 - **2c — Full toolset**: full color/palette panel, symmetry & grid tools,
-  line/shape/selection tools, a stamp tool, and the full Export screen. Grew
-  to 5 fairly independent areas (the stamp tool was added later, see below),
+  line/shape/selection tools, a brush tool, and the full Export screen. Grew
+  to 5 fairly independent areas (the brush tool was added later, see below),
   so it's further split into three ordered sub-changes of its own:
-  - **2c1 — Stamps and shape tools**: an extensible stamp tool (place a
-    predefined pixel pattern in the current color with one click — a
-    "heart" stamp is the first shape) plus line/shape/selection tools
-    (beyond Phase 1's pencil/eraser/bucket).
+  - **2c1 — Brushes and shape tools**: an extensible brush tool (place a
+    predefined pixel pattern in the current color with one click, or drag
+    to place a repeating trail — a "heart" brush is the first shape, with
+    a Rainbow color-cycling mode) plus line/shape/selection tools (beyond
+    Phase 1's pencil/eraser/bucket).
   - **2c2 — Color panel and symmetry/grid**: full color/palette panel
     (custom color picker, saved palettes, replacing Phase 1's fixed
     16-swatch row), symmetry & grid tools (mirror axes, tile preview, grid
@@ -93,3 +94,7 @@ becomes the next priority:
 - **Import** screen (.aseprite, reference images, palette files)
 - Animation timeline / onion skinning — explicitly out of scope for now, see
   CLAUDE.md non-goals; would need its own roadmap discussion if ever revisited
+- **Custom brush creation** — a way to draw your own pattern (mini pixel
+  grid editor) and save it into the Brush picker alongside Heart, instead
+  of only shipping predefined shapes. Raised while building 2c1's Brush
+  tool; explicitly deferred, not a priority right now.

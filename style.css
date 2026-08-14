@@ -368,7 +368,7 @@ body {
 }
 
 .palette-row,
-.stamps-row {
+.brushes-row {
   display: flex;
   gap: 0.35rem;
   padding: 0.5rem;
@@ -389,7 +389,11 @@ body {
   border-color: #0a84ff;
 }
 
-.stamp-swatch {
+.palette-swatch.rainbow-swatch {
+  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+}
+
+.brush-swatch {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 0.3rem;
@@ -401,7 +405,7 @@ body {
   font-size: 0.7rem;
 }
 
-.stamp-swatch.active {
+.brush-swatch.active {
   border-color: #0a84ff;
 }
 

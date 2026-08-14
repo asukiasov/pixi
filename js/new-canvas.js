@@ -1,4 +1,5 @@
 import { LayerStack } from './layers.js';
+import { createProject } from './persistence.js';
 
 const PRESETS = [16, 32, 64, 128];
 const MIN_SIZE = 1;
@@ -11,7 +12,9 @@ function clampSize(value) {
 /**
  * Wires up the New Canvas screen: size presets + custom size, background
  * choice, and a Create button that allocates a LayerStack (one starting
- * layer at the chosen background) and hands it to `onCanvasCreated`.
+ * layer at the chosen background), immediately persists it as a project
+ * record (before any drawing happens), and hands
+ * `{ layerStack, projectId }` to `onCanvasCreated`.
  */
 export function initNewCanvasScreen({ onCanvasCreated }) {
   const presetButtons = document.querySelectorAll('#size-presets .preset-button');
@@ -36,7 +39,7 @@ export function initNewCanvasScreen({ onCanvasCreated }) {
     return [...backgroundRadios].find((r) => r.checked)?.value ?? 'transparent';
   }
 
-  createButton.addEventListener('click', () => {
+  createButton.addEventListener('click', async () => {
     const customWidth = customWidthInput.value ? Number(customWidthInput.value) : null;
     const customHeight = customHeightInput.value ? Number(customHeightInput.value) : null;
 
@@ -45,6 +48,8 @@ export function initNewCanvasScreen({ onCanvasCreated }) {
     const background = currentBackground();
 
     const layerStack = new LayerStack(width, height, background);
-    onCanvasCreated(layerStack);
+    const thumbnail = await layerStack.toPNGBlob();
+    const record = await createProject(layerStack, undefined, thumbnail);
+    onCanvasCreated({ layerStack, projectId: record.id });
   });
 }

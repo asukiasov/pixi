@@ -194,3 +194,114 @@ describe('snapshot / restore', () => {
     assert.deepEqual(Array.from(snap.layers[0].data.slice(0, 4)), [0, 0, 0, 0]);
   });
 });
+
+describe('toProjectRecord / fromProjectRecord', () => {
+  test('round-trips dimensions, layer settings, active index, and pixel data', () => {
+    const stack = new LayerStack(3, 3, 'white');
+    stack.addLayer('B');
+    stack.setOpacity(1, 0.4);
+    stack.setBlendMode(1, 'multiply');
+    stack.setVisibility(1, false);
+    stack.getActiveLayer().engine.setPixel(1, 1, [9, 8, 7, 255]);
+
+    const record = stack.toProjectRecord();
+    const restored = LayerStack.fromProjectRecord(record);
+
+    assert.equal(restored.width, 3);
+    assert.equal(restored.height, 3);
+    assert.equal(restored.getActiveIndex(), 1);
+    const layers = restored.getLayers();
+    assert.equal(layers.length, 2);
+    assert.equal(layers[0].name, 'Layer 1');
+    assert.deepEqual(layers[0].engine.getPixel(0, 0), [255, 255, 255, 255]);
+    assert.equal(layers[1].opacity, 0.4);
+    assert.equal(layers[1].blendMode, 'multiply');
+    assert.equal(layers[1].visible, false);
+    assert.deepEqual(layers[1].engine.getPixel(1, 1), [9, 8, 7, 255]);
+  });
+
+  test('layer data is stored as a plain ArrayBuffer, not a typed array', () => {
+    const stack = new LayerStack(2, 2, 'transparent');
+    const record = stack.toProjectRecord();
+    assert.ok(record.layers[0].data instanceof ArrayBuffer);
+  });
+
+  test('record data is independent of the live stack', () => {
+    const stack = new LayerStack(2, 2, 'transparent');
+    const record = stack.toProjectRecord();
+    stack.getActiveLayer().engine.setPixel(0, 0, [1, 2, 3, 255]);
+    const view = new Uint8ClampedArray(record.layers[0].data);
+    assert.deepEqual(Array.from(view.slice(0, 4)), [0, 0, 0, 0]);
+  });
+});
+
+describe('resize', () => {
+  test('shrinking crops content beyond the new bounds, top-left anchored', () => {
+    const stack = new LayerStack(4, 4, 'transparent');
+    stack.getActiveLayer().engine.setPixel(0, 0, [1, 1, 1, 255]);
+    stack.getActiveLayer().engine.setPixel(3, 3, [2, 2, 2, 255]); // will be cropped away
+    stack.resize(2, 2);
+    assert.equal(stack.width, 2);
+    assert.equal(stack.height, 2);
+    assert.deepEqual(stack.getActiveLayer().engine.getPixel(0, 0), [1, 1, 1, 255]);
+  });
+
+  test('growing pads new area transparently and preserves existing content position', () => {
+    const stack = new LayerStack(2, 2, 'white');
+    stack.resize(4, 4);
+    assert.equal(stack.width, 4);
+    assert.equal(stack.height, 4);
+    assert.deepEqual(stack.getActiveLayer().engine.getPixel(0, 0), [255, 255, 255, 255]);
+    assert.deepEqual(stack.getActiveLayer().engine.getPixel(3, 3), [0, 0, 0, 0]);
+  });
+
+  test('resize applies to every layer and preserves layer settings', () => {
+    const stack = new LayerStack(2, 2, 'transparent');
+    stack.addLayer('B');
+    stack.setOpacity(1, 0.5);
+    stack.resize(4, 4);
+    const layers = stack.getLayers();
+    assert.equal(layers.length, 2);
+    assert.equal(layers[1].name, 'B');
+    assert.equal(layers[1].opacity, 0.5);
+    assert.equal(layers[1].engine.width, 4);
+  });
+});
+
+describe('rotate90', () => {
+  test('clockwise rotation on a non-square canvas swaps dimensions and content', () => {
+    const stack = new LayerStack(2, 1, 'transparent'); // 2 wide, 1 tall
+    stack.getActiveLayer().engine.setPixel(0, 0, [10, 0, 0, 255]); // "A", left
+    stack.getActiveLayer().engine.setPixel(1, 0, [20, 0, 0, 255]); // "B", right
+    stack.rotate90('cw');
+    assert.equal(stack.width, 1);
+    assert.equal(stack.height, 2);
+    // Rotating a rightward arrow [A,B] 90 CW points it down: A on top, B below.
+    assert.deepEqual(stack.getActiveLayer().engine.getPixel(0, 0), [10, 0, 0, 255]);
+    assert.deepEqual(stack.getActiveLayer().engine.getPixel(0, 1), [20, 0, 0, 255]);
+  });
+
+  test('counter-clockwise rotation on a non-square canvas', () => {
+    const stack = new LayerStack(2, 1, 'transparent');
+    stack.getActiveLayer().engine.setPixel(0, 0, [10, 0, 0, 255]); // "A", left
+    stack.getActiveLayer().engine.setPixel(1, 0, [20, 0, 0, 255]); // "B", right
+    stack.rotate90('ccw');
+    assert.equal(stack.width, 1);
+    assert.equal(stack.height, 2);
+    // Rotating a rightward arrow [A,B] 90 CCW points it up: B on top, A below.
+    assert.deepEqual(stack.getActiveLayer().engine.getPixel(0, 0), [20, 0, 0, 255]);
+    assert.deepEqual(stack.getActiveLayer().engine.getPixel(0, 1), [10, 0, 0, 255]);
+  });
+
+  test('rotation on a square canvas keeps dimensions and applies to every layer', () => {
+    const stack = new LayerStack(2, 2, 'transparent');
+    stack.addLayer('B');
+    stack.getActiveLayer().engine.setPixel(0, 0, [5, 5, 5, 255]);
+    stack.rotate90('cw');
+    assert.equal(stack.width, 2);
+    assert.equal(stack.height, 2);
+    assert.equal(stack.getLayers().length, 2);
+    // (0,0) in a 2x2 rotates CW to (1,0).
+    assert.deepEqual(stack.getLayers()[1].engine.getPixel(1, 0), [5, 5, 5, 255]);
+  });
+});

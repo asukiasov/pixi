@@ -1,4 +1,6 @@
 import { UndoStack } from './undo.js';
+import { saveProject } from './persistence.js';
+import { initCanvasSettings } from './canvas-settings.js';
 
 const PALETTE = [
   '#000000', '#ffffff', '#9d9d9d', '#4a4a4a',
@@ -15,20 +17,35 @@ function hexToRgba(hex) {
 }
 
 // Module-level state, not per-call: the Workspace screen is a singleton in
-// this app (one workspace <canvas>), reused across every canvas the user
-// creates in a session. DOM listeners are bound exactly once, the first time
-// initWorkspace runs; later calls just rebind state to the new layer stack.
+// this app (one workspace <canvas>), reused across every project the user
+// opens or creates in a session. DOM listeners are bound exactly once, the
+// first time initWorkspace runs; later calls just rebind state to the new
+// project/layer stack.
 let state = null;
 let domBound = false;
+let canvasSettingsControls = null;
 
 function updateUndoRedoButtons() {
   state.undoButton.disabled = !state.undoStack.canUndo();
   state.redoButton.disabled = !state.undoStack.canRedo();
 }
 
+/**
+ * Auto-save: writes the current layer stack (and a fresh thumbnail) to
+ * IndexedDB. Fire-and-forget from callers' perspective — drawing shouldn't
+ * block on a write completing. Not queued/serialized: rapid successive
+ * commits could in principle finish out of order and leave a slightly stale
+ * save; acceptable at this interaction rate, not solved in this slice.
+ */
+async function autoSave() {
+  const thumbnail = await state.layerStack.toPNGBlob();
+  await saveProject(state.projectId, state.layerStack, thumbnail);
+}
+
 function commit() {
   state.undoStack.push(state.layerStack.snapshot());
   updateUndoRedoButtons();
+  autoSave();
 }
 
 function colorForCurrentTool() {
@@ -159,7 +176,7 @@ function bindDomOnce() {
   const toolButtons = document.querySelectorAll('.tool-button[data-tool]');
   const pixelPerfectToggle = document.getElementById('pixel-perfect-toggle');
   const paletteRow = document.getElementById('palette-row');
-  const newCanvasButton = document.getElementById('new-canvas-nav-button');
+  const backToGalleryButton = document.getElementById('back-to-gallery-button');
 
   toolButtons.forEach((button) => {
     button.addEventListener('click', () => {
@@ -192,6 +209,7 @@ function bindDomOnce() {
       state.layerStack.restore(snapshot);
       state.canvasView.render();
       renderLayersPanel();
+      autoSave();
     }
     updateUndoRedoButtons();
   });
@@ -202,6 +220,7 @@ function bindDomOnce() {
       state.layerStack.restore(snapshot);
       state.canvasView.render();
       renderLayersPanel();
+      autoSave();
     }
     updateUndoRedoButtons();
   });
@@ -216,9 +235,10 @@ function bindDomOnce() {
     URL.revokeObjectURL(url);
   });
 
-  newCanvasButton.addEventListener('click', () => {
-    const proceed = window.confirm('Start a new canvas? The current drawing will be lost.');
-    if (proceed) state.onRequestNewCanvas?.();
+  // Every action auto-saves, so there's nothing to lose by leaving — no
+  // confirmation prompt here (unlike Phase 1/2a's "New" control).
+  backToGalleryButton.addEventListener('click', () => {
+    state.onRequestGallery?.();
   });
 
   state.addLayerButton.addEventListener('click', () => {
@@ -228,20 +248,38 @@ function bindDomOnce() {
     commit();
     renderLayersPanel();
   });
+
+  canvasSettingsControls = initCanvasSettings({
+    onResize(width, height) {
+      state.layerStack.resize(width, height);
+      state.canvasView.resetView();
+      state.canvasView.render();
+      canvasSettingsControls.setCurrentSize(state.layerStack.width, state.layerStack.height);
+      commit();
+    },
+    onRotate(direction) {
+      state.layerStack.rotate90(direction);
+      state.canvasView.resetView();
+      state.canvasView.render();
+      canvasSettingsControls.setCurrentSize(state.layerStack.width, state.layerStack.height);
+      commit();
+    },
+  });
 }
 
 /**
- * Wires the Workspace tab bar, palette, and Layers panel to `layerStack` and
- * `canvasView`, and owns the undo/redo stack for the current canvas. Safe to
- * call repeatedly (once per canvas created in a session) — DOM listeners
- * bind only once; subsequent calls just reset the drawing state for the new
- * layer stack.
+ * Wires the Workspace tab bar, palette, Layers panel, and Canvas Settings
+ * panel to `layerStack` and `canvasView`, and owns the undo/redo stack and
+ * auto-save for the current project. Safe to call repeatedly (once per
+ * project opened or created in a session) — DOM listeners bind only once;
+ * subsequent calls just reset the drawing state for the new project.
  */
-export function initWorkspace({ layerStack, canvasView, onRequestNewCanvas }) {
+export function initWorkspace({ projectId, layerStack, canvasView, onRequestGallery }) {
   state = {
+    projectId,
     layerStack,
     canvasView,
-    onRequestNewCanvas,
+    onRequestGallery,
     undoStack: new UndoStack(),
     currentTool: 'pencil',
     currentColor: hexToRgba(PALETTE[0]),
@@ -261,8 +299,10 @@ export function initWorkspace({ layerStack, canvasView, onRequestNewCanvas }) {
     domBound = true;
   }
 
-  // Baseline snapshot so the very first stroke can be undone back to the
-  // freshly created (filled-background) starting layer.
+  canvasSettingsControls.setCurrentSize(layerStack.width, layerStack.height);
+
+  // Baseline snapshot so the very first stroke can be undone back to
+  // whatever state the project was in when opened.
   state.undoStack.push(layerStack.snapshot());
   updateUndoRedoButtons();
   renderLayersPanel();
@@ -294,7 +334,8 @@ export function initWorkspace({ layerStack, canvasView, onRequestNewCanvas }) {
       if (last && last.x === point.x && last.y === point.y) return;
       state.strokePoints.push(point);
       // Redraw the whole stroke from a clean backup each move so pixel-perfect
-      // corner removal (which depends on later points) stays correct.
+      // corner removal (which depends on later points) stays correct. This is
+      // in-progress drawing, not a committed action, so it does NOT auto-save.
       state.strokeEngine.data.set(state.strokeBackup);
       state.strokeEngine.strokeFreehand(state.strokePoints, colorForCurrentTool(), state.pixelPerfect);
       state.canvasView.render();

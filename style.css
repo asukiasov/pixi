@@ -13,14 +13,95 @@ body {
   color: #f2f2f2;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .screen {
   height: 100%;
   display: flex;
   flex-direction: column;
 }
 
-.screen.hidden {
-  display: none;
+/* Gallery screen */
+
+#screen-gallery {
+  padding: 1rem;
+  gap: 1rem;
+  overflow-y: auto;
+}
+
+.gallery-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.gallery-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.gallery-header .primary-button {
+  margin-top: 0;
+  width: auto;
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+  gap: 0.75rem;
+}
+
+.gallery-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #2c2c2e;
+  border: 1px solid #48484a;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.gallery-thumbnail {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: #e2e2e2;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+}
+
+.gallery-tile-name {
+  padding: 0.4rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gallery-tile-delete {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  border: none;
+  border-radius: 0.3rem;
+  background: rgba(28, 28, 30, 0.75);
+  color: inherit;
+  font-size: 0.9rem;
+}
+
+.gallery-empty-state {
+  color: #a0a0a5;
+  text-align: center;
+  margin-top: 2rem;
 }
 
 /* New Canvas screen */
@@ -114,6 +195,48 @@ body {
      checker square is exactly one artwork pixel. */
   background-image: repeating-conic-gradient(#cfcfcf 0% 25%, #e8e8e8 0% 50%);
   background-position: 0 0;
+}
+
+.canvas-settings-panel {
+  padding: 0.6rem;
+  background: #1c1c1e;
+  border-top: 1px solid #2c2c2e;
+  flex: none;
+}
+
+.canvas-settings-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.canvas-settings-row:last-child {
+  margin-bottom: 0;
+}
+
+.canvas-settings-row h2 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #a0a0a5;
+  margin: 0;
+}
+
+.canvas-settings-row label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.canvas-settings-row input[type="number"] {
+  width: 4.5rem;
+  padding: 0.35rem;
+  background: #2c2c2e;
+  border: 1px solid #48484a;
+  color: inherit;
+  border-radius: 0.4rem;
 }
 
 .layers-panel {

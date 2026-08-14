@@ -68,6 +68,15 @@ buffer back into a `Uint8ClampedArray` for a `PixelEngine`.
 already owned. `js/persistence.js` calls these; it doesn't know about
 `Uint8ClampedArray`/`PixelEngine` internals itself.
 
+**Revised during implementation**: `persistence.js`'s `createProject`/
+`saveProject` take the thumbnail `Blob` as a parameter rather than calling
+`layerStack.toPNGBlob()` themselves. `toPNGBlob()` needs a `<canvas>`, and
+having `persistence.js` call it directly would make the whole module
+DOM-dependent and untestable in Node — the caller (`workspace.js`, browser-
+only) computes the thumbnail and passes it in, keeping `persistence.js`
+exactly as DOM-free and unit-testable as `engine.js`/`layers.js`'s
+non-canvas methods.
+
 **Auto-save hooks into the existing `commit()` in `js/workspace.js`** — the
 function that already pushes an undo snapshot after every completed stroke,
 fill, layer change, or (new in this slice) canvas resize/rotate. Save is

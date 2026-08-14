@@ -5,9 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Pixi</title>
   <link rel="stylesheet" href="style.css" />
+  <!-- Resolves bare "dexie" imports in js/persistence.js to a CDN build, no
+       npm/bundler for the shipped app. Node resolves the same bare
+       specifier from node_modules, for `node --test` only. -->
+  <script type="importmap">
+    { "imports": { "dexie": "https://esm.sh/dexie@4" } }
+  </script>
 </head>
 <body>
-  <main id="screen-new-canvas" class="screen">
+  <main id="screen-gallery" class="screen">
+    <div class="gallery-header">
+      <h1>Pixi</h1>
+      <button type="button" id="gallery-new-canvas-button" class="primary-button">+ New Canvas</button>
+    </div>
+    <div id="gallery-grid" class="gallery-grid"></div>
+    <p id="gallery-empty-state" class="gallery-empty-state hidden">
+      No projects yet — tap "+ New Canvas" to start one.
+    </p>
+  </main>
+
+  <main id="screen-new-canvas" class="screen hidden">
     <h1>New Canvas</h1>
 
     <section class="field-group">
@@ -40,6 +57,21 @@
       <canvas id="workspace-canvas"></canvas>
     </div>
 
+    <div id="canvas-settings-panel" class="canvas-settings-panel hidden">
+      <div class="canvas-settings-row">
+        <h2>Canvas Settings</h2>
+      </div>
+      <div class="canvas-settings-row">
+        <label>W <input type="number" id="canvas-settings-width" min="1" max="256" /></label>
+        <label>H <input type="number" id="canvas-settings-height" min="1" max="256" /></label>
+        <button type="button" id="canvas-settings-apply" class="tool-button">Resize</button>
+      </div>
+      <div class="canvas-settings-row">
+        <button type="button" id="canvas-settings-rotate-ccw" class="tool-button">Rotate ↺</button>
+        <button type="button" id="canvas-settings-rotate-cw" class="tool-button">Rotate ↻</button>
+      </div>
+    </div>
+
     <div id="layers-panel" class="layers-panel">
       <div class="layers-panel-header">
         <h2>Layers</h2>
@@ -51,11 +83,12 @@
     <div id="palette-row" class="palette-row"></div>
 
     <nav class="tab-bar">
-      <button type="button" id="new-canvas-nav-button" class="tool-button">New</button>
+      <button type="button" id="back-to-gallery-button" class="tool-button">Gallery</button>
       <button type="button" class="tool-button" data-tool="pencil">Pencil</button>
       <button type="button" class="tool-button" data-tool="eraser">Eraser</button>
       <button type="button" class="tool-button" data-tool="bucket">Bucket</button>
       <button type="button" id="pixel-perfect-toggle" class="tool-button">Pixel-perfect</button>
+      <button type="button" id="canvas-settings-toggle" class="tool-button">Canvas Settings</button>
       <button type="button" id="undo-button" class="tool-button" disabled>Undo</button>
       <button type="button" id="redo-button" class="tool-button" disabled>Redo</button>
       <button type="button" id="export-button" class="tool-button">Export PNG</button>

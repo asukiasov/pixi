@@ -161,6 +161,100 @@ export class LayerStack {
   }
 
   /**
+   * Plain-object representation suitable for storage (e.g. Dexie/IndexedDB):
+   * each layer's pixel data becomes a standalone ArrayBuffer copy, not a
+   * live typed-array view. No id/thumbnail/timestamps here - persistence.js
+   * owns those.
+   */
+  toProjectRecord() {
+    return {
+      width: this.#width,
+      height: this.#height,
+      layers: this.#layers.map((l) => ({
+        id: l.id,
+        name: l.name,
+        data: l.engine.data.slice().buffer,
+        visible: l.visible,
+        opacity: l.opacity,
+        blendMode: l.blendMode,
+      })),
+      activeLayerIndex: this.#activeIndex,
+    };
+  }
+
+  /** Reconstructs a full LayerStack from a record produced by toProjectRecord(). */
+  static fromProjectRecord(record) {
+    const stack = new LayerStack(record.width, record.height, 'transparent');
+    stack.#layers = record.layers.map((s) => {
+      const layer = new Layer(s.name, record.width, record.height, 'transparent');
+      layer.id = s.id;
+      layer.engine.data.set(new Uint8ClampedArray(s.data));
+      layer.visible = s.visible;
+      layer.opacity = s.opacity;
+      layer.blendMode = s.blendMode;
+      return layer;
+    });
+    stack.#activeIndex = record.activeLayerIndex;
+    return stack;
+  }
+
+  /**
+   * Changes canvas dimensions, anchored at the top-left corner, applied to
+   * every layer: shrinking crops content beyond the new bounds; growing
+   * pads the new area transparently.
+   */
+  resize(width, height) {
+    const copyWidth = Math.min(this.#width, width);
+    const copyHeight = Math.min(this.#height, height);
+
+    this.#layers = this.#layers.map((l) => {
+      const newLayer = new Layer(l.name, width, height, 'transparent');
+      newLayer.id = l.id;
+      newLayer.visible = l.visible;
+      newLayer.opacity = l.opacity;
+      newLayer.blendMode = l.blendMode;
+      for (let y = 0; y < copyHeight; y++) {
+        for (let x = 0; x < copyWidth; x++) {
+          newLayer.engine.setPixel(x, y, l.engine.getPixel(x, y));
+        }
+      }
+      return newLayer;
+    });
+    this.#width = width;
+    this.#height = height;
+  }
+
+  /**
+   * Rotates every layer 90 degrees clockwise ('cw') or counter-clockwise
+   * ('ccw'). Width and height swap when the canvas isn't square.
+   */
+  rotate90(direction) {
+    const oldWidth = this.#width;
+    const oldHeight = this.#height;
+    const newWidth = oldHeight;
+    const newHeight = oldWidth;
+
+    this.#layers = this.#layers.map((l) => {
+      const newLayer = new Layer(l.name, newWidth, newHeight, 'transparent');
+      newLayer.id = l.id;
+      newLayer.visible = l.visible;
+      newLayer.opacity = l.opacity;
+      newLayer.blendMode = l.blendMode;
+      for (let y = 0; y < oldHeight; y++) {
+        for (let x = 0; x < oldWidth; x++) {
+          const color = l.engine.getPixel(x, y);
+          const [nx, ny] =
+            direction === 'cw' ? [oldHeight - 1 - y, x] : [y, oldWidth - 1 - x];
+          newLayer.engine.setPixel(nx, ny, color);
+        }
+      }
+      return newLayer;
+    });
+    this.#width = newWidth;
+    this.#height = newHeight;
+  }
+
+  /**
    * Composites all visible layers bottom-to-top onto an offscreen canvas
    * using native globalAlpha/globalCompositeOperation, and returns that
    * canvas. Requires a DOM, like PixelEngine.toPNGBlob().

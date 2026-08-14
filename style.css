@@ -96,7 +96,7 @@ body {
   position: relative;
   flex: 1;
   overflow: hidden;
-  background: repeating-conic-gradient(#3a3a3c 0% 25%, #2c2c2e 0% 50%) 0 0 / 20px 20px;
+  background: #e2e2e2;
   touch-action: none;
 }
 
@@ -110,7 +110,7 @@ body {
   /* Marks the canvas boundary even when its content is fully transparent —
      otherwise a transparent canvas's checkerboard is visually identical to
      the container's own checkered background and the edges disappear. */
-  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline: 2px solid rgba(0, 0, 0, 0.35);
   outline-offset: -1px;
 }
 

@@ -270,7 +270,7 @@ function buildLayerRow(layer, index, isActive, layerCount) {
   const upButton = document.createElement('button');
   upButton.type = 'button';
   upButton.className = 'layer-reorder-button';
-  upButton.textContent = '↑'; // ↑
+  upButton.innerHTML = '<span class="material-symbols-outlined">arrow_upward</span>';
   upButton.title = 'Move layer up';
   upButton.disabled = index === layerCount - 1;
   upButton.addEventListener('click', () => {
@@ -283,7 +283,7 @@ function buildLayerRow(layer, index, isActive, layerCount) {
   const downButton = document.createElement('button');
   downButton.type = 'button';
   downButton.className = 'layer-reorder-button';
-  downButton.textContent = '↓'; // ↓
+  downButton.innerHTML = '<span class="material-symbols-outlined">arrow_downward</span>';
   downButton.title = 'Move layer down';
   downButton.disabled = index === 0;
   downButton.addEventListener('click', () => {

@@ -95,7 +95,14 @@ body {
   border-radius: 0.3rem;
   background: rgba(28, 28, 30, 0.75);
   color: inherit;
-  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.gallery-tile-delete .material-symbols-outlined {
+  font-size: 1.1rem;
 }
 
 .gallery-empty-state {
@@ -435,6 +442,12 @@ body {
   margin-bottom: 0;
 }
 
+.canvas-settings-row .tool-button {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 .canvas-settings-row h2 {
   font-size: 0.8rem;
   text-transform: uppercase;
@@ -600,11 +613,18 @@ body {
   flex: none;
   width: 1.6rem;
   height: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   color: inherit;
   font-size: 0.9rem;
   padding: 0;
+}
+
+.layer-reorder-button .material-symbols-outlined {
+  font-size: 1rem;
 }
 
 .layer-reorder-button:disabled,
@@ -654,9 +674,10 @@ body {
 
 .fg-bg-swatch-stack {
   position: relative;
-  width: 2.2rem;
-  height: 2.2rem;
+  width: 2.6rem;
+  height: 2.6rem;
   flex: none;
+  margin: 0.15rem 0.15rem 0.3rem 0;
 }
 
 /* Buttons, not divs (clicking either opens the color-picker-popover
@@ -664,8 +685,8 @@ body {
    chrome back to a plain swatch. */
 .fg-bg-swatch {
   position: absolute;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.7rem;
+  height: 1.7rem;
   border-radius: 0.25rem;
   border: 1px solid #48484a;
   padding: 0;
@@ -684,6 +705,38 @@ body {
   background: #000000;
 }
 
+/* Small corner icons on the swatch stack (Photoshop-style), not
+   full-size buttons stacked above/below it. */
+.fg-bg-corner-button {
+  position: absolute;
+  width: 1.05rem;
+  height: 1.05rem;
+  padding: 0;
+  border: 1px solid #48484a;
+  border-radius: 50%;
+  background: #1c1c1e;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.fg-bg-corner-button .material-symbols-outlined {
+  font-size: 0.7rem;
+}
+
+.swap-corner {
+  top: -0.2rem;
+  right: -0.2rem;
+}
+
+.reset-corner {
+  bottom: -0.2rem;
+  left: -0.2rem;
+}
+
 /* Color picker popover - opened by clicking the Foreground or Background
    swatch, not an always-visible inline row. Positioned via JS
    (js/workspace.js), same fixed-position/getBoundingClientRect pattern
@@ -699,7 +752,7 @@ body {
   padding: 0.6rem;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   z-index: 60;
-  width: 12rem;
+  width: 13.5rem;
 }
 
 .color-picker-popover-header {
@@ -772,6 +825,9 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.3rem;
+  padding: 0.5rem 0.4rem;
+  white-space: nowrap;
+  font-size: 0.85rem;
 }
 
 /* Brushes panel — Photoshop-Brushes-panel-style: title, spacing control,

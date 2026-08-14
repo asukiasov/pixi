@@ -49,7 +49,7 @@ function buildProjectTile(project, onOpenProject, refresh) {
   const deleteButton = document.createElement('button');
   deleteButton.type = 'button';
   deleteButton.className = 'gallery-tile-delete';
-  deleteButton.textContent = '\u{1F5D1}'; // 🗑
+  deleteButton.innerHTML = '<span class="material-symbols-outlined">delete</span>';
   deleteButton.title = 'Delete project';
   deleteButton.addEventListener('click', async (e) => {
     e.stopPropagation();

@@ -17,7 +17,7 @@
        original range query pulled the full variable font (~4MB, ~30s on a
        slow connection, icons invisible until it finished); this is a few
        KB. Keep icon_names in sync with the icons used in this file. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,colorize,undo,redo,add,remove,delete,visibility,visibility_off,restart_alt,swap_horiz,close,home,grid_on,layers,settings,download" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,colorize,undo,redo,add,remove,delete,visibility,visibility_off,restart_alt,swap_horiz,close,home,grid_on,layers,settings,download,arrow_upward,arrow_downward,rotate_left,rotate_right" />
 </head>
 <body>
   <main id="screen-gallery" class="screen">
@@ -112,18 +112,20 @@
       </button>
 
       <!-- Foreground/Background - always relevant (not tool-scoped),
-           unlike the Pencil options below. -->
+           unlike the Pencil options below. Reset/swap are small icons
+           overlapping the swatch stack's corners (Photoshop-style),
+           not full-size buttons stacked above/below it. -->
       <div class="fg-bg-swatches">
-        <button type="button" id="fg-bg-reset" class="icon-button" aria-label="Reset colors" data-tooltip="Reset colors">
-          <span class="material-symbols-outlined">restart_alt</span>
-        </button>
         <div class="fg-bg-swatch-stack">
           <button type="button" id="background-swatch" class="fg-bg-swatch bg-swatch" aria-label="Background color" data-tooltip="Background color"></button>
           <button type="button" id="foreground-swatch" class="fg-bg-swatch fg-swatch" aria-label="Foreground color" data-tooltip="Foreground color"></button>
+          <button type="button" id="fg-bg-swap" class="fg-bg-corner-button swap-corner" aria-label="Swap colors" data-tooltip="Swap colors">
+            <span class="material-symbols-outlined">swap_horiz</span>
+          </button>
+          <button type="button" id="fg-bg-reset" class="fg-bg-corner-button reset-corner" aria-label="Reset colors" data-tooltip="Reset colors">
+            <span class="material-symbols-outlined">restart_alt</span>
+          </button>
         </div>
-        <button type="button" id="fg-bg-swap" class="icon-button" aria-label="Swap colors" data-tooltip="Swap colors">
-          <span class="material-symbols-outlined">swap_horiz</span>
-        </button>
       </div>
 
       <!-- Popover opened by clicking either FG/BG swatch above - edits
@@ -187,8 +189,12 @@
           <button type="button" id="canvas-settings-apply" class="tool-button">Resize</button>
         </div>
         <div class="canvas-settings-row">
-          <button type="button" id="canvas-settings-rotate-ccw" class="tool-button">Rotate ↺</button>
-          <button type="button" id="canvas-settings-rotate-cw" class="tool-button">Rotate ↻</button>
+          <button type="button" id="canvas-settings-rotate-ccw" class="tool-button" data-tooltip="Rotate left">
+            <span class="material-symbols-outlined">rotate_left</span> Rotate
+          </button>
+          <button type="button" id="canvas-settings-rotate-cw" class="tool-button" data-tooltip="Rotate right">
+            <span class="material-symbols-outlined">rotate_right</span> Rotate
+          </button>
         </div>
       </div>
 

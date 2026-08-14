@@ -8,16 +8,18 @@ build step, deployed to GitHub Pages.
 
 **Non-goals for now**: no animation timeline/onion skinning, no native
 Android/iOS build (web only), no bundler (plain HTML/CSS/JS, ES module
-imports via CDN, not npm), no custom backend server (Firebase covers
+imports via CDN, not npm), no custom backend server (Supabase covers
 auth/database/storage/functions when that phase arrives).
 
 **Stack**: vanilla HTML/CSS/JS + ES modules, no framework, no build step.
 Dexie.js (CDN) over IndexedDB as the offline-first local cache — the app must
-be fully usable signed-out; Firebase (Auth/Firestore/Storage/Functions, CDN
-modular SDK) and Stripe Checkout are additive, later-phase only. Firebase
-project config, data model, and Storage layout are in
-`docs/firebase-database.md`. Phase-by-phase build order and screen list are
-in `openspec/roadmap.md`.
+be fully usable signed-out; Supabase (Auth/Postgres/Storage/Edge Functions,
+via `@supabase/supabase-js` from an ESM CDN) and Stripe Checkout are
+additive, later-phase only. Supabase project config, schema, and Storage
+layout are in `docs/supabase-database.md`. The Supabase project (`pixi`) is
+already GitHub-integrated with this repo for database migrations — see that
+doc. Phase-by-phase build order and screen list are in
+`openspec/roadmap.md`.
 
 ## Process: OpenSpec vs. Superpowers skills
 

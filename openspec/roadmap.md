@@ -22,7 +22,7 @@ at `openspec/specs/canvas-creation/` and `openspec/specs/pixel-drawing-engine/`.
 
 ## Phase 2 — Layers, local persistence, and the full toolset
 
-Entirely local, no Firebase, no accounts. This is the point where Pixi becomes
+Entirely local, no Supabase, no accounts. This is the point where Pixi becomes
 a real standalone tool someone could use offline indefinitely.
 
 - Layers: add/reorder/opacity/delete, composited via canvas blend modes
@@ -39,11 +39,11 @@ a real standalone tool someone could use offline indefinitely.
 
 Status: not started.
 
-## Phase 3 — Firebase Auth + sync
+## Phase 3 — Supabase Auth + sync
 
-- Google sign-in via Firebase Auth
-- Projects sync to Firestore/Storage per the schema in
-  `docs/firebase-database.md`
+- Google sign-in via Supabase Auth
+- Projects sync to Postgres/Storage per the schema in
+  `docs/supabase-database.md`
 - Offline-first behavior: IndexedDB stays the source of truth when signed out
   or offline; sync is additive, not required to use the app
 - Screen: **Sign in**
@@ -52,12 +52,12 @@ Status: not started.
 
 ## Phase 4 — Monetization
 
-- Stripe Checkout + Cloud Function webhook + entitlements gating — the
-  one-time-purchase unlock
+- Stripe Checkout + Supabase Edge Function webhook + entitlements gating —
+  the one-time-purchase unlock
 - Screen: **Upgrade/unlock**
-- Needs real server compute (Cloud Functions) for the webhook and Admin SDK
-  writes — GitHub Pages hosting can't run this part; see the Secrets &
-  deployment note in `docs/firebase-database.md`
+- Needs real server compute (Edge Functions) for the webhook and
+  `service_role`-key writes — GitHub Pages hosting can't run this part; see
+  the Secrets & deployment note in `docs/supabase-database.md`
 
 Status: not started, not urgent to detail yet.
 

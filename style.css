@@ -107,6 +107,11 @@ body {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   touch-action: none;
+  /* Marks the canvas boundary even when its content is fully transparent —
+     otherwise a transparent canvas's checkerboard is visually identical to
+     the container's own checkered background and the edges disappear. */
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: -1px;
 }
 
 .layers-panel {

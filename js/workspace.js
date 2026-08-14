@@ -132,6 +132,18 @@ function updateSelectionControls() {
   state.selectionControlsEl.classList.toggle('hidden', !state.selection);
 }
 
+/**
+ * Clears the active selection, if any - shared by the "Clear selection"
+ * button, Escape, and Cmd/Ctrl+D, so all three stay in sync by
+ * construction rather than duplicating this three-line sequence.
+ */
+function clearSelection() {
+  if (!state.selection) return;
+  state.selection = null;
+  state.canvasView.setSelectionRect(null);
+  updateSelectionControls();
+}
+
 function renderLayersPanel() {
   const layers = state.layerStack.getLayers();
   const activeIndex = state.layerStack.getActiveIndex();
@@ -644,9 +656,21 @@ function bindDomOnce() {
     if (key === '=' || key === '+') {
       e.preventDefault();
       state.canvasView.zoomStep(1);
-    } else if (key === '-' || key === '_') {
+      return;
+    }
+    if (key === '-' || key === '_') {
       e.preventDefault();
       state.canvasView.zoomStep(-1);
+      return;
+    }
+
+    // Cmd/Ctrl+D: deselect, same as Escape below - the common shortcut
+    // for this in Photoshop and similar tools. preventDefault matters
+    // here specifically: Ctrl/Cmd+D is the browser's "bookmark this
+    // page" shortcut otherwise.
+    if (key === 'd') {
+      e.preventDefault();
+      clearSelection();
     }
   });
 
@@ -655,10 +679,7 @@ function bindDomOnce() {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (document.getElementById('screen-workspace').classList.contains('hidden')) return;
-    if (!state.selection) return;
-    state.selection = null;
-    state.canvasView.setSelectionRect(null);
-    updateSelectionControls();
+    clearSelection();
   });
 
   // Bare-letter tool shortcuts (P/E/G/B/L/R/M/H — see each button's
@@ -703,11 +724,7 @@ function bindDomOnce() {
     renderLayersPanel();
   });
 
-  state.selectionClearButton.addEventListener('click', () => {
-    state.selection = null;
-    state.canvasView.setSelectionRect(null);
-    updateSelectionControls();
-  });
+  state.selectionClearButton.addEventListener('click', clearSelection);
 
   state.selectionDeleteButton.addEventListener('click', () => {
     if (!state.selection) return;

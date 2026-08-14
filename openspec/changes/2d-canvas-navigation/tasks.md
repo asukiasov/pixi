@@ -120,3 +120,21 @@
       second project resets zoom to a fresh Fit Screen percentage, Hand
       tool deselected (pencil draws normally again), and Layers panel
       visible with its toggle active; zero console errors throughout.
+
+## 7. Post-ship bug: Fit Screen visually cleared the artwork
+
+- [x] 7.1 **Bug found via user report**: clicking the Fit Screen preset
+      made all drawn content disappear from view; drawing again made it
+      reappear. Root cause: `resetView()` assigns `canvasEl.width`/
+      `height`, which the browser always treats as clearing the canvas's
+      drawing buffer, even when assigned the same numeric value. Every
+      other caller of `resetView()` (the initial view in `js/app.js`,
+      `onResize`/`onRotate` in `js/workspace.js`, `setLayerStack()`
+      internally) already follows it with a `render()` call to repaint
+      from the layer data - `setZoomPreset('fit')` (task 1.2) was the one
+      path that didn't. Fixed by adding the missing `render()` call.
+- [x] 7.2 Playwright verification: draw on the canvas, click Fit Screen,
+      sample canvas pixel data immediately after (no further interaction)
+      and confirm the drawn content is still visibly present, not
+      requiring a subsequent stroke to reappear; re-run full `node --test`
+      suite

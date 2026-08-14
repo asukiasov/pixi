@@ -122,7 +122,14 @@ export class CanvasView {
    */
   setZoomPreset(preset) {
     if (preset === 'fit') {
+      // resetView() assigns canvasEl.width/height, which always clears
+      // the canvas's drawing buffer in the browser (even to the same
+      // numeric value) - every other caller of resetView() follows it
+      // with a render() to repaint from the layer data; this one must
+      // too, or the artwork visibly vanishes until something else
+      // (e.g. the next stroke) happens to trigger a render.
       this.resetView();
+      this.render();
       return;
     }
 

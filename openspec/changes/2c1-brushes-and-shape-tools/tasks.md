@@ -250,3 +250,11 @@
       drag starting from inside it, confirm it replaces (not clears) the
       selection; make a selection, press Escape, confirm it clears
       regardless of the active tool; re-run full `node --test` suite
+- [x] 14.4 **Added per feedback**: Cmd/Ctrl+D also clears the active
+      selection (common convention in Photoshop/similar tools),
+      preventing the browser's default bookmark-page action for that
+      shortcut. Extracted the three-line clear sequence (already
+      duplicated between the "Clear selection" button and Escape) into a
+      shared `clearSelection()` helper so the button, Escape, and
+      Cmd/Ctrl+D can't drift out of sync. Playwright: Cmd/Ctrl+D clears
+      an active selection from any tool; re-run full `node --test` suite

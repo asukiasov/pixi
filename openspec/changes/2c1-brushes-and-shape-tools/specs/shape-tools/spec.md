@@ -42,8 +42,9 @@ The user SHALL be able to define a rectangular selection by dragging on
 the active layer. A selection persists across tool switches until cleared.
 Besides the existing explicit "Clear selection" control, the user SHALL
 also be able to clear the active selection by clicking outside it with
-the Selection tool active, or by pressing Escape while the Workspace
-screen is open — both equivalent to clicking "Clear selection".
+the Selection tool active, by pressing Escape, or by pressing Cmd/Ctrl+D
+— all while the Workspace screen is open, all equivalent to clicking
+"Clear selection".
 
 #### Scenario: Making a selection
 - **WHEN** the user drags with the Selection tool
@@ -72,6 +73,13 @@ screen is open — both equivalent to clicking "Clear selection".
   Workspace screen is open
 - **THEN** the selection is cleared, regardless of which tool is
   currently active
+
+#### Scenario: Cmd/Ctrl+D clears the selection
+- **WHEN** a selection is active and the user presses Cmd/Ctrl+D while
+  the Workspace screen is open
+- **THEN** the selection is cleared, regardless of which tool is
+  currently active, and the browser's default action for that shortcut
+  (bookmarking the page) does not occur
 
 ### Requirement: Drawing is clipped to an active selection
 While a selection is active, pencil, eraser, bucket, brush, line, and

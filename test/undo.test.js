@@ -47,10 +47,10 @@ describe('UndoStack', () => {
     assert.equal(stack.undo(), 'state-0');
   });
 
-  test('stack is capped at 50 snapshots', () => {
+  test('stack is capped at 20 snapshots', () => {
     const stack = new UndoStack();
-    for (let i = 0; i < 60; i++) stack.push(`state-${i}`);
-    assert.equal(stack.size(), 50);
+    for (let i = 0; i < 30; i++) stack.push(`state-${i}`);
+    assert.equal(stack.size(), 20);
     // The oldest 10 should have been dropped; undoing all the way should
     // bottom out at state-10, not state-0.
     let last;

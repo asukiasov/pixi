@@ -59,6 +59,10 @@ function pointsToRect(a, b) {
 let state = null;
 let domBound = false;
 let canvasSettingsControls = null;
+let toolButtons = null;
+let pixelPerfectToggle = null;
+let paletteRow = null;
+let brushesRow = null;
 
 function updateUndoRedoButtons() {
   state.undoButton.disabled = !state.undoStack.canUndo();
@@ -81,6 +85,30 @@ function commit() {
   state.undoStack.push(state.layerStack.snapshot());
   updateUndoRedoButtons();
   autoSave();
+}
+
+/** Shared by the Undo button and the Cmd/Ctrl+Z keyboard shortcut. */
+function performUndo() {
+  const snapshot = state.undoStack.undo();
+  if (snapshot) {
+    state.layerStack.restore(snapshot);
+    state.canvasView.render();
+    renderLayersPanel();
+    autoSave();
+  }
+  updateUndoRedoButtons();
+}
+
+/** Shared by the Redo button and the Cmd/Ctrl+Shift+Z (or Ctrl+Y) shortcut. */
+function performRedo() {
+  const snapshot = state.undoStack.redo();
+  if (snapshot) {
+    state.layerStack.restore(snapshot);
+    state.canvasView.render();
+    renderLayersPanel();
+    autoSave();
+  }
+  updateUndoRedoButtons();
 }
 
 function colorForCurrentTool() {
@@ -212,11 +240,10 @@ function buildLayerRow(layer, index, isActive, layerCount) {
 }
 
 function bindDomOnce() {
-  const toolButtons = document.querySelectorAll('.tool-button[data-tool]');
-  const pixelPerfectToggle = document.getElementById('pixel-perfect-toggle');
-  const rectangleFillToggle = document.getElementById('rectangle-fill-toggle');
-  const paletteRow = document.getElementById('palette-row');
-  const brushesRow = document.getElementById('brushes-row');
+  toolButtons = document.querySelectorAll('.tool-button[data-tool]');
+  pixelPerfectToggle = document.getElementById('pixel-perfect-toggle');
+  paletteRow = document.getElementById('palette-row');
+  brushesRow = document.getElementById('brushes-row');
   const backToGalleryButton = document.getElementById('back-to-gallery-button');
 
   toolButtons.forEach((button) => {
@@ -229,11 +256,6 @@ function bindDomOnce() {
   pixelPerfectToggle.addEventListener('click', () => {
     state.pixelPerfect = !state.pixelPerfect;
     pixelPerfectToggle.classList.toggle('active', state.pixelPerfect);
-  });
-
-  rectangleFillToggle.addEventListener('click', () => {
-    state.rectangleFilled = !state.rectangleFilled;
-    rectangleFillToggle.classList.toggle('active', state.rectangleFilled);
   });
 
   PALETTE.forEach((hex, index) => {
@@ -280,26 +302,25 @@ function bindDomOnce() {
     brushesRow.appendChild(swatch);
   });
 
-  state.undoButton.addEventListener('click', () => {
-    const snapshot = state.undoStack.undo();
-    if (snapshot) {
-      state.layerStack.restore(snapshot);
-      state.canvasView.render();
-      renderLayersPanel();
-      autoSave();
-    }
-    updateUndoRedoButtons();
-  });
+  state.undoButton.addEventListener('click', performUndo);
+  state.redoButton.addEventListener('click', performRedo);
 
-  state.redoButton.addEventListener('click', () => {
-    const snapshot = state.undoStack.redo();
-    if (snapshot) {
-      state.layerStack.restore(snapshot);
-      state.canvasView.render();
-      renderLayersPanel();
-      autoSave();
+  // Cmd+Z / Ctrl+Z to undo, Cmd+Shift+Z / Ctrl+Shift+Z (and Ctrl+Y, the
+  // common Windows alternative) to redo. Only while the Workspace screen is
+  // actually visible, so it doesn't fire from the Gallery or New Canvas.
+  document.addEventListener('keydown', (e) => {
+    if (!(e.metaKey || e.ctrlKey)) return;
+    const key = e.key.toLowerCase();
+    if (key !== 'z' && key !== 'y') return;
+    if (document.getElementById('screen-workspace').classList.contains('hidden')) return;
+
+    if (key === 'y' || (key === 'z' && e.shiftKey)) {
+      e.preventDefault();
+      performRedo();
+    } else if (key === 'z') {
+      e.preventDefault();
+      performUndo();
     }
-    updateUndoRedoButtons();
   });
 
   state.exportButton.addEventListener('click', async () => {
@@ -458,6 +479,17 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     bindDomOnce();
     domBound = true;
   }
+
+  // The DOM (tool buttons, palette/brush swatches, pixel-perfect toggle) is
+  // bound once and reused across every project, but each freshly-opened
+  // project's `state` above resets to defaults — without this, opening a
+  // different project left the *previous* project's tool/color highlighted
+  // even though it no longer applied (e.g. the state was reset but a
+  // stale-highlighted swatch/tool suggested otherwise).
+  toolButtons.forEach((b) => b.classList.toggle('active', b.dataset.tool === state.currentTool));
+  paletteRow.querySelectorAll('.palette-swatch').forEach((s, i) => s.classList.toggle('active', i === 0));
+  brushesRow.querySelectorAll('.brush-swatch').forEach((s, i) => s.classList.toggle('active', i === 0));
+  pixelPerfectToggle.classList.remove('active');
 
   canvasSettingsControls.setCurrentSize(layerStack.width, layerStack.height);
   canvasSettingsControls.setCurrentName(projectName);

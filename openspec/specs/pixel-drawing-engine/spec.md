@@ -84,7 +84,8 @@ intercepting these as native page gestures.
 
 ### Requirement: Undo and redo
 The system SHALL let the user undo and redo completed drawing actions (strokes
-and fills) via visible buttons, keeping up to the last 50 actions.
+and fills) via visible buttons or the Cmd/Ctrl+Z (undo) and Cmd/Ctrl+Shift+Z /
+Ctrl+Y (redo) keyboard shortcuts, keeping up to the last 20 actions.
 
 #### Scenario: Undo a stroke
 - **WHEN** the user completes a stroke and then taps Undo
@@ -100,8 +101,14 @@ and fills) via visible buttons, keeping up to the last 50 actions.
   longer available for it
 
 #### Scenario: Undo history limit
-- **WHEN** more than 50 actions have been completed
-- **THEN** only the most recent 50 remain available to undo
+- **WHEN** more than 20 actions have been completed
+- **THEN** only the most recent 20 remain available to undo
+
+#### Scenario: Undo/redo via keyboard
+- **WHEN** the user presses Cmd/Ctrl+Z (or Cmd/Ctrl+Shift+Z / Ctrl+Y) while
+  the Workspace is visible
+- **THEN** it undoes (or redoes) the same way tapping the Undo/Redo button
+  would
 
 ### Requirement: PNG export
 The system SHALL let the user export the current canvas as a PNG file at its

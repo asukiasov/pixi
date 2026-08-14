@@ -2,7 +2,7 @@
 // callers push whatever they want restored (e.g. a copy of the engine's
 // pixel buffer) after each completed stroke or fill, not per-pixel.
 
-const MAX_SNAPSHOTS = 50;
+const MAX_SNAPSHOTS = 20;
 
 export class UndoStack {
   #snapshots = [];

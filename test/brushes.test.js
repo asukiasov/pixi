@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { PixelEngine } from '../js/engine.js';
-import { BRUSHES, placeBrush, rainbowColor } from '../js/brushes.js';
+import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from '../js/brushes.js';
 
 describe('BRUSHES registry', () => {
   test('includes a Heart brush with a well-formed pattern', () => {
@@ -12,6 +12,43 @@ describe('BRUSHES registry', () => {
       assert.ok(dx >= 0 && dx < heart.width, `dx ${dx} within width ${heart.width}`);
       assert.ok(dy >= 0 && dy < heart.height, `dy ${dy} within height ${heart.height}`);
     }
+  });
+
+  test('includes a Circle brush, a filled 5x5 pattern', () => {
+    const circle = BRUSHES.find((b) => b.id === 'circle');
+    assert.ok(circle);
+    assert.equal(circle.width, 5);
+    assert.equal(circle.height, 5);
+    for (const [dx, dy] of circle.pixels) {
+      assert.ok(dx >= 0 && dx < circle.width, `dx ${dx} within width ${circle.width}`);
+      assert.ok(dy >= 0 && dy < circle.height, `dy ${dy} within height ${circle.height}`);
+    }
+    // Corners of a "circle" should be empty; center should be filled.
+    const has = (x, y) => circle.pixels.some(([px, py]) => px === x && py === y);
+    assert.equal(has(0, 0), false);
+    assert.equal(has(4, 0), false);
+    assert.equal(has(2, 2), true);
+  });
+});
+
+describe('pixelsFromGrid', () => {
+  test('converts a 2D boolean grid to [x, y] pairs for "on" cells only', () => {
+    const grid = [
+      [true, false],
+      [false, true],
+    ];
+    const pixels = pixelsFromGrid(grid);
+    assert.equal(pixels.length, 2);
+    assert.ok(pixels.some(([x, y]) => x === 0 && y === 0));
+    assert.ok(pixels.some(([x, y]) => x === 1 && y === 1));
+  });
+
+  test('an all-false grid produces no pixels', () => {
+    const grid = [
+      [false, false],
+      [false, false],
+    ];
+    assert.deepEqual(pixelsFromGrid(grid), []);
   });
 });
 

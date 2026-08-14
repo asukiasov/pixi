@@ -15,6 +15,13 @@ const db = new Dexie('pixi');
 db.version(1).stores({
   projects: 'id, updatedAt',
 });
+// Dexie requires restating every store (not just the diff) in a new
+// version block. customBrushes: user-created Brush-tool patterns,
+// available across every project - see design.md on the userId field.
+db.version(2).stores({
+  projects: 'id, updatedAt',
+  customBrushes: 'id, createdAt',
+});
 
 function generateId() {
   return crypto.randomUUID();
@@ -73,7 +80,38 @@ export async function deleteProject(id) {
   await db.projects.delete(id);
 }
 
-/** Test-only: empties the projects table between test cases. */
+/**
+ * Creates a custom brush (from the Brush editor's grid) and writes it
+ * immediately. `userId` is always null today - no auth exists yet (Phase 3
+ * adds Supabase Auth, per openspec/roadmap.md); reserving the field now
+ * means "owned by the signed-in user" later is a matter of setting it, not
+ * a schema change.
+ */
+export async function createCustomBrush(name, width, height, pixels) {
+  const record = {
+    id: generateId(),
+    name,
+    width,
+    height,
+    pixels,
+    userId: null,
+    createdAt: Date.now(),
+  };
+  await db.customBrushes.put(record);
+  return record;
+}
+
+/** Every custom brush, for merging into the Brush tool's picker alongside the built-ins. */
+export async function listCustomBrushes() {
+  return db.customBrushes.toArray();
+}
+
+export async function deleteCustomBrush(id) {
+  await db.customBrushes.delete(id);
+}
+
+/** Test-only: empties the projects and customBrushes tables between test cases. */
 export async function _clearAllForTests() {
   await db.projects.clear();
+  await db.customBrushes.clear();
 }

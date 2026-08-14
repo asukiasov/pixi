@@ -8,6 +8,9 @@ import {
   listProjects,
   deleteProject,
   renameProject,
+  createCustomBrush,
+  listCustomBrushes,
+  deleteCustomBrush,
   _clearAllForTests,
 } from '../js/persistence.js';
 import { LayerStack } from '../js/layers.js';
@@ -136,5 +139,40 @@ describe('deleteProject', () => {
     const all = await listProjects();
     assert.ok(!all.some((p) => p.id === created.id));
     assert.equal(await loadProject(created.id), undefined);
+  });
+});
+
+describe('createCustomBrush', () => {
+  test('creates a record with id, name, dimensions, pixels, and a null userId', async () => {
+    const pixels = [[0, 0], [1, 1]];
+    const record = await createCustomBrush('My Brush', 2, 2, pixels);
+    assert.ok(record.id);
+    assert.equal(record.name, 'My Brush');
+    assert.equal(record.width, 2);
+    assert.equal(record.height, 2);
+    assert.deepEqual(record.pixels, pixels);
+    // Reserved for Phase 3 (Supabase Auth) ownership - unused today.
+    assert.equal(record.userId, null);
+    assert.ok(record.createdAt);
+  });
+});
+
+describe('listCustomBrushes', () => {
+  test('returns every created custom brush', async () => {
+    await createCustomBrush('A', 2, 2, [[0, 0]]);
+    await createCustomBrush('B', 3, 3, [[1, 1]]);
+    const all = await listCustomBrushes();
+    assert.equal(all.length, 2);
+    assert.ok(all.some((b) => b.name === 'A'));
+    assert.ok(all.some((b) => b.name === 'B'));
+  });
+});
+
+describe('deleteCustomBrush', () => {
+  test('removes it so it no longer appears in listCustomBrushes', async () => {
+    const created = await createCustomBrush('Gone soon', 2, 2, [[0, 0]]);
+    await deleteCustomBrush(created.id);
+    const all = await listCustomBrushes();
+    assert.ok(!all.some((b) => b.id === created.id));
   });
 });

@@ -413,8 +413,7 @@ body {
   opacity: 0.3;
 }
 
-.palette-row,
-.brushes-row {
+.palette-row {
   display: flex;
   gap: 0.35rem;
   padding: 0.5rem;
@@ -439,20 +438,134 @@ body {
   background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
 }
 
+/* Brushes panel — Photoshop-Brushes-panel-style: title, spacing control,
+   thumbnail grid, bottom toolbar with add/delete icon buttons. */
+
+.brushes-panel {
+  max-height: 12rem;
+  overflow-y: auto;
+  background: #1c1c1e;
+  border-top: 1px solid #2c2c2e;
+  flex: none;
+}
+
+.brushes-panel-header {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.5rem;
+}
+
+.brushes-panel-header h2 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #a0a0a5;
+  margin: 0;
+}
+
+.brushes-panel-row {
+  padding: 0 0.5rem 0.4rem;
+}
+
+.brushes-spacing-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.brushes-spacing-label input[type="number"] {
+  width: 3.5rem;
+  padding: 0.3rem;
+  background: #2c2c2e;
+  border: 1px solid #48484a;
+  color: inherit;
+  border-radius: 0.4rem;
+}
+
+.brushes-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.75rem, 1fr));
+  gap: 0.4rem;
+  padding: 0 0.5rem 0.5rem;
+}
+
 .brush-swatch {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 100%;
+  aspect-ratio: 1;
   border-radius: 0.3rem;
   border: 2px solid #48484a;
   background: #2c2c2e;
   color: inherit;
-  flex: none;
   padding: 0;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .brush-swatch.active {
   border-color: #0a84ff;
+}
+
+.brushes-panel-toolbar {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  border-top: 1px solid #2c2c2e;
+}
+
+/* Brush editor — fixed 9x9 grid, click/drag to toggle cells on. */
+
+.brush-editor-panel {
+  padding: 0.6rem;
+  background: #1c1c1e;
+  border-top: 1px solid #2c2c2e;
+  flex: none;
+}
+
+.brush-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.brush-editor-row:last-child {
+  margin-bottom: 0;
+}
+
+.brush-editor-row input[type="text"] {
+  flex: 1;
+  padding: 0.4rem 0.5rem;
+  background: #2c2c2e;
+  border: 1px solid #48484a;
+  color: inherit;
+  border-radius: 0.4rem;
+}
+
+.brush-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1.6rem);
+  grid-template-rows: repeat(9, 1.6rem);
+  gap: 1px;
+  background: #48484a;
+  border: 1px solid #48484a;
+  width: fit-content;
+  margin-bottom: 0.5rem;
+  touch-action: none;
+}
+
+.brush-editor-cell {
+  width: 1.6rem;
+  height: 1.6rem;
+  background: #2c2c2e;
+  border: none;
+  padding: 0;
+}
+
+.brush-editor-cell.on {
+  background: #0a84ff;
 }
 
 .selection-controls {

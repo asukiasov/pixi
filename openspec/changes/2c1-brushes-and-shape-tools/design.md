@@ -124,6 +124,61 @@ sequence" — there's no persistent hue counter to reset. `rainbowColor(hue)`
 array format; `RAINBOW_HUE_STEP = 20` degrees per brush (18-ish visibly
 distinct steps around the wheel before repeating).
 
+**Circle brush is a second hand-authored bitmap, same format as Heart.**
+5×5, filled:
+```
+.XXX.
+XXXXX
+XXXXX
+XXXXX
+.XXX.
+```
+
+**Brushes panel replaces the bare `brushes-row`, styled after Photoshop's
+Brushes panel** (per a reference screenshot): a titled panel with a
+thumbnail grid (not a single-row horizontal scroll) and a bottom toolbar
+holding Add (+) and Delete (🗑) icon buttons — reusing the Material Symbols
+icons already added for tools/undo/redo, not new text buttons. A Spacing
+number input sits above the grid, mirroring Photoshop's "Size: N px" row.
+
+**Custom brush creation is a fixed 9×9 grid of plain `<button>` cells, not
+a canvas.** Matches Heart's width, simple enough that DOM buttons (click to
+toggle, drag to paint) avoid building a second mini pixel-editor rendering
+path alongside the real one. On Save, the grid's on/off cell state converts
+to the same `pixels: [[x,y], ...]` format built-in brushes use via a new
+`pixelsFromGrid(grid)` helper in `js/brushes.js` — so a custom brush is
+indistinguishable from a built-in one everywhere else in the code (picker,
+placement, undo).
+
+**Custom brushes persist via a new Dexie table, `customBrushes`, forward-
+compatible with future per-user ownership.** Record shape:
+```js
+{ id, name, width, height, pixels, userId: null, createdAt }
+```
+`userId` is always `null` today (no auth exists yet — Phase 3 adds
+Supabase Auth per `openspec/roadmap.md`); reserving the field now means
+"a brush becomes owned by the signed-in user" later is a matter of setting
+it and syncing, not a schema change. Dexie version bumps from 1 to 2
+(`projects` unchanged, `customBrushes: 'id, createdAt'` added) — Dexie
+requires restating unchanged stores in a new version block, not just the
+diff. Built-in brushes (Heart, Circle) are never in this table, so
+"can't delete a built-in brush" falls out naturally: the delete control is
+only enabled for a selected brush that has a matching `customBrushes`
+record.
+
+**Spacing is index-based subsampling of the already-interpolated path, not
+distance accumulation.** `redrawBrushPath()` places a brush only at path
+points where `index % state.brushSpacing === 0` — since the path is
+already a dense pixel-by-pixel Bresenham interpolation (~1 unit apart
+regardless of drag direction), index-stepping approximates "every N
+pixels" well enough without tracking cumulative Euclidean distance. Index 0
+(the tap/drag-start point) always satisfies the modulo check, so a
+stationary tap still always places exactly one brush regardless of
+Spacing. Rainbow's hue-per-placement counter increments only on points that
+actually get placed (not skipped ones), so increasing Spacing doesn't
+change the rainbow's visual cycle rate along the trail, just how many
+brushes appear per unit length.
+
 ## Risks / Trade-offs
 
 - [Selection-clip-by-restoring-outside-pixels means bucket fill still
@@ -143,7 +198,10 @@ distinct steps around the wheel before repeating).
 ## Testing
 
 - `js/brushes.js`: DOM-free, tested with `node --test` — placement math
-  (centering, edge clipping), pattern registry shape.
+  (centering, edge clipping), pattern registry shape, Circle's shape,
+  `pixelsFromGrid()`.
+- `js/persistence.js`: `createCustomBrush`/`listCustomBrushes`/
+  `deleteCustomBrush`, tested the same way as project CRUD (`fake-indexeddb`).
 - `js/shape-tools.js`: DOM-free — rectangle (outline/filled) pixel
   correctness, selection-clip logic (`clipToSelection`).
 - Line needs no new tests beyond what `engine.strokeFreehand` already has,

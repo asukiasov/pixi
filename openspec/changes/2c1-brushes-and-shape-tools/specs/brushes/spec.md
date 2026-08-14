@@ -1,18 +1,29 @@
 ## Purpose
 
-Lets a user place predefined pixel-art patterns (like a heart) with a
-single click, filled with their current draw color, instead of drawing
-them freehand every time.
+Lets a user place predefined (or their own custom-drawn) pixel-art
+patterns with a single click, filled with their current draw color,
+instead of drawing them freehand every time.
 
 ## ADDED Requirements
 
 ### Requirement: Brush picker
-The Brush tool SHALL offer a picker of available brush shapes; selecting
-one makes it the current brush. The system ships with one shape (Heart).
+The Brush tool SHALL offer a picker of available brush shapes, presented
+as a titled panel (a thumbnail grid, similar in layout to the Layers
+panel) rather than a bare unlabeled row; selecting one makes it the
+current brush. The system ships with two built-in shapes (Heart, Circle).
 
 #### Scenario: Selecting a brush
 - **WHEN** the user selects the Heart brush from the picker
 - **THEN** Heart becomes the current brush for subsequent placements
+
+### Requirement: Circle brush
+The system SHALL ship a built-in Circle brush, a filled 5×5 circular
+pattern, alongside Heart.
+
+#### Scenario: Placing the Circle brush
+- **WHEN** the user places the Circle brush
+- **THEN** a filled 5×5 circular pattern appears on the active layer,
+  centered on the placed point, in the current draw color
 
 ### Requirement: Place a brush
 Tapping the canvas with the Brush tool active SHALL place the current
@@ -50,18 +61,32 @@ undo purposes — one Undo reverts the whole drag, not brush-by-brush.
 
 ### Requirement: Continuous brush placement while dragging
 Dragging with the Brush tool active SHALL place the current brush
-repeatedly along the drag path, roughly once per pixel of movement (using
-the same line-interpolation the Line tool uses, so fast drags don't skip
-gaps), instead of only placing once per tap.
+repeatedly along the drag path (using the same line-interpolation the Line
+tool uses, so fast drags don't skip gaps), spaced according to the current
+Spacing setting, instead of only placing once per tap.
 
 #### Scenario: Dragging places a trail of brushes
-- **WHEN** the user drags the Brush tool across the canvas
+- **WHEN** the user drags the Brush tool across the canvas with Spacing at
+  its default (1px)
 - **THEN** the brush pattern is placed repeatedly along the dragged path,
   roughly one brush per pixel moved
 
 #### Scenario: A stationary tap still places exactly one brush
 - **WHEN** the user taps without dragging
-- **THEN** exactly one brush is placed, matching prior single-tap behavior
+- **THEN** exactly one brush is placed, matching prior single-tap behavior,
+  regardless of the Spacing setting
+
+### Requirement: Brush spacing
+The Brushes panel SHALL offer a Spacing control (in pixels, minimum 1)
+governing how far apart consecutive placements are along a drag — e.g.
+Spacing 1 places on every pixel of the path, Spacing 4 places roughly every
+4th pixel. Spacing applies only to dragged placement; a single tap always
+places exactly one brush regardless of Spacing.
+
+#### Scenario: Increasing spacing produces a sparser trail
+- **WHEN** the user sets Spacing to 4 and drags the Brush tool
+- **THEN** the placements along the trail are spaced roughly 4 pixels apart
+  instead of touching every pixel
 
 ### Requirement: Rainbow color mode
 "Rainbow" SHALL be selectable as one entry in the same color palette used
@@ -95,3 +120,38 @@ regardless of whether Rainbow is currently selected.
 - **WHEN** the user starts a new Brush drag while Rainbow is selected
 - **THEN** the color sequence restarts from the same starting hue as any
   other drag, rather than continuing from where the previous drag left off
+
+### Requirement: Custom brush creation
+The Brushes panel SHALL offer an "add brush" control that opens a small
+pixel-grid editor (a fixed-size grid the user clicks or drags across to
+toggle cells on/off, independent of any project's canvas). Saving with a
+name adds it to the brush picker as a new brush, usable exactly like a
+built-in one. Canceling discards it.
+
+#### Scenario: Creating a custom brush
+- **WHEN** the user opens the brush editor, toggles a pattern of cells on,
+  names it, and saves
+- **THEN** a new brush with that pattern and name appears in the picker and
+  can be placed like Heart or Circle
+
+#### Scenario: Canceling brush creation
+- **WHEN** the user opens the brush editor and cancels instead of saving
+- **THEN** no new brush is added
+
+### Requirement: Custom brushes persist across projects
+A saved custom brush SHALL be stored locally (IndexedDB) and available in
+every project, not just the one open when it was created — the same way
+built-in brushes are available everywhere. Deleting a custom brush SHALL
+remove it from the picker in every project going forward. Built-in brushes
+(Heart, Circle) cannot be deleted.
+
+#### Scenario: A custom brush is available in a different project
+- **WHEN** the user creates a custom brush while project A is open, then
+  opens project B
+- **THEN** the custom brush appears in project B's picker too
+
+#### Scenario: Deleting a custom brush
+- **WHEN** the user deletes a custom brush from the picker
+- **THEN** it no longer appears in any project's picker, and existing
+  brush strokes already placed with it are unaffected (only the picker
+  entry is removed, not past canvas content)

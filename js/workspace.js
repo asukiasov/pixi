@@ -1,9 +1,11 @@
 import { UndoStack } from './undo.js';
-import { saveProject, renameProject } from './persistence.js';
+import { saveProject, renameProject, createCustomBrush, listCustomBrushes, deleteCustomBrush } from './persistence.js';
 import { initCanvasSettings } from './canvas-settings.js';
-import { BRUSHES, placeBrush, rainbowColor } from './brushes.js';
+import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
 import { bresenhamLine } from './engine.js';
+
+const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
 
 const RAINBOW_HUE_STEP = 20; // degrees per brush placed, in Rainbow mode
 
@@ -62,7 +64,14 @@ let canvasSettingsControls = null;
 let toolButtons = null;
 let pixelPerfectToggle = null;
 let paletteRow = null;
-let brushesRow = null;
+let brushesPanelGrid = null;
+let deleteBrushButton = null;
+
+// All available brushes: the built-ins plus whatever's been loaded from
+// IndexedDB. Module-level, not per-project — brushes are global, not
+// scoped to one project (see the "Custom brushes persist across
+// projects" requirement).
+let allBrushes = [...BRUSHES];
 
 function updateUndoRedoButtons() {
   state.undoButton.disabled = !state.undoStack.canUndo();
@@ -239,11 +248,121 @@ function buildLayerRow(layer, index, isActive, layerCount) {
   return row;
 }
 
+/** Rebuilds the Brushes panel grid from `allBrushes`, marking the current one active. */
+function renderBrushesPanel() {
+  brushesPanelGrid.innerHTML = '';
+  allBrushes.forEach((brush) => {
+    const swatch = document.createElement('button');
+    swatch.type = 'button';
+    swatch.className = 'brush-swatch' + (brush.id === state.currentBrush?.id ? ' active' : '');
+    swatch.textContent = brush.name;
+    swatch.title = brush.name;
+    swatch.addEventListener('click', () => {
+      state.currentBrush = brush;
+      brushesPanelGrid.querySelectorAll('.brush-swatch').forEach((s) => s.classList.toggle('active', s === swatch));
+      deleteBrushButton.disabled = !brush.isCustom;
+    });
+    brushesPanelGrid.appendChild(swatch);
+  });
+  deleteBrushButton.disabled = !state.currentBrush?.isCustom;
+}
+
+/** Fetches custom brushes from IndexedDB, merges with the built-ins, re-renders the panel. */
+async function loadCustomBrushes() {
+  const custom = await listCustomBrushes();
+  allBrushes = [...BRUSHES, ...custom.map((b) => ({ ...b, isCustom: true }))];
+  renderBrushesPanel();
+}
+
+function makeEmptyBrushEditorGrid() {
+  return Array.from({ length: BRUSH_EDITOR_SIZE }, () => Array(BRUSH_EDITOR_SIZE).fill(false));
+}
+
+let brushEditorGridState = null;
+let brushEditorPainting = false;
+let brushEditorPaintValue = true;
+
+function openBrushEditor() {
+  brushEditorGridState = makeEmptyBrushEditorGrid();
+  document.getElementById('brush-editor-name').value = '';
+  document.querySelectorAll('.brush-editor-cell').forEach((c) => c.classList.remove('on'));
+  document.getElementById('brush-editor-panel').classList.remove('hidden');
+}
+
+function closeBrushEditor() {
+  document.getElementById('brush-editor-panel').classList.add('hidden');
+}
+
+/**
+ * Builds the fixed 9x9 editor grid once and wires paint/erase-by-drag.
+ * Listens on the grid container (not per-cell pointerenter) and resolves
+ * the cell under the pointer via elementFromPoint on every move — touch
+ * pointers implicitly capture to their initial target element, so
+ * pointerenter would never fire on sibling cells during a touch drag.
+ */
+function bindBrushEditorOnce() {
+  const grid = document.getElementById('brush-editor-grid');
+  const nameInput = document.getElementById('brush-editor-name');
+  const clearButton = document.getElementById('brush-editor-clear');
+  const cancelButton = document.getElementById('brush-editor-cancel');
+  const saveButton = document.getElementById('brush-editor-save');
+
+  for (let y = 0; y < BRUSH_EDITOR_SIZE; y++) {
+    for (let x = 0; x < BRUSH_EDITOR_SIZE; x++) {
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'brush-editor-cell';
+      cell.dataset.x = String(x);
+      cell.dataset.y = String(y);
+      grid.appendChild(cell);
+    }
+  }
+
+  function setCellFromEvent(clientX, clientY, isFirst) {
+    const el = document.elementFromPoint(clientX, clientY);
+    const cell = el?.closest?.('.brush-editor-cell');
+    if (!cell) return;
+    const x = Number(cell.dataset.x);
+    const y = Number(cell.dataset.y);
+    if (isFirst) brushEditorPaintValue = !brushEditorGridState[y][x];
+    brushEditorGridState[y][x] = brushEditorPaintValue;
+    cell.classList.toggle('on', brushEditorPaintValue);
+  }
+
+  grid.addEventListener('pointerdown', (e) => {
+    brushEditorPainting = true;
+    setCellFromEvent(e.clientX, e.clientY, true);
+    e.preventDefault();
+  });
+  grid.addEventListener('pointermove', (e) => {
+    if (!brushEditorPainting) return;
+    setCellFromEvent(e.clientX, e.clientY, false);
+  });
+  document.addEventListener('pointerup', () => {
+    brushEditorPainting = false;
+  });
+
+  clearButton.addEventListener('click', () => {
+    brushEditorGridState = makeEmptyBrushEditorGrid();
+    grid.querySelectorAll('.brush-editor-cell').forEach((c) => c.classList.remove('on'));
+  });
+
+  cancelButton.addEventListener('click', () => closeBrushEditor());
+
+  saveButton.addEventListener('click', async () => {
+    const name = nameInput.value.trim() || 'Custom Brush';
+    const pixels = pixelsFromGrid(brushEditorGridState);
+    if (pixels.length === 0) return; // nothing drawn - no-op, stay open
+    await createCustomBrush(name, BRUSH_EDITOR_SIZE, BRUSH_EDITOR_SIZE, pixels);
+    await loadCustomBrushes();
+    closeBrushEditor();
+  });
+}
+
 function bindDomOnce() {
   toolButtons = document.querySelectorAll('.tool-button[data-tool]');
   pixelPerfectToggle = document.getElementById('pixel-perfect-toggle');
   paletteRow = document.getElementById('palette-row');
-  brushesRow = document.getElementById('brushes-row');
   const backToGalleryButton = document.getElementById('back-to-gallery-button');
 
   toolButtons.forEach((button) => {
@@ -288,19 +407,31 @@ function bindDomOnce() {
   });
   paletteRow.appendChild(rainbowSwatch);
 
-  BRUSHES.forEach((brush, index) => {
-    const swatch = document.createElement('button');
-    swatch.type = 'button';
-    swatch.className = 'brush-swatch';
-    swatch.textContent = brush.name;
-    swatch.title = brush.name;
-    if (index === 0) swatch.classList.add('active');
-    swatch.addEventListener('click', () => {
-      state.currentBrush = brush;
-      brushesRow.querySelectorAll('.brush-swatch').forEach((s) => s.classList.toggle('active', s === swatch));
-    });
-    brushesRow.appendChild(swatch);
+  brushesPanelGrid = document.getElementById('brushes-panel-grid');
+  deleteBrushButton = document.getElementById('delete-brush-button');
+  const addBrushButton = document.getElementById('add-brush-button');
+  const brushSpacingInput = document.getElementById('brush-spacing');
+
+  renderBrushesPanel();
+  loadCustomBrushes(); // async; re-renders the panel once custom brushes arrive
+
+  brushSpacingInput.addEventListener('change', () => {
+    const value = Math.max(1, Math.min(20, Number(brushSpacingInput.value) || 1));
+    brushSpacingInput.value = String(value);
+    state.brushSpacing = value;
   });
+
+  deleteBrushButton.addEventListener('click', async () => {
+    const custom = allBrushes.find((b) => b.id === state.currentBrush.id && b.isCustom);
+    if (!custom) return;
+    await deleteCustomBrush(custom.id);
+    await loadCustomBrushes();
+    state.currentBrush = allBrushes[0];
+    renderBrushesPanel();
+  });
+
+  addBrushButton.addEventListener('click', () => openBrushEditor());
+  bindBrushEditorOnce();
 
   state.undoButton.addEventListener('click', performUndo);
   state.redoButton.addEventListener('click', performRedo);
@@ -421,17 +552,23 @@ function drawShapePreview() {
 }
 
 /**
- * Redraws the entire accumulated Brush drag path from the pre-drag backup:
- * one brush placement per point in `state.brushPath`, colored by rainbow
- * hue (index-based, so redrawing from scratch each move naturally keeps
- * the sequence deterministic — no persistent counter to reset between
- * drags) when Rainbow mode is on, or the selected palette color otherwise.
+ * Redraws the entire accumulated Brush drag path from the pre-drag backup.
+ * Only places at path indices where `index % state.brushSpacing === 0` —
+ * the path is already a dense pixel-by-pixel interpolation, so
+ * index-stepping approximates "every N pixels" well without tracking
+ * cumulative distance. Index 0 always satisfies the check, so a stationary
+ * tap always places exactly one brush regardless of Spacing. Rainbow's hue
+ * counter only increments for placements that actually happen (not
+ * skipped ones), so Spacing doesn't change the rainbow's cycle rate.
  */
 function redrawBrushPath() {
   state.strokeEngine.data.set(state.strokeBackup);
+  let placementIndex = 0;
   state.brushPath.forEach((point, i) => {
-    const rgba = state.brushRainbow ? rainbowColor(i * RAINBOW_HUE_STEP) : state.currentColor;
+    if (i % state.brushSpacing !== 0) return;
+    const rgba = state.brushRainbow ? rainbowColor(placementIndex * RAINBOW_HUE_STEP) : state.currentColor;
     placeBrush(state.strokeEngine, point.x, point.y, state.currentBrush, rgba);
+    placementIndex++;
   });
   clipToSelection(state.strokeEngine, state.strokeBackup, state.selection);
 }
@@ -454,8 +591,9 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     undoStack: new UndoStack(),
     currentTool: 'pencil',
     currentColor: hexToRgba(PALETTE[0]),
-    currentBrush: BRUSHES[0],
+    currentBrush: allBrushes[0],
     brushRainbow: false,
+    brushSpacing: 1,
     brushPath: [],
     pixelPerfect: false,
     rectangleFilled: false,
@@ -488,7 +626,8 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   // stale-highlighted swatch/tool suggested otherwise).
   toolButtons.forEach((b) => b.classList.toggle('active', b.dataset.tool === state.currentTool));
   paletteRow.querySelectorAll('.palette-swatch').forEach((s, i) => s.classList.toggle('active', i === 0));
-  brushesRow.querySelectorAll('.brush-swatch').forEach((s, i) => s.classList.toggle('active', i === 0));
+  renderBrushesPanel();
+  document.getElementById('brush-spacing').value = '1';
   pixelPerfectToggle.classList.remove('active');
 
   canvasSettingsControls.setCurrentSize(layerStack.width, layerStack.height);

@@ -1,9 +1,10 @@
-// Predefined pixel-art patterns placeable with one click, or dragged as a
-// repeating trail. DOM-free, no engine.js changes needed — placement
-// relies on PixelEngine.setPixel's existing bounds check to silently clip
-// out-of-canvas pixels. Adding a new brush is a data addition here, not
-// new tool-handling code (see js/workspace.js). Custom (user-drawn) brush
-// creation is intentionally out of scope for now — see openspec/roadmap.md.
+// Predefined (or user-drawn custom) pixel-art patterns placeable with one
+// click, or dragged as a repeating trail. DOM-free, no engine.js changes
+// needed — placement relies on PixelEngine.setPixel's existing bounds
+// check to silently clip out-of-canvas pixels. Adding a built-in brush is
+// a data addition here, not new tool-handling code (see js/workspace.js).
+// Custom brushes are built the same way (see pixelsFromGrid) and persisted
+// via js/persistence.js, not stored in this file.
 
 const HEART_PATTERN = [
   '.XX...XX.',
@@ -14,6 +15,14 @@ const HEART_PATTERN = [
   '..XXXXX..',
   '...XXX...',
   '....X....',
+];
+
+const CIRCLE_PATTERN = [
+  '.XXX.',
+  'XXXXX',
+  'XXXXX',
+  'XXXXX',
+  '.XXX.',
 ];
 
 function patternToPixels(rows) {
@@ -34,7 +43,30 @@ export const BRUSHES = [
     height: HEART_PATTERN.length,
     pixels: patternToPixels(HEART_PATTERN),
   },
+  {
+    id: 'circle',
+    name: 'Circle',
+    width: CIRCLE_PATTERN[0].length,
+    height: CIRCLE_PATTERN.length,
+    pixels: patternToPixels(CIRCLE_PATTERN),
+  },
 ];
+
+/**
+ * Converts a 2D boolean grid (grid[y][x] === true means "on") from the
+ * custom-brush editor into the same `pixels: [[x, y], ...]` format
+ * built-in brushes use, so a custom brush works identically everywhere
+ * else in the code.
+ */
+export function pixelsFromGrid(grid) {
+  const pixels = [];
+  grid.forEach((row, y) => {
+    row.forEach((on, x) => {
+      if (on) pixels.push([x, y]);
+    });
+  });
+  return pixels;
+}
 
 /**
  * Places `brush`'s pattern on `engine`, centered on (centerX, centerY),

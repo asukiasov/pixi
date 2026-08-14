@@ -122,3 +122,33 @@
       more shapes/custom brushes exist. Custom (user-drawn) brush creation
       noted in `openspec/roadmap.md`'s "Not yet scheduled" section, not
       built in this slice per explicit direction
+
+## 9. Circle brush, Brushes panel, custom brush creation, spacing
+
+- [x] 9.1 `js/brushes.js`: add Circle pattern (5×5 filled) to `BRUSHES`
+- [x] 9.2 `js/brushes.js`: implement `pixelsFromGrid(grid)` — converts a 2D
+      boolean grid to the `pixels: [[x,y], ...]` format
+- [x] 9.3 `js/persistence.js`: add `customBrushes` Dexie table (version
+      bump 1→2), `createCustomBrush(name, width, height, pixels)`,
+      `listCustomBrushes()`, `deleteCustomBrush(id)`. Record includes
+      `userId: null` (reserved for Phase 3 ownership, unused today)
+- [x] 9.4 `index.html`/`style.css`: replace `#brushes-row` with a
+      Photoshop-style Brushes panel — header, Spacing number input,
+      thumbnail grid, bottom toolbar with Add/Delete icon buttons (Material
+      Symbols, matching tools/undo/redo)
+- [x] 9.5 `index.html`/`style.css`: brush editor panel — fixed 9×9 grid of
+      toggleable cells, name input, Clear/Cancel/Save controls
+- [x] 9.6 `js/workspace.js`: load custom brushes on startup, merge with
+      `BRUSHES` for the picker; wire Add (opens editor) / Save (builds
+      pixels via `pixelsFromGrid`, persists, adds to picker) / Cancel /
+      Delete (only enabled for a selected custom brush)
+- [x] 9.7 `js/workspace.js`: add `state.brushSpacing` (default 1) and a
+      Spacing input; `redrawBrushPath()` places only at path indices where
+      `index % brushSpacing === 0` (index 0 always included, so a
+      stationary tap is unaffected by Spacing)
+- [x] 9.8 Unit tests (`node --test`): Circle pattern shape, `pixelsFromGrid`,
+      `createCustomBrush`/`listCustomBrushes`/`deleteCustomBrush`
+- [x] 9.9 Playwright smoke pass: place Circle; create a custom brush via the
+      editor and place it; delete it and confirm it's gone from the picker;
+      confirm a custom brush survives a project switch; set Spacing > 1 and
+      confirm a sparser trail; re-run full `node --test` suite

@@ -40,6 +40,10 @@ filled, previewed live while dragging and committed on release.
 ### Requirement: Rectangular selection
 The user SHALL be able to define a rectangular selection by dragging on
 the active layer. A selection persists across tool switches until cleared.
+Besides the existing explicit "Clear selection" control, the user SHALL
+also be able to clear the active selection by clicking outside it with
+the Selection tool active, or by pressing Escape while the Workspace
+screen is open — both equivalent to clicking "Clear selection".
 
 #### Scenario: Making a selection
 - **WHEN** the user drags with the Selection tool
@@ -50,6 +54,24 @@ the active layer. A selection persists across tool switches until cleared.
 - **WHEN** the user clears the selection
 - **THEN** no selection remains and other tools can draw anywhere on the
   canvas again
+
+#### Scenario: Clicking outside the selection clears it
+- **WHEN** a selection is active, the Selection tool is active, and the
+  user clicks (without dragging) at a point outside the current selection
+- **THEN** the selection is cleared, the same as clicking "Clear
+  selection"
+
+#### Scenario: Clicking inside the selection starts a new one, not a clear
+- **WHEN** a selection is active and the user drags starting from a point
+  inside it with the Selection tool
+- **THEN** the drag defines a new selection (replacing the old one) rather
+  than clearing it
+
+#### Scenario: Escape clears the selection
+- **WHEN** a selection is active and the user presses Escape while the
+  Workspace screen is open
+- **THEN** the selection is cleared, regardless of which tool is
+  currently active
 
 ### Requirement: Drawing is clipped to an active selection
 While a selection is active, pencil, eraser, bucket, brush, line, and

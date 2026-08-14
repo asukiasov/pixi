@@ -157,8 +157,8 @@ function buildLayerRow(layer, index, isActive, layerCount) {
 
   const visibilityButton = document.createElement('button');
   visibilityButton.type = 'button';
-  visibilityButton.className = 'layer-visibility-toggle';
-  visibilityButton.textContent = layer.visible ? '\u{1F441}' : '\u{1F6AB}'; // 👁 / 🚫
+  visibilityButton.className = 'layer-visibility-toggle icon-button';
+  visibilityButton.innerHTML = `<span class="material-symbols-outlined">${layer.visible ? 'visibility' : 'visibility_off'}</span>`;
   visibilityButton.title = layer.visible ? 'Hide layer' : 'Show layer';
   visibilityButton.addEventListener('click', () => {
     state.layerStack.setVisibility(index, !layer.visible);
@@ -237,8 +237,8 @@ function buildLayerRow(layer, index, isActive, layerCount) {
 
   const deleteButton = document.createElement('button');
   deleteButton.type = 'button';
-  deleteButton.className = 'layer-delete-button';
-  deleteButton.textContent = '\u{1F5D1}'; // 🗑
+  deleteButton.className = 'layer-delete-button icon-button';
+  deleteButton.innerHTML = '<span class="material-symbols-outlined">delete</span>';
   deleteButton.title = 'Delete layer';
   deleteButton.disabled = layerCount <= 1;
   deleteButton.addEventListener('click', () => {
@@ -450,6 +450,49 @@ function bindBrushEditorOnce() {
   });
 }
 
+/**
+ * Wires a single shared tooltip element (positioned via JS, not CSS
+ * ::after — see style.css's .tool-tooltip comment for why) to every
+ * [data-tooltip] element in the tools sidebar. Shows after a short delay
+ * on hover/focus, to the right of the button; hides immediately on
+ * leave/blur.
+ */
+function bindTooltips() {
+  const tooltipEl = document.createElement('div');
+  tooltipEl.className = 'tool-tooltip';
+  document.body.appendChild(tooltipEl);
+
+  let showTimer = null;
+
+  function show(target) {
+    clearTimeout(showTimer);
+    showTimer = setTimeout(() => {
+      const text = target.dataset.tooltip;
+      if (!text) return;
+      tooltipEl.textContent = text;
+      const rect = target.getBoundingClientRect();
+      tooltipEl.style.left = `${rect.right + 8}px`;
+      tooltipEl.style.top = `${rect.top + rect.height / 2}px`;
+      tooltipEl.style.transform = 'translateY(-50%)';
+      tooltipEl.classList.add('visible');
+    }, 300);
+  }
+
+  function hide() {
+    clearTimeout(showTimer);
+    tooltipEl.classList.remove('visible');
+  }
+
+  document.querySelectorAll('[data-tooltip]').forEach((el) => {
+    el.addEventListener('mouseenter', () => show(el));
+    el.addEventListener('mouseleave', hide);
+    el.addEventListener('focus', () => show(el));
+    el.addEventListener('blur', hide);
+    // A click (tool switch) shouldn't leave a stale tooltip lingering.
+    el.addEventListener('click', hide);
+  });
+}
+
 function bindDomOnce() {
   toolButtons = document.querySelectorAll('.tool-button[data-tool]');
   pixelPerfectToggle = document.getElementById('pixel-perfect-toggle');
@@ -470,6 +513,8 @@ function bindDomOnce() {
       state.canvasView.setPanMode(state.currentTool === 'hand');
     });
   });
+
+  bindTooltips();
 
   pixelPerfectToggle.addEventListener('click', () => {
     state.pixelPerfect = !state.pixelPerfect;
@@ -592,6 +637,17 @@ function bindDomOnce() {
       e.preventDefault();
       state.canvasView.zoomStep(-1);
     }
+  });
+
+  // Escape clears the active selection, regardless of which tool is
+  // current — unlike the shortcuts above, this one takes no modifier key.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('screen-workspace').classList.contains('hidden')) return;
+    if (!state.selection) return;
+    state.selection = null;
+    state.canvasView.setSelectionRect(null);
+    updateSelectionControls();
   });
 
   state.exportButton.addEventListener('click', async () => {
@@ -927,7 +983,21 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
 
       if (tool === 'selection') {
         if (!state.dragStart) return;
-        state.selection = pointsToRect(state.dragStart, state.dragCurrent ?? state.dragStart);
+        const end = state.dragCurrent ?? state.dragStart;
+        const wasATap = end.x === state.dragStart.x && end.y === state.dragStart.y;
+        // A plain click (no drag) outside the current selection clears it,
+        // instead of replacing it with a degenerate 1x1 selection at the
+        // click point — the same effect as "Clear selection", reachable
+        // without hunting for that button. A drag always defines a new
+        // selection regardless of where it starts (existing behavior,
+        // unchanged), and a tap *inside* the current selection still just
+        // makes the usual 1x1 selection there.
+        if (wasATap && state.selection && !isPointInSelection(state.dragStart, state.selection)) {
+          state.selection = null;
+          state.canvasView.setSelectionRect(null);
+        } else {
+          state.selection = pointsToRect(state.dragStart, end);
+        }
         state.dragStart = null;
         state.dragCurrent = null;
         updateSelectionControls();

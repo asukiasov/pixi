@@ -234,3 +234,19 @@
       confirm it renders with cycling colors along its length, matching
       the same sequence Brush uses; confirm a regular color still draws a
       solid-color line; re-run full `node --test` suite
+
+## 14. Selection deselect via outside-click or Escape
+
+- [x] 14.1 `js/workspace.js`: Selection tool's `onDrawEnd` — if the
+      pointer-up point matches the pointer-down point (a tap, not a drag)
+      and it falls outside the current selection, clear the selection
+      instead of replacing it with a degenerate 1x1 one at the tap point
+- [x] 14.2 `js/workspace.js`: a second keydown listener for Escape (no
+      modifier key required, unlike the undo/redo/zoom shortcuts) that
+      clears the active selection, gated on the Workspace screen being
+      visible
+- [x] 14.3 Playwright smoke pass: make a selection, click outside it with
+      the Selection tool active, confirm it clears; make a selection,
+      drag starting from inside it, confirm it replaces (not clears) the
+      selection; make a selection, press Escape, confirm it clears
+      regardless of the active tool; re-run full `node --test` suite

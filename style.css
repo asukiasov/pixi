@@ -200,6 +200,32 @@ body {
   align-items: center;
   justify-content: center;
   padding: 0;
+  position: relative;
+}
+
+/* Custom tooltip, from data-tooltip - not the native title attribute
+   (which is slow to appear and can't be styled to match the app's dark
+   theme). A single shared element positioned via JS (js/workspace.js),
+   not a per-button ::after: .tools-sidebar's own overflow-y: auto
+   implicitly clips overflow-x too (a CSS overflow-pairing rule), which
+   would clip a ::after poking out to the right of the sidebar. */
+.tool-tooltip {
+  position: fixed;
+  background: #2c2c2e;
+  color: #f2f2f2;
+  border: 1px solid #48484a;
+  border-radius: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  z-index: 50;
+}
+
+.tool-tooltip.visible {
+  opacity: 1;
 }
 
 .icon-button {
@@ -382,11 +408,17 @@ body {
 .layer-visibility-toggle {
   flex: none;
   width: 1.6rem;
+  height: 1.6rem;
   background: transparent;
   border: none;
   color: inherit;
   font-size: 1rem;
   padding: 0;
+}
+
+.layer-visibility-toggle .material-symbols-outlined,
+.layer-delete-button .material-symbols-outlined {
+  font-size: 1.1rem;
 }
 
 .layer-name-input {
@@ -424,6 +456,7 @@ body {
 .layer-delete-button {
   flex: none;
   width: 1.6rem;
+  height: 1.6rem;
   background: transparent;
   border: none;
   color: inherit;

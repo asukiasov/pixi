@@ -34,21 +34,27 @@ proposed/implemented/archived before the next starts:
   survive closing the tab — plus the **Gallery** screen (grid of saved
   projects, thumbnails, "+" new canvas) and **Canvas settings** screen
   (resize/crop/rotate an existing project).
-- **2c — Full toolset**: full color/palette panel (custom color picker,
-  saved palettes, replacing Phase 1's fixed 16-swatch row), symmetry & grid
-  tools (mirror axes, tile preview, grid overlay density), line/shape/
-  selection tools (beyond Phase 1's pencil/eraser/bucket), and the full
-  **Export** screen (scale multiplier, transparent-background toggle — Phase
-  1 shipped only a single native-resolution export button).
+- **2c — Full toolset**: full color/palette panel, symmetry & grid tools,
+  line/shape/selection tools, a stamp tool, and the full Export screen. Grew
+  to 5 fairly independent areas (the stamp tool was added later, see below),
+  so it's further split into three ordered sub-changes of its own:
+  - **2c1 — Stamps and shape tools**: an extensible stamp tool (place a
+    predefined pixel pattern in the current color with one click — a
+    "heart" stamp is the first shape) plus line/shape/selection tools
+    (beyond Phase 1's pencil/eraser/bucket).
+  - **2c2 — Color panel and symmetry/grid**: full color/palette panel
+    (custom color picker, saved palettes, replacing Phase 1's fixed
+    16-swatch row), symmetry & grid tools (mirror axes, tile preview, grid
+    overlay density).
+  - **2c3 — Full Export screen**: scale multiplier, transparent-background
+    toggle (Phase 1 shipped only a single native-resolution export button).
 
 Status: **2a done** — archived at
 `openspec/changes/archive/2026-08-14-2a-layers/`, spec lives at
 `openspec/specs/layers/`. **2b done** — archived at
 `openspec/changes/archive/2026-08-14-2b-local-persistence-gallery/`, specs
 live at `openspec/specs/local-persistence/`, `openspec/specs/gallery/`,
-`openspec/specs/canvas-settings/`. **2c not started** — full color/palette
-panel, symmetry & grid tools, line/shape/selection tools, full Export
-screen.
+`openspec/specs/canvas-settings/`. **2c1 in progress**. 2c2/2c3 not started.
 
 ## Phase 3 — Supabase Auth + sync
 

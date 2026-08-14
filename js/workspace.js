@@ -508,6 +508,33 @@ function bindBrushEditorOnce() {
   });
 }
 
+const CONFETTI_COLORS = ['#ff453a', '#ff9f0a', '#ffd60a', '#30d158', '#64d2ff', '#0a84ff', '#bf5af2'];
+
+/** A little celebration for finishing a piece - bursts from the Export button, cleans up after itself. */
+function celebrateExport(originEl) {
+  const origin = originEl.getBoundingClientRect();
+  const container = document.createElement('div');
+  container.className = 'confetti-burst';
+  document.body.appendChild(container);
+
+  for (let i = 0; i < 28; i++) {
+    const piece = document.createElement('span');
+    piece.className = 'confetti-piece';
+    piece.style.left = `${origin.left + origin.width / 2}px`;
+    piece.style.top = `${origin.top + origin.height / 2}px`;
+    piece.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 80 + Math.random() * 140;
+    piece.style.setProperty('--dx', `${Math.cos(angle) * distance}px`);
+    piece.style.setProperty('--dy', `${Math.sin(angle) * distance - 40}px`);
+    piece.style.setProperty('--rot', `${Math.random() * 720 - 360}deg`);
+    piece.style.animationDelay = `${Math.random() * 0.1}s`;
+    container.appendChild(piece);
+  }
+
+  setTimeout(() => container.remove(), 1400);
+}
+
 /**
  * Wires a single shared tooltip element (positioned via JS, not CSS
  * ::after — see style.css's .tool-tooltip comment for why) to every
@@ -665,10 +692,27 @@ function openColorPicker(target, anchorEl) {
     target === 'background' ? 'Background Color' : 'Foreground Color';
   updateColorPickerInputs(target === 'background' ? state.backgroundColor : state.foregroundColor);
   const popover = document.getElementById('color-picker-popover');
-  const rect = anchorEl.getBoundingClientRect();
-  popover.style.left = `${rect.right + 12}px`;
-  popover.style.top = `${rect.top}px`;
+  // Unhide before measuring - .hidden is display:none, which has no box
+  // to read a size from.
   popover.classList.remove('hidden');
+  const rect = anchorEl.getBoundingClientRect();
+  const popRect = popover.getBoundingClientRect();
+  const margin = 8;
+
+  // Prefer opening to the right of the anchor; flip to the left if that
+  // would run off the right edge (previously it never did this - the
+  // popover could render partly or fully off-screen on a narrow window).
+  let left = rect.right + 12;
+  if (left + popRect.width > window.innerWidth - margin) {
+    left = rect.left - popRect.width - 12;
+  }
+  left = Math.max(margin, Math.min(left, window.innerWidth - popRect.width - margin));
+
+  let top = rect.top;
+  top = Math.max(margin, Math.min(top, window.innerHeight - popRect.height - margin));
+
+  popover.style.left = `${left}px`;
+  popover.style.top = `${top}px`;
 }
 
 function closeColorPicker() {
@@ -960,6 +1004,7 @@ function bindDomOnce() {
     a.download = 'pixi-export.png';
     a.click();
     URL.revokeObjectURL(url);
+    celebrateExport(state.exportButton);
   });
 
   // Every action auto-saves, so there's nothing to lose by leaving — no

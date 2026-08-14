@@ -111,6 +111,47 @@
         <span class="material-symbols-outlined">colorize</span>
       </button>
 
+      <!-- Foreground/Background - always relevant (not tool-scoped),
+           unlike the Pencil options below. -->
+      <div class="fg-bg-swatches">
+        <button type="button" id="fg-bg-reset" class="icon-button" aria-label="Reset colors" data-tooltip="Reset colors">
+          <span class="material-symbols-outlined">restart_alt</span>
+        </button>
+        <div class="fg-bg-swatch-stack">
+          <button type="button" id="background-swatch" class="fg-bg-swatch bg-swatch" aria-label="Background color" data-tooltip="Background color"></button>
+          <button type="button" id="foreground-swatch" class="fg-bg-swatch fg-swatch" aria-label="Foreground color" data-tooltip="Foreground color"></button>
+        </div>
+        <button type="button" id="fg-bg-swap" class="icon-button" aria-label="Swap colors" data-tooltip="Swap colors">
+          <span class="material-symbols-outlined">swap_horiz</span>
+        </button>
+      </div>
+
+      <!-- Popover opened by clicking either FG/BG swatch above - edits
+           whichever one was clicked (js/workspace.js tracks the target).
+           Positioned via fixed + JS (getBoundingClientRect), clamped to
+           the viewport, so its DOM location doesn't matter. -->
+      <div id="color-picker-popover" class="color-picker-popover hidden">
+        <div class="color-picker-popover-header">
+          <span id="color-picker-popover-title">Foreground Color</span>
+          <button type="button" id="color-picker-close" class="icon-button" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <input type="color" id="color-picker-native" value="#000000" title="Custom color" />
+        <div class="color-picker-hex-row">
+          <input type="text" id="color-picker-hex" class="color-picker-hex" value="#000000" maxlength="7" placeholder="#000000" aria-label="Hex" title="Double-click to copy" />
+          <span id="color-picker-copied" class="color-picker-copied hidden">Copied!</span>
+        </div>
+        <div class="color-picker-rgb-row">
+          <input type="number" id="color-picker-r" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Red" />
+          <input type="number" id="color-picker-g" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Green" />
+          <input type="number" id="color-picker-b" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Blue" />
+        </div>
+        <button type="button" id="color-picker-add" class="tool-button">
+          <span class="material-symbols-outlined">add</span> Add to palette
+        </button>
+      </div>
+
       <!-- Shown only while Pencil or Eraser is active (js/workspace.js),
            same tool-scoped-visibility pattern the Brushes panel uses. -->
       <div id="pencil-options" class="pencil-options hidden">
@@ -152,45 +193,6 @@
       </div>
 
       <div id="palette-row" class="palette-row"></div>
-
-      <div id="color-panel-row" class="color-panel-row">
-        <div class="fg-bg-swatches">
-          <button type="button" id="fg-bg-reset" class="icon-button" aria-label="Reset colors" data-tooltip="Reset colors">
-            <span class="material-symbols-outlined">restart_alt</span>
-          </button>
-          <div class="fg-bg-swatch-stack">
-            <button type="button" id="background-swatch" class="fg-bg-swatch bg-swatch" aria-label="Background color" data-tooltip="Background color"></button>
-            <button type="button" id="foreground-swatch" class="fg-bg-swatch fg-swatch" aria-label="Foreground color" data-tooltip="Foreground color"></button>
-          </div>
-          <button type="button" id="fg-bg-swap" class="icon-button" aria-label="Swap colors" data-tooltip="Swap colors">
-            <span class="material-symbols-outlined">swap_horiz</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Popover opened by clicking either FG/BG swatch above - edits
-           whichever one was clicked (js/workspace.js tracks the target). -->
-      <div id="color-picker-popover" class="color-picker-popover hidden">
-        <div class="color-picker-popover-header">
-          <span id="color-picker-popover-title">Foreground Color</span>
-          <button type="button" id="color-picker-close" class="icon-button" aria-label="Close">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-        <input type="color" id="color-picker-native" value="#000000" title="Custom color" />
-        <div class="color-picker-hex-row">
-          <input type="text" id="color-picker-hex" class="color-picker-hex" value="#000000" maxlength="7" placeholder="#000000" aria-label="Hex" title="Double-click to copy" />
-          <span id="color-picker-copied" class="color-picker-copied hidden">Copied!</span>
-        </div>
-        <div class="color-picker-rgb-row">
-          <input type="number" id="color-picker-r" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Red" />
-          <input type="number" id="color-picker-g" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Green" />
-          <input type="number" id="color-picker-b" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Blue" />
-        </div>
-        <button type="button" id="color-picker-add" class="tool-button">
-          <span class="material-symbols-outlined">add</span> Add to palette
-        </button>
-      </div>
 
       <div id="selection-controls" class="selection-controls hidden">
         <button type="button" id="selection-clear-button" class="tool-button">Clear selection</button>

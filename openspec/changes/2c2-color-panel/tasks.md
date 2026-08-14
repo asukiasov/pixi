@@ -127,3 +127,24 @@
       on the hex field copies the exact value to the clipboard and shows
       the confirmation message. Zero console errors. Full `node --test`
       suite unaffected (96/96 — no engine logic touched).
+
+## 8. Bug fix + relocation, per feedback with a screenshot
+
+- [x] 8.1 **Bug**: the popover was positioned with no viewport clamping -
+      on a narrow/short window it could render partly or fully off-screen
+      (confirmed via the user's screenshot: cut off against the right
+      edge and overlapping a mobile taskbar). Fixed in `openColorPicker()`
+      - unhide first to measure the popover's real box, then clamp both
+      `left` and `top` to stay within `window.innerWidth`/`innerHeight`
+      minus an 8px margin, flipping to the anchor's left side first if
+      the preferred right-side position would overflow.
+- [x] 8.2 Moved `.fg-bg-swatches` (reset/swatch-stack/swap) from the
+      bottom `#color-panel-row` into `#tools-sidebar`, below the tool
+      buttons - always visible (unlike the tool-scoped Pencil options
+      below it), restyled from a horizontal row to a vertical stack to
+      fit the narrow sidebar. The now-empty `#color-panel-row` wrapper
+      was removed.
+- [x] 8.3 Playwright: confirmed the popover fits fully within a 440x400
+      viewport (the scenario from the bug report) after the clamp fix;
+      confirmed the Foreground/Background control renders inside
+      `#tools-sidebar`'s x-range. Zero console errors.

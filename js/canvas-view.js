@@ -24,6 +24,9 @@ export class CanvasView {
   #pinchMidpoint = null;
   #pinchDist = 0;
 
+  #selectionOverlayEl;
+  #selectionRect = null;
+
   constructor(canvasEl, containerEl, layerStack) {
     this.#canvasEl = canvasEl;
     this.#containerEl = containerEl;
@@ -40,6 +43,12 @@ export class CanvasView {
     canvasEl.addEventListener('pointermove', this.#onPointerMove);
     canvasEl.addEventListener('pointerup', this.#onPointerUp);
     canvasEl.addEventListener('pointercancel', this.#onPointerUp);
+
+    // A sibling overlay, not a canvas-drawn rectangle, so it never touches
+    // pixel data — just a visual marker for the active selection (if any).
+    this.#selectionOverlayEl = document.createElement('div');
+    this.#selectionOverlayEl.className = 'selection-overlay hidden';
+    this.#containerEl.appendChild(this.#selectionOverlayEl);
   }
 
   setHandlers(handlers) {
@@ -80,9 +89,32 @@ export class CanvasView {
     this.#ctx.putImageData(this.#layerStack.composite(), 0, 0);
   }
 
+  /**
+   * Shows (and positions) or hides the selection overlay. `rect` is in
+   * grid coordinates: { x, y, width, height }, or null to hide it.
+   */
+  setSelectionRect(rect) {
+    this.#selectionRect = rect;
+    if (!rect) {
+      this.#selectionOverlayEl.classList.add('hidden');
+      return;
+    }
+    this.#selectionOverlayEl.classList.remove('hidden');
+    this.#selectionOverlayEl.style.left = `${rect.x * this.#baseScale}px`;
+    this.#selectionOverlayEl.style.top = `${rect.y * this.#baseScale}px`;
+    this.#selectionOverlayEl.style.width = `${rect.width * this.#baseScale}px`;
+    this.#selectionOverlayEl.style.height = `${rect.height * this.#baseScale}px`;
+    this.#applyTransform();
+  }
+
   #applyTransform() {
+    const transform = `translate(${this.#panX}px, ${this.#panY}px) scale(${this.#scale})`;
     this.#canvasEl.style.transformOrigin = '0 0';
-    this.#canvasEl.style.transform = `translate(${this.#panX}px, ${this.#panY}px) scale(${this.#scale})`;
+    this.#canvasEl.style.transform = transform;
+    // Sibling element at the same origin, so the identical transform keeps
+    // it aligned with the canvas through pan/zoom with no separate math.
+    this.#selectionOverlayEl.style.transformOrigin = '0 0';
+    this.#selectionOverlayEl.style.transform = transform;
   }
 
   #toGridPoint(clientX, clientY) {

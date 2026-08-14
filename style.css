@@ -197,6 +197,16 @@ body {
   background-position: 0 0;
 }
 
+.selection-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  outline: 1px dashed #0a84ff;
+  outline-offset: -1px;
+  background: rgba(10, 132, 255, 0.15);
+  pointer-events: none;
+}
+
 .canvas-settings-panel {
   padding: 0.6rem;
   background: #1c1c1e;
@@ -357,7 +367,8 @@ body {
   opacity: 0.3;
 }
 
-.palette-row {
+.palette-row,
+.stamps-row {
   display: flex;
   gap: 0.35rem;
   padding: 0.5rem;
@@ -376,6 +387,34 @@ body {
 
 .palette-swatch.active {
   border-color: #0a84ff;
+}
+
+.stamp-swatch {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.3rem;
+  border: 2px solid #48484a;
+  background: #2c2c2e;
+  color: inherit;
+  flex: none;
+  padding: 0;
+  font-size: 0.7rem;
+}
+
+.stamp-swatch.active {
+  border-color: #0a84ff;
+}
+
+.selection-controls {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  background: #1c1c1e;
+  border-top: 1px solid #2c2c2e;
+}
+
+.selection-controls .tool-button {
+  flex: 1;
 }
 
 .tab-bar {

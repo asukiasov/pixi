@@ -85,13 +85,25 @@
       <div id="layers-panel-list" class="layers-panel-list"></div>
     </div>
 
+    <div id="stamps-row" class="stamps-row"></div>
+
     <div id="palette-row" class="palette-row"></div>
+
+    <div id="selection-controls" class="selection-controls hidden">
+      <button type="button" id="selection-clear-button" class="tool-button">Clear selection</button>
+      <button type="button" id="selection-delete-button" class="tool-button">Delete</button>
+    </div>
 
     <nav class="tab-bar">
       <button type="button" id="back-to-gallery-button" class="tool-button">Gallery</button>
       <button type="button" class="tool-button" data-tool="pencil">Pencil</button>
       <button type="button" class="tool-button" data-tool="eraser">Eraser</button>
       <button type="button" class="tool-button" data-tool="bucket">Bucket</button>
+      <button type="button" class="tool-button" data-tool="stamp">Stamp</button>
+      <button type="button" class="tool-button" data-tool="line">Line</button>
+      <button type="button" class="tool-button" data-tool="rectangle">Rectangle</button>
+      <button type="button" class="tool-button" data-tool="selection">Select</button>
+      <button type="button" id="rectangle-fill-toggle" class="tool-button">Filled</button>
       <button type="button" id="pixel-perfect-toggle" class="tool-button">Pixel-perfect</button>
       <button type="button" id="canvas-settings-toggle" class="tool-button">Canvas Settings</button>
       <button type="button" id="undo-button" class="tool-button" disabled>Undo</button>

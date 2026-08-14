@@ -23,21 +23,27 @@ at `openspec/specs/canvas-creation/` and `openspec/specs/pixel-drawing-engine/`.
 ## Phase 2 — Layers, local persistence, and the full toolset
 
 Entirely local, no Supabase, no accounts. This is the point where Pixi becomes
-a real standalone tool someone could use offline indefinitely.
+a real standalone tool someone could use offline indefinitely. Too broad for
+one OpenSpec change, so it's split into three ordered sub-changes, each
+proposed/implemented/archived before the next starts:
 
-- Layers: add/reorder/opacity/delete, composited via canvas blend modes
-- Local save/load through IndexedDB (Dexie) — turns Phase 1's session-only
-  canvas into projects that survive closing the tab
-- Full color/palette panel (custom color picker, saved palettes), replacing
-  Phase 1's fixed 16-swatch row
-- Symmetry & grid tools (mirror axes, tile preview, grid overlay density)
-- Line, shape, and selection tools (beyond Phase 1's pencil/eraser/bucket)
-- Screens: **Gallery** (grid of saved projects, thumbnails, "+" new canvas),
-  **Canvas settings** (resize/crop/rotate an existing project), full
-  **Export** screen (scale multiplier, transparent-background toggle —
-  Phase 1 shipped only a single native-resolution export button)
+- **2a — Layers**: add/reorder/opacity/delete, composited via canvas blend
+  modes. Builds directly on Phase 1's engine.
+- **2b — Local persistence + project management**: save/load through
+  IndexedDB (Dexie) — turns Phase 1's session-only canvas into projects that
+  survive closing the tab — plus the **Gallery** screen (grid of saved
+  projects, thumbnails, "+" new canvas) and **Canvas settings** screen
+  (resize/crop/rotate an existing project).
+- **2c — Full toolset**: full color/palette panel (custom color picker,
+  saved palettes, replacing Phase 1's fixed 16-swatch row), symmetry & grid
+  tools (mirror axes, tile preview, grid overlay density), line/shape/
+  selection tools (beyond Phase 1's pencil/eraser/bucket), and the full
+  **Export** screen (scale multiplier, transparent-background toggle — Phase
+  1 shipped only a single native-resolution export button).
 
-Status: not started.
+Status: 2a in progress — `openspec/changes/2a-layers/`. 2b and 2c not
+started; not detailed further until 2a is done, since implementing layers
+may reveal constraints worth reflecting in their specs.
 
 ## Phase 3 — Supabase Auth + sync
 

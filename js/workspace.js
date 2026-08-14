@@ -493,6 +493,7 @@ function bindDomOnce() {
   deleteBrushButton = document.getElementById('delete-brush-button');
   const addBrushButton = document.getElementById('add-brush-button');
   const brushSpacingInput = document.getElementById('brush-spacing');
+  const brushRotationInput = document.getElementById('brush-rotation');
 
   renderBrushesPanel();
   loadCustomBrushes(); // async; re-renders the panel once custom brushes arrive
@@ -501,6 +502,16 @@ function bindDomOnce() {
     const value = Math.max(1, Math.min(20, Number(brushSpacingInput.value) || 1));
     brushSpacingInput.value = String(value);
     state.brushSpacing = value;
+  });
+
+  // Degrees the brush rotates per placement along a drag (0 = no
+  // rotation, matching prior behavior). Wraps naturally since placeBrush's
+  // rotation math takes any angle, but there's no reason to let the input
+  // itself hold a value outside one full turn.
+  brushRotationInput.addEventListener('change', () => {
+    const value = Math.max(0, Math.min(359, Number(brushRotationInput.value) || 0));
+    brushRotationInput.value = String(value);
+    state.brushRotationStep = value;
   });
 
   deleteBrushButton.addEventListener('click', async () => {
@@ -640,8 +651,9 @@ function drawShapePreview() {
  * index-stepping approximates "every N pixels" well without tracking
  * cumulative distance. Index 0 always satisfies the check, so a stationary
  * tap always places exactly one brush regardless of Spacing. Rainbow's hue
- * counter only increments for placements that actually happen (not
- * skipped ones), so Spacing doesn't change the rainbow's cycle rate.
+ * counter and Rotation's angle counter only advance for placements that
+ * actually happen (not skipped ones), so Spacing doesn't change their
+ * cycle rate.
  */
 function redrawBrushPath() {
   state.strokeEngine.data.set(state.strokeBackup);
@@ -649,7 +661,8 @@ function redrawBrushPath() {
   state.brushPath.forEach((point, i) => {
     if (i % state.brushSpacing !== 0) return;
     const rgba = state.brushRainbow ? rainbowColor(placementIndex * RAINBOW_HUE_STEP) : state.currentColor;
-    placeBrush(state.strokeEngine, point.x, point.y, state.currentBrush, rgba);
+    const angle = placementIndex * state.brushRotationStep;
+    placeBrush(state.strokeEngine, point.x, point.y, state.currentBrush, rgba, angle);
     placementIndex++;
   });
   clipToSelection(state.strokeEngine, state.strokeBackup, state.selection);
@@ -676,6 +689,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     currentBrush: allBrushes[0],
     brushRainbow: false,
     brushSpacing: 1,
+    brushRotationStep: 0,
     brushPath: [],
     pixelPerfect: false,
     rectangleFilled: false,
@@ -712,6 +726,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   brushesPanel.classList.toggle('hidden', state.currentTool !== 'brush');
   closeBrushEditor();
   document.getElementById('brush-spacing').value = '1';
+  document.getElementById('brush-rotation').value = '0';
   pixelPerfectToggle.classList.remove('active');
 
   canvasSettingsControls.setCurrentSize(layerStack.width, layerStack.height);

@@ -109,6 +109,33 @@ places exactly one brush regardless of Spacing.
 - **THEN** the placements along the trail are spaced roughly 4 pixels apart
   instead of touching every pixel
 
+### Requirement: Brush rotation
+The Brushes panel SHALL offer a Rotation control (degrees, 0-359, default
+0) governing how much the brush pattern rotates, around its own center,
+from one placement to the next along a drag — e.g. Rotation 0 keeps every
+placement upright and identical; Rotation 30 advances each successive
+placement's angle by 30 degrees further than the last, cumulatively (like
+Rainbow's hue step), producing a spinning/pinwheel trail. Rotation applies
+per placement, the same placements Spacing governs — a placement skipped
+by Spacing does not consume a step of the rotation sequence either. A
+single tap (no drag) always places the brush at its base (0-degree)
+orientation, regardless of the Rotation setting.
+
+#### Scenario: Dragging with rotation set produces a rotating trail
+- **WHEN** the user sets Rotation to 30 and drags the Brush tool
+- **THEN** each successive brush placed along the trail appears rotated
+  30 degrees further than the one before it
+
+#### Scenario: Rotation at 0 behaves as before
+- **WHEN** Rotation is 0 (the default) and the user drags the Brush tool
+- **THEN** every brush placed along the trail keeps its original,
+  unrotated orientation
+
+#### Scenario: A stationary tap ignores rotation
+- **WHEN** the user taps without dragging, with Rotation set to a nonzero
+  value
+- **THEN** the brush is placed at its base orientation, not rotated
+
 ### Requirement: Rainbow color mode
 "Rainbow" SHALL be selectable as one entry in the same color palette used
 to pick a regular draw color — not a separate toggle — and is mutually

@@ -196,3 +196,28 @@
       right-side column (not below Layers) at the expected width, brush
       placement on the canvas still works with the sidebar present, editor
       buttons aren't clipped; re-run full `node --test` suite
+
+## 12. Brush rotation
+
+- [x] 12.1 `js/brushes.js`: `rotatedBrushPixels(brush, angleDegrees)` -
+      rotates `brush.pixels` around the pattern's own center
+      (nearest-neighbor, deduped); returns `brush.pixels` unchanged for a
+      zero angle (the common case). `placeBrush` gains an `angleDegrees`
+      (default 0) parameter and rotates via this helper before placing -
+      fully backward compatible with every existing call site
+- [x] 12.2 `index.html`/`style.css`: Rotation number input (0-359°) in the
+      Brushes panel, alongside Spacing, same visual style
+- [x] 12.3 `js/workspace.js`: `state.brushRotationStep` (default 0);
+      `redrawBrushPath()` passes `placementIndex * brushRotationStep` as
+      the angle to `placeBrush` for each placement that actually happens
+      (mirrors how Rainbow's hue counter only advances on real
+      placements, so Spacing doesn't change the rotation's cycle rate
+      either); reset to 0 in `initWorkspace`'s per-project state reset
+- [x] 12.4 Unit tests (`node --test`): a zero angle behaves identically to
+      omitting the argument; a 90-degree rotation moves a known
+      off-center pixel to its expected rotated cell; a 360-degree
+      rotation returns to the original pattern
+- [x] 12.5 Playwright smoke pass: drag the Heart brush with Rotation 30 and
+      Spacing 6, confirm each successive stamp along the trail is visibly
+      rotated further than the last; confirm Rotation 0 keeps every stamp
+      upright and identical; re-run full `node --test` suite

@@ -84,6 +84,34 @@ describe('placeBrush', () => {
     assert.deepEqual(engine.getPixel(4, 5), [255, 255, 255, 255]);
   });
 
+  test('a zero angle behaves exactly like no angle argument at all', () => {
+    const engine = new PixelEngine(10, 10, 'transparent');
+    const brush = { id: 'diag', name: 'Diag', width: 2, height: 2, pixels: [[0, 0], [1, 1]] };
+    placeBrush(engine, 5, 5, brush, [9, 9, 9, 255], 0);
+    assert.deepEqual(engine.getPixel(4, 4), [9, 9, 9, 255]);
+    assert.deepEqual(engine.getPixel(5, 5), [9, 9, 9, 255]);
+  });
+
+  test('a 90-degree rotation maps a non-symmetric pattern onto its rotated cells', () => {
+    // A single off-center pixel at the top-right of a 3x3 pattern: rotating
+    // 90 degrees clockwise around the center should move it to the
+    // bottom-right, the same way rotating a physical shape would.
+    const engine = new PixelEngine(20, 20, 'transparent');
+    const brush = { id: 'corner', name: 'Corner', width: 3, height: 3, pixels: [[2, 0]] };
+    placeBrush(engine, 10, 10, brush, [255, 0, 0, 255], 90);
+    // top-left = (9,9); pre-rotation pixel (2,0) -> post-rotation (2,2)
+    assert.deepEqual(engine.getPixel(11, 11), [255, 0, 0, 255]);
+    // The original (un-rotated) location should be untouched.
+    assert.deepEqual(engine.getPixel(11, 9), [0, 0, 0, 0]);
+  });
+
+  test('a 360-degree rotation returns to the original pattern', () => {
+    const engine = new PixelEngine(20, 20, 'transparent');
+    const brush = { id: 'corner', name: 'Corner', width: 3, height: 3, pixels: [[2, 0]] };
+    placeBrush(engine, 10, 10, brush, [255, 0, 0, 255], 360);
+    assert.deepEqual(engine.getPixel(11, 9), [255, 0, 0, 255]);
+  });
+
   test('clips the out-of-bounds portion silently near an edge', () => {
     const engine = new PixelEngine(5, 5, 'transparent');
     const brush = { id: 'square', name: 'Square', width: 3, height: 3, pixels: [

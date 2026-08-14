@@ -69,14 +69,51 @@ export function pixelsFromGrid(grid) {
 }
 
 /**
+ * Rotates `brush.pixels` by `angleDegrees` around the pattern's own center,
+ * nearest-neighbor style (pixel art has no sub-pixel positions, so a
+ * rotated pixel snaps to the nearest integer cell). Returns the pattern
+ * unchanged for a zero angle - the common case (Rotation defaults to 0),
+ * and avoids the rounding/dedup work when nothing actually rotates.
+ * Rotating a pixel grid at an arbitrary angle can map two source pixels
+ * onto the same rounded destination cell, or leave small gaps versus the
+ * original silhouette - an inherent tradeoff of rotating a grid pattern
+ * rather than a vector shape, acceptable for a pixel-art brush trail.
+ */
+function rotatedBrushPixels(brush, angleDegrees) {
+  if (!angleDegrees) return brush.pixels;
+  const angleRad = (angleDegrees * Math.PI) / 180;
+  const cos = Math.cos(angleRad);
+  const sin = Math.sin(angleRad);
+  const cx = (brush.width - 1) / 2;
+  const cy = (brush.height - 1) / 2;
+  const seen = new Set();
+  const pixels = [];
+  for (const [x, y] of brush.pixels) {
+    const dx = x - cx;
+    const dy = y - cy;
+    const rx = Math.round(dx * cos - dy * sin + cx);
+    const ry = Math.round(dx * sin + dy * cos + cy);
+    const key = `${rx},${ry}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      pixels.push([rx, ry]);
+    }
+  }
+  return pixels;
+}
+
+/**
  * Places `brush`'s pattern on `engine`, centered on (centerX, centerY),
  * with every "on" pixel set to `rgba`. Pixels that fall outside the canvas
- * are silently dropped by setPixel's own bounds check.
+ * are silently dropped by setPixel's own bounds check. `angleDegrees`
+ * (default 0) rotates the pattern around its own center before placing -
+ * used by the Brush tool's Rotation setting, which advances the angle by a
+ * fixed step per placement along a drag.
  */
-export function placeBrush(engine, centerX, centerY, brush, rgba) {
+export function placeBrush(engine, centerX, centerY, brush, rgba, angleDegrees = 0) {
   const topLeftX = centerX - Math.floor(brush.width / 2);
   const topLeftY = centerY - Math.floor(brush.height / 2);
-  for (const [dx, dy] of brush.pixels) {
+  for (const [dx, dy] of rotatedBrushPixels(brush, angleDegrees)) {
     engine.setPixel(topLeftX + dx, topLeftY + dy, rgba);
   }
 }

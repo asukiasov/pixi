@@ -43,10 +43,15 @@ proposed/implemented/archived before the next starts:
     to place a repeating trail — a "heart" brush is the first shape, with
     a Rainbow color-cycling mode) plus line/shape/selection tools (beyond
     Phase 1's pencil/eraser/bucket).
-  - **2c2 — Color panel and symmetry/grid**: full color/palette panel
-    (custom color picker, saved palettes, replacing Phase 1's fixed
-    16-swatch row), symmetry & grid tools (mirror axes, tile preview, grid
-    overlay density).
+  - **2c2 — Color panel**: custom color picker with RGB/hex entry and
+    "add to palette", alongside Phase 1's fixed 16-swatch row. Scoped
+    down from the original "color panel and symmetry/grid" description —
+    symmetry & grid tools (mirror axes, tile preview, grid overlay
+    density) weren't requested with the color picker and are unrelated
+    in implementation; still available to pull into a later 2c2-follow-up
+    or its own change when prioritized. "Saved palettes" (persisting
+    custom swatches across sessions) is also deferred — this slice is
+    session-only.
   - **2c3 — Full Export screen**: scale multiplier, transparent-background
     toggle (Phase 1 shipped only a single native-resolution export button).
 
@@ -57,14 +62,20 @@ proposed/implemented/archived before the next starts:
     whole panel. Raised after 2c1; not part of the original 2c split, but
     fits alongside it (workspace chrome, not a new drawing tool) rather
     than under Phase 3+.
+  - **2e — Pencil/Eraser Size and Opacity**: a configurable circular tip
+    (Size, in pixels) and Opacity (alpha blending, not full overwrite),
+    shared by Pencil and Eraser, with vertical sliders in the tools
+    sidebar shown only while one of those tools is active. Also raised
+    after 2c1; grouped with 2d as workspace/tool refinements rather than
+    new drawing capabilities in their own right.
 
 Status: **2a done** — archived at
 `openspec/changes/archive/2026-08-14-2a-layers/`, spec lives at
 `openspec/specs/layers/`. **2b done** — archived at
 `openspec/changes/archive/2026-08-14-2b-local-persistence-gallery/`, specs
 live at `openspec/specs/local-persistence/`, `openspec/specs/gallery/`,
-`openspec/specs/canvas-settings/`. **2c1 in progress**. 2c2/2c3/2d not
-started.
+`openspec/specs/canvas-settings/`. **2c1 in progress. 2d done** (not yet
+archived). **2c2, 2c3, 2e proposed, not yet implemented.**
 
 ## Phase 3 — Supabase Auth + sync
 

@@ -23,6 +23,27 @@ function hexToRgba(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255, 255];
 }
 
+/** Inverse of hexToRgba - drops alpha (palette swatches and the native
+ * <input type="color"> are always fully opaque 6-digit hex). */
+function rgbaToHex(rgba) {
+  return (
+    '#' +
+    [rgba[0], rgba[1], rgba[2]]
+      .map((c) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0'))
+      .join('')
+  );
+}
+
+/** #rgb or #rrggbb, with or without the leading #. */
+const HEX_COLOR_RE = /^#?([0-9a-f]{6}|[0-9a-f]{3})$/i;
+
+function normalizeHex(value) {
+  if (!HEX_COLOR_RE.test(value)) return null;
+  let hex = value.startsWith('#') ? value.slice(1) : value;
+  if (hex.length === 3) hex = [...hex].map((c) => c + c).join('');
+  return `#${hex.toLowerCase()}`;
+}
+
 /**
  * Whether a point is inside `selection` (or there's no active selection,
  * in which case everywhere counts as "inside"). Used to guard point-origin
@@ -69,6 +90,14 @@ let brushesPanelGrid = null;
 let deleteBrushButton = null;
 let layersPanel = null;
 let layersPanelToggle = null;
+let foregroundSwatchEl = null;
+let backgroundSwatchEl = null;
+
+// User-added custom palette colors (hex strings). Module-level, not
+// per-project — like allBrushes, palette additions are a session-wide
+// resource, still visible after switching to a different project; only
+// the *current selection* resets per project.
+let customSwatches = [];
 let zoomReadout = null;
 let pencilOptionsPanel = null;
 let pencilSizePreview = null;
@@ -127,7 +156,7 @@ function performRedo() {
 }
 
 function colorForCurrentTool() {
-  return state.currentTool === 'eraser' ? [0, 0, 0, 0] : state.currentColor;
+  return state.currentTool === 'eraser' ? [0, 0, 0, 0] : state.foregroundColor;
 }
 
 /**
@@ -142,7 +171,7 @@ function pencilOrEraserApplyPixel(engine) {
   if (state.currentTool === 'eraser') {
     return (x, y) => engine.erasePixelBlended(x, y, state.pencilOpacity);
   }
-  return (x, y) => engine.setPixelBlended(x, y, state.currentColor, state.pencilOpacity);
+  return (x, y) => engine.setPixelBlended(x, y, state.foregroundColor, state.pencilOpacity);
 }
 
 function updateSelectionControls() {
@@ -533,6 +562,83 @@ function bindTooltips() {
   });
 }
 
+/**
+ * Rebuilds the palette row's swatches from [...PALETTE, ...customSwatches]
+ * plus the Rainbow swatch last. Called once at bind time and again after
+ * every "Add to palette" - mirrors renderBrushesPanel()'s pattern for the
+ * same reason (a session-wide list that can grow after the DOM already
+ * exists).
+ */
+function renderPaletteRow() {
+  paletteRow.innerHTML = '';
+  [...PALETTE, ...customSwatches].forEach((hex) => {
+    const swatch = document.createElement('button');
+    swatch.type = 'button';
+    swatch.className = 'palette-swatch';
+    swatch.style.background = hex;
+    swatch.dataset.hex = hex.toLowerCase();
+    swatch.title = hex;
+    swatch.addEventListener('click', () => setForegroundColor(hexToRgba(hex)));
+    paletteRow.appendChild(swatch);
+  });
+
+  // "Rainbow" lives in the same palette row as a selectable color, mutually
+  // exclusive with picking a regular one — not a separate toggle button.
+  // Only the Brush tool reads state.brushRainbow; every other tool just
+  // keeps using state.foregroundColor, which selecting Rainbow never touches.
+  const rainbowSwatch = document.createElement('button');
+  rainbowSwatch.type = 'button';
+  rainbowSwatch.className = 'palette-swatch rainbow-swatch';
+  rainbowSwatch.title = 'Rainbow (Brush tool only)';
+  rainbowSwatch.addEventListener('click', () => {
+    state.brushRainbow = true;
+    syncActiveSwatch();
+  });
+  paletteRow.appendChild(rainbowSwatch);
+
+  syncActiveSwatch();
+}
+
+/** Toggles .active on whichever palette swatch (or Rainbow) matches current state. */
+function syncActiveSwatch() {
+  const fgHex = rgbaToHex(state.foregroundColor);
+  paletteRow.querySelectorAll('.palette-swatch:not(.rainbow-swatch)').forEach((s) => {
+    s.classList.toggle('active', !state.brushRainbow && s.dataset.hex === fgHex);
+  });
+  const rainbowEl = paletteRow.querySelector('.rainbow-swatch');
+  if (rainbowEl) rainbowEl.classList.toggle('active', state.brushRainbow);
+}
+
+/** Keeps the native color input, hex field, and RGB fields all showing the same color. */
+function updateColorPickerInputs(rgba) {
+  const hex = rgbaToHex(rgba);
+  document.getElementById('color-picker-native').value = hex;
+  document.getElementById('color-picker-hex').value = hex;
+  document.getElementById('color-picker-r').value = String(rgba[0]);
+  document.getElementById('color-picker-g').value = String(rgba[1]);
+  document.getElementById('color-picker-b').value = String(rgba[2]);
+}
+
+function updateFgBgSwatches() {
+  foregroundSwatchEl.style.background = rgbaToHex(state.foregroundColor);
+  backgroundSwatchEl.style.background = rgbaToHex(state.backgroundColor);
+}
+
+/**
+ * Sets the foreground color from any source (palette swatch, custom
+ * picker, Eyedropper) - the single path every color-pick action goes
+ * through, so the picker fields, palette active-state, and FG/BG swatch
+ * all stay in sync by construction. Deselects Rainbow, the same way
+ * picking a regular color always has.
+ */
+function setForegroundColor(rgba) {
+  state.foregroundColor = rgba;
+  state.brushRainbow = false;
+  updateColorPickerInputs(rgba);
+  updateFgBgSwatches();
+  syncActiveSwatch();
+}
+
 function bindDomOnce() {
   toolButtons = document.querySelectorAll('.tool-button[data-tool]');
   pixelPerfectToggle = document.getElementById('pixel-perfect-toggle');
@@ -588,35 +694,65 @@ function bindDomOnce() {
     pencilOpacityReadout.textContent = `${value}%`;
   });
 
-  PALETTE.forEach((hex, index) => {
-    const swatch = document.createElement('button');
-    swatch.type = 'button';
-    swatch.className = 'palette-swatch';
-    swatch.style.background = hex;
-    if (index === 0) swatch.classList.add('active');
-    swatch.addEventListener('click', () => {
-      state.currentColor = hexToRgba(hex);
-      // Picking a regular color deselects Rainbow, the same way it
-      // deselects any other previously-picked color.
-      state.brushRainbow = false;
-      paletteRow.querySelectorAll('.palette-swatch').forEach((s) => s.classList.toggle('active', s === swatch));
-    });
-    paletteRow.appendChild(swatch);
+  renderPaletteRow();
+
+  // Custom color picker: native <input type="color"> + hex + RGB fields,
+  // all cross-synced through setForegroundColor/updateColorPickerInputs.
+  const colorPickerNative = document.getElementById('color-picker-native');
+  const colorPickerHex = document.getElementById('color-picker-hex');
+  const colorPickerR = document.getElementById('color-picker-r');
+  const colorPickerG = document.getElementById('color-picker-g');
+  const colorPickerB = document.getElementById('color-picker-b');
+  const colorPickerAdd = document.getElementById('color-picker-add');
+
+  colorPickerNative.addEventListener('input', () => {
+    setForegroundColor(hexToRgba(colorPickerNative.value));
   });
 
-  // "Rainbow" lives in the same palette row as a selectable color, mutually
-  // exclusive with picking a regular one — not a separate toggle button.
-  // Only the Brush tool reads state.brushRainbow; every other tool just
-  // keeps using state.currentColor, which selecting Rainbow never touches.
-  const rainbowSwatch = document.createElement('button');
-  rainbowSwatch.type = 'button';
-  rainbowSwatch.className = 'palette-swatch rainbow-swatch';
-  rainbowSwatch.title = 'Rainbow (Brush tool only)';
-  rainbowSwatch.addEventListener('click', () => {
-    state.brushRainbow = true;
-    paletteRow.querySelectorAll('.palette-swatch').forEach((s) => s.classList.toggle('active', s === rainbowSwatch));
+  colorPickerHex.addEventListener('change', () => {
+    const normalized = normalizeHex(colorPickerHex.value);
+    // Malformed input is ignored (leaves prior state intact) rather than
+    // crashing - just resync the field to the last valid color.
+    if (!normalized) {
+      colorPickerHex.value = rgbaToHex(state.foregroundColor);
+      return;
+    }
+    setForegroundColor(hexToRgba(normalized));
   });
-  paletteRow.appendChild(rainbowSwatch);
+
+  function applyRgbFields() {
+    const clamp = (v) => Math.max(0, Math.min(255, Number(v) || 0));
+    setForegroundColor([clamp(colorPickerR.value), clamp(colorPickerG.value), clamp(colorPickerB.value), 255]);
+  }
+  colorPickerR.addEventListener('change', applyRgbFields);
+  colorPickerG.addEventListener('change', applyRgbFields);
+  colorPickerB.addEventListener('change', applyRgbFields);
+
+  colorPickerAdd.addEventListener('click', () => {
+    customSwatches.push(rgbaToHex(state.foregroundColor));
+    renderPaletteRow();
+  });
+
+  // Foreground/Background: swap and reset-to-black/white.
+  foregroundSwatchEl = document.getElementById('foreground-swatch');
+  backgroundSwatchEl = document.getElementById('background-swatch');
+
+  document.getElementById('fg-bg-swap').addEventListener('click', () => {
+    const swapped = state.backgroundColor;
+    state.backgroundColor = state.foregroundColor;
+    state.foregroundColor = swapped;
+    updateColorPickerInputs(state.foregroundColor);
+    updateFgBgSwatches();
+    syncActiveSwatch();
+  });
+
+  document.getElementById('fg-bg-reset').addEventListener('click', () => {
+    state.foregroundColor = hexToRgba('#000000');
+    state.backgroundColor = hexToRgba('#ffffff');
+    updateColorPickerInputs(state.foregroundColor);
+    updateFgBgSwatches();
+    syncActiveSwatch();
+  });
 
   brushesPanelGrid = document.getElementById('brushes-panel-grid');
   deleteBrushButton = document.getElementById('delete-brush-button');
@@ -865,7 +1001,7 @@ function redrawBrushPath() {
   let placementIndex = 0;
   state.brushPath.forEach((point, i) => {
     if (i % state.brushSpacing !== 0) return;
-    const rgba = state.brushRainbow ? rainbowColor(placementIndex * RAINBOW_HUE_STEP) : state.currentColor;
+    const rgba = state.brushRainbow ? rainbowColor(placementIndex * RAINBOW_HUE_STEP) : state.foregroundColor;
     const angle = placementIndex * state.brushRotationStep;
     placeBrush(state.strokeEngine, point.x, point.y, state.currentBrush, rgba, angle);
     placementIndex++;
@@ -890,7 +1026,8 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     onRequestGallery,
     undoStack: new UndoStack(),
     currentTool: 'pencil',
-    currentColor: hexToRgba(PALETTE[0]),
+    foregroundColor: hexToRgba(PALETTE[0]),
+    backgroundColor: hexToRgba('#ffffff'),
     currentBrush: allBrushes[0],
     brushRainbow: false,
     brushSpacing: 1,
@@ -929,7 +1066,12 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   // even though it no longer applied (e.g. the state was reset but a
   // stale-highlighted swatch/tool suggested otherwise).
   toolButtons.forEach((b) => b.classList.toggle('active', b.dataset.tool === state.currentTool));
-  paletteRow.querySelectorAll('.palette-swatch').forEach((s, i) => s.classList.toggle('active', i === 0));
+  // Custom swatches (customSwatches) are session-wide and NOT reset here -
+  // only which color is currently selected resets, back to the first
+  // preset (matching state.foregroundColor's default above).
+  updateColorPickerInputs(state.foregroundColor);
+  updateFgBgSwatches();
+  syncActiveSwatch();
   renderBrushesPanel();
   brushesPanel.classList.toggle('hidden', state.currentTool !== 'brush');
   closeBrushEditor();
@@ -988,12 +1130,27 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
         return;
       }
 
+      if (tool === 'eyedropper') {
+        // Reads layerStack.composite() - the same ImageData already used
+        // to render the canvas, so sampling reflects blend modes/opacity/
+        // visibility exactly as seen, not one layer's raw pixel. A pure
+        // read: no pixels change, no isPointInSelection/clipToSelection
+        // guard (sampling isn't bounded by the selection), no commit().
+        const composite = state.layerStack.composite();
+        if (point.x >= 0 && point.x < composite.width && point.y >= 0 && point.y < composite.height) {
+          const i = (point.y * composite.width + point.x) * 4;
+          const rgba = [composite.data[i], composite.data[i + 1], composite.data[i + 2], composite.data[i + 3]];
+          setForegroundColor(rgba);
+        }
+        return;
+      }
+
       const activeEngine = state.layerStack.getActiveLayer().engine;
 
       if (tool === 'bucket') {
         if (!isPointInSelection(point, state.selection)) return;
         const backup = activeEngine.data.slice();
-        activeEngine.floodFill(point.x, point.y, state.currentColor);
+        activeEngine.floodFill(point.x, point.y, state.foregroundColor);
         clipToSelection(activeEngine, backup, state.selection);
         state.canvasView.render();
         commit();

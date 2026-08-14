@@ -578,6 +578,89 @@ body {
   background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
 }
 
+/* Color panel: Foreground/Background swatches (Photoshop-style) + custom
+   color picker, directly below the palette row. */
+.color-panel-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: #1c1c1e;
+  border-top: 1px solid #2c2c2e;
+  flex-wrap: wrap;
+}
+
+.fg-bg-swatches {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: none;
+}
+
+.fg-bg-swatch-stack {
+  position: relative;
+  width: 2.2rem;
+  height: 2.2rem;
+  flex: none;
+}
+
+.fg-bg-swatch {
+  position: absolute;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid #48484a;
+}
+
+.bg-swatch {
+  right: 0;
+  bottom: 0;
+  background: #ffffff;
+}
+
+.fg-swatch {
+  left: 0;
+  top: 0;
+  background: #000000;
+}
+
+.color-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.color-picker input[type='color'] {
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border: 1px solid #48484a;
+  border-radius: 0.3rem;
+  background: none;
+  flex: none;
+}
+
+.color-picker-hex {
+  width: 5.5rem;
+  padding: 0.35rem 0.5rem;
+  background: #2c2c2e;
+  border: 1px solid #48484a;
+  color: inherit;
+  border-radius: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.color-picker-rgb {
+  width: 3rem;
+  padding: 0.35rem 0.4rem;
+  background: #2c2c2e;
+  border: 1px solid #48484a;
+  color: inherit;
+  border-radius: 0.4rem;
+  font-size: 0.85rem;
+}
+
 /* Brushes panel — Photoshop-Brushes-panel-style: title, spacing control,
    thumbnail grid, bottom toolbar with add/delete icon buttons. */
 

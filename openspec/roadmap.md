@@ -77,8 +77,8 @@ Status: **2a done** — archived at
 `openspec/specs/layers/`. **2b done** — archived at
 `openspec/changes/archive/2026-08-14-2b-local-persistence-gallery/`, specs
 live at `openspec/specs/local-persistence/`, `openspec/specs/gallery/`,
-`openspec/specs/canvas-settings/`. **2c1 in progress. 2d done, 2e done**
-(neither yet archived). **2c2, 2c3 proposed, not yet implemented.**
+`openspec/specs/canvas-settings/`. **2c1 in progress. 2d, 2e, 2c2 done**
+(none yet archived). **2c3 proposed, not yet implemented.**
 
 ## Phase 3 — Supabase Auth + sync
 

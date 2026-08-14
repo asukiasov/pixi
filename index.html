@@ -17,7 +17,7 @@
        original range query pulled the full variable font (~4MB, ~30s on a
        slow connection, icons invisible until it finished); this is a few
        KB. Keep icon_names in sync with the icons used in this file. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,undo,redo,add,remove,delete,visibility,visibility_off" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,colorize,undo,redo,add,remove,delete,visibility,visibility_off,restart_alt,swap_horiz" />
 </head>
 <body>
   <main id="screen-gallery" class="screen">
@@ -86,6 +86,9 @@
       <button type="button" class="tool-button" data-tool="hand" aria-label="Hand (pan)" data-tooltip="Hand" data-shortcut="H">
         <span class="material-symbols-outlined">back_hand</span>
       </button>
+      <button type="button" class="tool-button" data-tool="eyedropper" aria-label="Eyedropper" data-tooltip="Eyedropper" data-shortcut="I">
+        <span class="material-symbols-outlined">colorize</span>
+      </button>
 
       <!-- Shown only while Pencil or Eraser is active (js/workspace.js),
            same tool-scoped-visibility pattern the Brushes panel uses. -->
@@ -128,6 +131,32 @@
       </div>
 
       <div id="palette-row" class="palette-row"></div>
+
+      <div id="color-panel-row" class="color-panel-row">
+        <div class="fg-bg-swatches">
+          <button type="button" id="fg-bg-reset" class="icon-button" aria-label="Reset colors" data-tooltip="Reset colors">
+            <span class="material-symbols-outlined">restart_alt</span>
+          </button>
+          <div class="fg-bg-swatch-stack">
+            <div id="background-swatch" class="fg-bg-swatch bg-swatch" title="Background color"></div>
+            <div id="foreground-swatch" class="fg-bg-swatch fg-swatch" title="Foreground color"></div>
+          </div>
+          <button type="button" id="fg-bg-swap" class="icon-button" aria-label="Swap colors" data-tooltip="Swap colors">
+            <span class="material-symbols-outlined">swap_horiz</span>
+          </button>
+        </div>
+
+        <div class="color-picker">
+          <input type="color" id="color-picker-native" value="#000000" title="Custom color" />
+          <input type="text" id="color-picker-hex" class="color-picker-hex" value="#000000" maxlength="7" placeholder="#000000" aria-label="Hex" />
+          <input type="number" id="color-picker-r" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Red" />
+          <input type="number" id="color-picker-g" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Green" />
+          <input type="number" id="color-picker-b" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Blue" />
+          <button type="button" id="color-picker-add" class="tool-button icon-button" aria-label="Add to palette" data-tooltip="Add to palette">
+            <span class="material-symbols-outlined">add</span>
+          </button>
+        </div>
+      </div>
 
       <div id="selection-controls" class="selection-controls hidden">
         <button type="button" id="selection-clear-button" class="tool-button">Clear selection</button>

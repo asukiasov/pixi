@@ -112,6 +112,61 @@ export class PixelEngine {
   }
 
   /**
+   * Returns a compact `width*height*4` `Uint8ClampedArray` copy of the
+   * rectangle at (x, y). Out-of-canvas source pixels read as fully
+   * transparent ([0,0,0,0]) rather than throwing - mirrors setPixel's own
+   * "silently drop out-of-canvas writes" convention, just for reads. Used
+   * by the Move tool to snapshot a region's content once at drag-start,
+   * before clearing/re-stamping it elsewhere (see stampRegion/clearRegion).
+   */
+  extractRegion(x, y, width, height) {
+    const buffer = new Uint8ClampedArray(width * height * 4);
+    for (let dy = 0; dy < height; dy++) {
+      for (let dx = 0; dx < width; dx++) {
+        const rgba = this.#inBounds(x + dx, y + dy) ? this.getPixel(x + dx, y + dy) : [0, 0, 0, 0];
+        const i = (dy * width + dx) * 4;
+        buffer[i] = rgba[0];
+        buffer[i + 1] = rgba[1];
+        buffer[i + 2] = rgba[2];
+        buffer[i + 3] = rgba[3];
+      }
+    }
+    return buffer;
+  }
+
+  /**
+   * Sets every pixel in the rectangle at (x, y) to `rgba` (default fully
+   * transparent), via setPixel - so it's automatically bounds-checked, a
+   * region straddling the canvas edge just clips silently. Used by the
+   * Move tool to clear a region's original footprint before stamping it
+   * back at an offset.
+   */
+  clearRegion(x, y, width, height, rgba = [0, 0, 0, 0]) {
+    for (let dy = 0; dy < height; dy++) {
+      for (let dx = 0; dx < width; dx++) {
+        this.setPixel(x + dx, y + dy, rgba);
+      }
+    }
+  }
+
+  /**
+   * Writes a `width*height*4` `buffer` (the shape extractRegion returns)
+   * back into the canvas at (x, y), via setPixel - bounds-checked per
+   * pixel, so a stamp that lands partially off-canvas just loses the
+   * off-canvas portion silently, same as placeBrush already does at
+   * canvas edges. Used by the Move tool to re-stamp extracted content at
+   * its new, dragged-to position.
+   */
+  stampRegion(x, y, width, height, buffer) {
+    for (let dy = 0; dy < height; dy++) {
+      for (let dx = 0; dx < width; dx++) {
+        const i = (dy * width + dx) * 4;
+        this.setPixel(x + dx, y + dy, [buffer[i], buffer[i + 1], buffer[i + 2], buffer[i + 3]]);
+      }
+    }
+  }
+
+  /**
    * Serializes the current buffer to a PNG Blob at native resolution.
    * Requires a DOM (canvas element + toBlob), so this method only works in
    * a browser environment, unlike the rest of this module.

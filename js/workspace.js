@@ -942,6 +942,10 @@ function bindDomOnce() {
       // Hand tool: single-pointer drag pans the canvas instead of drawing
       // (see CanvasView#setPanMode). Every other tool leaves pan mode off.
       state.canvasView.setPanMode(state.currentTool === 'hand');
+      // Move tool: swaps in the CSS `move` cursor while active (see
+      // CanvasView#setMoveMode) - purely cosmetic, drag handling itself
+      // lives in onDrawStart/onDrawMove/onDrawEnd below.
+      state.canvasView.setMoveMode(state.currentTool === 'move');
       // Size/Opacity sliders: shared by Pencil and Eraser, hidden for
       // every other tool - same tool-scoped-visibility pattern as Brushes.
       pencilOptionsPanel.classList.toggle('hidden', state.currentTool !== 'pencil' && state.currentTool !== 'eraser');
@@ -1428,6 +1432,26 @@ function redrawBrushPath() {
 }
 
 /**
+ * Redraws the Move tool's live preview from the pre-drag backup: resets
+ * the active layer to `state.strokeBackup`, clears `state.moveRegion`'s
+ * original footprint to transparent, and re-stamps `state.moveContent`
+ * (extracted once at drag-start, see onDrawStart) at the region's
+ * position offset by how far the drag has moved so far. Deliberately does
+ * NOT call clipToSelection - when a selection is active, moveRegion IS
+ * the selection rect, and clipping the result back to that rect's
+ * *original* bounds would undo the move (every moved pixel ends up
+ * outside the original rect once it's moved) - see design.md.
+ */
+function redrawMovePreview() {
+  state.strokeEngine.data.set(state.strokeBackup);
+  const dx = state.dragCurrent.x - state.dragStart.x;
+  const dy = state.dragCurrent.y - state.dragStart.y;
+  const { x, y, width, height } = state.moveRegion;
+  state.strokeEngine.clearRegion(x, y, width, height);
+  state.strokeEngine.stampRegion(x + dx, y + dy, width, height, state.moveContent);
+}
+
+/**
  * Wires the Workspace tab bar, palette, brushes row, Layers panel, Canvas
  * Settings panel, and selection controls to `layerStack` and `canvasView`,
  * and owns the undo/redo stack and auto-save for the current project. Safe
@@ -1463,6 +1487,8 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     strokeEngine: null,
     strokeBackup: null,
     strokePoints: [],
+    moveRegion: null,
+    moveContent: null,
     undoButton: document.getElementById('undo-button'),
     redoButton: document.getElementById('redo-button'),
     exportButton: document.getElementById('export-button'),
@@ -1518,6 +1544,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   // Hand tool is never the default (Pencil is) - every freshly opened
   // project starts with single-pointer drag drawing, not panning.
   canvasView.setPanMode(false);
+  canvasView.setMoveMode(false);
 
   canvasSettingsControls.setCurrentSize(layerStack.width, layerStack.height);
   canvasSettingsControls.setCurrentName(projectName);
@@ -1612,6 +1639,29 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
         return;
       }
 
+      if (tool === 'move') {
+        state.dragStart = point;
+        state.dragCurrent = point;
+        // With an active selection, Move always operates on it regardless
+        // of where inside the canvas the drag starts (see design.md);
+        // with none, the whole active layer's content moves.
+        state.moveRegion = state.selection
+          ? { ...state.selection }
+          : { x: 0, y: 0, width: state.layerStack.width, height: state.layerStack.height };
+        // Extracted once, from the pristine pre-drag content - the
+        // dragged content itself never changes during a drag, only its
+        // on-canvas position does.
+        state.moveContent = activeEngine.extractRegion(
+          state.moveRegion.x,
+          state.moveRegion.y,
+          state.moveRegion.width,
+          state.moveRegion.height
+        );
+        redrawMovePreview();
+        state.canvasView.render();
+        return;
+      }
+
       // pencil / eraser
       state.strokePoints = [point];
       strokeFreehandThick(state.strokePoints, state.pencilSize, state.pixelPerfect, pencilOrEraserApplyPixel(activeEngine));
@@ -1634,6 +1684,13 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
       if (tool === 'line' || tool === 'rectangle') {
         state.dragCurrent = tool === 'rectangle' && shiftHeld ? squareDragCurrent(state.dragStart, point) : point;
         drawShapePreview();
+        state.canvasView.render();
+        return;
+      }
+
+      if (tool === 'move') {
+        state.dragCurrent = point;
+        redrawMovePreview();
         state.canvasView.render();
         return;
       }
@@ -1692,10 +1749,24 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
       }
 
       if (!state.strokeBackup) return;
+
+      // Move: if a selection was active, it translates with the content
+      // it just moved - so a second Move drag continues moving the same
+      // (now-relocated) content, per design.md. Applied once here, not
+      // live during the drag (nothing reads state.selection mid-drag).
+      if (tool === 'move' && state.selection) {
+        const dx = state.dragCurrent.x - state.dragStart.x;
+        const dy = state.dragCurrent.y - state.dragStart.y;
+        state.selection = { ...state.selection, x: state.selection.x + dx, y: state.selection.y + dy };
+        state.canvasView.setSelectionRect(state.selection);
+      }
+
       state.strokeEngine = null;
       state.strokeBackup = null;
       state.strokePoints = [];
       state.brushPath = [];
+      state.moveRegion = null;
+      state.moveContent = null;
       state.dragStart = null;
       state.dragCurrent = null;
       commit();
@@ -1719,6 +1790,8 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
       state.strokeBackup = null;
       state.strokePoints = [];
       state.brushPath = [];
+      state.moveRegion = null;
+      state.moveContent = null;
       state.dragStart = null;
       state.dragCurrent = null;
     },

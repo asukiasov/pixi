@@ -13,6 +13,7 @@ export function initGallery({ onOpenProject, onNewCanvas }) {
   const newButton = document.getElementById('gallery-new-canvas-button');
 
   newButton.addEventListener('click', () => onNewCanvas());
+  bindPawParadeEasterEgg();
 
   async function refresh() {
     const projects = await listProjects();
@@ -24,6 +25,54 @@ export function initGallery({ onOpenProject, onNewCanvas }) {
   }
 
   return { refresh };
+}
+
+const PAW_PARADE_CLICKS = 7; // rapid clicks on the "Pixi" title required
+const PAW_PARADE_WINDOW_MS = 2000; // ...within this window, or the count resets
+const PAW_PARADE_LENGTH = 10; // paw prints in the trail
+
+/**
+ * Easter egg: clicking the Gallery's "Pixi" title 7 times within 2
+ * seconds sends a trail of paw prints walking across the screen - a nod
+ * to the Hand tool's paw cursors (assets/cursors/pets*.svg). Purely
+ * decorative, no state, self-removing.
+ */
+function bindPawParadeEasterEgg() {
+  const title = document.querySelector('.gallery-header h1');
+  if (!title) return;
+  let clickCount = 0;
+  let windowStart = 0;
+
+  title.addEventListener('click', () => {
+    const now = Date.now();
+    if (now - windowStart > PAW_PARADE_WINDOW_MS) {
+      clickCount = 0;
+      windowStart = now;
+    }
+    clickCount++;
+    if (clickCount >= PAW_PARADE_CLICKS) {
+      clickCount = 0;
+      pawParade();
+    }
+  });
+}
+
+function pawParade() {
+  const trail = document.createElement('div');
+  trail.className = 'paw-parade';
+  document.body.appendChild(trail);
+  for (let i = 0; i < PAW_PARADE_LENGTH; i++) {
+    const paw = document.createElement('span');
+    paw.className = 'paw-print';
+    paw.textContent = '🐾';
+    paw.style.left = `${(i / (PAW_PARADE_LENGTH - 1)) * 90 + 5}%`;
+    paw.style.setProperty('--paw-offset', i % 2 === 0 ? '-10px' : '10px');
+    paw.style.animationDelay = `${i * 0.12}s`;
+    trail.appendChild(paw);
+  }
+  // Long enough for the slowest-delayed paw's animation to finish (see
+  // .paw-print's 0.6s animation + up to ~1.1s of staggered delay).
+  setTimeout(() => trail.remove(), 2200);
 }
 
 function buildProjectTile(project, onOpenProject, refresh) {

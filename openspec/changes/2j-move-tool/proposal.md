@@ -11,7 +11,7 @@ content is out of scope for this slice"). This closes that gap.
 ## What Changes
 
 - Add a **Move** tool (`data-tool="move"`, shortcut `V`, icon
-  `open_with`): drag on the canvas to shift pixel content on the active
+  `arrow_selector_tool`): drag on the canvas to shift pixel content on the active
   layer.
   - **With an active selection**: only the selected rectangle's content
     moves. The selection rect itself moves with it (so a second drag
@@ -74,7 +74,7 @@ non-rectangular selection shape (selections are still rectangle-only, per
   `setPanMode`, toggling a `.move-mode` class on the canvas element for
   the CSS cursor.
 - `index.html`: new tool button (`data-tool="move"`, `data-shortcut="V"`,
-  `open_with` icon); `open_with` added to the Material Symbols
+  `arrow_selector_tool` icon); `arrow_selector_tool` added to the Material Symbols
   `icon_names` subsetting list.
 - `style.css`: `#workspace-canvas.move-mode { cursor: move; }`.
 - New tests in `test/engine.test.js` for `extractRegion`/`clearRegion`/

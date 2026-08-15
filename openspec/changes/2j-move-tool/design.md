@@ -131,12 +131,15 @@ method mirroring `setPanMode`, toggling a `.move-mode` class; no
 grab/grabbing distinction) since `move` doesn't have a meaningfully
 different "actively dragging" glyph.
 
-**Shortcut `V`, icon `open_with`.** `V` matches Photoshop/Illustrator
-exactly, per the ask, and isn't taken by any existing `data-shortcut`
-(P/E/G/B/L/R/M/H/I). `open_with` (Material Symbols' four-way-arrow-cross
-glyph) is the closest match in the icon set already used throughout this
-app to Photoshop's Move tool glyph — no new icon library, just one more
-name added to `index.html`'s existing subsetting `icon_names=` list.
+**Shortcut `V`, icon `arrow_selector_tool`.** `V` matches Photoshop/
+Illustrator exactly, per the ask, and isn't taken by any existing
+`data-shortcut` (P/E/G/B/L/R/M/H/I). Icon revised after feedback: the
+original choice, `open_with` (a four-way-arrow-cross glyph), read as a
+generic "move/drag" symbol rather than the arrow-cursor glyph
+Photoshop/Illustrator's own Move/Selection tool actually uses —
+`arrow_selector_tool` (Material Symbols' literal cursor-arrow icon) is
+the closer match and what's now used. No new icon library either way,
+just the name in `index.html`'s existing subsetting `icon_names=` list.
 
 ## Risks / Trade-offs
 

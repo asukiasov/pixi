@@ -1330,3 +1330,36 @@ body {
   border-color: #ff453a;
   color: #fff;
 }
+
+/* Paw Parade easter egg (js/gallery.js) - 7 rapid clicks on the Gallery's
+   "Pixi" title. Purely decorative overlay, removes itself. */
+.paw-parade {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+  overflow: hidden;
+}
+
+.paw-print {
+  position: absolute;
+  top: 50%;
+  font-size: 1.8rem;
+  opacity: 0;
+  animation: paw-print-step 0.6s ease-out forwards;
+}
+
+@keyframes paw-print-step {
+  0% {
+    opacity: 0;
+    transform: translateY(calc(-50% + var(--paw-offset, 0px))) scale(0.4) rotate(-15deg);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(calc(-50% + var(--paw-offset, 0px))) scale(1) rotate(-5deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(calc(-50% + var(--paw-offset, 0px))) scale(1) rotate(-5deg);
+  }
+}

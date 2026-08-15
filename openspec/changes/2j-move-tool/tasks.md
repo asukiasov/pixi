@@ -21,9 +21,12 @@
 ## 2. Move tool wiring
 
 - [x] 2.1 `index.html`: new tool button (`data-tool="move"`,
-      `data-shortcut="V"`, `open_with` icon, tooltip "Move"), placed in
-      the tools sidebar; `open_with` added to the Material Symbols
-      `icon_names=` subsetting list
+      `data-shortcut="V"`, `arrow_selector_tool` icon, tooltip "Move"),
+      placed in the tools sidebar; `arrow_selector_tool` added to the
+      Material Symbols `icon_names=` subsetting list. Revised from the
+      original `open_with` (four-way-arrow-cross) after feedback that it
+      didn't read as Photoshop/Illustrator's actual Move/Selection tool
+      glyph - `arrow_selector_tool` (a literal cursor-arrow icon) does
 - [x] 2.2 `js/canvas-view.js`: `setMoveMode(enabled)` mirroring
       `setPanMode` — toggles a `.move-mode` class on the canvas element
 - [x] 2.3 `style.css`: `#workspace-canvas.move-mode { cursor: move; }`

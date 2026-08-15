@@ -258,3 +258,31 @@
       shared `clearSelection()` helper so the button, Escape, and
       Cmd/Ctrl+D can't drift out of sync. Playwright: Cmd/Ctrl+D clears
       an active selection from any tool; re-run full `node --test` suite
+
+## 15. Revised per feedback: Rectangle Shift-square, Filled toggle back, Rainbow+Pencil
+
+- [x] 15.1 `js/workspace.js`: module-level `shiftHeld`, tracked via
+      document keydown/keyup (independent of any single drag, since
+      Shift can be pressed/released mid-drag); new `squareDragCurrent()`
+      helper clamps the drag's current point so width==height, in
+      whichever direction the drag is already heading; applied in
+      `onDrawMove`'s Rectangle branch only
+- [x] 15.2 Reintroduced a Filled toggle for Rectangle - removed earlier
+      this session per explicit instruction, but the shape-tools spec's
+      "toggle between outline and filled" requirement was never actually
+      updated to match, so this restores spec/code alignment rather than
+      reversing a decision. Implemented as a tool-scoped icon toggle
+      (`#rectangle-fill-toggle`, `check_box`/`check_box_outline_blank`),
+      shown only while Rectangle is active - not the old always-visible
+      text button.
+- [x] 15.3 `js/engine.js`: `strokeFreehandThick` now passes a third
+      `index` argument to `applyPixel` (0-based order over unique pixels
+      actually touched, post-dedup) - additive, existing callers that
+      ignore the third argument are unaffected
+- [x] 15.4 `js/workspace.js`: `pencilOrEraserApplyPixel` uses
+      `rainbowColor(index * RAINBOW_HUE_STEP)` for Pencil when
+      `state.brushRainbow` is set, same cycling sequence Brush/Line use
+- [x] 15.5 Playwright: a very non-square Shift+drag produced a pixel-exact
+      square; Filled toggle produces a filled rectangle when on; Rainbow
+      selected + a Pencil stroke produced visibly different colors at two
+      sampled points along it; re-run full `node --test` suite (103/103)

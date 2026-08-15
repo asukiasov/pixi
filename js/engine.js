@@ -257,6 +257,7 @@ export function strokeFreehandThick(points, size, pixelPerfect, applyPixel) {
   const finalPath = size === 1 && pixelPerfect ? removeRedundantCorners(rawPath) : rawPath;
   const offsets = circleOffsets(size);
   const touched = new Set();
+  let index = 0;
   for (const p of finalPath) {
     for (const [dx, dy] of offsets) {
       const x = p.x + dx;
@@ -264,7 +265,13 @@ export function strokeFreehandThick(points, size, pixelPerfect, applyPixel) {
       const key = `${x},${y}`;
       if (touched.has(key)) continue;
       touched.add(key);
-      applyPixel(x, y);
+      // Third argument: a 0-based order over unique pixels actually
+      // touched (not raw path position) - lets a caller cycle something
+      // (e.g. Rainbow's hue) once per real placement, the same way
+      // Brush's placementIndex does, without it being skewed by
+      // dedup-skipped pixels.
+      applyPixel(x, y, index);
+      index++;
     }
   }
 }

@@ -1,5 +1,15 @@
 import { UndoStack } from './undo.js';
-import { saveProject, renameProject, createCustomBrush, listCustomBrushes, deleteCustomBrush } from './persistence.js';
+import {
+  saveProject,
+  renameProject,
+  createCustomBrush,
+  listCustomBrushes,
+  deleteCustomBrush,
+  createColorPalette,
+  listColorPalettes,
+  addColorToPalette,
+  deleteColorPalette,
+} from './persistence.js';
 import { initCanvasSettings } from './canvas-settings.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
@@ -74,6 +84,21 @@ function pointsToRect(a, b) {
   };
 }
 
+/**
+ * Given a drag's start point and its current (unconstrained) point,
+ * returns a current point clamped so the resulting rect is a square -
+ * the larger of the two deltas wins, in whichever direction the drag is
+ * already heading. Used for the Rectangle tool's Shift-to-constrain.
+ */
+function squareDragCurrent(start, current) {
+  const dx = current.x - start.x;
+  const dy = current.y - start.y;
+  const side = Math.max(Math.abs(dx), Math.abs(dy));
+  const sx = dx < 0 ? -1 : 1;
+  const sy = dy < 0 ? -1 : 1;
+  return { x: start.x + sx * side, y: start.y + sy * side };
+}
+
 // Module-level state, not per-call: the Workspace screen is a singleton in
 // this app (one workspace <canvas>), reused across every project the user
 // opens or creates in a session. DOM listeners are bound exactly once, the
@@ -81,6 +106,9 @@ function pointsToRect(a, b) {
 // project/layer stack.
 let state = null;
 let domBound = false;
+// Tracked independently of any single event, since Shift can be pressed/
+// released mid-drag - the Rectangle tool checks this on every move.
+let shiftHeld = false;
 let canvasSettingsControls = null;
 let toolButtons = null;
 let pixelPerfectToggle = null;
@@ -93,14 +121,19 @@ let layersPanelToggle = null;
 let foregroundSwatchEl = null;
 let backgroundSwatchEl = null;
 
-// User-added custom palette colors (hex strings). Module-level, not
-// per-project — like allBrushes, palette additions are a session-wide
-// resource, still visible after switching to a different project; only
-// the *current selection* resets per project.
-let customSwatches = [];
 let zoomReadout = null;
 let pencilOptionsPanel = null;
-let pencilSizePreview = null;
+let rectangleOptionsPanel = null;
+
+// Named, persisted palettes of user-added colors (superseded the old
+// flat, unpersisted customSwatches list - see 2f-color-library-panel).
+// Module-level, not per-project — like allBrushes, a session/global
+// resource, loaded once from IndexedDB and refreshed after every mutation.
+let colorPalettes = [];
+let activePaletteId = null;
+let colorLibraryGrid = null;
+let colorLibrarySelect = null;
+let deletePaletteButton = null;
 
 // All available brushes: the built-ins plus whatever's been loaded from
 // IndexedDB. Module-level, not per-project — brushes are global, not
@@ -170,6 +203,13 @@ function colorForCurrentTool() {
 function pencilOrEraserApplyPixel(engine) {
   if (state.currentTool === 'eraser') {
     return (x, y) => engine.erasePixelBlended(x, y, state.pencilOpacity);
+  }
+  // Rainbow cycles per unique pixel placed, same as Brush - the index
+  // strokeFreehandThick now passes is the pixel's order among unique
+  // placements (not raw path position), so Spacing-style skips don't
+  // exist here but dedup-skipped pixels still don't throw off the cycle.
+  if (state.brushRainbow) {
+    return (x, y, index) => engine.setPixelBlended(x, y, rainbowColor(index * RAINBOW_HUE_STEP), state.pencilOpacity);
   }
   return (x, y) => engine.setPixelBlended(x, y, state.foregroundColor, state.pencilOpacity);
 }
@@ -367,6 +407,72 @@ async function loadCustomBrushes() {
   renderBrushesPanel();
 }
 
+/**
+ * Fetches every palette from IndexedDB. Auto-creates one "Default"
+ * palette on first-ever load if none exist yet - the panel should never
+ * show an empty "no palettes" state with nothing to select or add to
+ * (mirrors "a fresh canvas always has exactly one layer").
+ */
+async function loadColorPalettes() {
+  let palettes = await listColorPalettes();
+  if (palettes.length === 0) {
+    const defaultPalette = await createColorPalette('Default');
+    palettes = [defaultPalette];
+  }
+  colorPalettes = palettes;
+  // Keep the previously active palette selected if it still exists
+  // (e.g. after adding a color to it); otherwise fall back to the first.
+  if (!colorPalettes.some((p) => p.id === activePaletteId)) {
+    activePaletteId = colorPalettes[0].id;
+  }
+  renderColorLibraryPanel();
+}
+
+/**
+ * Rebuilds the palette-name dropdown (shown only once more than one
+ * palette exists, sorted alphabetically) and the active palette's
+ * swatch grid.
+ */
+function renderColorLibraryPanel() {
+  const sorted = [...colorPalettes].sort((a, b) => a.name.localeCompare(b.name));
+
+  colorLibrarySelect.innerHTML = '';
+  sorted.forEach((palette) => {
+    const option = document.createElement('option');
+    option.value = palette.id;
+    option.textContent = palette.name;
+    if (palette.id === activePaletteId) option.selected = true;
+    colorLibrarySelect.appendChild(option);
+  });
+  colorLibrarySelect.classList.toggle('hidden', sorted.length <= 1);
+
+  const active = colorPalettes.find((p) => p.id === activePaletteId);
+  colorLibraryGrid.innerHTML = '';
+  if (active && active.colors.length > 0) {
+    active.colors.forEach((hex) => {
+      const swatch = document.createElement('button');
+      swatch.type = 'button';
+      swatch.className = 'color-library-swatch';
+      swatch.style.background = hex;
+      swatch.dataset.hex = hex.toLowerCase();
+      swatch.title = hex;
+      swatch.addEventListener('click', () => setForegroundColor(hexToRgba(hex)));
+      colorLibraryGrid.appendChild(swatch);
+    });
+  } else if (active) {
+    const empty = document.createElement('p');
+    empty.className = 'color-library-empty';
+    empty.textContent = 'No colors yet - add one from the color picker.';
+    colorLibraryGrid.appendChild(empty);
+  }
+
+  // Can't delete the only remaining palette - same "can't delete the
+  // only layer" pattern the Layers panel already uses.
+  deletePaletteButton.disabled = colorPalettes.length <= 1;
+
+  syncActiveSwatch();
+}
+
 function makeEmptyBrushEditorGrid(width, height) {
   return Array.from({ length: height }, () => Array(width).fill(false));
 }
@@ -510,29 +616,60 @@ function bindBrushEditorOnce() {
 
 const CONFETTI_COLORS = ['#ff453a', '#ff9f0a', '#ffd60a', '#30d158', '#64d2ff', '#0a84ff', '#bf5af2'];
 
-/** A little celebration for finishing a piece - bursts from the Export button, cleans up after itself. */
-function celebrateExport(originEl) {
-  const origin = originEl.getBoundingClientRect();
+/** Shared confetti burst, from a given screen point, with a configurable piece count/spread. */
+function confettiBurst(originX, originY, count, maxDistance) {
   const container = document.createElement('div');
   container.className = 'confetti-burst';
   document.body.appendChild(container);
 
-  for (let i = 0; i < 28; i++) {
+  for (let i = 0; i < count; i++) {
     const piece = document.createElement('span');
     piece.className = 'confetti-piece';
-    piece.style.left = `${origin.left + origin.width / 2}px`;
-    piece.style.top = `${origin.top + origin.height / 2}px`;
+    piece.style.left = `${originX}px`;
+    piece.style.top = `${originY}px`;
     piece.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
     const angle = Math.random() * Math.PI * 2;
-    const distance = 80 + Math.random() * 140;
+    const distance = maxDistance * 0.4 + Math.random() * maxDistance * 0.6;
     piece.style.setProperty('--dx', `${Math.cos(angle) * distance}px`);
     piece.style.setProperty('--dy', `${Math.sin(angle) * distance - 40}px`);
     piece.style.setProperty('--rot', `${Math.random() * 720 - 360}deg`);
-    piece.style.animationDelay = `${Math.random() * 0.1}s`;
+    piece.style.animationDelay = `${Math.random() * 0.15}s`;
     container.appendChild(piece);
   }
 
-  setTimeout(() => container.remove(), 1400);
+  setTimeout(() => container.remove(), 1600);
+}
+
+/** A little celebration for finishing a piece - bursts from the Export button, cleans up after itself. */
+function celebrateExport(originEl) {
+  const origin = originEl.getBoundingClientRect();
+  confettiBurst(origin.left + origin.width / 2, origin.top + origin.height / 2, 28, 220);
+}
+
+const KONAMI_SEQUENCE = [
+  'arrowup', 'arrowup', 'arrowdown', 'arrowdown', 'arrowleft', 'arrowright', 'arrowleft', 'arrowright', 'b', 'a',
+];
+let konamiProgress = 0;
+
+/** You know what this is if you know what this is. */
+function bindKonamiCode() {
+  document.addEventListener('keydown', (e) => {
+    if (document.getElementById('screen-workspace').classList.contains('hidden')) return;
+    const key = e.key.toLowerCase();
+    if (key === KONAMI_SEQUENCE[konamiProgress]) {
+      konamiProgress++;
+      if (konamiProgress === KONAMI_SEQUENCE.length) {
+        konamiProgress = 0;
+        for (let burst = 0; burst < 3; burst++) {
+          setTimeout(() => {
+            confettiBurst(window.innerWidth * (0.25 + burst * 0.25), window.innerHeight * 0.4, 40, 320);
+          }, burst * 200);
+        }
+      }
+    } else {
+      konamiProgress = key === KONAMI_SEQUENCE[0] ? 1 : 0;
+    }
+  });
 }
 
 /**
@@ -567,9 +704,20 @@ function bindTooltips() {
         tooltipEl.appendChild(shortcutSpan);
       }
       const rect = target.getBoundingClientRect();
-      tooltipEl.style.left = `${rect.right + 12}px`;
-      tooltipEl.style.top = `${rect.top + rect.height / 2}px`;
-      tooltipEl.style.transform = 'translateY(-50%)';
+      // Top-bar buttons sit close together horizontally - a tooltip to
+      // the right would cover the next button - so those show below
+      // instead. The vertical tools sidebar keeps showing to the right.
+      const isTopbar = target.closest('.workspace-topbar') !== null;
+      tooltipEl.classList.toggle('below', isTopbar);
+      if (isTopbar) {
+        tooltipEl.style.left = `${rect.left + rect.width / 2}px`;
+        tooltipEl.style.top = `${rect.bottom + 10}px`;
+        tooltipEl.style.transform = 'translateX(-50%)';
+      } else {
+        tooltipEl.style.left = `${rect.right + 12}px`;
+        tooltipEl.style.top = `${rect.top + rect.height / 2}px`;
+        tooltipEl.style.transform = 'translateY(-50%)';
+      }
       tooltipEl.classList.add('visible');
     }, 300);
   }
@@ -590,15 +738,13 @@ function bindTooltips() {
 }
 
 /**
- * Rebuilds the palette row's swatches from [...PALETTE, ...customSwatches]
- * plus the Rainbow swatch last. Called once at bind time and again after
- * every "Add to palette" - mirrors renderBrushesPanel()'s pattern for the
- * same reason (a session-wide list that can grow after the DOM already
- * exists).
+ * Rebuilds the palette row's swatches from the fixed PALETTE presets
+ * plus the Rainbow swatch last. User-added colors now live in the Color
+ * Library panel (see renderColorLibraryPanel), not here.
  */
 function renderPaletteRow() {
   paletteRow.innerHTML = '';
-  [...PALETTE, ...customSwatches].forEach((hex) => {
+  PALETTE.forEach((hex) => {
     const swatch = document.createElement('button');
     swatch.type = 'button';
     swatch.className = 'palette-swatch';
@@ -634,6 +780,11 @@ function syncActiveSwatch() {
   });
   const rainbowEl = paletteRow.querySelector('.rainbow-swatch');
   if (rainbowEl) rainbowEl.classList.toggle('active', state.brushRainbow);
+  if (colorLibraryGrid) {
+    colorLibraryGrid.querySelectorAll('.color-library-swatch').forEach((s) => {
+      s.classList.toggle('active', !state.brushRainbow && s.dataset.hex === fgHex);
+    });
+  }
 }
 
 /** Keeps the native color input, hex field, and RGB fields all showing the same color. */
@@ -740,20 +891,21 @@ function bindDomOnce() {
       // Size/Opacity sliders: shared by Pencil and Eraser, hidden for
       // every other tool - same tool-scoped-visibility pattern as Brushes.
       pencilOptionsPanel.classList.toggle('hidden', state.currentTool !== 'pencil' && state.currentTool !== 'eraser');
+      // Filled toggle: Rectangle only.
+      rectangleOptionsPanel.classList.toggle('hidden', state.currentTool !== 'rectangle');
     });
   });
 
   bindTooltips();
+  bindKonamiCode();
 
   pixelPerfectToggle.addEventListener('click', () => {
     state.pixelPerfect = !state.pixelPerfect;
     pixelPerfectToggle.classList.toggle('active', state.pixelPerfect);
   });
 
-  // Pencil/Eraser Size + Opacity - shared sliders, live readouts, and a
-  // small preview swatch scaled (capped) to the current Size.
+  // Pencil/Eraser Size + Opacity - shared sliders with live readouts.
   pencilOptionsPanel = document.getElementById('pencil-options');
-  pencilSizePreview = document.getElementById('pencil-size-preview');
   const pencilSizeSlider = document.getElementById('pencil-size-slider');
   const pencilSizeReadout = document.getElementById('pencil-size-readout');
   const pencilOpacitySlider = document.getElementById('pencil-opacity-slider');
@@ -763,15 +915,22 @@ function bindDomOnce() {
     const value = Number(pencilSizeSlider.value);
     state.pencilSize = value;
     pencilSizeReadout.textContent = `${value}px`;
-    const previewPx = Math.min(22, Math.max(4, value * 2));
-    pencilSizePreview.style.width = `${previewPx}px`;
-    pencilSizePreview.style.height = `${previewPx}px`;
   });
 
   pencilOpacitySlider.addEventListener('input', () => {
     const value = Number(pencilOpacitySlider.value);
     state.pencilOpacity = value / 100;
     pencilOpacityReadout.textContent = `${value}%`;
+  });
+
+  // Rectangle's Filled toggle - tool-scoped, same pattern as Pencil options.
+  rectangleOptionsPanel = document.getElementById('rectangle-options');
+  const rectangleFillToggle = document.getElementById('rectangle-fill-toggle');
+  const rectangleFillIcon = document.getElementById('rectangle-fill-icon');
+  rectangleFillToggle.addEventListener('click', () => {
+    state.rectangleFilled = !state.rectangleFilled;
+    rectangleFillToggle.classList.toggle('active', state.rectangleFilled);
+    rectangleFillIcon.textContent = state.rectangleFilled ? 'check_box' : 'check_box_outline_blank';
   });
 
   renderPaletteRow();
@@ -825,10 +984,10 @@ function bindDomOnce() {
   colorPickerG.addEventListener('change', applyRgbFields);
   colorPickerB.addEventListener('change', applyRgbFields);
 
-  colorPickerAdd.addEventListener('click', () => {
+  colorPickerAdd.addEventListener('click', async () => {
     const current = colorPickerTarget === 'background' ? state.backgroundColor : state.foregroundColor;
-    customSwatches.push(rgbaToHex(current));
-    renderPaletteRow();
+    await addColorToPalette(activePaletteId, rgbaToHex(current));
+    await loadColorPalettes();
   });
 
   document.getElementById('color-picker-close').addEventListener('click', closeColorPicker);
@@ -907,6 +1066,50 @@ function bindDomOnce() {
   addBrushButton.addEventListener('click', () => openBrushEditor());
   bindBrushEditorOnce();
 
+  // Color Library panel: named, persisted palettes (see design.md's
+  // "one Dexie record per palette" decision).
+  colorLibraryGrid = document.getElementById('color-library-grid');
+  colorLibrarySelect = document.getElementById('color-library-select');
+  deletePaletteButton = document.getElementById('delete-palette-button');
+  const addPaletteButton = document.getElementById('add-palette-button');
+  const newPaletteRow = document.getElementById('new-palette-row');
+  const newPaletteName = document.getElementById('new-palette-name');
+  const newPaletteSave = document.getElementById('new-palette-save');
+  const newPaletteCancel = document.getElementById('new-palette-cancel');
+
+  loadColorPalettes(); // async; renders the panel once palettes arrive
+
+  colorLibrarySelect.addEventListener('change', () => {
+    activePaletteId = colorLibrarySelect.value;
+    renderColorLibraryPanel();
+  });
+
+  addPaletteButton.addEventListener('click', () => {
+    newPaletteName.value = '';
+    newPaletteRow.classList.remove('hidden');
+    newPaletteName.focus();
+  });
+
+  newPaletteCancel.addEventListener('click', () => {
+    newPaletteRow.classList.add('hidden');
+  });
+
+  newPaletteSave.addEventListener('click', async () => {
+    const name = newPaletteName.value.trim();
+    if (!name) return; // nothing entered - no-op, stay open
+    const created = await createColorPalette(name);
+    activePaletteId = created.id;
+    newPaletteRow.classList.add('hidden');
+    await loadColorPalettes();
+  });
+
+  deletePaletteButton.addEventListener('click', async () => {
+    if (colorPalettes.length <= 1) return; // can't delete the only palette
+    await deleteColorPalette(activePaletteId);
+    activePaletteId = null; // loadColorPalettes falls back to the first remaining
+    await loadColorPalettes();
+  });
+
   // Layers panel: its own show/hide toggle, independent of the Brushes
   // panel's tool-scoped visibility (toggling one never touches the other).
   layersPanel = document.getElementById('layers-panel');
@@ -976,6 +1179,15 @@ function bindDomOnce() {
     if (e.key !== 'Escape') return;
     if (document.getElementById('screen-workspace').classList.contains('hidden')) return;
     clearSelection();
+  });
+
+  // Shift constrains the Rectangle tool to a square while held - tracked
+  // independently since it can toggle mid-drag, read from onDrawMove.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Shift') shiftHeld = true;
+  });
+  document.addEventListener('keyup', (e) => {
+    if (e.key === 'Shift') shiftHeld = false;
   });
 
   // Bare-letter tool shortcuts (P/E/G/B/L/R/M/H — see each button's
@@ -1183,9 +1395,9 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   // even though it no longer applied (e.g. the state was reset but a
   // stale-highlighted swatch/tool suggested otherwise).
   toolButtons.forEach((b) => b.classList.toggle('active', b.dataset.tool === state.currentTool));
-  // Custom swatches (customSwatches) are session-wide and NOT reset here -
-  // only which color is currently selected resets, back to the first
-  // preset (matching state.foregroundColor's default above).
+  // Color palettes (colorPalettes) are global and NOT reset here - only
+  // which color is currently selected resets, back to the first preset
+  // (matching state.foregroundColor's default above).
   colorPickerTarget = 'foreground';
   closeColorPicker();
   updateColorPickerInputs(state.foregroundColor);
@@ -1199,15 +1411,17 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   pixelPerfectToggle.classList.remove('active');
   layersPanel.classList.remove('hidden');
   layersPanelToggle.classList.add('active');
-  // Default tool is Pencil, so the panel starts visible; sliders/readout/
-  // preview reset to match state.pencilSize/pencilOpacity's defaults (1, 1).
+  // Default tool is Pencil, so the panel starts visible; sliders/readouts
+  // reset to match state.pencilSize/pencilOpacity's defaults (1, 1).
   pencilOptionsPanel.classList.remove('hidden');
   document.getElementById('pencil-size-slider').value = '1';
   document.getElementById('pencil-size-readout').textContent = '1px';
-  pencilSizePreview.style.width = '4px';
-  pencilSizePreview.style.height = '4px';
   document.getElementById('pencil-opacity-slider').value = '100';
   document.getElementById('pencil-opacity-readout').textContent = '100%';
+  // Rectangle isn't the default tool, so its options start hidden.
+  rectangleOptionsPanel.classList.add('hidden');
+  document.getElementById('rectangle-fill-toggle').classList.remove('active');
+  document.getElementById('rectangle-fill-icon').textContent = 'check_box_outline_blank';
   // Hand tool is never the default (Pencil is) - every freshly opened
   // project starts with single-pointer drag drawing, not panning.
   canvasView.setPanMode(false);
@@ -1324,7 +1538,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
       if (!state.strokeBackup) return;
 
       if (tool === 'line' || tool === 'rectangle') {
-        state.dragCurrent = point;
+        state.dragCurrent = tool === 'rectangle' && shiftHeld ? squareDragCurrent(state.dragStart, point) : point;
         drawShapePreview();
         state.canvasView.render();
         return;

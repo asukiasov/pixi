@@ -155,3 +155,22 @@
       Pixel-perfect toggle still work correctly from their new top-bar
       buttons (same IDs, same JS); full workspace layout (tools sidebar,
       canvas, right sidebar) unaffected by the restructure
+
+## 9. Revised per feedback: Undo/Redo moved to top bar, tooltip direction
+
+- [x] 9.1 `index.html`: Undo/Redo moved from the bottom bar's second
+      group into `.workspace-topbar` (right-aligned via a new
+      `.workspace-topbar-spacer` flex:1 element between the left icon
+      group and Undo/Redo) - IDs unchanged, no JS lookup changes needed
+- [x] 9.2 **Bug**: top-bar tooltips used the same "show to the right"
+      positioning as the vertical tools sidebar, but top-bar buttons sit
+      close together horizontally - a tooltip to the right covered the
+      next button. `bindTooltips()`'s `show()` now detects
+      `target.closest('.workspace-topbar')` and positions those tooltips
+      below the button instead (arrow flipped to point up via a new
+      `.tool-tooltip.below` class), leaving the tools-sidebar's
+      to-the-right positioning unchanged.
+- [x] 9.3 Playwright: confirmed Undo/Redo render inside
+      `.workspace-topbar` and function identically; confirmed a top-bar
+      tooltip carries the `below` class and no longer overlaps the
+      neighboring button

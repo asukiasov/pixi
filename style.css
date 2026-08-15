@@ -199,6 +199,10 @@ body {
   flex: none;
 }
 
+.workspace-topbar-spacer {
+  flex: 1;
+}
+
 .workspace-body {
   display: flex;
   flex-direction: row;
@@ -217,19 +221,34 @@ body {
   flex: none;
 }
 
-/* Pencil/Eraser Size + Opacity - vertical sliders, shown only while one
-   of those two tools is active (js/workspace.js). Sits at the bottom of
-   the tools sidebar itself, not the right-side panel column - it's tied
-   to the tool buttons directly above it, not a separate data panel like
-   Layers/Brushes. */
-.pencil-options {
+/* Rectangle's Filled toggle - tool-scoped, bottom of the tools sidebar. */
+.rectangle-options {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
   margin-top: 0.4rem;
   padding-top: 0.6rem;
   border-top: 1px solid #2c2c2e;
+}
+
+/* Pencil/Eraser Size + Opacity - floats over the canvas's top-left
+   corner (js/workspace.js positions its visibility, not its location -
+   this is a fixed overlay, not part of the tools sidebar's flow), shown
+   only while one of those two tools is active. */
+.pencil-options {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.5rem;
+  background: rgba(28, 28, 30, 0.92);
+  border: 1px solid #48484a;
+  border-radius: 0.6rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .pencil-options-row {
@@ -299,16 +318,6 @@ body {
   white-space: nowrap;
 }
 
-/* Live preview of the current Size, roughly to scale, capped so a large
-   Size doesn't blow out the ~2.6rem-wide sidebar. */
-.pencil-options-preview {
-  width: 1.4rem;
-  height: 1.4rem;
-  border-radius: 50%;
-  background: #f2f2f2;
-  flex: none;
-}
-
 .tools-sidebar .tool-button {
   width: 2.6rem;
   height: 2.6rem;
@@ -360,6 +369,19 @@ body {
   transform: translateY(-50%);
   border: 0.3rem solid transparent;
   border-right-color: #2c2c2e;
+}
+
+/* Top-bar buttons sit close together horizontally - a tooltip to the
+   right would cover the next button. Shown below instead, arrow
+   pointing up at the button. */
+.tool-tooltip.below::after {
+  right: auto;
+  left: 50%;
+  top: auto;
+  bottom: 100%;
+  transform: translateX(-50%);
+  border-right-color: transparent;
+  border-bottom-color: #2c2c2e;
 }
 
 .tool-tooltip-shortcut {
@@ -508,7 +530,7 @@ body {
 }
 
 .layers-panel {
-  max-height: 45%;
+  max-height: 35%;
   overflow-y: auto;
   border-bottom: 1px solid #2c2c2e;
   flex: none;
@@ -834,12 +856,118 @@ body {
    thumbnail grid, bottom toolbar with add/delete icon buttons. */
 
 /* Second section of the right-sidebar (see .right-sidebar above), shown
-   only while the Brush tool is active — see js/workspace.js. flex:1 fills
-   whatever vertical space Layers isn't using. */
+   only while the Brush tool is active — see js/workspace.js. Capped at
+   35% like Layers so the always-visible Color Library panel below still
+   gets its share of space when Brushes is shown. */
 .brushes-panel {
+  flex: none;
+  max-height: 35%;
+  overflow-y: auto;
+}
+
+/* Third section - always visible (not tool-scoped), named/persisted
+   palettes of user-added colors. flex:1 fills whatever's left after
+   Layers (and Brushes, when shown). */
+.color-library-panel {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  border-top: 1px solid #2c2c2e;
+  display: flex;
+  flex-direction: column;
+}
+
+.color-library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.5rem;
+  flex: none;
+}
+
+.color-library-header h2 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #a0a0a5;
+  margin: 0;
+}
+
+.color-library-header-actions {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.color-library-header-actions .icon-button {
+  width: 1.8rem;
+  height: 1.8rem;
+}
+
+.color-library-header-actions .material-symbols-outlined {
+  font-size: 1.1rem;
+}
+
+.color-library-select {
+  margin: 0 0.5rem 0.4rem;
+  padding: 0.3rem 0.4rem;
+  background: #2c2c2e;
+  border: 1px solid #48484a;
+  color: inherit;
+  border-radius: 0.4rem;
+  font-size: 0.8rem;
+  flex: none;
+}
+
+.new-palette-row {
+  display: flex;
+  gap: 0.3rem;
+  margin: 0 0.5rem 0.4rem;
+  flex: none;
+}
+
+.new-palette-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.4rem;
+  background: #2c2c2e;
+  border: 1px solid #48484a;
+  color: inherit;
+  border-radius: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.new-palette-row .tool-button {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.color-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(1.6rem, 1fr));
+  gap: 0.3rem;
+  padding: 0 0.5rem 0.5rem;
+  overflow-y: auto;
+}
+
+.color-library-swatch {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 0.25rem;
+  border: 2px solid #48484a;
+  padding: 0;
+  cursor: pointer;
+}
+
+.color-library-swatch.active {
+  border-color: #0a84ff;
+}
+
+.color-library-empty {
+  grid-column: 1 / -1;
+  padding: 0 0.5rem 0.5rem;
+  font-size: 0.75rem;
+  color: #6e6e73;
+  margin: 0;
 }
 
 .brushes-panel-header {

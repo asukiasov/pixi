@@ -17,7 +17,7 @@
        original range query pulled the full variable font (~4MB, ~30s on a
        slow connection, icons invisible until it finished); this is a few
        KB. Keep icon_names in sync with the icons used in this file. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,colorize,undo,redo,add,remove,delete,visibility,visibility_off,restart_alt,swap_horiz,close,home,grid_on,layers,settings,download,arrow_upward,arrow_downward,rotate_left,rotate_right" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,colorize,undo,redo,add,remove,delete,visibility,visibility_off,restart_alt,swap_horiz,close,home,grid_on,layers,settings,download,arrow_upward,arrow_downward,rotate_left,rotate_right,check_box_outline_blank,check_box" />
 </head>
 <body>
   <main id="screen-gallery" class="screen">
@@ -77,6 +77,15 @@
       </button>
       <button type="button" id="export-button" class="tool-button icon-button" aria-label="Export PNG" data-tooltip="Export PNG">
         <span class="material-symbols-outlined">download</span>
+      </button>
+
+      <div class="workspace-topbar-spacer"></div>
+
+      <button type="button" id="undo-button" class="tool-button icon-button" disabled aria-label="Undo" data-tooltip="Undo">
+        <span class="material-symbols-outlined">undo</span>
+      </button>
+      <button type="button" id="redo-button" class="tool-button icon-button" disabled aria-label="Redo" data-tooltip="Redo">
+        <span class="material-symbols-outlined">redo</span>
       </button>
     </header>
 
@@ -156,22 +165,32 @@
 
       <!-- Shown only while Pencil or Eraser is active (js/workspace.js),
            same tool-scoped-visibility pattern the Brushes panel uses. -->
-      <div id="pencil-options" class="pencil-options hidden">
-        <div class="pencil-options-row">
-          <input type="range" id="pencil-size-slider" class="vertical-slider" min="1" max="20" value="1" aria-label="Size" />
-          <span id="pencil-size-readout" class="pencil-options-readout">1px</span>
-        </div>
-        <div id="pencil-size-preview" class="pencil-options-preview"></div>
-        <div class="pencil-options-row">
-          <input type="range" id="pencil-opacity-slider" class="vertical-slider" min="1" max="100" value="100" aria-label="Opacity" />
-          <span id="pencil-opacity-readout" class="pencil-options-readout">100%</span>
-        </div>
+      <!-- Rectangle's Filled toggle - tool-scoped like Pencil options below. -->
+      <div id="rectangle-options" class="rectangle-options hidden">
+        <button type="button" id="rectangle-fill-toggle" class="tool-button icon-button" aria-label="Filled" data-tooltip="Filled rectangle">
+          <span class="material-symbols-outlined" id="rectangle-fill-icon">check_box_outline_blank</span>
+        </button>
       </div>
     </aside>
 
     <div class="workspace-main">
       <div id="workspace-canvas-container" class="canvas-container">
         <canvas id="workspace-canvas"></canvas>
+
+        <!-- Floats over the canvas's top-left corner (not buried in the
+             narrow tools sidebar) - shown only while Pencil or Eraser is
+             active (js/workspace.js), same tool-scoped-visibility
+             pattern the Brushes panel uses. -->
+        <div id="pencil-options" class="pencil-options hidden">
+          <div class="pencil-options-row">
+            <input type="range" id="pencil-size-slider" class="vertical-slider" min="1" max="20" value="1" aria-label="Size" />
+            <span id="pencil-size-readout" class="pencil-options-readout">1px</span>
+          </div>
+          <div class="pencil-options-row">
+            <input type="range" id="pencil-opacity-slider" class="vertical-slider" min="1" max="100" value="100" aria-label="Opacity" />
+            <span id="pencil-opacity-readout" class="pencil-options-readout">100%</span>
+          </div>
+        </div>
       </div>
 
       <div id="canvas-settings-panel" class="canvas-settings-panel hidden">
@@ -218,15 +237,6 @@
           <button type="button" id="zoom-preset-100" class="tool-button" title="Actual size">100%</button>
           <button type="button" id="zoom-preset-fit" class="tool-button" title="Fit the canvas to the screen">Fit</button>
           <button type="button" id="zoom-preset-fill" class="tool-button" title="Fill the screen with the canvas">Fill</button>
-        </div>
-        <!-- 2. Undo/redo. -->
-        <div class="bottom-bar-group">
-          <button type="button" id="undo-button" class="tool-button icon-button" disabled title="Undo">
-            <span class="material-symbols-outlined">undo</span>
-          </button>
-          <button type="button" id="redo-button" class="tool-button icon-button" disabled title="Redo">
-            <span class="material-symbols-outlined">redo</span>
-          </button>
         </div>
       </nav>
     </div>
@@ -290,6 +300,29 @@
             <button type="button" id="brush-editor-save" class="tool-button">Save</button>
           </div>
         </div>
+      </div>
+
+      <!-- Named, persisted palettes of user-added colors - global and
+           cross-session, unlike the fixed preset palette-row. -->
+      <div id="color-library-panel" class="color-library-panel">
+        <div class="color-library-header">
+          <h2>Color Library</h2>
+          <div class="color-library-header-actions">
+            <button type="button" id="add-palette-button" class="tool-button icon-button" aria-label="Add palette" data-tooltip="New palette">
+              <span class="material-symbols-outlined">add</span>
+            </button>
+            <button type="button" id="delete-palette-button" class="tool-button icon-button" aria-label="Delete palette" data-tooltip="Delete palette">
+              <span class="material-symbols-outlined">delete</span>
+            </button>
+          </div>
+        </div>
+        <select id="color-library-select" class="color-library-select hidden"></select>
+        <div id="new-palette-row" class="new-palette-row hidden">
+          <input type="text" id="new-palette-name" placeholder="Palette name" />
+          <button type="button" id="new-palette-save" class="tool-button">Save</button>
+          <button type="button" id="new-palette-cancel" class="tool-button">Cancel</button>
+        </div>
+        <div id="color-library-grid" class="color-library-grid"></div>
       </div>
     </aside>
     </div>

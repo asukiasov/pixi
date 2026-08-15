@@ -37,6 +37,17 @@ filled, previewed live while dragging and committed on release.
 - **THEN** every pixel within the rectangle's bounds is set to the current
   draw color
 
+#### Scenario: Constraining to a square with Shift
+- **WHEN** the user holds Shift while dragging with the Rectangle tool
+- **THEN** the drawn rectangle is constrained to equal width and height (a
+  square), following whichever of the two the drag's larger delta implies,
+  in the drag's current direction
+
+#### Scenario: Releasing Shift mid-drag returns to free-form
+- **WHEN** the user releases Shift while still dragging
+- **THEN** the rectangle immediately goes back to following the pointer
+  freely, no longer constrained to a square
+
 ### Requirement: Rectangular selection
 The user SHALL be able to define a rectangular selection by dragging on
 the active layer. A selection persists across tool switches until cleared.

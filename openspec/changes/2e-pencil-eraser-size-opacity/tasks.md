@@ -102,3 +102,19 @@
 - [x] 6.2 Playwright: confirmed sliders still function identically after
       the restyle (Size/Opacity `input` events still update
       `state.pencilSize`/`pencilOpacity` and their readouts)
+
+## 7. Revised per feedback: reposition panel, remove resizing preview
+
+- [x] 7.1 Moved `#pencil-options` out of `#tools-sidebar`'s in-flow
+      column into `#workspace-canvas-container` as a `position: absolute`
+      overlay (top: 0.6rem; left: 0.6rem), floating over the canvas's
+      top-left corner instead of being buried at the bottom of the narrow
+      sidebar. Its own background/border/shadow added since it's no
+      longer visually part of the sidebar. Visibility toggling logic
+      (`js/workspace.js`) unchanged - only its CSS position moved.
+- [x] 7.2 Removed `#pencil-size-preview` (the growing/shrinking size-
+      preview dot) entirely, per explicit dislike of that animation - the
+      "Npx" text readout already conveys the current Size
+- [x] 7.3 Playwright: confirmed the panel now renders over the canvas
+      area (not inside the tools-sidebar's x-range) near its top-left
+      corner; confirmed no `#pencil-size-preview` element remains

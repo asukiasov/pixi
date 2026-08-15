@@ -146,9 +146,13 @@ the next color in a cycling rainbow sequence instead of a fixed color; the
 sequence advances by a fixed hue step per brush placed and wraps around.
 Rainbow also applies to the Line tool: each pixel along a drawn line SHALL
 use the next color in the same cycling sequence, stepping once per pixel
-along the line. Rainbow does not affect any other tool (pencil, eraser,
-bucket, rectangle): they SHALL keep using the last regular color that was
-selected, regardless of whether Rainbow is currently selected.
+along the line. Rainbow also applies to the Pencil tool: each unique
+pixel placed along a stroke SHALL use the next color in the cycling
+sequence, the same as Brush, respecting Pencil's Size (stamped as one
+circular area per step, same as a non-Rainbow stroke) and Opacity.
+Rainbow does not affect any other tool (eraser, bucket, rectangle): they
+SHALL keep using the last regular color that was selected, regardless of
+whether Rainbow is currently selected.
 
 #### Scenario: Placing brushes with Rainbow selected
 - **WHEN** Rainbow is the selected color and the user drags the Brush tool
@@ -161,14 +165,20 @@ selected, regardless of whether Rainbow is currently selected.
 - **THEN** consecutive pixels along the drawn line have different,
   cyclically progressing colors, the same sequence Brush uses
 
+#### Scenario: Drawing with Pencil with Rainbow selected
+- **WHEN** Rainbow is the selected color and the user draws a stroke with
+  the Pencil tool
+- **THEN** consecutive unique pixels along the stroke have different,
+  cyclically progressing colors, the same sequence Brush and Line use
+
 #### Scenario: A regular color is selected instead
 - **WHEN** the user selects a regular palette color (deselecting Rainbow)
-- **THEN** every brush placed (single tap or dragged trail) and every line
-  drawn uses that color, as before
+- **THEN** every brush placed (single tap or dragged trail), every line
+  drawn, and every Pencil stroke uses that color, as before
 
 #### Scenario: Rainbow selected has no effect on other tools
-- **WHEN** Rainbow is the selected color and the user draws with pencil,
-  eraser, bucket, or rectangle
+- **WHEN** Rainbow is the selected color and the user draws with eraser,
+  bucket, or rectangle
 - **THEN** that tool uses the last regular color that was selected, not a
   rainbow-cycling color
 

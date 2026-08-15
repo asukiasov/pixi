@@ -22,6 +22,15 @@ db.version(2).stores({
   projects: 'id, updatedAt',
   customBrushes: 'id, createdAt',
 });
+// colorPalettes: named, persisted collections of user-added colors (see
+// 2f-color-library-panel's design.md) - one record per palette, its
+// whole color list read/written together, same userId:null-reserved
+// pattern as customBrushes.
+db.version(3).stores({
+  projects: 'id, updatedAt',
+  customBrushes: 'id, createdAt',
+  colorPalettes: 'id, name',
+});
 
 function generateId() {
   return crypto.randomUUID();
@@ -110,8 +119,48 @@ export async function deleteCustomBrush(id) {
   await db.customBrushes.delete(id);
 }
 
-/** Test-only: empties the projects and customBrushes tables between test cases. */
+/**
+ * Creates a named palette (optionally seeded with colors) and writes it
+ * immediately. `userId` is always null today, same reserved-for-Phase-3
+ * pattern as createCustomBrush.
+ */
+export async function createColorPalette(name, colors = []) {
+  const now = Date.now();
+  const record = {
+    id: generateId(),
+    name,
+    colors,
+    userId: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await db.colorPalettes.put(record);
+  return record;
+}
+
+/** Every palette, for the Color Library panel's dropdown + swatch grid. */
+export async function listColorPalettes() {
+  return db.colorPalettes.toArray();
+}
+
+export async function renameColorPalette(id, name) {
+  await db.colorPalettes.update(id, { name, updatedAt: Date.now() });
+}
+
+/** Appends `hex` to the palette's color list (no de-duplication - the same color can be added twice if the user wants). */
+export async function addColorToPalette(id, hex) {
+  const record = await db.colorPalettes.get(id);
+  if (!record) return;
+  await db.colorPalettes.update(id, { colors: [...record.colors, hex], updatedAt: Date.now() });
+}
+
+export async function deleteColorPalette(id) {
+  await db.colorPalettes.delete(id);
+}
+
+/** Test-only: empties the projects, customBrushes, and colorPalettes tables between test cases. */
 export async function _clearAllForTests() {
   await db.projects.clear();
   await db.customBrushes.clear();
+  await db.colorPalettes.clear();
 }

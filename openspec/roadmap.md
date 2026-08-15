@@ -77,14 +77,21 @@ proposed/implemented/archived before the next starts:
     the "saved palettes" half of custom colors that 2c2 deliberately
     deferred (2c2's `customSwatches` was session-only, unnamed, flat).
     Replaces `customSwatches` outright rather than living alongside it.
+  - **2g — Background layer**: a white-background canvas's starting
+    layer becomes a locked (reorder-disabled) "Background" layer;
+    erasing it reveals the current Background color (from 2c2's
+    Foreground/Background model) instead of transparency. Transparent-
+    background canvases are unaffected. Completes a Non-Goal 2c2's
+    design.md explicitly deferred ("Background does not affect Eraser"),
+    now scoped to this one special layer instead of every layer.
 
 Status: **2a done** — archived at
 `openspec/changes/archive/2026-08-14-2a-layers/`, spec lives at
 `openspec/specs/layers/`. **2b done** — archived at
 `openspec/changes/archive/2026-08-14-2b-local-persistence-gallery/`, specs
 live at `openspec/specs/local-persistence/`, `openspec/specs/gallery/`,
-`openspec/specs/canvas-settings/`. **2c1 in progress. 2d, 2e, 2c2 done**
-(none yet archived). **2c3, 2f proposed, not yet implemented.**
+`openspec/specs/canvas-settings/`. **2c1 in progress. 2d, 2e, 2c2, 2f
+done** (none yet archived). **2c3, 2g proposed, not yet implemented.**
 
 ## Phase 3 — Supabase Auth + sync
 

@@ -286,3 +286,30 @@
       square; Filled toggle produces a filled rectangle when on; Rainbow
       selected + a Pencil stroke produced visibly different colors at two
       sampled points along it; re-run full `node --test` suite (103/103)
+
+## 16. Color Library sequence mode for Pencil
+
+- [x] 16.1 `index.html`: new `#pencil-library-toggle` icon button
+      (Material Symbols `palette`) inside `#pencil-options`, below the
+      Size/Opacity sliders
+- [x] 16.2 `js/workspace.js`: `pencilOrEraserApplyPixel` gains a
+      `state.pencilLibrarySequence` branch (checked after Rainbow, before
+      the plain-foreground fallback) that cycles
+      `colorPalettes.find(p => p.id === activePaletteId).colors` by pixel
+      index, same as Rainbow's hue cycling; falls back to the plain
+      foreground color if the active palette has no colors
+- [x] 16.3 Toggle click handler sets `state.pencilLibrarySequence` and
+      clears `state.brushRainbow` (mutual exclusivity); the Rainbow
+      palette-swatch click handler now also clears
+      `state.pencilLibrarySequence` and the toggle's `active` class, so
+      only one is ever on
+- [x] 16.4 Toggle is hidden whenever the current tool isn't Pencil
+      (including Eraser, unlike the shared Size/Opacity panel) - wired
+      into the same tool-button click handler that shows/hides
+      `pencilOptionsPanel`
+- [x] 16.5 Reset in `initWorkspace`'s per-project reset block (unhidden,
+      `active` class cleared) since Pencil is the default tool
+- [x] 16.6 Playwright: toggling on and drawing a stroke sampled pixel
+      colors along it and confirmed they matched the active Color
+      Library palette's colors in list order; switching to Eraser hid the
+      toggle; re-run full `node --test` suite (103/103)

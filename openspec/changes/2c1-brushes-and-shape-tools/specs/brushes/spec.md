@@ -188,6 +188,47 @@ whether Rainbow is currently selected.
 - **THEN** the color sequence restarts from the same starting hue as any
   other drag, rather than continuing from where the previous drag left off
 
+### Requirement: Color Library sequence mode (Pencil only)
+The Pencil tool SHALL offer a Color Library sequence toggle (an explicit
+on/off control, the same "toggle" interaction as Rectangle's Filled
+control — not tied to which regular color is currently selected, and
+distinct from Rainbow's palette-entry selection model). While enabled,
+each unique pixel placed along a Pencil stroke SHALL use the next color
+in the active Color Library palette's color list (from
+`2f-color-library-panel`), cycling in list order and wrapping around,
+respecting Pencil's Size and Opacity exactly as Rainbow does. It is
+mutually exclusive with Rainbow: enabling one turns the other off. If the
+active palette has no colors, Pencil falls back to the plain foreground
+color as if the toggle were off. Eraser, Brush, Line, and every other
+tool are unaffected regardless of this toggle's state.
+
+#### Scenario: Drawing with the Color Library sequence enabled
+- **WHEN** the toggle is on and the user draws a Pencil stroke
+- **THEN** consecutive unique pixels along the stroke use consecutive
+  colors from the active palette, in list order, wrapping around
+
+#### Scenario: Enabling it turns off Rainbow, and vice versa
+- **WHEN** the user enables the Color Library sequence while Rainbow is
+  selected (or selects Rainbow while the sequence is enabled)
+- **THEN** the other mode turns off, so exactly one (or neither) is active
+  at a time
+
+#### Scenario: Toggling off returns to the plain foreground color
+- **WHEN** the user turns the toggle off
+- **THEN** the Pencil goes back to drawing with the current foreground
+  color, unaffected by which palette was active
+
+#### Scenario: Empty active palette falls back gracefully
+- **WHEN** the toggle is on but the active Color Library palette has no
+  colors
+- **THEN** the Pencil draws with the plain foreground color instead of
+  failing or drawing nothing
+
+#### Scenario: Not shown for Eraser
+- **WHEN** the Eraser tool is active
+- **THEN** the Color Library sequence toggle is hidden (Eraser has no
+  draw color to cycle)
+
 ### Requirement: Custom brush creation
 The Brushes panel SHALL offer an "add brush" control that opens a
 pixel-grid editor (a grid the user clicks or drags across to toggle cells

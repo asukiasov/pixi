@@ -61,3 +61,28 @@
       every palette and its colors; deleting a palette removes it and
       falls back to another; the delete control is disabled with only one
       palette left; zero console errors throughout
+
+## 6. Default palette seeding + Add-to-palette overflow bug fix
+
+- [x] 6.1 New `js/default-color-library.js`: exports
+      `DEFAULT_MATERIAL_COLORS`, the full Material Design color list
+      (verbatim, user-supplied) as hex strings
+- [x] 6.2 `js/workspace.js`'s `loadColorPalettes()`: first-ever-load
+      auto-create now names the palette "Material" and seeds it with
+      `DEFAULT_MATERIAL_COLORS` instead of creating an empty "Default"
+      palette
+- [x] 6.3 Bug fix: `#color-picker-add` ("+ Add to palette") rendered as a
+      collapsed ~42px square with its label overflowing outside the
+      button's own box, because `#color-picker-popover` lives inside
+      `#tools-sidebar` in the DOM, so `.tools-sidebar .tool-button`'s
+      fixed `2.6rem` width/height (meant for the icon-only tool rail) won
+      the cascade on those two properties — `#color-picker-add`'s own
+      rule set padding/font-size but never width/height, so a higher-
+      specificity ID selector didn't help. Fixed by adding explicit
+      `width: 100%; height: auto;` to `#color-picker-add`
+- [x] 6.4 Playwright verification: fresh IndexedDB → Color Library panel
+      shows a "Material" palette with 255 swatches, scrollable, on first
+      load with no user action needed; `#color-picker-add`'s bounding box
+      now spans the popover's full inner width and sits fully inside the
+      popover's bounding box (was previously a ~42px square with the
+      label rendering outside it)

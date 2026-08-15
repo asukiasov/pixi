@@ -105,3 +105,24 @@ larger than the container.
   tool (not Hand) is selected
 - **THEN** the view pans the same way it already does today, unaffected
   by which single-pointer tool is currently selected
+
+### Requirement: Hand tool cursor reflects pan state
+The canvas SHALL show an open-hand cursor while the Hand tool is active
+and idle, and a closed/"grabbing" hand cursor while a pan drag is
+actually in progress — matching the open/closed-hand convention other
+pixel-art and image tools use, distinct from every other tool's cursor.
+
+#### Scenario: Idle Hand tool shows an open hand
+- **WHEN** the Hand tool is selected and the user is not currently
+  dragging
+- **THEN** the cursor over the canvas is an open-hand ("grab") cursor
+
+#### Scenario: Dragging with the Hand tool shows a closed hand
+- **WHEN** the user presses and drags with the Hand tool active
+- **THEN** the cursor changes to a closed-hand ("grabbing") cursor for the
+  duration of the drag, reverting to the open hand on release
+
+#### Scenario: Other tools never show the hand cursor
+- **WHEN** any tool other than Hand is active
+- **THEN** the canvas cursor is that tool's own cursor (e.g. crosshair for
+  Pencil), never the open or closed hand

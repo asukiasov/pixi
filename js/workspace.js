@@ -13,6 +13,7 @@ import {
 import { initCanvasSettings } from './canvas-settings.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
+import { DEFAULT_MATERIAL_COLORS } from './default-color-library.js';
 import { bresenhamLine, strokeFreehandThick } from './engine.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
@@ -123,6 +124,7 @@ let backgroundSwatchEl = null;
 
 let zoomReadout = null;
 let pencilOptionsPanel = null;
+let pencilLibraryToggle = null;
 let rectangleOptionsPanel = null;
 
 // Named, persisted palettes of user-added colors (superseded the old
@@ -210,6 +212,18 @@ function pencilOrEraserApplyPixel(engine) {
   // exist here but dedup-skipped pixels still don't throw off the cycle.
   if (state.brushRainbow) {
     return (x, y, index) => engine.setPixelBlended(x, y, rainbowColor(index * RAINBOW_HUE_STEP), state.pencilOpacity);
+  }
+  // Color Library sequence (Pencil only, toggled in #pencil-options): cycles
+  // through the active palette's colors per unique pixel placed, same
+  // index-driven cycling as Rainbow above, just sourced from
+  // colorPalettes/activePaletteId instead of a hue formula. Falls back to
+  // the plain foreground color if the active palette has none.
+  if (state.pencilLibrarySequence) {
+    const active = colorPalettes.find((p) => p.id === activePaletteId);
+    const colors = active?.colors ?? [];
+    if (colors.length > 0) {
+      return (x, y, index) => engine.setPixelBlended(x, y, hexToRgba(colors[index % colors.length]), state.pencilOpacity);
+    }
   }
   return (x, y) => engine.setPixelBlended(x, y, state.foregroundColor, state.pencilOpacity);
 }
@@ -408,15 +422,17 @@ async function loadCustomBrushes() {
 }
 
 /**
- * Fetches every palette from IndexedDB. Auto-creates one "Default"
- * palette on first-ever load if none exist yet - the panel should never
- * show an empty "no palettes" state with nothing to select or add to
- * (mirrors "a fresh canvas always has exactly one layer").
+ * Fetches every palette from IndexedDB. Auto-creates one "Material"
+ * palette, seeded with the full Material Design color system (see
+ * js/default-color-library.js), on first-ever load if none exist yet -
+ * the panel should never show an empty "no palettes" state with nothing
+ * to select or add to (mirrors "a fresh canvas always has exactly one
+ * layer"), and a starting library beats an empty one to pick colors from.
  */
 async function loadColorPalettes() {
   let palettes = await listColorPalettes();
   if (palettes.length === 0) {
-    const defaultPalette = await createColorPalette('Default');
+    const defaultPalette = await createColorPalette('Material', [...DEFAULT_MATERIAL_COLORS]);
     palettes = [defaultPalette];
   }
   colorPalettes = palettes;
@@ -765,6 +781,8 @@ function renderPaletteRow() {
   rainbowSwatch.title = 'Rainbow (Brush tool only)';
   rainbowSwatch.addEventListener('click', () => {
     state.brushRainbow = true;
+    state.pencilLibrarySequence = false;
+    pencilLibraryToggle.classList.remove('active');
     syncActiveSwatch();
   });
   paletteRow.appendChild(rainbowSwatch);
@@ -891,6 +909,9 @@ function bindDomOnce() {
       // Size/Opacity sliders: shared by Pencil and Eraser, hidden for
       // every other tool - same tool-scoped-visibility pattern as Brushes.
       pencilOptionsPanel.classList.toggle('hidden', state.currentTool !== 'pencil' && state.currentTool !== 'eraser');
+      // Color Library sequence toggle: Pencil only, not Eraser (nothing to
+      // cycle through when Eraser doesn't paint a color at all).
+      pencilLibraryToggle.classList.toggle('hidden', state.currentTool !== 'pencil');
       // Filled toggle: Rectangle only.
       rectangleOptionsPanel.classList.toggle('hidden', state.currentTool !== 'rectangle');
     });
@@ -921,6 +942,17 @@ function bindDomOnce() {
     const value = Number(pencilOpacitySlider.value);
     state.pencilOpacity = value / 100;
     pencilOpacityReadout.textContent = `${value}%`;
+  });
+
+  // Color Library sequence toggle - on/off, same pattern as Rectangle's
+  // Filled toggle below. Mutually exclusive with Rainbow (both are
+  // per-pixel color-cycling modes for the same applyPixel slot).
+  pencilLibraryToggle = document.getElementById('pencil-library-toggle');
+  pencilLibraryToggle.addEventListener('click', () => {
+    state.pencilLibrarySequence = !state.pencilLibrarySequence;
+    if (state.pencilLibrarySequence) state.brushRainbow = false;
+    pencilLibraryToggle.classList.toggle('active', state.pencilLibrarySequence);
+    syncActiveSwatch();
   });
 
   // Rectangle's Filled toggle - tool-scoped, same pattern as Pencil options.
@@ -1365,6 +1397,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     pixelPerfect: false,
     pencilSize: 1,
     pencilOpacity: 1,
+    pencilLibrarySequence: false,
     rectangleFilled: false,
     layersPanelVisible: true,
     selection: null,
@@ -1418,6 +1451,8 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   document.getElementById('pencil-size-readout').textContent = '1px';
   document.getElementById('pencil-opacity-slider').value = '100';
   document.getElementById('pencil-opacity-readout').textContent = '100%';
+  pencilLibraryToggle.classList.remove('active');
+  pencilLibraryToggle.classList.remove('hidden'); // Pencil is the default tool
   // Rectangle isn't the default tool, so its options start hidden.
   rectangleOptionsPanel.classList.add('hidden');
   document.getElementById('rectangle-fill-toggle').classList.remove('active');

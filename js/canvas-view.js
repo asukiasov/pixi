@@ -71,6 +71,12 @@ export class CanvasView {
    */
   setPanMode(enabled) {
     this.#panMode = enabled;
+    // Hand-cursor while the tool is active; a separate 'panning' class
+    // (toggled per-drag below) swaps it to the "grabbing" cursor while a
+    // pan is actually in progress, matching every other pixel-art tool's
+    // open-hand/closed-hand convention.
+    this.#canvasEl.classList.toggle('pan-mode', enabled);
+    if (!enabled) this.#canvasEl.classList.remove('panning');
   }
 
   /** Fits the canvas to the container and centers it at 1x zoom ("Fit Screen"). */
@@ -206,6 +212,7 @@ export class CanvasView {
     if (this.#pointers.size === 1 && !this.#multiTouchActive) {
       if (this.#panMode) {
         this.#panning = true;
+        this.#canvasEl.classList.add('panning');
       } else {
         this.#drawing = true;
         this.#handlers.onDrawStart?.(this.#toGridPoint(e.clientX, e.clientY));
@@ -252,6 +259,7 @@ export class CanvasView {
     }
     if (this.#panning && this.#pointers.size === 0) {
       this.#panning = false;
+      this.#canvasEl.classList.remove('panning');
     }
     if (this.#pointers.size < 2) {
       this.#pinchMidpoint = null;

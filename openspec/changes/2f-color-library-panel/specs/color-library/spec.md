@@ -31,8 +31,24 @@ alphabetically by name.
 #### Scenario: A fresh install starts with one default palette
 - **WHEN** the user opens the Workspace for the first time (no palettes
   created yet)
-- **THEN** one palette (named "Default") exists and is active, initially
-  empty
+- **THEN** one palette (named "Material", seeded with the full Material
+  Design color system) exists and is active — see the "Default palette
+  is seeded, not empty" requirement below
+
+### Requirement: Default palette is seeded, not empty
+The auto-created first-ever palette ("Material") SHALL start populated
+with a fixed, built-in list of colors (the Material Design color system —
+primary colors plus their tint/shade rows, the grayscale row, and
+black/white) rather than empty. Revised from this change's original
+Default-palette design, which started empty; requested directly once the
+empty starting state shipped and felt like a dead end with nothing to
+pick from.
+
+#### Scenario: First-ever load shows a populated palette
+- **WHEN** the user opens the Workspace for the first time
+- **THEN** the "Material" palette's swatch grid already shows its full
+  built-in color set, immediately selectable — not an empty-state message
+
 
 #### Scenario: Creating a new palette
 - **WHEN** the user creates a new palette and names it

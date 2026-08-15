@@ -427,6 +427,7 @@ body {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   touch-action: none;
+  cursor: crosshair;
   /* Shows through the canvas's own transparent pixels, so transparency in
      the artwork itself reads as a checkerboard, distinct from the flat
      #e2e2e2 area surrounding the canvas. background-size is set in
@@ -434,6 +435,17 @@ body {
      checker square is exactly one artwork pixel. */
   background-image: repeating-conic-gradient(#cfcfcf 0% 25%, #e8e8e8 0% 50%);
   background-position: 0 0;
+}
+
+/* Hand tool cursor states, toggled by CanvasView#setPanMode/#onPointerDown
+   (js/canvas-view.js) - open hand while idle, closed/"grabbing" hand while
+   an actual pan drag is in progress. */
+#workspace-canvas.pan-mode {
+  cursor: grab;
+}
+
+#workspace-canvas.pan-mode.panning {
+  cursor: grabbing;
 }
 
 .selection-overlay {
@@ -842,11 +854,20 @@ body {
   font-size: 0.85rem;
 }
 
+/* Width/height explicitly reset here - #color-picker-popover lives inside
+   #tools-sidebar (see index.html), so the fixed 2.6rem square from
+   `.tools-sidebar .tool-button` (meant for the icon-only tool rail) would
+   otherwise win the cascade on width/height (its selector doesn't set
+   padding, so that part of #color-picker-add's rule already wins - but
+   width/height need an explicit override here, not just higher specificity,
+   since a property only cascades against rules that set that property). */
 #color-picker-add {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.3rem;
+  width: 100%;
+  height: auto;
   padding: 0.5rem 0.4rem;
   white-space: nowrap;
   font-size: 0.85rem;

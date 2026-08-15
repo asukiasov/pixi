@@ -174,3 +174,16 @@
       `.workspace-topbar` and function identically; confirmed a top-bar
       tooltip carries the `below` class and no longer overlaps the
       neighboring button
+
+## 10. Hand tool cursor states
+
+- [x] 10.1 `js/canvas-view.js`: `CanvasView#setPanMode` toggles a
+      `pan-mode` class on the canvas element; `#onPointerDown` adds a
+      `panning` class when a pan drag starts (Hand tool + single
+      pointer), `#onPointerUp` removes it when the drag ends
+- [x] 10.2 `style.css`: `#workspace-canvas` gets a default `cursor:
+      crosshair`; `.pan-mode` overrides it to `cursor: grab`;
+      `.pan-mode.panning` overrides further to `cursor: grabbing`
+- [x] 10.3 Playwright: confirmed computed cursor is `grab` on the Hand
+      tool while idle, `grabbing` mid-drag, back to `grab` on release,
+      and `crosshair` after switching to Pencil

@@ -107,22 +107,27 @@ larger than the container.
   by which single-pointer tool is currently selected
 
 ### Requirement: Hand tool cursor reflects pan state
-The canvas SHALL show an open-hand cursor while the Hand tool is active
-and idle, and a closed/"grabbing" hand cursor while a pan drag is
-actually in progress — matching the open/closed-hand convention other
-pixel-art and image tools use, distinct from every other tool's cursor.
+The canvas SHALL show a custom paw-print cursor while the Hand tool is
+active and idle, and a distinct "picked up" paw cursor while a pan drag
+is actually in progress — a themed replacement for the OS-native
+open/closed-hand cursor, in the same spirit as this app's other playful
+touches, distinct from every other tool's cursor. Revised from this
+requirement's original OS-native grab/grabbing design, once custom paw
+artwork was supplied directly.
 
-#### Scenario: Idle Hand tool shows an open hand
+#### Scenario: Idle Hand tool shows the paw cursor
 - **WHEN** the Hand tool is selected and the user is not currently
   dragging
-- **THEN** the cursor over the canvas is an open-hand ("grab") cursor
+- **THEN** the cursor over the canvas is the custom paw-print cursor
+  (`assets/cursors/pets.svg`, Google's Material Symbols "pets" glyph)
 
-#### Scenario: Dragging with the Hand tool shows a closed hand
+#### Scenario: Dragging with the Hand tool shows the picked-up paw
 - **WHEN** the user presses and drags with the Hand tool active
-- **THEN** the cursor changes to a closed-hand ("grabbing") cursor for the
-  duration of the drag, reverting to the open hand on release
+- **THEN** the cursor changes to the "picked up" paw cursor
+  (`assets/cursors/pets-picked.svg`) for the duration of the drag,
+  reverting to the idle paw cursor on release
 
-#### Scenario: Other tools never show the hand cursor
+#### Scenario: Other tools never show the paw cursor
 - **WHEN** any tool other than Hand is active
 - **THEN** the canvas cursor is that tool's own cursor (e.g. crosshair for
-  Pencil), never the open or closed hand
+  Pencil), never either paw cursor

@@ -438,14 +438,16 @@ body {
 }
 
 /* Hand tool cursor states, toggled by CanvasView#setPanMode/#onPointerDown
-   (js/canvas-view.js) - open hand while idle, closed/"grabbing" hand while
-   an actual pan drag is in progress. */
+   (js/canvas-view.js) - a custom paw cursor (not the OS-native open/closed
+   hand) while idle, swapping to a "picked up" paw while an actual pan drag
+   is in progress. Falls back to grab/grabbing if the SVG cursor image ever
+   fails to load. */
 #workspace-canvas.pan-mode {
-  cursor: grab;
+  cursor: url('assets/cursors/pets.svg') 12 12, grab;
 }
 
 #workspace-canvas.pan-mode.panning {
-  cursor: grabbing;
+  cursor: url('assets/cursors/pets-picked.svg') 12 10, grabbing;
 }
 
 .selection-overlay {

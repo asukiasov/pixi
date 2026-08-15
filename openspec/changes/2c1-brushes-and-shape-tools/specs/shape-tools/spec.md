@@ -48,6 +48,40 @@ filled, previewed live while dragging and committed on release.
 - **THEN** the rectangle immediately goes back to following the pointer
   freely, no longer constrained to a square
 
+### Requirement: 1:1 proportion toggle (Rectangle and Selection)
+A persistent "1:1 proportion" toggle SHALL be available for the
+Rectangle and Selection tools, constraining drags to a square exactly
+like holding Shift does, for as long as it stays on - not just while
+physically held. Requested directly: touchscreens (iPad, etc.) have no
+Shift key, so Shift's square constraint (see the Rectangle tool
+requirement above) was unreachable there. Shift and the toggle are
+independent triggers for the same constraint - either being active is
+enough, and the toggle does not require Shift to also be held. Applies
+identically to both tools, not Rectangle only, since Selection's
+rectangular drag has the exact same "square vs. free-form" shape
+question.
+
+#### Scenario: Toggling it on constrains drags to a square
+- **WHEN** the "1:1 proportion" toggle is on and the user drags with the
+  Rectangle or Selection tool
+- **THEN** the result is constrained to a square, the same as holding
+  Shift would produce
+
+#### Scenario: It stays on across multiple drags
+- **WHEN** the toggle is on and the user completes a drag, then starts
+  another
+- **THEN** the new drag is also square-constrained - the toggle does not
+  reset itself after one use
+
+#### Scenario: Shift still works independently
+- **WHEN** the toggle is off and the user holds Shift while dragging
+- **THEN** the drag is square-constrained exactly as before, unaffected
+  by the toggle's state
+
+#### Scenario: Visible only for Rectangle and Selection
+- **WHEN** any tool other than Rectangle or Selection is active
+- **THEN** the toggle is hidden
+
 ### Requirement: Rectangular selection
 The user SHALL be able to define a rectangular selection by dragging on
 the active layer. A selection persists across tool switches until cleared.

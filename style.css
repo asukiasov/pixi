@@ -811,27 +811,6 @@ body {
   left: -0.2rem;
 }
 
-/* iOS/iPadOS-only native color picker trigger (see index.html and
-   openColorPicker in js/workspace.js) - not display:none, since a
-   display:none element can't have its native picker UI triggered via a
-   scripted .click(); imperceptible instead via zero size + opacity. */
-.visually-hidden-native-input {
-  /* Off-screen, not opacity/pointer-events-based - real iOS Safari is
-     known to refuse to open an <input type="color">'s native picker
-     from a scripted .click() when the element is hidden via opacity: 0
-     (some WebKit versions treat that as "not actually interactive" and
-     silently no-op the click, even though the box still exists in
-     layout). Positioning it off-screen keeps it a normal, fully
-     "visible" element as far as WebKit's own heuristic is concerned. */
-  position: fixed;
-  top: -100px;
-  left: -100px;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: none;
-}
-
 /* Color picker popover - opened by clicking the Foreground or Background
    swatch, not an always-visible inline row. Positioned via JS
    (js/workspace.js), same fixed-position/getBoundingClientRect pattern
@@ -1401,23 +1380,31 @@ body {
    clickable controls (buttons and swatches) - explicitly not the
    drawing canvas, text/number/range inputs, the brush-editor's
    pixel-toggle grid, the Foreground/Background swatches and their
-   swap/reset corner buttons, or the bottom bar's zoom toolset (buttons
-   used often/in quick succession, or fine click targets, where a
-   jitter-on-hover reads as noise rather than a nice touch - per
-   feedback). Respects prefers-reduced-motion. */
-@media (prefers-reduced-motion: no-preference) {
+   swap/reset corner buttons, the bottom bar's zoom toolset, any
+   delete-labeled button, "new artwork" actions (+ New Canvas, Create),
+   or Clear selection/Delete - buttons used often/in quick succession,
+   fine click targets, or destructive/creation actions, where a
+   jitter-on-hover reads as noise (or feels wrong for something
+   consequential) rather than a nice touch - per feedback.
+   Scoped to `(hover: hover) and (pointer: coarse)` - the standard way to
+   target a touchscreen that nonetheless supports a real :hover state,
+   which in practice means an iPad with a Pencil capable of hover
+   detection (Safari synthesizes :hover/pointerover as the Pencil nears
+   the screen, without touching it). A normal desktop mouse is
+   `pointer: fine`, and a plain finger-only touchscreen is `hover: none`
+   - both excluded, so buzz no longer fires on ordinary desktop mouse
+   hover, per feedback that it should be iPad-hover-only. Also respects
+   prefers-reduced-motion. */
+@media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: coarse) {
   .tool-button:not(:disabled):hover,
   .preset-button:not(:disabled):hover,
-  .primary-button:not(:disabled):hover,
   .icon-button:not(:disabled):hover,
-  .gallery-tile-delete:hover,
   .layer-visibility-toggle:hover,
   .layer-reorder-button:not(:disabled):hover,
-  .layer-delete-button:not(:disabled):hover,
   .brush-swatch:hover,
   .palette-swatch:hover,
   .color-library-swatch:hover {
-    animation: hover-buzz 0.2s linear infinite; /* 25% slower than the original 0.15s */
+    animation: hover-buzz 0.25s linear infinite; /* slowed further per feedback (was 0.2s) */
   }
 }
 
@@ -1436,5 +1423,24 @@ body {
    this descendant selector is more specific and wins regardless of
    source order, kept directly below the rule it overrides for clarity. */
 .zoom-controls .tool-button:hover {
+  animation: none;
+}
+
+/* Explicit opt-outs from the buzz rule above, all still matched by
+   .tool-button/.icon-button otherwise: Clear selection/Delete
+   (selection-controls), the remaining delete-labeled buttons (brush,
+   palette, layer, and the confirm-dialog's own "Delete" button) - per
+   feedback, buzz shouldn't apply to destructive actions. (.primary-button
+   and .gallery-tile-delete - "new artwork" and the Gallery's own delete
+   - are excluded further up by not being in the enabled list at all,
+   since neither shares a class with anything that still buzzes.) These
+   ID/class selectors are more specific than the plain .tool-button/
+   .icon-button buzz rule and win regardless of source order. */
+#selection-clear-button:hover,
+#selection-delete-button:hover,
+#delete-brush-button:hover,
+#delete-palette-button:hover,
+.confirm-dialog-confirm:hover,
+.layer-delete-button:hover {
   animation: none;
 }

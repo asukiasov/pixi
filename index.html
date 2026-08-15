@@ -17,7 +17,7 @@
        original range query pulled the full variable font (~4MB, ~30s on a
        slow connection, icons invisible until it finished); this is a few
        KB. Keep icon_names in sync with the icons used in this file. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,colorize,undo,redo,add,remove,delete,visibility,visibility_off,restart_alt,swap_horiz,close,home,grid_on,layers,settings,download,arrow_upward,arrow_downward,rotate_left,rotate_right,check_box_outline_blank,check_box,palette,arrow_selector_tool,playlist_add" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,colorize,undo,redo,add,remove,delete,visibility,visibility_off,restart_alt,swap_horiz,close,home,grid_on,layers,settings,download,arrow_upward,arrow_downward,rotate_left,rotate_right,check_box_outline_blank,check_box,palette,arrow_selector_tool,playlist_add,crop_square" />
 </head>
 <body>
   <main id="screen-gallery" class="screen">
@@ -140,17 +140,6 @@
         </div>
       </div>
 
-      <!-- iOS/iPadOS only (js/workspace.js's isIOS()): clicking either
-           FG/BG swatch triggers this directly instead of opening
-           #color-picker-popover below, going straight to the OS's own
-           color picker sheet. A separate element from
-           #color-picker-popover's own native input, since that one lives
-           inside a display:none ancestor when the popover is closed -
-           display:none elements can't be click()-triggered into showing
-           their native picker UI, so this one stays out of that popover
-           entirely and is hidden via off-screen/opacity instead. -->
-      <input type="color" id="fg-bg-native-picker" class="visually-hidden-native-input" tabindex="-1" aria-hidden="true" />
-
       <!-- Popover opened by clicking either FG/BG swatch above - edits
            whichever one was clicked (js/workspace.js tracks the target).
            Positioned via fixed + JS (getBoundingClientRect), clamped to
@@ -183,6 +172,16 @@
       <div id="rectangle-options" class="rectangle-options hidden">
         <button type="button" id="rectangle-fill-toggle" class="tool-button icon-button" aria-label="Filled" data-tooltip="Filled rectangle">
           <span class="material-symbols-outlined" id="rectangle-fill-icon">check_box_outline_blank</span>
+        </button>
+      </div>
+
+      <!-- 1:1 (square) proportion toggle - shown for Rectangle and
+           Selection, an on/off equivalent of holding Shift while
+           dragging (see squareDragCurrent/shiftHeld in js/workspace.js)
+           for touchscreens, which have no Shift key. -->
+      <div id="square-constraint-options" class="rectangle-options hidden">
+        <button type="button" id="square-constraint-toggle" class="tool-button icon-button" aria-label="1:1 proportion" data-tooltip="1:1 proportion (like holding Shift)">
+          <span class="material-symbols-outlined">crop_square</span>
         </button>
       </div>
     </aside>

@@ -30,20 +30,6 @@ const PALETTE = [
 
 const BLEND_MODES = ['normal', 'multiply', 'screen', 'overlay'];
 
-/**
- * True on iOS/iPadOS (including iPadOS 13+, which reports as
- * "MacIntel" in the UA string - the maxTouchPoints check distinguishes
- * it from an actual Mac). Used only to route the Foreground/Background
- * swatches straight to the native color picker there instead of this
- * app's custom popover - see openColorPicker.
- */
-function isIOS() {
-  return (
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  );
-}
-
 function hexToRgba(hex) {
   const n = Number.parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255, 255];
@@ -115,6 +101,16 @@ function squareDragCurrent(start, current) {
   return { x: start.x + sx * side, y: start.y + sy * side };
 }
 
+/**
+ * Whether a Rectangle/Selection drag should be constrained to a square -
+ * either Shift is held (desktop), or the persistent "1:1 proportion"
+ * toggle is on (touchscreens, which have no Shift key - see
+ * #square-constraint-toggle). Either one is enough.
+ */
+function isSquareConstrained() {
+  return shiftHeld || state.squareConstraint;
+}
+
 // Module-level state, not per-call: the Workspace screen is a singleton in
 // this app (one workspace <canvas>), reused across every project the user
 // opens or creates in a session. DOM listeners are bound exactly once, the
@@ -123,8 +119,11 @@ function squareDragCurrent(start, current) {
 let state = null;
 let domBound = false;
 // Tracked independently of any single event, since Shift can be pressed/
-// released mid-drag - the Rectangle tool checks this on every move.
+// released mid-drag - the Rectangle and Selection tools check this on
+// every move.
 let shiftHeld = false;
+let squareConstraintPanel = null;
+let squareConstraintToggle = null;
 let canvasSettingsControls = null;
 let toolButtons = null;
 let pixelPerfectToggle = null;
@@ -922,23 +921,17 @@ function openColorPicker(target, anchorEl) {
   colorPickerTarget = target;
   const current = target === 'background' ? state.backgroundColor : state.foregroundColor;
 
-  // iOS/iPadOS: skip this app's own popover (custom Grid/hex/RGB UI,
-  // "Add to palette") entirely and go straight to the OS's native color
-  // picker - requested directly, to match how every other iOS app
-  // handles Foreground/Background-style color pickers, rather than
-  // opening a middleware window first. The native <input type="color">
-  // (#color-picker-native) already has an 'input' listener wired in
-  // bindDomOnce that calls applyPickedColor on every change, so nothing
-  // else needs to react differently here - "Add to palette" simply isn't
-  // reachable through this path, an accepted trade-off of going fully
-  // native.
-  if (isIOS()) {
-    const nativeInput = document.getElementById('fg-bg-native-picker');
-    nativeInput.value = rgbaToHex(current);
-    nativeInput.click();
-    return;
-  }
-
+  // Reverted: an earlier version tried to skip this popover on iOS
+  // entirely and jump straight to the OS color picker via a scripted
+  // .click() on a hidden native <input type="color">. Two attempts at
+  // hiding that input (opacity-based, then off-screen-positioned) both
+  // failed on real hardware - the picker didn't open at all, worse than
+  // the popover it was meant to replace. Reverted to showing the same
+  // popover on every platform, including iOS: its own visible native
+  // <input type="color"> (#color-picker-native) is a real element a
+  // real tap lands on, which reliably opens iOS's native picker with no
+  // synthetic-click trickery involved - one extra tap versus the ideal
+  // "skip straight to native," but actually works.
   document.getElementById('color-picker-popover-title').textContent =
     target === 'background' ? 'Background Color' : 'Foreground Color';
   updateColorPickerInputs(current);
@@ -1000,6 +993,11 @@ function bindDomOnce() {
       pencilLibraryToggle.classList.toggle('hidden', state.currentTool !== 'pencil');
       // Filled toggle: Rectangle only.
       rectangleOptionsPanel.classList.toggle('hidden', state.currentTool !== 'rectangle');
+      // 1:1 proportion toggle: Rectangle and Selection.
+      squareConstraintPanel.classList.toggle(
+        'hidden',
+        state.currentTool !== 'rectangle' && state.currentTool !== 'selection'
+      );
     });
   });
 
@@ -1051,6 +1049,16 @@ function bindDomOnce() {
     rectangleFillIcon.textContent = state.rectangleFilled ? 'check_box' : 'check_box_outline_blank';
   });
 
+  // 1:1 proportion toggle - Rectangle and Selection, a persistent
+  // touchscreen-friendly equivalent of holding Shift (see
+  // isSquareConstrained).
+  squareConstraintPanel = document.getElementById('square-constraint-options');
+  squareConstraintToggle = document.getElementById('square-constraint-toggle');
+  squareConstraintToggle.addEventListener('click', () => {
+    state.squareConstraint = !state.squareConstraint;
+    squareConstraintToggle.classList.toggle('active', state.squareConstraint);
+  });
+
   renderPaletteRow();
 
   // Custom color picker: native <input type="color"> + hex + RGB fields,
@@ -1068,14 +1076,6 @@ function bindDomOnce() {
 
   colorPickerNative.addEventListener('input', () => {
     applyPickedColor(hexToRgba(colorPickerNative.value));
-  });
-
-  // iOS/iPadOS-only native picker (see openColorPicker/isIOS) - same
-  // routing through applyPickedColor/colorPickerTarget as the popover's
-  // own native input above, just a separate element so it works even
-  // while the popover itself stays closed/hidden.
-  document.getElementById('fg-bg-native-picker').addEventListener('input', (e) => {
-    applyPickedColor(hexToRgba(e.target.value));
   });
 
   colorPickerHex.addEventListener('change', () => {
@@ -1489,6 +1489,14 @@ function redrawBrushPath() {
   clipToSelection(state.strokeEngine, state.strokeBackup, state.selection);
 }
 
+/** True if every pixel in an extractRegion()-shaped buffer is fully transparent (alpha 0). */
+function isRegionFullyTransparent(buffer) {
+  for (let i = 3; i < buffer.length; i += 4) {
+    if (buffer[i] !== 0) return false;
+  }
+  return true;
+}
+
 /**
  * Redraws the Move tool's live preview from the pre-drag backup: resets
  * the active layer to `state.strokeBackup`, clears `state.moveRegion`'s
@@ -1499,9 +1507,16 @@ function redrawBrushPath() {
  * the selection rect, and clipping the result back to that rect's
  * *original* bounds would undo the move (every moved pixel ends up
  * outside the original rect once it's moved) - see design.md.
+ *
+ * If `state.moveContentEmpty` (nothing but transparency was extracted -
+ * e.g. a selection already cleared with Delete), stops right after the
+ * backup reset: no clear, no stamp. Otherwise dragging an empty region
+ * over real content elsewhere would stamp transparency on top of it,
+ * silently erasing it - a bug, not the intended "move nothing."
  */
 function redrawMovePreview() {
   state.strokeEngine.data.set(state.strokeBackup);
+  if (state.moveContentEmpty) return;
   const dx = state.dragCurrent.x - state.dragStart.x;
   const dy = state.dragCurrent.y - state.dragStart.y;
   const { x, y, width, height } = state.moveRegion;
@@ -1538,6 +1553,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     pencilOpacity: 1,
     colorLibrarySequence: false,
     rectangleFilled: false,
+    squareConstraint: false,
     layersPanelVisible: true,
     selection: null,
     dragStart: null,
@@ -1547,6 +1563,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     strokePoints: [],
     moveRegion: null,
     moveContent: null,
+    moveContentEmpty: false,
     undoButton: document.getElementById('undo-button'),
     redoButton: document.getElementById('redo-button'),
     exportButton: document.getElementById('export-button'),
@@ -1599,6 +1616,10 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   rectangleOptionsPanel.classList.add('hidden');
   document.getElementById('rectangle-fill-toggle').classList.remove('active');
   document.getElementById('rectangle-fill-icon').textContent = 'check_box_outline_blank';
+  // Neither Rectangle nor Selection is the default tool, so this starts
+  // hidden too.
+  squareConstraintPanel.classList.add('hidden');
+  squareConstraintToggle.classList.remove('active');
   // Hand tool is never the default (Pencil is) - every freshly opened
   // project starts with single-pointer drag drawing, not panning.
   canvasView.setPanMode(false);
@@ -1715,6 +1736,14 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
           state.moveRegion.width,
           state.moveRegion.height
         );
+        // Bug fix: dragging a region that's fully transparent (e.g. a
+        // selection whose content was already cleared with Delete)
+        // still stamped that transparency at the drop point, silently
+        // erasing whatever real content was already there. If there's
+        // nothing but transparency to carry, Move is a no-op - it
+        // doesn't clear the source (already blank) or touch the
+        // destination at all.
+        state.moveContentEmpty = isRegionFullyTransparent(state.moveContent);
         redrawMovePreview();
         state.canvasView.render();
         return;
@@ -1732,15 +1761,15 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
 
       if (tool === 'selection') {
         if (!state.dragStart) return;
-        state.dragCurrent = point;
-        state.canvasView.setSelectionRect(pointsToRect(state.dragStart, point));
+        state.dragCurrent = isSquareConstrained() ? squareDragCurrent(state.dragStart, point) : point;
+        state.canvasView.setSelectionRect(pointsToRect(state.dragStart, state.dragCurrent));
         return;
       }
 
       if (!state.strokeBackup) return;
 
       if (tool === 'line' || tool === 'rectangle') {
-        state.dragCurrent = tool === 'rectangle' && shiftHeld ? squareDragCurrent(state.dragStart, point) : point;
+        state.dragCurrent = tool === 'rectangle' && isSquareConstrained() ? squareDragCurrent(state.dragStart, point) : point;
         drawShapePreview();
         state.canvasView.render();
         return;
@@ -1825,6 +1854,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
       state.brushPath = [];
       state.moveRegion = null;
       state.moveContent = null;
+      state.moveContentEmpty = false;
       state.dragStart = null;
       state.dragCurrent = null;
       commit();
@@ -1850,6 +1880,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
       state.brushPath = [];
       state.moveRegion = null;
       state.moveContent = null;
+      state.moveContentEmpty = false;
       state.dragStart = null;
       state.dragCurrent = null;
     },

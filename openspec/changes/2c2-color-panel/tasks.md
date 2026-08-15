@@ -184,3 +184,25 @@
       color as its value; confirmed a real (non-iOS) desktop UA still
       opens the popover exactly as before. Zero console errors on
       either path.
+
+## 10. Reverted: iOS native-picker skip, on user report from real hardware
+
+- [x] 10.1 **Bug reported on real hardware**: "color panel doesn't
+      appear in iOS anymore at all" - the off-screen-positioned
+      `#fg-bg-native-picker` from task 9.2.1 still didn't reliably open
+      the native picker on a real device (theory: `<input type="color">`
+      presents an anchored popover-style picker on iPadOS, and an
+      off-screen anchor may produce an off-screen/invisible popover -
+      unverified, since a second guess without hardware access risked
+      the same outcome). Reverted rather than attempt a third unverified
+      fix: `openColorPicker()`'s iOS branch removed entirely, so the
+      popover now opens on every platform, matching its pre-9.x
+      behavior
+- [x] 10.2 Removed now-unused: `isIOS()`, `#fg-bg-native-picker` (and its
+      `input` listener), `.visually-hidden-native-input` CSS
+- [x] 10.3 The Color Library panel's "add current color" button (see
+      `2f-color-library-panel` tasks) stays regardless of this revert -
+      it's a useful second add-to-palette path on every platform, not
+      an iOS-only workaround
+- [x] 10.4 Playwright: confirmed the popover opens identically on a
+      spoofed iOS UA and a desktop UA; re-ran full `node --test` suite

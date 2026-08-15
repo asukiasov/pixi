@@ -101,33 +101,29 @@ requirement, regardless of the Background color).
 - **THEN** erased pixels become fully transparent, not the Background
   color
 
-### Requirement: Foreground/Background color picker is native on iOS
-On iOS/iPadOS, clicking the Foreground or Background swatch SHALL open
-the operating system's native color picker directly, instead of this
-app's own popover (Grid-style native input, hex field, RGB fields, "Add
-to palette"). Picked colors route through the same
-Foreground/Background assignment as every other platform. On every
-other platform, the existing custom popover (per the "Color palette"
-requirement above) is unaffected. Requested directly, to match how
-other iOS apps present a Foreground/Background-style picker rather than
-opening a middleware window first. The popover's own "Add to palette"
-button is not reachable through this path on iOS - see the
-`color-library` capability's "Add the current color from anywhere"
-requirement for how that gap is closed instead.
+### Requirement: The color-picker popover opens on every platform, including iOS
+Clicking the Foreground or Background swatch SHALL open this app's own
+popover (per the "Color palette" requirement above) on every platform,
+including iOS/iPadOS. Revised from an attempt earlier in this change to
+skip the popover on iOS and jump straight to the OS's native color
+picker via a scripted click on a hidden `<input type="color">` - two
+different hiding techniques for that hidden input both failed on real
+iOS Safari hardware (the picker didn't open at all), so that path was
+reverted rather than shipping a third unverified guess. The popover's
+own native `<input type="color">` swatch (`#color-picker-native`) is a
+real, visibly-tappable element once the popover is open - tapping it
+directly (a genuine tap, not a scripted click) still reliably opens
+iOS's native color picker, just one tap deeper than the reverted
+approach aimed for.
 
-#### Scenario: Clicking a swatch on iOS opens the native picker
+#### Scenario: iOS opens the same popover as every other platform
 - **WHEN** the user is on iOS/iPadOS and clicks the Foreground or
   Background swatch
-- **THEN** the OS's native color picker opens directly; this app's own
-  popover (Grid, hex/RGB fields, Add to palette) never appears
+- **THEN** this app's own popover opens, exactly as it does on desktop
+  or Android
 
-#### Scenario: A color picked natively updates Foreground/Background
-- **WHEN** the user picks a color in the native picker
-- **THEN** whichever swatch was clicked (Foreground or Background)
-  updates to that color, the same as picking via the popover on other
-  platforms
-
-#### Scenario: Non-iOS platforms are unaffected
-- **WHEN** the user is on any platform other than iOS/iPadOS and clicks
-  the Foreground or Background swatch
-- **THEN** this app's own popover opens, exactly as before
+#### Scenario: The popover's native input still opens iOS's real picker
+- **WHEN** the user is on iOS/iPadOS, the popover is open, and the user
+  taps its native color swatch (`#color-picker-native`)
+- **THEN** iOS's native color picker opens, since that's a real tap on a
+  real native `<input type="color">`, not a scripted click

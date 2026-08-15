@@ -117,7 +117,7 @@
       for a layer, a custom brush, and a gallery project; re-run full
       `node --test` suite (103/103)
 
-## 8. Add current color button (iOS's only add-to-palette path)
+## 8. Add current color button (a second always-available add-to-palette path)
 
 - [x] 8.1 `index.html`: new `#add-current-color-button` (`playlist_add`
       icon) in the Color Library panel's header, alongside the existing
@@ -128,7 +128,9 @@
       both this new button and the color-picker popover's own "Add to
       palette" button now route through, instead of two separate
       implementations
-- [x] 8.3 Playwright (spoofed iOS UA): confirmed the button is visible
-      and clicking it adds the current Foreground color to the active
-      palette's swatch grid, with zero console errors, on a UA where the
-      color-picker popover never opens
+- [x] 8.3 Playwright: confirmed the button is visible and clicking it
+      adds the current Foreground color to the active palette's swatch
+      grid, with zero console errors. Originally verified against a
+      spoofed iOS UA (motivated by `2c2-color-panel`'s since-reverted
+      attempt to skip the popover on iOS); kept regardless of that
+      revert, since it's a useful second path on every platform

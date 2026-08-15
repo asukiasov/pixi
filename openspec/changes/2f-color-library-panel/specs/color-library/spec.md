@@ -114,20 +114,12 @@ click and no way to undo it.
 ### Requirement: Add the current color from anywhere
 The Color Library panel SHALL offer a button that adds the current
 Foreground color to the active palette, independent of the color-picker
-popover's own "Add to palette" button. Added because `2c2-color-panel`'s
-iOS native-picker requirement means that popover (and its "Add to
-palette" button) doesn't exist on iOS/iPadOS at all - this button is
-the only "add to palette" path there, and works identically as a second
-path on every other platform too.
+popover's own "Add to palette" button - a second, always-available path
+to the same action, on every platform, not gated behind opening the
+popover first.
 
 #### Scenario: Adding the current color on any platform
 - **WHEN** the user clicks the Color Library panel's "add current color"
   button
 - **THEN** the current Foreground color is added to the active palette,
   the same as the popover's "Add to palette" button would do
-
-#### Scenario: This is the only add-to-palette path on iOS
-- **WHEN** the user is on iOS/iPadOS (where the color-picker popover
-  never appears - see `2c2-color-panel`)
-- **THEN** this button is still available and works, since it lives in
-  the Color Library panel, not the popover

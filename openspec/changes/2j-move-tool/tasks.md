@@ -68,3 +68,35 @@
       selection, drag with Move — confirm only the selected region's
       content moved and pixels outside it on the same layer are
       untouched; zero console errors throughout
+
+## 4. Bug fix: moving an empty region erased content at the destination
+
+- [x] 4.1 **Bug**: select a region with content, Delete it (clearing it
+      to transparent), then Move that same selection so it overlaps
+      other, unrelated content elsewhere on the layer - the destination
+      content was silently overwritten with transparency. Root cause:
+      `redrawMovePreview` always cleared the source and stamped the
+      extracted content at the destination, even when that content was
+      entirely transparent (nothing meaningful to move) - matches how
+      real Photoshop's Move tool behaves (it does "carry" transparency),
+      but reported as unwanted/surprising here
+- [x] 4.2 New `js/workspace.js` helper `isRegionFullyTransparent(buffer)`
+      - checks every 4th (alpha) byte of an `extractRegion()`-shaped
+      buffer
+- [x] 4.3 `onDrawStart`'s Move branch computes
+      `state.moveContentEmpty = isRegionFullyTransparent(state.moveContent)`
+      once, alongside the existing one-time `extractRegion` call
+- [x] 4.4 `redrawMovePreview` returns immediately after resetting to the
+      backup if `state.moveContentEmpty` - skips both `clearRegion` (the
+      source is already blank) and `stampRegion` (nothing to place, and
+      placing transparency would erase whatever's really there)
+- [x] 4.5 `state.moveContentEmpty` added to the initial state object and
+      reset alongside `moveRegion`/`moveContent` in both `onDrawEnd` and
+      `onDrawCancel`'s cleanup
+- [x] 4.6 Playwright: reproduced the exact bug scenario first (drew
+      content A and content B, selected A, deleted it, moved the empty
+      selection over B - confirmed B was wiped) to confirm the repro,
+      then confirmed the fix (same steps, B survives); re-confirmed the
+      normal non-empty move (select A with real content still in it,
+      move without deleting first) still relocates content correctly;
+      re-ran full `node --test` suite

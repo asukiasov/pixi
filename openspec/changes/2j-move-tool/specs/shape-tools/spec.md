@@ -14,7 +14,10 @@ the selected rectangle's content moves and the selection rect moves with
 it. With no active selection, the entire active layer's content moves.
 The area the content moved away from becomes fully transparent. The move
 is previewed live while dragging and committed as a single undo step on
-release.
+release. If the region being moved is entirely transparent (nothing to
+carry - e.g. a selection whose content was already cleared with Delete),
+the move is a no-op: it neither clears the source (already blank) nor
+touches whatever is at the destination.
 
 #### Scenario: Moving with no active selection
 - **WHEN** the user drags with the Move tool and no selection is active
@@ -27,6 +30,13 @@ release.
   by the drag's offset, pixels on the same layer outside the selection's
   original bounds are unaffected except where the moved content now
   overlaps them, and the selection rectangle itself relocates to match
+
+#### Scenario: Moving an empty region does not erase content at the destination
+- **WHEN** the region being moved (the active selection, or the whole
+  layer if none) is entirely transparent, and the user drags it so it
+  overlaps real content elsewhere on the same layer
+- **THEN** that other content is unaffected - moving nothing does not
+  overwrite it with transparency
 
 #### Scenario: A drag starting outside the current selection still moves it
 - **WHEN** a selection is active and the user starts a Move drag from a

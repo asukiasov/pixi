@@ -90,13 +90,22 @@ proposed/implemented/archived before the next starts:
     opening it no longer shifts the Workspace layout. Also raised
     directly, grouped here as another workspace-chrome refinement (not a
     new drawing capability) alongside 2d/2e/2f.
+  - **2j — Move tool**: a Photoshop/Illustrator-style Move tool
+    (shortcut `V`) that drags pixel content on the active layer to a new
+    position — with an active selection, just the selected region's
+    content (the selection rect moves with it); with none, the whole
+    active layer's content. The source area clears to transparent, same
+    idea `2c1`'s selection Delete already uses. Raised directly, right
+    after `2c1`'s Selection tool shipped with moving/copying a
+    selection's contents explicitly out of scope — this closes that gap.
 
 Status: **2a done** — archived at
 `openspec/changes/archive/2026-08-14-2a-layers/`, spec lives at
 `openspec/specs/layers/`. **2b done** — archived at
 `openspec/changes/archive/2026-08-14-2b-local-persistence-gallery/`, specs
 live at `openspec/specs/local-persistence/`, `openspec/specs/gallery/`,
-`openspec/specs/canvas-settings/`. **2c1 in progress. 2d, 2e, 2c2, 2f, 2h
+`openspec/specs/canvas-settings/`. **2c1 in progress. 2j proposed, not yet
+implemented, stacks on top of 2c1's shape-tools capability. 2d, 2e, 2c2, 2f, 2h
 done** (none yet archived). **2c3, 2g proposed, not yet implemented.**
 
 ## Phase 3 — Supabase Auth + sync

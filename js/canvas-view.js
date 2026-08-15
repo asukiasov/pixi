@@ -79,6 +79,15 @@ export class CanvasView {
     if (!enabled) this.#canvasEl.classList.remove('panning');
   }
 
+  /**
+   * Whether the Move tool is active - just swaps in the standard CSS
+   * `move` cursor keyword (no custom artwork, no pressed-state variant,
+   * unlike Hand's grab/grabbing paw cursors - see style.css).
+   */
+  setMoveMode(enabled) {
+    this.#canvasEl.classList.toggle('move-mode', enabled);
+  }
+
   /** Fits the canvas to the container and centers it at 1x zoom ("Fit Screen"). */
   resetView() {
     const { width, height } = this.#layerStack;

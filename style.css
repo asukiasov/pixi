@@ -459,6 +459,13 @@ body {
   cursor: url('assets/cursors/pets-picked.svg') 12 12, grabbing;
 }
 
+/* Move tool: a standard browser cursor keyword is enough (no custom
+   artwork needed the way Hand's paw cursors are) - toggled by
+   CanvasView#setMoveMode. */
+#workspace-canvas.move-mode {
+  cursor: move;
+}
+
 .selection-overlay {
   position: absolute;
   left: 0;

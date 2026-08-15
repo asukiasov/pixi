@@ -2,6 +2,14 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { PixelEngine, circleOffsets, strokeFreehandThick } from '../js/engine.js';
 
+function fillRect(engine, x, y, w, h, rgba) {
+  for (let dy = 0; dy < h; dy++) {
+    for (let dx = 0; dx < w; dx++) {
+      engine.setPixel(x + dx, y + dy, rgba);
+    }
+  }
+}
+
 function px(engine, x, y) {
   return engine.getPixel(x, y);
 }
@@ -268,5 +276,88 @@ describe('strokeFreehandThick', () => {
     // way size 1 does), so just confirm the call didn't throw and
     // touched a nontrivial area.
     assert.ok(size3.length > 3);
+  });
+});
+
+describe('extractRegion', () => {
+  test('copies an in-bounds rectangle pixel-for-pixel', () => {
+    const e = new PixelEngine(4, 4, 'transparent');
+    fillRect(e, 1, 1, 2, 2, [10, 20, 30, 255]);
+    const buffer = e.extractRegion(1, 1, 2, 2);
+    assert.equal(buffer.length, 2 * 2 * 4);
+    for (let i = 0; i < 4; i++) {
+      assert.deepEqual([buffer[i * 4], buffer[i * 4 + 1], buffer[i * 4 + 2], buffer[i * 4 + 3]], [10, 20, 30, 255]);
+    }
+  });
+
+  test('buffer layout is (dy*width+dx)*4, top-left of the region relative', () => {
+    const e = new PixelEngine(4, 4, 'transparent');
+    e.setPixel(2, 3, [1, 2, 3, 4]); // region top-left (1,2), so this is (dx=1,dy=1)
+    const buffer = e.extractRegion(1, 2, 3, 2);
+    const i = (1 * 3 + 1) * 4;
+    assert.deepEqual([buffer[i], buffer[i + 1], buffer[i + 2], buffer[i + 3]], [1, 2, 3, 4]);
+  });
+
+  test('out-of-canvas portion of the region reads as fully transparent', () => {
+    const e = new PixelEngine(4, 4, 'white');
+    const buffer = e.extractRegion(-1, -1, 3, 3);
+    // (dx=0,dy=0) maps to canvas (-1,-1), out of bounds.
+    assert.deepEqual([buffer[0], buffer[1], buffer[2], buffer[3]], [0, 0, 0, 0]);
+    // (dx=2,dy=2) maps to canvas (1,1), in bounds, opaque white.
+    const i = (2 * 3 + 2) * 4;
+    assert.deepEqual([buffer[i], buffer[i + 1], buffer[i + 2], buffer[i + 3]], [255, 255, 255, 255]);
+  });
+});
+
+describe('clearRegion', () => {
+  test('defaults to filling the region with fully transparent pixels', () => {
+    const e = new PixelEngine(4, 4, 'white');
+    e.clearRegion(1, 1, 2, 2);
+    for (let y = 1; y <= 2; y++) {
+      for (let x = 1; x <= 2; x++) {
+        assert.deepEqual(px(e, x, y), [0, 0, 0, 0]);
+      }
+    }
+    // Untouched pixel outside the region is unaffected.
+    assert.deepEqual(px(e, 0, 0), [255, 255, 255, 255]);
+  });
+
+  test('fills the region with an explicit color when given one', () => {
+    const e = new PixelEngine(4, 4, 'transparent');
+    e.clearRegion(0, 0, 2, 2, [9, 9, 9, 255]);
+    assert.deepEqual(px(e, 0, 0), [9, 9, 9, 255]);
+    assert.deepEqual(px(e, 1, 1), [9, 9, 9, 255]);
+  });
+
+  test('a region straddling the canvas edge clips silently, does not throw', () => {
+    const e = new PixelEngine(3, 3, 'white');
+    assert.doesNotThrow(() => e.clearRegion(2, 2, 3, 3));
+    assert.deepEqual(px(e, 2, 2), [0, 0, 0, 0]);
+  });
+});
+
+describe('stampRegion', () => {
+  test('writes a buffer back at the given offset', () => {
+    const e = new PixelEngine(4, 4, 'transparent');
+    const buffer = new Uint8ClampedArray([1, 2, 3, 255, 4, 5, 6, 255]); // 2x1
+    e.stampRegion(1, 1, 2, 1, buffer);
+    assert.deepEqual(px(e, 1, 1), [1, 2, 3, 255]);
+    assert.deepEqual(px(e, 2, 1), [4, 5, 6, 255]);
+  });
+
+  test('clips silently when the stamp lands partially off-canvas', () => {
+    const e = new PixelEngine(3, 3, 'transparent');
+    const buffer = new Uint8ClampedArray(2 * 2 * 4).fill(255);
+    assert.doesNotThrow(() => e.stampRegion(2, 2, 2, 2, buffer));
+    assert.deepEqual(px(e, 2, 2), [255, 255, 255, 255]);
+  });
+
+  test('round-trips with extractRegion for an in-bounds region', () => {
+    const e = new PixelEngine(5, 5, 'transparent');
+    fillRect(e, 1, 1, 3, 3, [7, 8, 9, 200]);
+    const buffer = e.extractRegion(1, 1, 3, 3);
+    const e2 = new PixelEngine(5, 5, 'transparent');
+    e2.stampRegion(1, 1, 3, 3, buffer);
+    assert.deepEqual(e2.data, e.data);
   });
 });

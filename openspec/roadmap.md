@@ -90,6 +90,14 @@ proposed/implemented/archived before the next starts:
     opening it no longer shifts the Workspace layout. Also raised
     directly, grouped here as another workspace-chrome refinement (not a
     new drawing capability) alongside 2d/2e/2f.
+  - **2i — URL routing**: hash-based routes (`#/`, `#/new`,
+    `#/project/<id>`) so the URL always reflects the current screen —
+    reloading the page while a project is open reopens that same
+    project instead of dropping back to the Gallery, and Back/Forward
+    navigate between screens. Keyed off the stable ID every project
+    already gets at creation; does not enable sharing a project to
+    another browser/device (no backend yet — see Phase 3). Raised
+    directly.
   - **2j — Move tool**: a Photoshop/Illustrator-style Move tool
     (shortcut `V`) that drags pixel content on the active layer to a new
     position — with an active selection, just the selected region's
@@ -104,8 +112,8 @@ Status: **2a done** — archived at
 `openspec/specs/layers/`. **2b done** — archived at
 `openspec/changes/archive/2026-08-14-2b-local-persistence-gallery/`, specs
 live at `openspec/specs/local-persistence/`, `openspec/specs/gallery/`,
-`openspec/specs/canvas-settings/`. **2c1 in progress. 2j proposed, not yet
-implemented, stacks on top of 2c1's shape-tools capability. 2d, 2e, 2c2, 2f, 2h
+`openspec/specs/canvas-settings/`. **2c1 in progress. 2j done (stacks on
+top of 2c1's shape-tools capability). 2d, 2e, 2c2, 2f, 2h, 2i, 2j
 done** (none yet archived). **2c3, 2g proposed, not yet implemented.**
 
 ## Phase 3 — Supabase Auth + sync

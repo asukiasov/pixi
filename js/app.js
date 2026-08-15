@@ -4,6 +4,7 @@ import { CanvasView } from './canvas-view.js';
 import { initGallery } from './gallery.js';
 import { loadProject } from './persistence.js';
 import { LayerStack } from './layers.js';
+import { parseRoute, navigate, onRouteChange } from './router.js';
 
 const screens = {
   gallery: document.getElementById('screen-gallery'),
@@ -22,11 +23,17 @@ function showScreen(name) {
 // DOM/pointer listeners).
 let canvasView = null;
 
+// The project ID currently shown in the Workspace, if any. Used by the
+// route-change handler to avoid redundantly reopening the project that's
+// already on screen (e.g. a hashchange fired by our own `navigate()` call).
+let currentWorkspaceProjectId = null;
+
 function openWorkspace({ layerStack, projectId, projectName }) {
   const canvasEl = document.getElementById('workspace-canvas');
   const containerEl = document.getElementById('workspace-canvas-container');
 
   showScreen('workspace');
+  currentWorkspaceProjectId = projectId;
 
   if (!canvasView) {
     canvasView = new CanvasView(canvasEl, containerEl, layerStack);
@@ -54,25 +61,99 @@ function openWorkspace({ layerStack, projectId, projectName }) {
     canvasView,
     onRequestGallery: () => {
       showScreen('gallery');
+      currentWorkspaceProjectId = null;
       gallery.refresh();
+      navigate({ screen: 'gallery' });
     },
   });
 }
 
+/** Loads a project by ID and opens it in the Workspace. */
+async function openProjectById(id) {
+  const record = await loadProject(id);
+  if (!record) {
+    return false;
+  }
+  const layerStack = LayerStack.fromProjectRecord(record);
+  openWorkspace({ layerStack, projectId: id, projectName: record.name });
+  return true;
+}
+
+/** Shows the Gallery screen and refreshes its contents. */
+function showGallery() {
+  showScreen('gallery');
+  currentWorkspaceProjectId = null;
+  gallery.refresh();
+}
+
 const gallery = initGallery({
-  onNewCanvas: () => showScreen('newCanvas'),
+  onNewCanvas: () => {
+    showScreen('newCanvas');
+    navigate({ screen: 'newCanvas' });
+  },
   async onOpenProject(id) {
-    const record = await loadProject(id);
-    const layerStack = LayerStack.fromProjectRecord(record);
-    openWorkspace({ layerStack, projectId: id, projectName: record.name });
+    const opened = await openProjectById(id);
+    if (opened) {
+      navigate({ screen: 'workspace', projectId: id });
+    }
   },
 });
 
 initNewCanvasScreen({
   onCanvasCreated({ layerStack, projectId, projectName }) {
     openWorkspace({ layerStack, projectId, projectName });
+    navigate({ screen: 'workspace', projectId });
   },
 });
 
-showScreen('gallery');
-gallery.refresh();
+// Reacts to Back/Forward (and any other external hash change) by
+// re-deriving the visible screen from the URL. This only ever updates
+// what's on screen — it must never itself call navigate(), or it would
+// fight with the history entry the browser just navigated to.
+onRouteChange(async (route) => {
+  if (route.screen === 'workspace' && route.projectId) {
+    if (route.projectId === currentWorkspaceProjectId) {
+      return;
+    }
+    const opened = await openProjectById(route.projectId);
+    if (!opened) {
+      // Stale/deleted project ID reached via Back/Forward or a manually
+      // edited URL: fall back to the Gallery and clear the bad hash so
+      // it doesn't keep bouncing back here.
+      showGallery();
+      navigate({ screen: 'gallery' }, { replace: true });
+    }
+    return;
+  }
+  if (route.screen === 'newCanvas') {
+    showScreen('newCanvas');
+    return;
+  }
+  showGallery();
+});
+
+// Boot: read the URL first, rather than always defaulting to the Gallery.
+async function boot() {
+  const route = parseRoute();
+
+  if (route.screen === 'workspace' && route.projectId) {
+    const opened = await openProjectById(route.projectId);
+    if (opened) {
+      return;
+    }
+    // Unknown/deleted project ID in the URL — fall back to the Gallery
+    // and clear the stale hash rather than leaving a dead link in place.
+    showGallery();
+    navigate({ screen: 'gallery' }, { replace: true });
+    return;
+  }
+
+  if (route.screen === 'newCanvas') {
+    showScreen('newCanvas');
+    return;
+  }
+
+  showGallery();
+}
+
+boot();

@@ -110,8 +110,10 @@ Foreground/Background assignment as every other platform. On every
 other platform, the existing custom popover (per the "Color palette"
 requirement above) is unaffected. Requested directly, to match how
 other iOS apps present a Foreground/Background-style picker rather than
-opening a middleware window first; "Add to palette" is not reachable
-through this path on iOS, an accepted trade-off of going fully native.
+opening a middleware window first. The popover's own "Add to palette"
+button is not reachable through this path on iOS - see the
+`color-library` capability's "Add the current color from anywhere"
+requirement for how that gap is closed instead.
 
 #### Scenario: Clicking a swatch on iOS opens the native picker
 - **WHEN** the user is on iOS/iPadOS and clicks the Foreground or

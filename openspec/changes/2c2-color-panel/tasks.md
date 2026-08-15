@@ -159,9 +159,19 @@
       `<input type="color">`, not nested inside `#color-picker-popover`
       - a `display: none` ancestor (the popover, when closed) blocks a
       scripted `.click()` from opening the input's native picker UI, so
-      this needed its own always-non-`display:none` element, hidden
-      instead via a new `.visually-hidden-native-input` class
-      (`position: fixed`, 1x1px, `opacity: 0`, `pointer-events: none`)
+      this needed its own always-non-`display:none` element, hidden via
+      a new `.visually-hidden-native-input` class
+- [x] 9.2.1 **Bug found on real hardware**: the initial
+      `.visually-hidden-native-input` hid the input via `opacity: 0` +
+      `pointer-events: none` at 1x1px - real iOS Safari silently
+      refused to open the native picker from `.click()` on an
+      `opacity: 0` element (a known WebKit quirk: opacity-hidden
+      elements are treated as "not actually interactive" for this
+      purpose, even though they still have a layout box). Fixed by
+      switching to off-screen positioning instead (`position: fixed;
+      top: -100px; left: -100px;`, 24x24px, no opacity/pointer-events
+      tricks) - the standard, well-tested pattern for a hidden-but-
+      genuinely-clickable native input
 - [x] 9.3 `openColorPicker()`: on iOS, sets `#fg-bg-native-picker`'s
       value to the current Foreground/Background color and calls
       `.click()` on it, returning before any of the popover's own

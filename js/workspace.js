@@ -896,6 +896,19 @@ function setBackgroundColor(rgba) {
 // it's opened by clicking the Foreground or Background swatch.
 let colorPickerTarget = 'foreground';
 
+/**
+ * Adds `rgba` to the active Color Library palette and refreshes the
+ * panel - the one path every "add to palette" control routes through,
+ * whether that's the color-picker popover's own button (non-iOS only,
+ * see openColorPicker) or the always-available button in the Color
+ * Library panel's header (every platform, and the only "add to palette"
+ * path on iOS, where the popover doesn't exist).
+ */
+async function addCurrentColorToActivePalette(rgba) {
+  await addColorToPalette(activePaletteId, rgbaToHex(rgba));
+  await loadColorPalettes();
+}
+
 /** Routes a picked color (from the native input, hex field, or RGB fields) to whichever swatch opened the popover. */
 function applyPickedColor(rgba) {
   if (colorPickerTarget === 'background') {
@@ -1099,8 +1112,7 @@ function bindDomOnce() {
 
   colorPickerAdd.addEventListener('click', async () => {
     const current = colorPickerTarget === 'background' ? state.backgroundColor : state.foregroundColor;
-    await addColorToPalette(activePaletteId, rgbaToHex(current));
-    await loadColorPalettes();
+    await addCurrentColorToActivePalette(current);
   });
 
   document.getElementById('color-picker-close').addEventListener('click', closeColorPicker);
@@ -1198,6 +1210,7 @@ function bindDomOnce() {
   colorLibraryGrid = document.getElementById('color-library-grid');
   colorLibrarySelect = document.getElementById('color-library-select');
   deletePaletteButton = document.getElementById('delete-palette-button');
+  const addCurrentColorButton = document.getElementById('add-current-color-button');
   const addPaletteButton = document.getElementById('add-palette-button');
   const newPaletteRow = document.getElementById('new-palette-row');
   const newPaletteName = document.getElementById('new-palette-name');
@@ -1209,6 +1222,10 @@ function bindDomOnce() {
   colorLibrarySelect.addEventListener('change', () => {
     activePaletteId = colorLibrarySelect.value;
     renderColorLibraryPanel();
+  });
+
+  addCurrentColorButton.addEventListener('click', () => {
+    addCurrentColorToActivePalette(state.foregroundColor);
   });
 
   addPaletteButton.addEventListener('click', () => {

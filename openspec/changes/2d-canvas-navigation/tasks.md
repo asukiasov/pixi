@@ -221,13 +221,28 @@
       (which ignores it for accessibility since iOS 10), but still
       effective on other browsers/older versions
 - [x] 12.2 `style.css`: `html, body` gains `touch-action: pan-x pan-y` -
-      the actual fix on iOS Safari, which respects `touch-action` even
-      though it ignores the viewport meta's `user-scalable`. `pan-x
-      pan-y` (not `none`) so normal scrolling keeps working everywhere;
-      the canvas/canvas-container's existing stricter `touch-action:
-      none` is unaffected and still handles pinch-zoom itself
+      the standards-based half of the fix; `pan-x pan-y` (not `none`) so
+      normal scrolling keeps working everywhere; the canvas/
+      canvas-container's existing stricter `touch-action: none` is
+      unaffected and still handles pinch-zoom itself
 - [x] 12.3 Playwright: confirmed `getComputedStyle(document.body).
       touchAction` is `pan-x pan-y` and the canvas's is still `none`;
       full manual-pinch-gesture behavior isn't Playwright-testable
       (no real touch hardware in headless Chromium), so this is a
       computed-style check, not a simulated pinch
+- [x] 12.4 **Bug found on real hardware**: `touch-action` alone did not
+      stop real iOS Safari's native pinch-zoom - Safari has a long
+      history of still triggering it via `gesturestart`/`gesturechange`
+      (a WebKit-proprietary event pair, unrelated to `touch-action`).
+      Fixed in `js/app.js`: `document.addEventListener` on
+      `gesturestart`/`gesturechange`/`gestureend`, calling
+      `preventDefault()` unconditionally on all three. Safe everywhere,
+      including over the canvas, since `canvas-view.js`'s own
+      pinch-zoom is built entirely from raw `pointerdown`/`pointermove`
+      events, never `gesturestart`/`gesturechange` - `GestureEvent`
+      doesn't exist outside WebKit/Safari, so this is a silent no-op on
+      every other browser
+- [x] 12.5 Playwright: confirmed a dispatched `gesturestart` event has
+      `defaultPrevented === true` after this fix; real-hardware pinch
+      behavior still isn't Playwright-testable, so this remains an
+      event-handling check, not a simulated gesture

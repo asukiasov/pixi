@@ -816,15 +816,20 @@ body {
    display:none element can't have its native picker UI triggered via a
    scripted .click(); imperceptible instead via zero size + opacity. */
 .visually-hidden-native-input {
+  /* Off-screen, not opacity/pointer-events-based - real iOS Safari is
+     known to refuse to open an <input type="color">'s native picker
+     from a scripted .click() when the element is hidden via opacity: 0
+     (some WebKit versions treat that as "not actually interactive" and
+     silently no-op the click, even though the box still exists in
+     layout). Positioning it off-screen keeps it a normal, fully
+     "visible" element as far as WebKit's own heuristic is concerned. */
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 1px;
-  height: 1px;
+  top: -100px;
+  left: -100px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: none;
-  opacity: 0;
-  pointer-events: none;
 }
 
 /* Color picker popover - opened by clicking the Foreground or Background
@@ -1392,18 +1397,19 @@ body {
 /* "Buzz" hover feedback - a small, fast shake, reimplemented directly
    (a few lines of CSS) rather than pulling in ianlunn.github.io/Hover/
    as an external dependency, since this app has no CDN/build step for
-   third-party CSS libraries (see CLAUDE.md's stack). Applied to every
-   real clickable control (buttons and swatches) - explicitly not the
-   drawing canvas, text/number/range inputs, or the brush-editor's
-   pixel-toggle grid, where a jitter-on-hover would be actively annoying
-   rather than a nice touch. Respects prefers-reduced-motion. */
+   third-party CSS libraries (see CLAUDE.md's stack). Applied to most
+   clickable controls (buttons and swatches) - explicitly not the
+   drawing canvas, text/number/range inputs, the brush-editor's
+   pixel-toggle grid, the Foreground/Background swatches and their
+   swap/reset corner buttons, or the bottom bar's zoom toolset (buttons
+   used often/in quick succession, or fine click targets, where a
+   jitter-on-hover reads as noise rather than a nice touch - per
+   feedback). Respects prefers-reduced-motion. */
 @media (prefers-reduced-motion: no-preference) {
   .tool-button:not(:disabled):hover,
   .preset-button:not(:disabled):hover,
   .primary-button:not(:disabled):hover,
   .icon-button:not(:disabled):hover,
-  .fg-bg-corner-button:hover,
-  .fg-bg-swatch:hover,
   .gallery-tile-delete:hover,
   .layer-visibility-toggle:hover,
   .layer-reorder-button:not(:disabled):hover,
@@ -1422,4 +1428,13 @@ body {
   100% {
     transform: translateX(-3px) rotate(-2deg);
   }
+}
+
+/* Explicit opt-out from the buzz rule above: the bottom bar's zoom
+   toolset (#zoom-out-button/#zoom-in-button/the 100%/Fit/Fill presets)
+   would otherwise match the plain .tool-button/.icon-button buzz rule -
+   this descendant selector is more specific and wins regardless of
+   source order, kept directly below the rule it overrides for clarity. */
+.zoom-controls .tool-button:hover {
+  animation: none;
 }

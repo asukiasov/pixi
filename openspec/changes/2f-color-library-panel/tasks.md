@@ -116,3 +116,19 @@
       intact, Confirm removes it; same confirm-then-delete flow verified
       for a layer, a custom brush, and a gallery project; re-run full
       `node --test` suite (103/103)
+
+## 8. Add current color button (iOS's only add-to-palette path)
+
+- [x] 8.1 `index.html`: new `#add-current-color-button` (`playlist_add`
+      icon) in the Color Library panel's header, alongside the existing
+      new-palette/delete-palette buttons; `playlist_add` added to the
+      Material Symbols `icon_names=` subsetting list
+- [x] 8.2 `js/workspace.js`: extracted `addCurrentColorToActivePalette(rgba)`
+      (calls `addColorToPalette` + `loadColorPalettes`) as the one path
+      both this new button and the color-picker popover's own "Add to
+      palette" button now route through, instead of two separate
+      implementations
+- [x] 8.3 Playwright (spoofed iOS UA): confirmed the button is visible
+      and clicking it adds the current Foreground color to the active
+      palette's swatch grid, with zero console errors, on a UA where the
+      color-picker popover never opens

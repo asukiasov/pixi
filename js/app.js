@@ -12,6 +12,22 @@ const screens = {
   workspace: document.getElementById('screen-workspace'),
 };
 
+// Blocks Safari's native pinch-to-zoom of the whole page (bug: pinching
+// over the right sidebar on iPad zoomed the entire app UI, not the
+// canvas). style.css's `touch-action: pan-x pan-y` on html/body is the
+// standards-based fix and is kept, but real iOS Safari has a long
+// history of still triggering its native pinch-zoom via `gesturestart`/
+// `gesturechange` (a WebKit-proprietary event pair, unrelated to
+// touch-action) regardless of that CSS - this listens for those and
+// cancels them everywhere. Safe to do unconditionally, including over
+// the canvas: canvas-view.js's own pinch-zoom is built entirely from
+// raw pointerdown/pointermove events, never gesturestart/gesturechange,
+// so it's unaffected. `GestureEvent` doesn't exist outside
+// WebKit/Safari, so this is a silent no-op everywhere else.
+['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
+  document.addEventListener(type, (e) => e.preventDefault());
+});
+
 function showScreen(name) {
   for (const [key, el] of Object.entries(screens)) {
     el.classList.toggle('hidden', key !== name);

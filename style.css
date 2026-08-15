@@ -1363,3 +1363,38 @@ body {
     transform: translateY(calc(-50% + var(--paw-offset, 0px))) scale(1) rotate(-5deg);
   }
 }
+
+/* "Buzz" hover feedback - a small, fast shake, reimplemented directly
+   (a few lines of CSS) rather than pulling in ianlunn.github.io/Hover/
+   as an external dependency, since this app has no CDN/build step for
+   third-party CSS libraries (see CLAUDE.md's stack). Applied to every
+   real clickable control (buttons and swatches) - explicitly not the
+   drawing canvas, text/number/range inputs, or the brush-editor's
+   pixel-toggle grid, where a jitter-on-hover would be actively annoying
+   rather than a nice touch. Respects prefers-reduced-motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .tool-button:not(:disabled):hover,
+  .preset-button:not(:disabled):hover,
+  .primary-button:not(:disabled):hover,
+  .icon-button:not(:disabled):hover,
+  .fg-bg-corner-button:hover,
+  .fg-bg-swatch:hover,
+  .gallery-tile-delete:hover,
+  .layer-visibility-toggle:hover,
+  .layer-reorder-button:not(:disabled):hover,
+  .layer-delete-button:not(:disabled):hover,
+  .brush-swatch:hover,
+  .palette-swatch:hover,
+  .color-library-swatch:hover {
+    animation: hover-buzz 0.15s linear infinite;
+  }
+}
+
+@keyframes hover-buzz {
+  50% {
+    transform: translateX(3px) rotate(2deg);
+  }
+  100% {
+    transform: translateX(-3px) rotate(-2deg);
+  }
+}

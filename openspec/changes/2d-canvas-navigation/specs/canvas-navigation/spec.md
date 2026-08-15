@@ -131,3 +131,29 @@ artwork was supplied directly.
 - **WHEN** any tool other than Hand is active
 - **THEN** the canvas cursor is that tool's own cursor (e.g. crosshair for
   Pencil), never either paw cursor
+
+### Requirement: Only the canvas pinch-zooms
+Native browser pinch-zoom of the whole page SHALL be disabled everywhere
+except the canvas itself, which handles pinch-zoom entirely through its
+own pointer-event-driven logic (see the "Zoom controls" requirement).
+Pinching anywhere else in the Workspace (the tools sidebar, right
+sidebar, top bar, bottom bar) SHALL NOT zoom the page. Bug fix: pinching
+over the right sidebar on iPad previously zoomed the entire app UI
+(text, icons, layout) via the browser's native pinch-zoom, not the
+canvas.
+
+#### Scenario: Pinching outside the canvas does nothing
+- **WHEN** the user pinches with two fingers anywhere in the Workspace
+  other than the canvas (e.g. the right sidebar)
+- **THEN** nothing zooms - the page layout and text size are unaffected
+
+#### Scenario: Pinching on the canvas still zooms it
+- **WHEN** the user pinches with two fingers on the canvas itself
+- **THEN** the canvas zooms exactly as before, unaffected by this
+  requirement
+
+#### Scenario: Normal scrolling still works
+- **WHEN** the user scrolls (not pinches) a scrollable area, such as the
+  Gallery grid or a sidebar with overflow
+- **THEN** scrolling works exactly as before - only pinch-zoom is
+  disabled, not panning/scrolling gestures generally

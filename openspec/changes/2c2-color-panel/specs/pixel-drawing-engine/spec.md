@@ -100,3 +100,32 @@ requirement, regardless of the Background color).
 - **WHEN** a non-default Background color is set and the user erases
 - **THEN** erased pixels become fully transparent, not the Background
   color
+
+### Requirement: Foreground/Background color picker is native on iOS
+On iOS/iPadOS, clicking the Foreground or Background swatch SHALL open
+the operating system's native color picker directly, instead of this
+app's own popover (Grid-style native input, hex field, RGB fields, "Add
+to palette"). Picked colors route through the same
+Foreground/Background assignment as every other platform. On every
+other platform, the existing custom popover (per the "Color palette"
+requirement above) is unaffected. Requested directly, to match how
+other iOS apps present a Foreground/Background-style picker rather than
+opening a middleware window first; "Add to palette" is not reachable
+through this path on iOS, an accepted trade-off of going fully native.
+
+#### Scenario: Clicking a swatch on iOS opens the native picker
+- **WHEN** the user is on iOS/iPadOS and clicks the Foreground or
+  Background swatch
+- **THEN** the OS's native color picker opens directly; this app's own
+  popover (Grid, hex/RGB fields, Add to palette) never appears
+
+#### Scenario: A color picked natively updates Foreground/Background
+- **WHEN** the user picks a color in the native picker
+- **THEN** whichever swatch was clicked (Foreground or Background)
+  updates to that color, the same as picking via the popover on other
+  platforms
+
+#### Scenario: Non-iOS platforms are unaffected
+- **WHEN** the user is on any platform other than iOS/iPadOS and clicks
+  the Foreground or Background swatch
+- **THEN** this app's own popover opens, exactly as before

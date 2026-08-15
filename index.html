@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Pixi</title>
   <link rel="stylesheet" href="style.css" />
   <!-- Resolves bare "dexie" imports in js/persistence.js to a CDN build, no
@@ -139,6 +139,17 @@
           </button>
         </div>
       </div>
+
+      <!-- iOS/iPadOS only (js/workspace.js's isIOS()): clicking either
+           FG/BG swatch triggers this directly instead of opening
+           #color-picker-popover below, going straight to the OS's own
+           color picker sheet. A separate element from
+           #color-picker-popover's own native input, since that one lives
+           inside a display:none ancestor when the popover is closed -
+           display:none elements can't be click()-triggered into showing
+           their native picker UI, so this one stays out of that popover
+           entirely and is hidden via off-screen/opacity instead. -->
+      <input type="color" id="fg-bg-native-picker" class="visually-hidden-native-input" tabindex="-1" aria-hidden="true" />
 
       <!-- Popover opened by clicking either FG/BG swatch above - edits
            whichever one was clicked (js/workspace.js tracks the target).

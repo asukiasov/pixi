@@ -213,3 +213,21 @@
       resolves to each `url(...) x y, grab(bing)` value at the right
       pan-drag state; rendered both SVGs standalone to confirm they draw
       as paw prints, not blank/broken images
+
+## 12. Bug fix: pinching outside the canvas zoomed the whole page
+
+- [x] 12.1 `index.html`'s viewport meta gains `maximum-scale=1,
+      user-scalable=no` - a defense-in-depth no-op on modern iOS Safari
+      (which ignores it for accessibility since iOS 10), but still
+      effective on other browsers/older versions
+- [x] 12.2 `style.css`: `html, body` gains `touch-action: pan-x pan-y` -
+      the actual fix on iOS Safari, which respects `touch-action` even
+      though it ignores the viewport meta's `user-scalable`. `pan-x
+      pan-y` (not `none`) so normal scrolling keeps working everywhere;
+      the canvas/canvas-container's existing stricter `touch-action:
+      none` is unaffected and still handles pinch-zoom itself
+- [x] 12.3 Playwright: confirmed `getComputedStyle(document.body).
+      touchAction` is `pan-x pan-y` and the canvas's is still `none`;
+      full manual-pinch-gesture behavior isn't Playwright-testable
+      (no real touch hardware in headless Chromium), so this is a
+      computed-style check, not a simulated pinch

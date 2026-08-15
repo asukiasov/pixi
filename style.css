@@ -5,6 +5,15 @@
 html, body {
   height: 100%;
   margin: 0;
+  /* Disables native pinch-zoom of the whole page (e.g. pinching over the
+     right sidebar on iPad zoomed the entire app UI, not the canvas) -
+     the viewport meta's user-scalable=no (index.html) is ignored by iOS
+     Safari 10+ for accessibility, so this touch-action is the actual
+     fix there; kept as pan-x pan-y (not none) so normal scrolling still
+     works everywhere except the canvas, which sets its own stricter
+     touch-action: none and handles pan/zoom entirely itself (see
+     js/canvas-view.js). */
+  touch-action: pan-x pan-y;
 }
 
 body {
@@ -802,6 +811,22 @@ body {
   left: -0.2rem;
 }
 
+/* iOS/iPadOS-only native color picker trigger (see index.html and
+   openColorPicker in js/workspace.js) - not display:none, since a
+   display:none element can't have its native picker UI triggered via a
+   scripted .click(); imperceptible instead via zero size + opacity. */
+.visually-hidden-native-input {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Color picker popover - opened by clicking the Foreground or Background
    swatch, not an always-visible inline row. Positioned via JS
    (js/workspace.js), same fixed-position/getBoundingClientRect pattern
@@ -1386,7 +1411,7 @@ body {
   .brush-swatch:hover,
   .palette-swatch:hover,
   .color-library-swatch:hover {
-    animation: hover-buzz 0.15s linear infinite;
+    animation: hover-buzz 0.2s linear infinite; /* 25% slower than the original 0.15s */
   }
 }
 

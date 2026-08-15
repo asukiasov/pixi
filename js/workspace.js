@@ -30,6 +30,20 @@ const PALETTE = [
 
 const BLEND_MODES = ['normal', 'multiply', 'screen', 'overlay'];
 
+/**
+ * True on iOS/iPadOS (including iPadOS 13+, which reports as
+ * "MacIntel" in the UA string - the maxTouchPoints check distinguishes
+ * it from an actual Mac). Used only to route the Foreground/Background
+ * swatches straight to the native color picker there instead of this
+ * app's custom popover - see openColorPicker.
+ */
+function isIOS() {
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+}
+
 function hexToRgba(hex) {
   const n = Number.parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255, 255];
@@ -893,9 +907,28 @@ function applyPickedColor(rgba) {
 
 function openColorPicker(target, anchorEl) {
   colorPickerTarget = target;
+  const current = target === 'background' ? state.backgroundColor : state.foregroundColor;
+
+  // iOS/iPadOS: skip this app's own popover (custom Grid/hex/RGB UI,
+  // "Add to palette") entirely and go straight to the OS's native color
+  // picker - requested directly, to match how every other iOS app
+  // handles Foreground/Background-style color pickers, rather than
+  // opening a middleware window first. The native <input type="color">
+  // (#color-picker-native) already has an 'input' listener wired in
+  // bindDomOnce that calls applyPickedColor on every change, so nothing
+  // else needs to react differently here - "Add to palette" simply isn't
+  // reachable through this path, an accepted trade-off of going fully
+  // native.
+  if (isIOS()) {
+    const nativeInput = document.getElementById('fg-bg-native-picker');
+    nativeInput.value = rgbaToHex(current);
+    nativeInput.click();
+    return;
+  }
+
   document.getElementById('color-picker-popover-title').textContent =
     target === 'background' ? 'Background Color' : 'Foreground Color';
-  updateColorPickerInputs(target === 'background' ? state.backgroundColor : state.foregroundColor);
+  updateColorPickerInputs(current);
   const popover = document.getElementById('color-picker-popover');
   // Unhide before measuring - .hidden is display:none, which has no box
   // to read a size from.
@@ -1022,6 +1055,14 @@ function bindDomOnce() {
 
   colorPickerNative.addEventListener('input', () => {
     applyPickedColor(hexToRgba(colorPickerNative.value));
+  });
+
+  // iOS/iPadOS-only native picker (see openColorPicker/isIOS) - same
+  // routing through applyPickedColor/colorPickerTarget as the popover's
+  // own native input above, just a separate element so it works even
+  // while the popover itself stays closed/hidden.
+  document.getElementById('fg-bg-native-picker').addEventListener('input', (e) => {
+    applyPickedColor(hexToRgba(e.target.value));
   });
 
   colorPickerHex.addEventListener('change', () => {

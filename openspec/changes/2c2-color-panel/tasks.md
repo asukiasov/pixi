@@ -148,3 +148,29 @@
       viewport (the scenario from the bug report) after the clamp fix;
       confirmed the Foreground/Background control renders inside
       `#tools-sidebar`'s x-range. Zero console errors.
+
+## 9. iOS: native color picker, no middleware popover
+
+- [x] 9.1 New `js/workspace.js` helper `isIOS()` - UA regex
+      (`iPad|iPhone|iPod`) plus the `platform === 'MacIntel' &&
+      maxTouchPoints > 1` check for iPadOS 13+ (which reports as a Mac
+      in its UA string)
+- [x] 9.2 New `#fg-bg-native-picker` (`index.html`): a standalone
+      `<input type="color">`, not nested inside `#color-picker-popover`
+      - a `display: none` ancestor (the popover, when closed) blocks a
+      scripted `.click()` from opening the input's native picker UI, so
+      this needed its own always-non-`display:none` element, hidden
+      instead via a new `.visually-hidden-native-input` class
+      (`position: fixed`, 1x1px, `opacity: 0`, `pointer-events: none`)
+- [x] 9.3 `openColorPicker()`: on iOS, sets `#fg-bg-native-picker`'s
+      value to the current Foreground/Background color and calls
+      `.click()` on it, returning before any of the popover's own
+      unhide/positioning logic runs; non-iOS behavior unchanged
+- [x] 9.4 `#fg-bg-native-picker`'s `input` event routes through the same
+      `applyPickedColor` every other color-pick path already uses
+- [x] 9.5 Playwright (spoofed iOS UA + touch context): confirmed
+      `#color-picker-popover` never becomes visible when clicking a swatch
+      on iOS; confirmed `#fg-bg-native-picker` receives the current
+      color as its value; confirmed a real (non-iOS) desktop UA still
+      opens the popover exactly as before. Zero console errors on
+      either path.

@@ -99,6 +99,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 0;
+  cursor: pointer;
 }
 
 .gallery-tile-delete .material-symbols-outlined {
@@ -141,6 +142,12 @@ body {
   background: #2c2c2e;
   color: inherit;
   font-size: 1rem;
+  /* Real <button>s default to cursor: default (not pointer) in the UA
+     stylesheet - explicit pointer both signals clickability and is one of
+     the heuristics WebKit uses to decide whether an element qualifies for
+     the Apple Pencil hover effect on supporting iPads (confirmed via
+     Playwright: computed cursor on a bare <button> is "default"). */
+  cursor: pointer;
 }
 
 .preset-button.active,
@@ -172,6 +179,7 @@ body {
   border-radius: 0.6rem;
   background: #0a84ff;
   color: white;
+  cursor: pointer;
 }
 
 /* Workspace screen */
@@ -397,6 +405,7 @@ body {
   width: 2.6rem;
   height: 2.6rem;
   padding: 0;
+  cursor: pointer;
 }
 
 .workspace-main {
@@ -617,6 +626,7 @@ body {
   color: inherit;
   font-size: 1rem;
   padding: 0;
+  cursor: pointer;
 }
 
 .layer-visibility-toggle .material-symbols-outlined,
@@ -668,6 +678,7 @@ body {
   color: inherit;
   font-size: 0.9rem;
   padding: 0;
+  cursor: pointer;
 }
 
 .layer-reorder-button .material-symbols-outlined {
@@ -1054,6 +1065,7 @@ body {
   color: inherit;
   padding: 0.2rem;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .brush-swatch.active {

@@ -84,13 +84,19 @@ proposed/implemented/archived before the next starts:
     background canvases are unaffected. Completes a Non-Goal 2c2's
     design.md explicitly deferred ("Background does not affect Eraser"),
     now scoped to this one special layer instead of every layer.
+  - **2h — Canvas Settings popover**: converts Canvas Settings from a
+    docked bottom panel to a popover anchored to the top bar's gear icon
+    (same clamped-to-viewport pattern the color-picker popover uses), so
+    opening it no longer shifts the Workspace layout. Also raised
+    directly, grouped here as another workspace-chrome refinement (not a
+    new drawing capability) alongside 2d/2e/2f.
 
 Status: **2a done** — archived at
 `openspec/changes/archive/2026-08-14-2a-layers/`, spec lives at
 `openspec/specs/layers/`. **2b done** — archived at
 `openspec/changes/archive/2026-08-14-2b-local-persistence-gallery/`, specs
 live at `openspec/specs/local-persistence/`, `openspec/specs/gallery/`,
-`openspec/specs/canvas-settings/`. **2c1 in progress. 2d, 2e, 2c2, 2f
+`openspec/specs/canvas-settings/`. **2c1 in progress. 2d, 2e, 2c2, 2f, 2h
 done** (none yet archived). **2c3, 2g proposed, not yet implemented.**
 
 ## Phase 3 — Supabase Auth + sync

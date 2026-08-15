@@ -1,4 +1,5 @@
 import { listProjects, deleteProject } from './persistence.js';
+import { confirmDialog } from './confirm-dialog.js';
 
 /**
  * Wires the Gallery screen: project grid, "+ New Canvas", open, and
@@ -53,7 +54,10 @@ function buildProjectTile(project, onOpenProject, refresh) {
   deleteButton.title = 'Delete project';
   deleteButton.addEventListener('click', async (e) => {
     e.stopPropagation();
-    const proceed = window.confirm(`Delete "${project.name}"? This can't be undone.`);
+    const proceed = await confirmDialog({
+      title: 'Delete project?',
+      message: `Delete "${project.name}"? This can't be undone.`,
+    });
     if (!proceed) return;
     await deleteProject(project.id);
     refresh();

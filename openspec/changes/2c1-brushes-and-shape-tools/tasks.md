@@ -313,3 +313,32 @@
       colors along it and confirmed they matched the active Color
       Library palette's colors in list order; switching to Eraser hid the
       toggle; re-run full `node --test` suite (103/103)
+
+## 17. Revised per feedback: same toggle offered on Brush too
+
+- [x] 17.1 Renamed `state.pencilLibrarySequence` to
+      `state.colorLibrarySequence` throughout (no longer Pencil-specific)
+- [x] 17.2 New `js/workspace.js` helper `colorForSequenceIndex(index)` -
+      Rainbow or Color Library sequence, whichever is active, else the
+      plain foreground color; extracted so `pencilOrEraserApplyPixel`
+      (Pencil/Eraser) and `redrawBrushPath` (Brush) share one
+      implementation instead of two that could drift
+- [x] 17.3 `redrawBrushPath` now calls `colorForSequenceIndex` for its
+      per-placement color, replacing its old Rainbow-only ternary - Brush
+      gets Color Library sequence "for free" through the shared helper
+- [x] 17.4 New `#brush-library-toggle` button in `index.html`'s
+      `#brushes-panel` toolbar (same `palette` icon as Pencil's); new
+      `js/workspace.js` helper `setColorLibrarySequence(enabled)` keeps
+      both `#pencil-library-toggle` and `#brush-library-toggle`'s
+      `active` class in sync with the one shared state flag, and clears
+      Rainbow when enabling (mutual exclusivity) - both toggle buttons'
+      click handlers, and the Rainbow swatch's click handler, now route
+      through it instead of duplicating the state-update logic
+- [x] 17.5 Reset in `initWorkspace`'s per-project reset block clears
+      `#brush-library-toggle`'s `active` class too (it has no
+      Brush-tool-specific hidden/shown toggle of its own - the whole
+      `#brushes-panel` already hides/shows with the Brush tool)
+- [x] 17.6 Playwright: enabled the toggle from `#brush-library-toggle`
+      while Brush was active, confirmed `#pencil-library-toggle` also
+      shows `active` after switching to Pencil (one shared state); full
+      `node --test` suite still 103/103

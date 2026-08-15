@@ -86,3 +86,33 @@
       now spans the popover's full inner width and sits fully inside the
       popover's bounding box (was previously a ~42px square with the
       label rendering outside it)
+
+## 7. Delete-palette confirmation + default-palette protection
+
+- [x] 7.1 **Bug**: the default "Material" palette could be deleted with a
+      single click (delete was only disabled when it was the *only*
+      remaining palette), and no delete in the app asked for confirmation
+      first
+- [x] 7.2 `js/persistence.js`: `createColorPalette(name, colors,
+      isDefault = false)` gains an `isDefault` flag, persisted on the
+      record; `loadColorPalettes()`'s first-ever-load auto-create now
+      passes `isDefault: true`
+- [x] 7.3 New `js/confirm-dialog.js`: `confirmDialog({title, message,
+      confirmLabel})` - a shared, dark-themed, promise-based "are you
+      sure?" modal (lazily built once, appended to `<body>`), replacing
+      `window.confirm()` everywhere the app deletes something. Dismisses
+      via Cancel, clicking outside, or Escape (all resolve `false`)
+- [x] 7.4 `js/workspace.js`: `deletePaletteButton` is now also disabled
+      whenever the active palette's `isDefault` is true (in addition to
+      the existing "only one palette left" check); its click handler
+      awaits `confirmDialog` before calling `deleteColorPalette`
+- [x] 7.5 Same `confirmDialog` wired into `js/gallery.js` (project
+      delete, replacing its prior `window.confirm`), the custom-brush
+      delete button, and the per-layer delete button (`js/workspace.js`)
+      - every delete action in the app now confirms first
+- [x] 7.6 Playwright: default "Material" palette's delete button stays
+      disabled even with a second palette present and active; deleting a
+      non-default palette shows the confirm modal, Cancel leaves it
+      intact, Confirm removes it; same confirm-then-delete flow verified
+      for a layer, a custom brush, and a gallery project; re-run full
+      `node --test` suite (103/103)

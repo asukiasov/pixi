@@ -15,6 +15,7 @@ import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js'
 import { drawRectangle, clipToSelection } from './shape-tools.js';
 import { DEFAULT_MATERIAL_COLORS } from './default-color-library.js';
 import { bresenhamLine, strokeFreehandThick } from './engine.js';
+import { confirmDialog } from './confirm-dialog.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
 
@@ -125,6 +126,7 @@ let backgroundSwatchEl = null;
 let zoomReadout = null;
 let pencilOptionsPanel = null;
 let pencilLibraryToggle = null;
+let brushLibraryToggle = null;
 let rectangleOptionsPanel = null;
 
 // Named, persisted palettes of user-added colors (superseded the old
@@ -195,6 +197,41 @@ function colorForCurrentTool() {
 }
 
 /**
+ * Resolves the color for the `index`-th pixel/placement of a cycling
+ * stroke - Rainbow (hue-stepped) or Color Library sequence (steps through
+ * the active palette's colors, wrapping), whichever is active, falling
+ * back to the plain foreground color. Shared by Pencil/Eraser's
+ * `pencilOrEraserApplyPixel` and the Brush tool's `redrawBrushPath` so the
+ * two cycling modes behave identically everywhere they're offered, not
+ * two parallel implementations that could drift.
+ */
+function colorForSequenceIndex(index) {
+  if (state.brushRainbow) return rainbowColor(index * RAINBOW_HUE_STEP);
+  if (state.colorLibrarySequence) {
+    const active = colorPalettes.find((p) => p.id === activePaletteId);
+    const colors = active?.colors ?? [];
+    if (colors.length > 0) return hexToRgba(colors[index % colors.length]);
+  }
+  return state.foregroundColor;
+}
+
+/**
+ * Turns Color Library sequence on/off, keeping both its toggle buttons in
+ * sync - #pencil-library-toggle (Pencil options panel) and
+ * #brush-library-toggle (Brushes panel) are two separate DOM elements
+ * (their parent panels are never both visible at once) wired to the same
+ * `state.colorLibrarySequence` flag, so either one can turn it on/off and
+ * both reflect the result. Mutually exclusive with Rainbow: enabling this
+ * clears `state.brushRainbow`, the same way selecting Rainbow clears this.
+ */
+function setColorLibrarySequence(enabled) {
+  state.colorLibrarySequence = enabled;
+  if (enabled) state.brushRainbow = false;
+  pencilLibraryToggle.classList.toggle('active', enabled);
+  brushLibraryToggle.classList.toggle('active', enabled);
+}
+
+/**
  * Returns the per-pixel operation strokeFreehandThick should call for the
  * current tool: Pencil blends the draw color at pencilOpacity
  * (setPixelBlended), Eraser fades existing alpha at pencilOpacity
@@ -206,24 +243,13 @@ function pencilOrEraserApplyPixel(engine) {
   if (state.currentTool === 'eraser') {
     return (x, y) => engine.erasePixelBlended(x, y, state.pencilOpacity);
   }
-  // Rainbow cycles per unique pixel placed, same as Brush - the index
-  // strokeFreehandThick now passes is the pixel's order among unique
-  // placements (not raw path position), so Spacing-style skips don't
-  // exist here but dedup-skipped pixels still don't throw off the cycle.
-  if (state.brushRainbow) {
-    return (x, y, index) => engine.setPixelBlended(x, y, rainbowColor(index * RAINBOW_HUE_STEP), state.pencilOpacity);
-  }
-  // Color Library sequence (Pencil only, toggled in #pencil-options): cycles
-  // through the active palette's colors per unique pixel placed, same
-  // index-driven cycling as Rainbow above, just sourced from
-  // colorPalettes/activePaletteId instead of a hue formula. Falls back to
-  // the plain foreground color if the active palette has none.
-  if (state.pencilLibrarySequence) {
-    const active = colorPalettes.find((p) => p.id === activePaletteId);
-    const colors = active?.colors ?? [];
-    if (colors.length > 0) {
-      return (x, y, index) => engine.setPixelBlended(x, y, hexToRgba(colors[index % colors.length]), state.pencilOpacity);
-    }
+  // Rainbow and Color Library sequence both cycle per unique pixel placed,
+  // same as Brush - the index strokeFreehandThick now passes is the
+  // pixel's order among unique placements (not raw path position), so
+  // Spacing-style skips don't exist here but dedup-skipped pixels still
+  // don't throw off the cycle.
+  if (state.brushRainbow || state.colorLibrarySequence) {
+    return (x, y, index) => engine.setPixelBlended(x, y, colorForSequenceIndex(index), state.pencilOpacity);
   }
   return (x, y) => engine.setPixelBlended(x, y, state.foregroundColor, state.pencilOpacity);
 }
@@ -353,7 +379,12 @@ function buildLayerRow(layer, index, isActive, layerCount) {
   deleteButton.innerHTML = '<span class="material-symbols-outlined">delete</span>';
   deleteButton.title = 'Delete layer';
   deleteButton.disabled = layerCount <= 1;
-  deleteButton.addEventListener('click', () => {
+  deleteButton.addEventListener('click', async () => {
+    const proceed = await confirmDialog({
+      title: 'Delete layer?',
+      message: `Delete "${layer.name}"? This can't be undone.`,
+    });
+    if (!proceed) return;
     state.layerStack.deleteLayer(index);
     state.canvasView.render();
     commit();
@@ -432,7 +463,7 @@ async function loadCustomBrushes() {
 async function loadColorPalettes() {
   let palettes = await listColorPalettes();
   if (palettes.length === 0) {
-    const defaultPalette = await createColorPalette('Material', [...DEFAULT_MATERIAL_COLORS]);
+    const defaultPalette = await createColorPalette('Material', [...DEFAULT_MATERIAL_COLORS], true);
     palettes = [defaultPalette];
   }
   colorPalettes = palettes;
@@ -482,9 +513,12 @@ function renderColorLibraryPanel() {
     colorLibraryGrid.appendChild(empty);
   }
 
-  // Can't delete the only remaining palette - same "can't delete the
-  // only layer" pattern the Layers panel already uses.
-  deletePaletteButton.disabled = colorPalettes.length <= 1;
+  // Can't delete the only remaining palette (same "can't delete the only
+  // layer" pattern the Layers panel already uses), and can't delete the
+  // built-in default palette even when other palettes exist - there
+  // should always be at least one populated, undeletable palette to fall
+  // back to.
+  deletePaletteButton.disabled = colorPalettes.length <= 1 || Boolean(active?.isDefault);
 
   syncActiveSwatch();
 }
@@ -781,8 +815,7 @@ function renderPaletteRow() {
   rainbowSwatch.title = 'Rainbow (Brush tool only)';
   rainbowSwatch.addEventListener('click', () => {
     state.brushRainbow = true;
-    state.pencilLibrarySequence = false;
-    pencilLibraryToggle.classList.remove('active');
+    setColorLibrarySequence(false);
     syncActiveSwatch();
   });
   paletteRow.appendChild(rainbowSwatch);
@@ -946,12 +979,12 @@ function bindDomOnce() {
 
   // Color Library sequence toggle - on/off, same pattern as Rectangle's
   // Filled toggle below. Mutually exclusive with Rainbow (both are
-  // per-pixel color-cycling modes for the same applyPixel slot).
+  // per-pixel color-cycling modes for the same applyPixel slot). Offered
+  // on both Pencil (this button) and Brush (#brush-library-toggle, below)
+  // - see setColorLibrarySequence.
   pencilLibraryToggle = document.getElementById('pencil-library-toggle');
   pencilLibraryToggle.addEventListener('click', () => {
-    state.pencilLibrarySequence = !state.pencilLibrarySequence;
-    if (state.pencilLibrarySequence) state.brushRainbow = false;
-    pencilLibraryToggle.classList.toggle('active', state.pencilLibrarySequence);
+    setColorLibrarySequence(!state.colorLibrarySequence);
     syncActiveSwatch();
   });
 
@@ -1089,6 +1122,11 @@ function bindDomOnce() {
   deleteBrushButton.addEventListener('click', async () => {
     const custom = allBrushes.find((b) => b.id === state.currentBrush.id && b.isCustom);
     if (!custom) return;
+    const proceed = await confirmDialog({
+      title: 'Delete brush?',
+      message: `Delete "${custom.name}"? This can't be undone.`,
+    });
+    if (!proceed) return;
     await deleteCustomBrush(custom.id);
     await loadCustomBrushes();
     state.currentBrush = allBrushes[0];
@@ -1097,6 +1135,15 @@ function bindDomOnce() {
 
   addBrushButton.addEventListener('click', () => openBrushEditor());
   bindBrushEditorOnce();
+
+  // Same Color Library sequence toggle as Pencil's, offered for Brush too
+  // (see setColorLibrarySequence) - a separate button since #brushes-panel
+  // and #pencil-options are never both visible at once.
+  brushLibraryToggle = document.getElementById('brush-library-toggle');
+  brushLibraryToggle.addEventListener('click', () => {
+    setColorLibrarySequence(!state.colorLibrarySequence);
+    syncActiveSwatch();
+  });
 
   // Color Library panel: named, persisted palettes (see design.md's
   // "one Dexie record per palette" decision).
@@ -1137,6 +1184,13 @@ function bindDomOnce() {
 
   deletePaletteButton.addEventListener('click', async () => {
     if (colorPalettes.length <= 1) return; // can't delete the only palette
+    const active = colorPalettes.find((p) => p.id === activePaletteId);
+    if (active?.isDefault) return; // can't delete the built-in default palette
+    const proceed = await confirmDialog({
+      title: 'Delete palette?',
+      message: `Delete "${active?.name ?? 'this palette'}" and all its colors? This can't be undone.`,
+    });
+    if (!proceed) return;
     await deleteColorPalette(activePaletteId);
     activePaletteId = null; // loadColorPalettes falls back to the first remaining
     await loadColorPalettes();
@@ -1362,7 +1416,7 @@ function redrawBrushPath() {
   let placementIndex = 0;
   state.brushPath.forEach((point, i) => {
     if (i % state.brushSpacing !== 0) return;
-    const rgba = state.brushRainbow ? rainbowColor(placementIndex * RAINBOW_HUE_STEP) : state.foregroundColor;
+    const rgba = colorForSequenceIndex(placementIndex);
     const angle = placementIndex * state.brushRotationStep;
     placeBrush(state.strokeEngine, point.x, point.y, state.currentBrush, rgba, angle);
     placementIndex++;
@@ -1397,7 +1451,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     pixelPerfect: false,
     pencilSize: 1,
     pencilOpacity: 1,
-    pencilLibrarySequence: false,
+    colorLibrarySequence: false,
     rectangleFilled: false,
     layersPanelVisible: true,
     selection: null,
@@ -1453,6 +1507,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   document.getElementById('pencil-opacity-readout').textContent = '100%';
   pencilLibraryToggle.classList.remove('active');
   pencilLibraryToggle.classList.remove('hidden'); // Pencil is the default tool
+  brushLibraryToggle.classList.remove('active');
   // Rectangle isn't the default tool, so its options start hidden.
   rectangleOptionsPanel.classList.add('hidden');
   document.getElementById('rectangle-fill-toggle').classList.remove('active');
@@ -1463,6 +1518,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
 
   canvasSettingsControls.setCurrentSize(layerStack.width, layerStack.height);
   canvasSettingsControls.setCurrentName(projectName);
+  canvasSettingsControls.close();
 
   // Selections don't persist with the project (see shape-tools spec) — a
   // freshly opened project always starts with none.

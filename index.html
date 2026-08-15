@@ -200,9 +200,16 @@
         </div>
       </div>
 
+      <!-- Popover anchored to the top bar's gear icon (#canvas-settings-toggle),
+           not a docked bottom panel - positioned via fixed + JS
+           (js/canvas-settings.js), same clamped-to-viewport pattern
+           #color-picker-popover uses. -->
       <div id="canvas-settings-panel" class="canvas-settings-panel hidden">
-        <div class="canvas-settings-row">
+        <div class="canvas-settings-row canvas-settings-header-row">
           <h2>Canvas Settings</h2>
+          <button type="button" id="canvas-settings-close" class="icon-button" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
         </div>
         <div class="canvas-settings-row">
           <label class="canvas-settings-name-label">Name
@@ -282,6 +289,14 @@
           </button>
           <button type="button" id="delete-brush-button" class="tool-button icon-button" disabled title="Delete selected brush">
             <span class="material-symbols-outlined">delete</span>
+          </button>
+          <!-- Same Color Library sequence toggle as Pencil's
+               (#pencil-library-toggle) - a separate DOM instance since
+               #pencil-options (Pencil/Eraser only) and #brushes-panel
+               (Brush only) are never both visible at once, both wired to
+               the same state.colorLibrarySequence flag in js/workspace.js. -->
+          <button type="button" id="brush-library-toggle" class="tool-button icon-button" aria-label="Color Library sequence" data-tooltip="Color Library sequence">
+            <span class="material-symbols-outlined">palette</span>
           </button>
         </div>
 

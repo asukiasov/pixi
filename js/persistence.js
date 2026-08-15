@@ -122,14 +122,19 @@ export async function deleteCustomBrush(id) {
 /**
  * Creates a named palette (optionally seeded with colors) and writes it
  * immediately. `userId` is always null today, same reserved-for-Phase-3
- * pattern as createCustomBrush.
+ * pattern as createCustomBrush. `isDefault` marks the one auto-created,
+ * built-in "Material" palette (see workspace.js's loadColorPalettes) -
+ * the UI refuses to delete it regardless of how many other palettes
+ * exist, so there's always at least one populated palette to fall back
+ * to. Every user-created palette leaves this false.
  */
-export async function createColorPalette(name, colors = []) {
+export async function createColorPalette(name, colors = [], isDefault = false) {
   const now = Date.now();
   const record = {
     id: generateId(),
     name,
     colors,
+    isDefault,
     userId: null,
     createdAt: now,
     updatedAt: now,

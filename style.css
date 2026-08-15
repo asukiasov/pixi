@@ -460,22 +460,33 @@ body {
   pointer-events: none;
 }
 
+/* Popover, not a docked bottom panel - position:fixed + JS
+   (js/canvas-settings.js's positionPanel), same clamped-to-viewport
+   pattern as .color-picker-popover. Its DOM location (inside
+   workspace-main) no longer matters for layout since it's taken out of
+   flow here. */
 .canvas-settings-panel {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 15rem;
   padding: 0.6rem;
-  background: #1c1c1e;
-  border-top: 1px solid #2c2c2e;
-  flex: none;
+  background: #2c2c2e;
+  border: 1px solid #48484a;
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  z-index: 60;
 }
 
 .canvas-settings-row {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  margin-bottom: 0.5rem;
 }
 
-.canvas-settings-row:last-child {
-  margin-bottom: 0;
+.canvas-settings-header-row {
+  justify-content: space-between;
 }
 
 .canvas-settings-row .tool-button {
@@ -1251,4 +1262,52 @@ body {
     transform: translate(var(--dx), calc(var(--dy) + 160px)) rotate(var(--rot));
     opacity: 0;
   }
+}
+
+/* Shared "Are you sure?" confirm modal (js/confirm-dialog.js) - built
+   once, reused for every delete action in the app (project, custom
+   brush, color palette, layer), replacing window.confirm(). */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.confirm-dialog {
+  width: 20rem;
+  max-width: calc(100vw - 2rem);
+  background: #2c2c2e;
+  border: 1px solid #48484a;
+  border-radius: 0.7rem;
+  padding: 1.2rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.confirm-dialog-title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.confirm-dialog-message {
+  margin: 0 0 1.2rem;
+  font-size: 0.85rem;
+  color: #c0c0c5;
+  line-height: 1.4;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.confirm-dialog-confirm {
+  background: #ff453a;
+  border-color: #ff453a;
+  color: #fff;
 }

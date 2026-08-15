@@ -84,3 +84,29 @@ session-only `customSwatches`.
 - **WHEN** the user adds a color to a palette while project A is open,
   then opens project B
 - **THEN** the same palette (with that color) is available in project B
+
+### Requirement: Deleting a palette requires confirmation and protects the default
+Deleting a palette SHALL show a confirmation dialog before removing it
+(asking "are you sure?", not deleting on the first click) and SHALL be
+unavailable both when it is the only remaining palette and when it is the
+built-in default ("Material") palette, regardless of how many other
+palettes exist — there must always be at least one populated, undeletable
+palette to fall back to. Added directly: the delete control originally
+had neither protection, so the built-in default (and, before this
+requirement, any palette) could be removed with a single accidental
+click and no way to undo it.
+
+#### Scenario: Deleting a palette asks for confirmation
+- **WHEN** the user clicks delete on a non-default palette that isn't the
+  only one
+- **THEN** a confirmation dialog appears before anything is deleted;
+  confirming deletes it, canceling leaves it untouched
+
+#### Scenario: The default palette can never be deleted
+- **WHEN** the built-in "Material" palette is active, even if other
+  palettes exist
+- **THEN** its delete control is disabled
+
+#### Scenario: The only remaining palette can never be deleted
+- **WHEN** exactly one palette exists (default or otherwise)
+- **THEN** its delete control is disabled

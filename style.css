@@ -447,7 +447,7 @@ body {
 }
 
 #workspace-canvas.pan-mode.panning {
-  cursor: url('assets/cursors/pets-picked.svg') 12 10, grabbing;
+  cursor: url('assets/cursors/pets-picked.svg') 12 12, grabbing;
 }
 
 .selection-overlay {

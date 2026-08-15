@@ -196,14 +196,17 @@
       pets/default/24px.svg`, not hand-approximated), 24x24, used for the
       idle Hand-tool cursor
 - [x] 11.2 New `assets/cursors/pets-picked.svg` - user-supplied "picked
-      up paw" artwork, given explicit `width="24" height="19"` (matching
-      its 18.2:14.4 viewBox aspect ratio; the source file had neither,
-      which would have defaulted to the CSS-replaced-element default of
-      300x150 as a cursor image), metadata/Illustrator cruft stripped;
-      used for the dragging Hand-tool cursor
+      up paw" artwork, given an explicit `width`/`height` matching its
+      viewBox (the source file had neither, which would have defaulted
+      to the CSS-replaced-element default of 300x150 as a cursor image),
+      metadata/Illustrator cruft stripped; used for the dragging
+      Hand-tool cursor. Replaced once with a re-exported 24x24 (square)
+      version of the same artwork, superseding the original's 18.2x14.4
+      viewBox - `width`/`height` and the CSS hotspot below were updated
+      to match
 - [x] 11.3 `style.css`: `.pan-mode`/`.pan-mode.panning` now set `cursor:
       url('assets/cursors/pets.svg') 12 12, grab` /
-      `url('assets/cursors/pets-picked.svg') 12 10, grabbing` -
+      `url('assets/cursors/pets-picked.svg') 12 12, grabbing` -
       `grab`/`grabbing` kept as the fallback if the SVG cursor image ever
       fails to load, not removed
 - [x] 11.4 Playwright: confirmed `getComputedStyle(canvas).cursor`

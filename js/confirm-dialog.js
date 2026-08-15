@@ -21,7 +21,7 @@ function ensureBuilt() {
       <p class="confirm-dialog-message"></p>
       <div class="confirm-dialog-actions">
         <button type="button" class="tool-button confirm-dialog-cancel">Cancel</button>
-        <button type="button" class="tool-button confirm-dialog-confirm">Delete</button>
+        <button type="button" class="tool-button confirm-dialog-confirm no-buzz">Delete</button>
       </div>
     </div>
   `;

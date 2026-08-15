@@ -28,6 +28,22 @@ const screens = {
   document.addEventListener(type, (e) => e.preventDefault());
 });
 
+// Flags iOS/iPadOS (including iPadOS 13+, which reports as "MacIntel"
+// in the UA string - the maxTouchPoints check distinguishes it from an
+// actual Mac) via a class on <html>, so style.css can scope the "Buzz"
+// hover effect to it. A CSS media-query approach was tried first
+// ((hover: hover) and (pointer: coarse), meant to target a hover-
+// capable touchscreen) but Apple Pencil is a *precise* stylus - it
+// reports `pointer: fine`, the same as a mouse - so that query excluded
+// Pencil hover right along with the desktop mouse hover it was meant to
+// exclude, and buzz stopped appearing on iPad entirely. CSS alone can't
+// distinguish "a mouse is hovering" from "a Pencil is hovering" (both
+// are fine+hover-capable); platform detection is the only way to keep
+// buzz iPad-only without also catching desktop mice.
+if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+  document.documentElement.classList.add('ios-platform');
+}
+
 function showScreen(name) {
   for (const [key, el] of Object.entries(screens)) {
     el.classList.toggle('hidden', key !== name);

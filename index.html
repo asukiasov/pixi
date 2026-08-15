@@ -17,7 +17,7 @@
        original range query pulled the full variable font (~4MB, ~30s on a
        slow connection, icons invisible until it finished); this is a few
        KB. Keep icon_names in sync with the icons used in this file. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,colorize,undo,redo,add,remove,delete,visibility,visibility_off,restart_alt,swap_horiz,close,home,grid_on,layers,settings,download,arrow_upward,arrow_downward,rotate_left,rotate_right,check_box_outline_blank,check_box,palette,arrow_selector_tool,playlist_add,crop_square" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,colorize,undo,redo,add,remove,delete,visibility,visibility_off,restart_alt,swap_horiz,close,home,grid_on,layers,settings,download,arrow_upward,arrow_downward,rotate_left,rotate_right,check_box_outline_blank,check_box,palette,arrow_selector_tool,playlist_add,opacity" />
 </head>
 <body>
   <main id="screen-gallery" class="screen">
@@ -170,8 +170,18 @@
            same tool-scoped-visibility pattern the Brushes panel uses. -->
       <!-- Rectangle's Filled toggle - tool-scoped like Pencil options below. -->
       <div id="rectangle-options" class="rectangle-options hidden">
+        <!-- Inline SVGs (Material Symbols' actual "rectangle" glyph,
+             outline and solid-fill variants), not the font icon used
+             elsewhere - the subsetted icon webfont only bakes a single
+             fixed FILL-axis point (0, outline), so it can't render a
+             true solid variant of the same glyph at runtime; these two
+             raw paths are fetched once from Google's static icon SVG
+             CDN, same source as the font, and swapped via visibility
+             instead. Was check_box/check_box_outline_blank - changed
+             per feedback that those didn't read as "filled rectangle". -->
         <button type="button" id="rectangle-fill-toggle" class="tool-button icon-button" aria-label="Filled" data-tooltip="Filled rectangle">
-          <span class="material-symbols-outlined" id="rectangle-fill-icon">check_box_outline_blank</span>
+          <svg id="rectangle-fill-icon-outline" class="rectangle-fill-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M80-160v-640h800v640H80Zm80-80h640v-480H160v480Zm0 0v-480 480Z"/></svg>
+          <svg id="rectangle-fill-icon-filled" class="rectangle-fill-icon hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M80-160v-640h800v640H80Z"/></svg>
         </button>
       </div>
 
@@ -180,9 +190,7 @@
            dragging (see squareDragCurrent/shiftHeld in js/workspace.js)
            for touchscreens, which have no Shift key. -->
       <div id="square-constraint-options" class="rectangle-options hidden">
-        <button type="button" id="square-constraint-toggle" class="tool-button icon-button" aria-label="1:1 proportion" data-tooltip="1:1 proportion (like holding Shift)">
-          <span class="material-symbols-outlined">crop_square</span>
-        </button>
+        <button type="button" id="square-constraint-toggle" class="tool-button square-constraint-button" aria-label="1:1 proportion" data-tooltip="1:1 proportion (like holding Shift)">1:1</button>
       </div>
     </aside>
 
@@ -247,23 +255,23 @@
       <div id="palette-row" class="palette-row"></div>
 
       <div id="selection-controls" class="selection-controls hidden">
-        <button type="button" id="selection-clear-button" class="tool-button">Clear selection</button>
-        <button type="button" id="selection-delete-button" class="tool-button">Delete</button>
+        <button type="button" id="selection-clear-button" class="tool-button no-buzz">Clear selection</button>
+        <button type="button" id="selection-delete-button" class="tool-button no-buzz">Delete</button>
       </div>
 
       <nav class="bottom-bar">
         <!-- 1. Zoom: bottom-left, per the canvas-navigation spec. -->
         <div class="bottom-bar-group zoom-controls">
-          <button type="button" id="zoom-out-button" class="tool-button icon-button" title="Zoom out (Ctrl/Cmd -)">
+          <button type="button" id="zoom-out-button" class="tool-button icon-button no-buzz" title="Zoom out (Ctrl/Cmd -)">
             <span class="material-symbols-outlined">remove</span>
           </button>
           <span id="zoom-readout" class="zoom-readout">100%</span>
-          <button type="button" id="zoom-in-button" class="tool-button icon-button" title="Zoom in (Ctrl/Cmd +)">
+          <button type="button" id="zoom-in-button" class="tool-button icon-button no-buzz" title="Zoom in (Ctrl/Cmd +)">
             <span class="material-symbols-outlined">add</span>
           </button>
-          <button type="button" id="zoom-preset-100" class="tool-button" title="Actual size">100%</button>
-          <button type="button" id="zoom-preset-fit" class="tool-button" title="Fit the canvas to the screen">Fit</button>
-          <button type="button" id="zoom-preset-fill" class="tool-button" title="Fill the screen with the canvas">Fill</button>
+          <button type="button" id="zoom-preset-100" class="tool-button no-buzz" title="Actual size">100%</button>
+          <button type="button" id="zoom-preset-fit" class="tool-button no-buzz" title="Fit the canvas to the screen">Fit</button>
+          <button type="button" id="zoom-preset-fill" class="tool-button no-buzz" title="Fill the screen with the canvas">Fill</button>
         </div>
       </nav>
     </div>
@@ -273,11 +281,32 @@
          see #layers-panel-toggle above); Brushes is scoped to the Brush
          tool (see js/workspace.js) - both independent of each other. -->
     <aside id="right-sidebar" class="right-sidebar">
+      <!-- Photoshop-style Layers panel: a shared toolbar (Blend mode +
+           Opacity, editing whichever layer is active) above a list of
+           compact single-row layers (thumbnail + name + visibility),
+           rather than each row carrying its own opacity/blend controls.
+           Reorder/delete stay as small per-row icons (Photoshop uses
+           drag-and-drop for reordering and a panel-level trash target;
+           this app has neither, so tap-to-reorder + a per-row delete
+           icon is the closest equivalent). -->
       <div id="layers-panel" class="layers-panel">
         <div class="layers-panel-header">
           <h2>Layers</h2>
           <button type="button" id="add-layer-button" class="tool-button">+ Layer</button>
         </div>
+        <div class="layers-panel-toolbar">
+          <select id="layers-panel-blend-select" class="layers-panel-blend-select" aria-label="Blend mode"></select>
+          <div class="layers-panel-opacity" data-tooltip="Opacity">
+            <span class="material-symbols-outlined layers-panel-opacity-icon">opacity</span>
+            <input type="range" id="layers-panel-opacity-slider" class="layers-panel-opacity-slider" min="0" max="100" value="100" aria-label="Layer opacity" />
+            <span id="layers-panel-opacity-readout" class="layers-panel-opacity-readout">100%</span>
+          </div>
+        </div>
+        <!-- Toolbar's two rows stack instead of sharing one line -
+             the right-sidebar's ~13rem width can't fit a blend
+             dropdown, "Opacity" label, slider, and percentage on a
+             single line the way Photoshop's wider desktop panel can
+             (an earlier attempt at one line overflowed the sidebar). -->
         <div id="layers-panel-list" class="layers-panel-list"></div>
       </div>
 
@@ -300,7 +329,7 @@
           <button type="button" id="add-brush-button" class="tool-button icon-button" title="Add brush">
             <span class="material-symbols-outlined">add</span>
           </button>
-          <button type="button" id="delete-brush-button" class="tool-button icon-button" disabled title="Delete selected brush">
+          <button type="button" id="delete-brush-button" class="tool-button icon-button no-buzz" disabled title="Delete selected brush">
             <span class="material-symbols-outlined">delete</span>
           </button>
           <!-- Same Color Library sequence toggle as Pencil's
@@ -354,7 +383,7 @@
             <button type="button" id="add-palette-button" class="tool-button icon-button" aria-label="Add palette" data-tooltip="New palette">
               <span class="material-symbols-outlined">add</span>
             </button>
-            <button type="button" id="delete-palette-button" class="tool-button icon-button" aria-label="Delete palette" data-tooltip="Delete palette">
+            <button type="button" id="delete-palette-button" class="tool-button icon-button no-buzz" aria-label="Delete palette" data-tooltip="Delete palette">
               <span class="material-symbols-outlined">delete</span>
             </button>
           </div>

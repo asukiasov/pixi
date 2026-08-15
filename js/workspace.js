@@ -133,6 +133,9 @@ let brushesPanelGrid = null;
 let deleteBrushButton = null;
 let layersPanel = null;
 let layersPanelToggle = null;
+let layersPanelBlendSelect = null;
+let layersPanelOpacitySlider = null;
+let layersPanelOpacityReadout = null;
 let foregroundSwatchEl = null;
 let backgroundSwatchEl = null;
 
@@ -283,6 +286,40 @@ function clearSelection() {
   updateSelectionControls();
 }
 
+/**
+ * Renders `layer`'s actual pixel content into a small canvas - a real
+ * thumbnail preview, Photoshop-style, not a generic placeholder. Full
+ * layer resolution is drawn (browsers downscale via CSS sizing on the
+ * <canvas> element itself, same object-fit:contain-over-a-flat-
+ * background approach the Gallery's project thumbnails already use), so
+ * this stays correct after any resize without regenerating anything.
+ */
+function buildLayerThumbnailCanvas(layer) {
+  const canvas = document.createElement('canvas');
+  canvas.className = 'layer-thumbnail';
+  canvas.width = layer.engine.width;
+  canvas.height = layer.engine.height;
+  const ctx = canvas.getContext('2d');
+  ctx.putImageData(new ImageData(new Uint8ClampedArray(layer.engine.data), layer.engine.width, layer.engine.height), 0, 0);
+  return canvas;
+}
+
+/**
+ * Syncs the panel-level Blend mode/Opacity toolbar (see index.html) to
+ * the currently active layer - Photoshop-style, these controls edit
+ * whichever layer is selected rather than living inline in every row.
+ * Called after every render (a fresh active layer may now be selected)
+ * and once right after wiring in bindDomOnce.
+ */
+function syncLayersPanelToolbar() {
+  const layer = state.layerStack.getActiveLayer();
+  if (!layer) return;
+  layersPanelBlendSelect.value = layer.blendMode;
+  const opacityPercent = Math.round(layer.opacity * 100);
+  layersPanelOpacitySlider.value = String(opacityPercent);
+  layersPanelOpacityReadout.textContent = `${opacityPercent}%`;
+}
+
 function renderLayersPanel() {
   const layers = state.layerStack.getLayers();
   const activeIndex = state.layerStack.getActiveIndex();
@@ -295,13 +332,23 @@ function renderLayersPanel() {
   }
 
   state.addLayerButton.disabled = layers.length >= 8;
+  syncLayersPanelToolbar();
 }
 
+/**
+ * A single compact row - thumbnail, visibility, name, and small
+ * reorder/delete icons - Photoshop's own Layers panel row, adapted to
+ * this app's tap-to-reorder (Photoshop uses drag-and-drop, which this
+ * app doesn't implement) and per-row delete icon (Photoshop's trash
+ * target lives once at the panel's bottom, but a per-row icon is a
+ * closer fit for a touch-first app anyway). Blend mode/Opacity are NOT
+ * here - see the panel-level toolbar/syncLayersPanelToolbar.
+ */
 function buildLayerRow(layer, index, isActive, layerCount) {
   const row = document.createElement('div');
   row.className = 'layer-row' + (isActive ? ' active' : '');
   row.addEventListener('click', (e) => {
-    if (e.target.closest('button, input, select')) return;
+    if (e.target.closest('button, input')) return;
     state.layerStack.setActiveLayer(index);
     renderLayersPanel();
   });
@@ -318,6 +365,8 @@ function buildLayerRow(layer, index, isActive, layerCount) {
     renderLayersPanel();
   });
 
+  const thumbnail = buildLayerThumbnailCanvas(layer);
+
   const nameInput = document.createElement('input');
   nameInput.type = 'text';
   nameInput.className = 'layer-name-input';
@@ -326,38 +375,6 @@ function buildLayerRow(layer, index, isActive, layerCount) {
     state.layerStack.renameLayer(index, nameInput.value.trim() || layer.name);
     commit();
     renderLayersPanel();
-  });
-
-  const opacityInput = document.createElement('input');
-  opacityInput.type = 'range';
-  opacityInput.min = '0';
-  opacityInput.max = '100';
-  opacityInput.value = String(Math.round(layer.opacity * 100));
-  opacityInput.className = 'layer-opacity-slider';
-  opacityInput.title = 'Opacity';
-  opacityInput.addEventListener('input', () => {
-    // Live-update the canvas while dragging, but don't rebuild the panel
-    // (that would destroy this slider mid-drag) or commit every tick.
-    state.layerStack.setOpacity(index, Number(opacityInput.value) / 100);
-    state.canvasView.render();
-  });
-  opacityInput.addEventListener('change', () => {
-    commit();
-  });
-
-  const blendSelect = document.createElement('select');
-  blendSelect.className = 'layer-blend-select';
-  for (const mode of BLEND_MODES) {
-    const option = document.createElement('option');
-    option.value = mode;
-    option.textContent = mode[0].toUpperCase() + mode.slice(1);
-    if (mode === layer.blendMode) option.selected = true;
-    blendSelect.appendChild(option);
-  }
-  blendSelect.addEventListener('change', () => {
-    state.layerStack.setBlendMode(index, blendSelect.value);
-    state.canvasView.render();
-    commit();
   });
 
   const upButton = document.createElement('button');
@@ -388,7 +405,7 @@ function buildLayerRow(layer, index, isActive, layerCount) {
 
   const deleteButton = document.createElement('button');
   deleteButton.type = 'button';
-  deleteButton.className = 'layer-delete-button icon-button';
+  deleteButton.className = 'layer-delete-button icon-button no-buzz';
   deleteButton.innerHTML = '<span class="material-symbols-outlined">delete</span>';
   deleteButton.title = 'Delete layer';
   deleteButton.disabled = layerCount <= 1;
@@ -404,18 +421,11 @@ function buildLayerRow(layer, index, isActive, layerCount) {
     renderLayersPanel();
   });
 
-  // Two sub-rows, not one flat row — the right-sidebar's 13rem width can't
-  // fit all six controls on one line the way the old full-width
-  // bottom-docked panel could (see style.css's .layer-row-top/-bottom).
-  const topRow = document.createElement('div');
-  topRow.className = 'layer-row-top';
-  topRow.append(visibilityButton, nameInput, deleteButton);
+  const actions = document.createElement('div');
+  actions.className = 'layer-row-actions';
+  actions.append(upButton, downButton, deleteButton);
 
-  const bottomRow = document.createElement('div');
-  bottomRow.className = 'layer-row-bottom';
-  bottomRow.append(opacityInput, blendSelect, upButton, downButton);
-
-  row.append(topRow, bottomRow);
+  row.append(visibilityButton, thumbnail, nameInput, actions);
   return row;
 }
 
@@ -1042,11 +1052,13 @@ function bindDomOnce() {
   // Rectangle's Filled toggle - tool-scoped, same pattern as Pencil options.
   rectangleOptionsPanel = document.getElementById('rectangle-options');
   const rectangleFillToggle = document.getElementById('rectangle-fill-toggle');
-  const rectangleFillIcon = document.getElementById('rectangle-fill-icon');
+  const rectangleFillIconOutline = document.getElementById('rectangle-fill-icon-outline');
+  const rectangleFillIconFilled = document.getElementById('rectangle-fill-icon-filled');
   rectangleFillToggle.addEventListener('click', () => {
     state.rectangleFilled = !state.rectangleFilled;
     rectangleFillToggle.classList.toggle('active', state.rectangleFilled);
-    rectangleFillIcon.textContent = state.rectangleFilled ? 'check_box' : 'check_box_outline_blank';
+    rectangleFillIconOutline.classList.toggle('hidden', state.rectangleFilled);
+    rectangleFillIconFilled.classList.toggle('hidden', !state.rectangleFilled);
   });
 
   // 1:1 proportion toggle - Rectangle and Selection, a persistent
@@ -1269,6 +1281,36 @@ function bindDomOnce() {
     state.layersPanelVisible = !state.layersPanelVisible;
     layersPanel.classList.toggle('hidden', !state.layersPanelVisible);
     layersPanelToggle.classList.toggle('active', state.layersPanelVisible);
+  });
+
+  // Layers panel toolbar (Blend mode + Opacity) - edits whichever layer
+  // is active, Photoshop-style, rather than living inline in every row
+  // (see buildLayerRow/syncLayersPanelToolbar).
+  layersPanelBlendSelect = document.getElementById('layers-panel-blend-select');
+  for (const mode of BLEND_MODES) {
+    const option = document.createElement('option');
+    option.value = mode;
+    option.textContent = mode[0].toUpperCase() + mode.slice(1);
+    layersPanelBlendSelect.appendChild(option);
+  }
+  layersPanelBlendSelect.addEventListener('change', () => {
+    state.layerStack.setBlendMode(state.layerStack.getActiveIndex(), layersPanelBlendSelect.value);
+    state.canvasView.render();
+    commit();
+  });
+
+  layersPanelOpacitySlider = document.getElementById('layers-panel-opacity-slider');
+  layersPanelOpacityReadout = document.getElementById('layers-panel-opacity-readout');
+  layersPanelOpacitySlider.addEventListener('input', () => {
+    const value = Number(layersPanelOpacitySlider.value);
+    // Live-update the canvas while dragging, but don't rebuild the
+    // panel (that would fight the slider mid-drag) or commit every tick.
+    state.layerStack.setOpacity(state.layerStack.getActiveIndex(), value / 100);
+    layersPanelOpacityReadout.textContent = `${value}%`;
+    state.canvasView.render();
+  });
+  layersPanelOpacitySlider.addEventListener('change', () => {
+    commit();
   });
 
   // Zoom: +/- buttons and the three presets all just call the CanvasView
@@ -1615,7 +1657,8 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   // Rectangle isn't the default tool, so its options start hidden.
   rectangleOptionsPanel.classList.add('hidden');
   document.getElementById('rectangle-fill-toggle').classList.remove('active');
-  document.getElementById('rectangle-fill-icon').textContent = 'check_box_outline_blank';
+  document.getElementById('rectangle-fill-icon-outline').classList.remove('hidden');
+  document.getElementById('rectangle-fill-icon-filled').classList.add('hidden');
   // Neither Rectangle nor Selection is the default tool, so this starts
   // hidden too.
   squareConstraintPanel.classList.add('hidden');

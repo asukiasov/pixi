@@ -199,6 +199,16 @@ body {
   line-height: 1;
 }
 
+/* Rectangle Filled toggle's icon - raw SVG, not a font glyph (see
+   index.html for why). currentColor so it follows the button's text
+   color exactly like the font icons do (including the active/blue
+   state via .tool-button.active). */
+.rectangle-fill-icon {
+  width: 1.3rem;
+  height: 1.3rem;
+  fill: currentColor;
+}
+
 .workspace-screen {
   /* .screen's default column direction now holds: the topbar sits above
      everything, and .workspace-body (below) is its own row - tools
@@ -246,6 +256,14 @@ body {
   margin-top: 0.4rem;
   padding-top: 0.6rem;
   border-top: 1px solid #2c2c2e;
+}
+
+/* "1:1" proportion toggle - a plain text label (like the zoom preset
+   buttons), not an icon - clearer than any icon at communicating "1:1"
+   specifically, per feedback. */
+.square-constraint-button {
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 /* Pencil/Eraser Size + Opacity - floats over the canvas's top-left
@@ -606,37 +624,96 @@ body {
   font-size: 0.8rem;
 }
 
+/* Photoshop-style toolbar: Blend mode + Opacity, editing whichever
+   layer is active - not per-row (see syncLayersPanelToolbar in
+   js/workspace.js). */
+.layers-panel-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.4rem 0.5rem;
+  border-top: 1px solid #2c2c2e;
+  border-bottom: 1px solid #2c2c2e;
+  background: #232325;
+}
+
+.layers-panel-blend-select {
+  width: 100%;
+  background: #2c2c2e;
+  color: inherit;
+  border: 1px solid #48484a;
+  border-radius: 0.3rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.3rem;
+}
+
+.layers-panel-opacity {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Icon, not the word "Opacity" - reclaims space this row needs at the
+   sidebar's narrowest clamped width (see .right-sidebar); a tooltip on
+   the row (data-tooltip) still names it. Matches the icon-only
+   convention the Pencil Size/Opacity sliders already use. */
+.layers-panel-opacity-icon {
+  flex: none;
+  font-size: 1rem;
+  color: #a0a0a5;
+}
+
+.layers-panel-opacity-slider {
+  flex: 1 1 auto;
+  min-width: 2rem;
+}
+
+.layers-panel-opacity-readout {
+  flex: none;
+  font-size: 0.7rem;
+  color: #a0a0a5;
+  width: 2rem;
+  text-align: right;
+}
+
 .layers-panel-list {
   display: flex;
   flex-direction: column;
 }
 
-/* Two sub-rows, not one flat row — the 13rem sidebar is too narrow to fit
-   visibility/name/opacity/blend/reorder/delete on a single line the way
-   the old full-width bottom-docked panel could. */
+/* One compact row per layer - thumbnail, visibility, name, small
+   reorder/delete icons. Blend mode/Opacity moved to the shared toolbar
+   above (see .layers-panel-toolbar), matching Photoshop's own panel,
+   where those controls apply to the selected layer rather than living
+   inline in every row. */
 .layer-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.35rem 0.5rem;
-  border-top: 1px solid #2c2c2e;
-}
-
-.layer-row-top,
-.layer-row-bottom {
-  display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.4rem;
+  padding: 0.3rem 0.4rem;
+  border-top: 1px solid #2c2c2e;
+  cursor: pointer;
 }
 
+/* Photoshop's own selected-row highlight - a solid accent bar, not just
+   a subtly darker background. */
 .layer-row.active {
-  background: #2c2c2e;
+  background: #0a5cad;
+}
+
+.layer-row.active .layer-name-input,
+.layer-row.active .layer-reorder-button,
+.layer-row.active .layer-delete-button,
+.layer-row.active .layer-visibility-toggle {
+  color: #fff;
 }
 
 .layer-visibility-toggle {
   flex: none;
-  width: 1.6rem;
-  height: 1.6rem;
+  width: 1.4rem;
+  height: 1.4rem;
   background: transparent;
   border: none;
   color: inherit;
@@ -648,6 +725,22 @@ body {
 .layer-visibility-toggle .material-symbols-outlined,
 .layer-delete-button .material-symbols-outlined {
   font-size: 1.1rem;
+}
+
+/* Real per-layer pixel-content preview, Photoshop-style, not a generic
+   placeholder (see buildLayerThumbnailCanvas). Flat light background
+   behind it stands in for transparency, same convention the Gallery's
+   own project thumbnails already use. */
+.layer-thumbnail {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  background: #e2e2e2;
+  border: 1px solid #48484a;
+  border-radius: 0.2rem;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  object-fit: contain;
 }
 
 .layer-name-input {
@@ -666,26 +759,17 @@ body {
   outline: none;
 }
 
-.layer-opacity-slider {
-  flex: 1 1 auto;
-  min-width: 2.5rem;
-}
-
-.layer-blend-select {
+.layer-row-actions {
+  display: flex;
+  align-items: center;
   flex: none;
-  background: #2c2c2e;
-  color: inherit;
-  border: 1px solid #48484a;
-  border-radius: 0.3rem;
-  font-size: 0.7rem;
-  max-width: 4rem;
 }
 
 .layer-reorder-button,
 .layer-delete-button {
   flex: none;
-  width: 1.6rem;
-  height: 1.6rem;
+  width: 1.4rem;
+  height: 1.4rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -698,7 +782,7 @@ body {
 }
 
 .layer-reorder-button .material-symbols-outlined {
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .layer-reorder-button:disabled,
@@ -1386,24 +1470,35 @@ body {
    fine click targets, or destructive/creation actions, where a
    jitter-on-hover reads as noise (or feels wrong for something
    consequential) rather than a nice touch - per feedback.
-   Scoped to `(hover: hover) and (pointer: coarse)` - the standard way to
-   target a touchscreen that nonetheless supports a real :hover state,
-   which in practice means an iPad with a Pencil capable of hover
-   detection (Safari synthesizes :hover/pointerover as the Pencil nears
-   the screen, without touching it). A normal desktop mouse is
-   `pointer: fine`, and a plain finger-only touchscreen is `hover: none`
-   - both excluded, so buzz no longer fires on ordinary desktop mouse
-   hover, per feedback that it should be iPad-hover-only. Also respects
-   prefers-reduced-motion. */
-@media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: coarse) {
-  .tool-button:not(:disabled):hover,
-  .preset-button:not(:disabled):hover,
-  .icon-button:not(:disabled):hover,
-  .layer-visibility-toggle:hover,
-  .layer-reorder-button:not(:disabled):hover,
-  .brush-swatch:hover,
-  .palette-swatch:hover,
-  .color-library-swatch:hover {
+   Scoped to iPad/iPhone only, per feedback that it shouldn't fire on
+   ordinary desktop mouse hover. Originally tried as a pure CSS media
+   query, `(hover: hover) and (pointer: coarse)` (meant to catch a
+   hover-capable touchscreen) - but Apple Pencil is a *precise* stylus,
+   reporting `pointer: fine` exactly like a mouse, so that query
+   excluded Pencil hover right along with the desktop mouse hover it
+   was meant to exclude, and buzz disappeared on iPad entirely. CSS
+   alone can't distinguish "a mouse is hovering" from "a Pencil is
+   hovering" - platform detection is used instead: js/app.js adds
+   `.ios-platform` to <html> via a UA check. Also respects
+   prefers-reduced-motion.
+   Exclusions (Clear selection/Delete/zoom toolset/"new artwork"/etc.)
+   are marked with a shared `.no-buzz` class instead of separate
+   higher-specificity override rules - simpler and less fragile than
+   fighting a specificity/source-order battle against this rule for
+   every excluded element that happens to also carry .tool-button/
+   .icon-button (a real bug this app hit once already: adding
+   `.ios-platform` to this rule's selectors upgraded its specificity
+   past the old override rules, silently un-excluding the zoom toolset
+   and the confirm-dialog's "Delete" button on iOS). */
+@media (prefers-reduced-motion: no-preference) {
+  .ios-platform .tool-button:not(:disabled):not(.no-buzz):hover,
+  .ios-platform .preset-button:not(:disabled):not(.no-buzz):hover,
+  .ios-platform .icon-button:not(:disabled):not(.no-buzz):hover,
+  .ios-platform .layer-visibility-toggle:not(.no-buzz):hover,
+  .ios-platform .layer-reorder-button:not(:disabled):not(.no-buzz):hover,
+  .ios-platform .brush-swatch:not(.no-buzz):hover,
+  .ios-platform .palette-swatch:not(.no-buzz):hover,
+  .ios-platform .color-library-swatch:not(.no-buzz):hover {
     animation: hover-buzz 0.25s linear infinite; /* slowed further per feedback (was 0.2s) */
   }
 }
@@ -1417,30 +1512,3 @@ body {
   }
 }
 
-/* Explicit opt-out from the buzz rule above: the bottom bar's zoom
-   toolset (#zoom-out-button/#zoom-in-button/the 100%/Fit/Fill presets)
-   would otherwise match the plain .tool-button/.icon-button buzz rule -
-   this descendant selector is more specific and wins regardless of
-   source order, kept directly below the rule it overrides for clarity. */
-.zoom-controls .tool-button:hover {
-  animation: none;
-}
-
-/* Explicit opt-outs from the buzz rule above, all still matched by
-   .tool-button/.icon-button otherwise: Clear selection/Delete
-   (selection-controls), the remaining delete-labeled buttons (brush,
-   palette, layer, and the confirm-dialog's own "Delete" button) - per
-   feedback, buzz shouldn't apply to destructive actions. (.primary-button
-   and .gallery-tile-delete - "new artwork" and the Gallery's own delete
-   - are excluded further up by not being in the enabled list at all,
-   since neither shares a class with anything that still buzzes.) These
-   ID/class selectors are more specific than the plain .tool-button/
-   .icon-button buzz rule and win regardless of source order. */
-#selection-clear-button:hover,
-#selection-delete-button:hover,
-#delete-brush-button:hover,
-#delete-palette-button:hover,
-.confirm-dialog-confirm:hover,
-.layer-delete-button:hover {
-  animation: none;
-}

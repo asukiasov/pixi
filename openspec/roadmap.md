@@ -106,6 +106,12 @@ proposed/implemented/archived before the next starts:
     idea `2c1`'s selection Delete already uses. Raised directly, right
     after `2c1`'s Selection tool shipped with moving/copying a
     selection's contents explicitly out of scope — this closes that gap.
+  - **2k — Layers panel redesign**: redraws the Layers panel in
+    Photoshop's own style — a live per-layer pixel thumbnail, and
+    Blend mode/Opacity moved from per-row controls to a shared toolbar
+    that edits whichever layer is active. Presentation only; no change
+    to what the panel can do. Raised directly, with a reference
+    screenshot.
 
 Status: **2a done** — archived at
 `openspec/changes/archive/2026-08-14-2a-layers/`, spec lives at
@@ -113,7 +119,7 @@ Status: **2a done** — archived at
 `openspec/changes/archive/2026-08-14-2b-local-persistence-gallery/`, specs
 live at `openspec/specs/local-persistence/`, `openspec/specs/gallery/`,
 `openspec/specs/canvas-settings/`. **2c1 in progress. 2j done (stacks on
-top of 2c1's shape-tools capability). 2d, 2e, 2c2, 2f, 2h, 2i, 2j
+top of 2c1's shape-tools capability). 2d, 2e, 2c2, 2f, 2h, 2i, 2j, 2k
 done** (none yet archived). **2c3, 2g proposed, not yet implemented.**
 
 ## Phase 3 — Supabase Auth + sync

@@ -272,9 +272,17 @@
       "toggle between outline and filled" requirement was never actually
       updated to match, so this restores spec/code alignment rather than
       reversing a decision. Implemented as a tool-scoped icon toggle
-      (`#rectangle-fill-toggle`, `check_box`/`check_box_outline_blank`),
-      shown only while Rectangle is active - not the old always-visible
-      text button.
+      (`#rectangle-fill-toggle`), shown only while Rectangle is active -
+      not the old always-visible text button. Icon revised twice since:
+      first `check_box`/`check_box_outline_blank` (didn't read as
+      "filled rectangle" per feedback), then to raw inline SVGs of
+      Material Symbols' actual `rectangle` glyph in its outline and
+      solid-fill variants (`#rectangle-fill-icon-outline`/`-filled`,
+      swapped via `.hidden`) - the subsetted icon webfont only bakes a
+      single fixed FILL-axis point, so it can't render a true solid
+      variant of the same glyph at runtime; these two raw SVG paths are
+      fetched once from Google's static icon SVG CDN (same source as
+      the font) instead.
 - [x] 15.3 `js/engine.js`: `strokeFreehandThick` now passes a third
       `index` argument to `applyPixel` (0-based order over unique pixels
       actually touched, post-dedup) - additive, existing callers that
@@ -342,3 +350,32 @@
       while Brush was active, confirmed `#pencil-library-toggle` also
       shows `active` after switching to Pencil (one shared state); full
       `node --test` suite still 103/103
+
+## 18. 1:1 proportion toggle (Rectangle and Selection)
+
+- [x] 18.1 New `js/workspace.js` helper `isSquareConstrained()` -
+      `shiftHeld || state.squareConstraint`, replacing the old
+      `tool === 'rectangle' && shiftHeld` check in Rectangle's
+      `onDrawMove` branch and newly applied to Selection's `onDrawMove`
+      branch too (Selection previously ignored Shift entirely)
+- [x] 18.2 New `#square-constraint-toggle` button
+      (`#square-constraint-options`, reusing `.rectangle-options`
+      layout), shown whenever the current tool is Rectangle or
+      Selection (wired into the same tool-button click handler that
+      shows/hides `#rectangle-options`/`#pencil-options`)
+- [x] 18.3 `state.squareConstraint` added to the initial state object
+      and the per-project reset block (panel hidden, toggle inactive -
+      neither Rectangle nor Selection is the default tool)
+- [x] 18.4 Icon revised to a plain "1:1" text label
+      (`.square-constraint-button`) instead of the `crop_square` icon
+      originally used - per feedback that an icon didn't communicate
+      "1:1" as directly as the literal text does; `crop_square` removed
+      from the Material Symbols `icon_names=` subsetting list since
+      nothing else uses it
+- [x] 18.5 Playwright: a very non-square Rectangle drag with the toggle
+      on produced a pixel-exact square (bounding-box check via
+      `getImageData`); a very non-square Selection drag with the toggle
+      on produced a square selection overlay (equal width/height);
+      confirmed the toggle is visible on both Rectangle and Selection
+      and hidden on every other tool; confirmed Shift still works
+      independently of the toggle

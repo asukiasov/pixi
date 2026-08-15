@@ -455,16 +455,19 @@ async function loadCustomBrushes() {
 /**
  * Fetches every palette from IndexedDB. Auto-creates one "Material"
  * palette, seeded with the full Material Design color system (see
- * js/default-color-library.js), on first-ever load if none exist yet -
- * the panel should never show an empty "no palettes" state with nothing
- * to select or add to (mirrors "a fresh canvas always has exactly one
- * layer"), and a starting library beats an empty one to pick colors from.
+ * js/default-color-library.js), whenever none of the existing palettes
+ * is flagged `isDefault` - covers both first-ever load (no palettes at
+ * all yet) and recovery for anyone who deleted the default palette
+ * before deletion protection existed (a plain `length === 0` check
+ * would miss that case if any other palette still exists). The panel
+ * should never end up with no populated, undeletable palette to fall
+ * back to.
  */
 async function loadColorPalettes() {
   let palettes = await listColorPalettes();
-  if (palettes.length === 0) {
+  if (!palettes.some((p) => p.isDefault)) {
     const defaultPalette = await createColorPalette('Material', [...DEFAULT_MATERIAL_COLORS], true);
-    palettes = [defaultPalette];
+    palettes = [...palettes, defaultPalette];
   }
   colorPalettes = palettes;
   // Keep the previously active palette selected if it still exists

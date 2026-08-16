@@ -130,14 +130,18 @@ navigation`, `color-library`, `url-routing`, `export`); archives under
 
 ## Phase 3 — Supabase Auth + sync
 
-- Google sign-in via Supabase Auth
+- Google sign-in via Supabase Auth only, for now — no email+password.
+  Other providers (Apple, GitHub, magic link, anonymous accounts, etc.)
+  are possible later but explicitly not planned yet; revisit when this
+  phase is actually picked up.
 - Projects sync to Postgres/Storage per the schema in
   `docs/supabase-database.md`
 - Offline-first behavior: IndexedDB stays the source of truth when signed out
   or offline; sync is additive, not required to use the app
 - Screen: **Sign in**
 
-Status: not started.
+Status: **deliberately not started yet** — holding off on the whole
+auth/sync layer for now, not just deferring a decision within it.
 
 ## Phase 4 — Monetization
 

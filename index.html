@@ -17,7 +17,7 @@
        original range query pulled the full variable font (~4MB, ~30s on a
        slow connection, icons invisible until it finished); this is a few
        KB. Keep icon_names in sync with the icons used in this file. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,colorize,undo,redo,add,remove,delete,visibility,visibility_off,restart_alt,swap_horiz,close,home,grid_on,layers,settings,download,arrow_upward,arrow_downward,rotate_left,rotate_right,check_box_outline_blank,check_box,palette,arrow_selector_tool,playlist_add,opacity,dock_to_right,expand_more,lock" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,colorize,undo,redo,add,remove,delete,visibility,visibility_off,restart_alt,swap_horiz,close,home,grid_on,layers,settings,download,arrow_upward,arrow_downward,rotate_left,rotate_right,check_box_outline_blank,check_box,palette,arrow_selector_tool,playlist_add,opacity,dock_to_right,expand_more,lock,image" />
 </head>
 <body>
   <main id="screen-gallery" class="screen">
@@ -350,9 +350,10 @@
             <button type="button" id="add-palette-button" class="tool-button icon-button" aria-label="Add palette" data-tooltip="New palette">
               <span class="material-symbols-outlined">add</span>
             </button>
-            <!-- Import a palette from an image (2n-color-library-image-import)
-                 - opens the hidden file input below; the real UI is the
-                 import-preview row that appears once a file is picked. -->
+            <!-- Import a palette from an image (2n-color-library-image-import,
+                 popover per 2o-image-import-refinements) - opens the hidden
+                 file input below; the real UI is #import-preview-row, a
+                 popover anchored to this button once a file is picked. -->
             <button type="button" id="import-palette-button" class="tool-button icon-button" aria-label="Import palette from image" data-tooltip="Import from image">
               <span class="material-symbols-outlined">image</span>
             </button>
@@ -369,21 +370,36 @@
             <button type="button" id="new-palette-save" class="tool-button">Save</button>
             <button type="button" id="new-palette-cancel" class="tool-button">Cancel</button>
           </div>
-          <!-- Import preview (2n-color-library-image-import): appears after a
-               file is picked, before anything is saved - live swatches +
-               adjustable color count + name + Save/Cancel, mirroring
-               #new-palette-row's naming pattern. -->
-          <div id="import-preview-row" class="import-preview-row hidden">
-            <div id="import-preview-grid" class="import-preview-grid"></div>
-            <div class="import-preview-controls">
-              <label for="import-preview-count">Colors</label>
-              <input type="number" id="import-preview-count" min="2" max="32" value="8" />
-              <input type="text" id="import-preview-name" placeholder="Palette name" />
-              <button type="button" id="import-preview-save" class="tool-button">Save</button>
-              <button type="button" id="import-preview-cancel" class="tool-button">Cancel</button>
-            </div>
-          </div>
           <div id="color-library-grid" class="color-library-grid"></div>
+        </div>
+      </div>
+
+      <!-- Import-palette popover (2o-image-import-refinements) - out of
+           #color-library-panel's normal flow (position:fixed + JS, same
+           clamped-to-viewport pattern as #canvas-settings-panel/
+           #export-panel), anchored to #import-palette-button. Live
+           swatch preview + adjustable color count + name + Save/Cancel -
+           a fixed-position surface so the color-count control never
+           shifts as the swatch grid above it gains/loses rows (unlike
+           the in-flow row this replaced). -->
+      <div id="import-preview-row" class="canvas-settings-panel import-preview-panel hidden">
+        <div class="canvas-settings-row canvas-settings-header-row">
+          <h2>Import Palette</h2>
+          <button type="button" id="import-preview-close" class="icon-button" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div id="import-preview-grid" class="import-preview-grid"></div>
+        <div class="canvas-settings-row">
+          <label for="import-preview-count">Colors</label>
+          <input type="number" id="import-preview-count" min="2" max="32" value="8" />
+        </div>
+        <div class="canvas-settings-row">
+          <input type="text" id="import-preview-name" placeholder="Palette name" />
+        </div>
+        <div class="canvas-settings-row">
+          <button type="button" id="import-preview-save" class="tool-button">Save</button>
+          <button type="button" id="import-preview-cancel" class="tool-button">Cancel</button>
         </div>
       </div>
 
@@ -420,8 +436,16 @@
         </div>
 
         <div id="brush-editor-panel" class="brush-editor-panel hidden">
-          <div class="brush-editor-row">
+          <div class="brush-editor-row brush-editor-header-row">
             <h2>New Brush</h2>
+            <!-- Import an image to pre-fill the grid (2m-brush-image-import),
+                 icon-only + header-row position per 2o-image-import-
+                 refinements - same "image" icon Color Library's Import
+                 control uses for the same action. -->
+            <button type="button" id="brush-editor-import" class="tool-button icon-button" aria-label="Import from image" data-tooltip="Import from image">
+              <span class="material-symbols-outlined">image</span>
+            </button>
+            <input type="file" id="brush-editor-import-input" accept="image/*" class="hidden" />
           </div>
           <div class="brush-editor-row">
             <input type="text" id="brush-editor-name" placeholder="Brush name" />
@@ -435,10 +459,6 @@
             </label>
           </div>
           <div id="brush-editor-grid" class="brush-editor-grid"></div>
-          <div class="brush-editor-row">
-            <button type="button" id="brush-editor-import" class="tool-button">Import</button>
-            <input type="file" id="brush-editor-import-input" accept="image/*" class="hidden" />
-          </div>
           <div class="brush-editor-row">
             <button type="button" id="brush-editor-clear" class="tool-button">Clear</button>
             <button type="button" id="brush-editor-cancel" class="tool-button">Cancel</button>

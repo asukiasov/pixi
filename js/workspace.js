@@ -1266,6 +1266,33 @@ function bindSliderWheel(slider) {
   }, { passive: false });
 }
 
+/**
+ * Positions `panel` as a popover below `anchorEl`, clamped to the
+ * viewport - flips above if it would overflow the bottom, clamped
+ * horizontally too. Same unhide-to-measure-then-clamp pattern as
+ * js/canvas-settings.js's/js/export.js's own positionPanel (duplicated
+ * rather than shared, matching this codebase's existing per-popover
+ * convention). Used for the Color Library import-palette popover
+ * (2o-image-import-refinements).
+ */
+function positionPanelBelow(panel, anchorEl) {
+  const rect = anchorEl.getBoundingClientRect();
+  const panelRect = panel.getBoundingClientRect();
+  const margin = 8;
+
+  let top = rect.bottom + 8;
+  if (top + panelRect.height > window.innerHeight - margin) {
+    top = rect.top - panelRect.height - 8;
+  }
+  top = Math.max(margin, Math.min(top, window.innerHeight - panelRect.height - margin));
+
+  let left = rect.left;
+  left = Math.max(margin, Math.min(left, window.innerWidth - panelRect.width - margin));
+
+  panel.style.left = `${left}px`;
+  panel.style.top = `${top}px`;
+}
+
 function bindDomOnce() {
   toolButtons = document.querySelectorAll('.tool-button[data-tool]');
   pixelPerfectToggle = document.getElementById('pixel-perfect-toggle');
@@ -1532,10 +1559,15 @@ function bindDomOnce() {
 
   // Import palette from image (2n-color-library-image-import): file
   // picker -> decode -> downsample once (cached) -> extractPalette on
-  // demand, re-run live as the color-count control changes.
+  // demand, re-run live as the color-count control changes. The preview
+  // itself is a popover (2o-image-import-refinements), not an in-flow
+  // row - same clamped-to-viewport anchor pattern as Canvas Settings/
+  // Export, so the color-count control never shifts as the swatch grid
+  // above it gains/loses rows.
   const importPaletteButton = document.getElementById('import-palette-button');
   const importInput = document.getElementById('color-library-import-input');
   const importPreviewRow = document.getElementById('import-preview-row');
+  const importPreviewClose = document.getElementById('import-preview-close');
   const importPreviewGrid = document.getElementById('import-preview-grid');
   const importPreviewCount = document.getElementById('import-preview-count');
   const importPreviewName = document.getElementById('import-preview-name');
@@ -1592,12 +1624,29 @@ function bindDomOnce() {
     importPreviewCount.value = String(COLOR_IMPORT_DEFAULT_COUNT);
     importPreviewName.value = '';
     newPaletteRow.classList.add('hidden'); // mutually exclusive with the plain "+ New Palette" row
+    // Unhide before measuring - .hidden is display:none, which has no box
+    // to read a size from (see js/canvas-settings.js's positionPanel).
     importPreviewRow.classList.remove('hidden');
+    positionPanelBelow(importPreviewRow, importPaletteButton);
     reExtractImportPreview();
   });
 
   importPreviewCount.addEventListener('change', reExtractImportPreview);
   importPreviewCount.addEventListener('input', reExtractImportPreview);
+
+  importPreviewClose.addEventListener('click', closeImportPreview);
+
+  // Close on outside click/Escape too, not just the explicit close button
+  // - standard popover behavior, same as Canvas Settings/Export.
+  document.addEventListener('pointerdown', (e) => {
+    if (importPreviewRow.classList.contains('hidden')) return;
+    if (importPreviewRow.contains(e.target)) return;
+    if (e.target === importPaletteButton || importPaletteButton.contains(e.target)) return;
+    closeImportPreview();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !importPreviewRow.classList.contains('hidden')) closeImportPreview();
+  });
 
   importPreviewCancel.addEventListener('click', () => {
     closeImportPreview();
@@ -1903,6 +1952,7 @@ function bindDomOnce() {
     }
     state.canvasView.render();
     commit();
+    renderLayersPanel(); // same stale-thumbnail issue as drawing commits
   });
 
   canvasSettingsControls = initCanvasSettings({
@@ -2205,6 +2255,10 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
         clipToSelection(activeEngine, backup, state.selection);
         state.canvasView.render();
         commit();
+        // Bucket fill changes the active layer's pixel content - the
+        // Layers panel's per-row thumbnail (buildLayerThumbnailCanvas)
+        // only updates on a full re-render, unlike the live canvas.
+        renderLayersPanel();
         return;
       }
 
@@ -2376,6 +2430,12 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
       state.dragStart = null;
       state.dragCurrent = null;
       commit();
+      // Every drawing tool (pencil, eraser, brush, line, rectangle,
+      // selection move) funnels through here - the Layers panel's
+      // per-row thumbnail only updates on a full re-render, unlike the
+      // live canvas, so without this it goes stale until some other
+      // action (add layer, hide/show layer) happens to trigger one.
+      renderLayersPanel();
     },
 
     onDrawCancel() {

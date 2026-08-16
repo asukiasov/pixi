@@ -13,16 +13,47 @@
 const TRANSPARENCY_CHECK_MAX_DIM = 256; // cap on the long edge, for perf on huge source images
 
 /**
- * Decodes a File (from an `image/*` file input) into an ImageBitmap.
- * Returns null instead of throwing on an unsupported or corrupt file, so
- * callers can fail silently - no console error, no crash - rather than
- * treat a bad pick as a hard error.
+ * Fallback decode path for files createImageBitmap() can't handle - most
+ * notably SVG, which createImageBitmap() rejects outright in Chromium
+ * (confirmed via direct testing: InvalidStateError, regardless of
+ * whether the SVG declares explicit width/height) even though it's a
+ * perfectly normal `<img>` source. Loads the file into an off-DOM Image
+ * element instead. Resolves null (never rejects) on failure, matching
+ * decodeImageFile's contract. A dimensionless SVG (no width/height, no
+ * viewBox-derived intrinsic size) falls back to the browser's standard
+ * 150x150 "default object size" - accepted as-is (see design.md) since
+ * every caller downsamples to its own target size afterward regardless.
+ */
+function decodeViaImgElement(file) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(null);
+    };
+    img.src = url;
+  });
+}
+
+/**
+ * Decodes a File (from an `image/*` file input) into an ImageBitmap, or
+ * an HTMLImageElement for formats createImageBitmap() can't decode (see
+ * decodeViaImgElement) - hasTransparency/downsampleToImageData below
+ * accept either interchangeably, both exposing .width/.height and
+ * working with drawImage(). Returns null instead of throwing on a file
+ * neither path can decode, so callers can fail silently - no console
+ * error, no crash - rather than treat a bad pick as a hard error.
  */
 export async function decodeImageFile(file) {
   try {
     return await createImageBitmap(file);
   } catch {
-    return null;
+    return decodeViaImgElement(file);
   }
 }
 

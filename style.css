@@ -1269,59 +1269,42 @@ body {
   font-size: 0.75rem;
 }
 
-/* Import preview (2n-color-library-image-import) - mirrors
-   .new-palette-row's naming-row styling, plus a swatch preview above the
-   controls that updates live as the color-count input changes. */
-.import-preview-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  margin: 0 0.5rem 0.4rem;
-  flex: none;
+/* Import-palette popover (2o-image-import-refinements) - built on
+   .canvas-settings-panel's base popover styling (position/size/
+   background/border), same as .export-panel; position:fixed + JS
+   (js/workspace.js's positionImportPreview), clamped to the viewport.
+   Its DOM location no longer matters for layout since it's taken out of
+   flow, same reasoning as .canvas-settings-panel's own comment. Rows
+   inside reuse .canvas-settings-row's generic label/input[type=number]
+   styling - only the swatch grid and the text input need their own
+   rules here. */
+.import-preview-panel {
+  width: 16rem;
 }
 
 .import-preview-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(19px, 1fr));
+  grid-auto-rows: 19px;
+  align-content: start;
   gap: 0.25rem;
+  /* Fixed, not max - a shorter preview (fewer rows) must reserve the
+     same space as a full one, or the controls below still shift as the
+     count changes (the bug this popover conversion was supposed to
+     fix). Scrolls internally past that height instead of growing. */
+  height: 9rem;
+  overflow-y: auto;
 }
 
-.import-preview-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  flex-wrap: wrap;
-}
-
-.import-preview-controls label {
-  font-size: 0.75rem;
-  color: #a0a0a5;
-}
-
-.import-preview-controls input[type='number'] {
-  width: 3.2rem;
-  padding: 0.3rem 0.4rem;
-  background: #2c2c2e;
-  border: 1px solid #48484a;
-  color: inherit;
-  border-radius: 0.4rem;
-  font-size: 0.8rem;
-}
-
-.import-preview-controls input[type='text'] {
+.import-preview-panel input[type='text'] {
   flex: 1;
-  min-width: 6rem;
-  padding: 0.3rem 0.4rem;
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
   background: #2c2c2e;
   border: 1px solid #48484a;
   color: inherit;
   border-radius: 0.4rem;
-  font-size: 0.8rem;
-}
-
-.import-preview-controls .tool-button {
-  padding: 0.3rem 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 /* Smaller swatches (~19px, was ~26px) so more rows fit within the
@@ -1447,6 +1430,16 @@ body {
 
 .brush-editor-row:last-child {
   margin-bottom: 0;
+}
+
+/* Title + Import icon button on one line (2o-image-import-refinements) -
+   same space-between pattern as .canvas-settings-header-row. */
+.brush-editor-header-row {
+  justify-content: space-between;
+}
+
+.brush-editor-header-row h2 {
+  margin: 0;
 }
 
 /* Clear/Cancel/Save row - the 13rem sidebar is too narrow to fit three

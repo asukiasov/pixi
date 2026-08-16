@@ -13,7 +13,7 @@ import {
 import { initCanvasSettings } from './canvas-settings.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
-import { DEFAULT_MATERIAL_COLORS } from './default-color-library.js';
+import { DEFAULT_MATERIAL_COLORS, PREDEFINED_PALETTES } from './default-color-library.js';
 import { bresenhamLine, strokeFreehandThick } from './engine.js';
 import { confirmDialog } from './confirm-dialog.js';
 
@@ -541,12 +541,25 @@ async function loadCustomBrushes() {
  * would miss that case if any other palette still exists). The panel
  * should never end up with no populated, undeletable palette to fall
  * back to.
+ *
+ * First-ever load only (judged before Material's own recovery-create
+ * above, on the true starting `palettes.length === 0`) also seeds every
+ * PREDEFINED_PALETTES entry as an ordinary, deletable palette - unlike
+ * Material, these never come back if deleted; they're starter content,
+ * not a required fallback.
  */
 async function loadColorPalettes() {
   let palettes = await listColorPalettes();
+  const isFirstEverLoad = palettes.length === 0;
   if (!palettes.some((p) => p.isDefault)) {
     const defaultPalette = await createColorPalette('Material', [...DEFAULT_MATERIAL_COLORS], true);
     palettes = [...palettes, defaultPalette];
+  }
+  if (isFirstEverLoad) {
+    for (const [name, colors] of Object.entries(PREDEFINED_PALETTES)) {
+      const created = await createColorPalette(name, [...colors]);
+      palettes = [...palettes, created];
+    }
   }
   colorPalettes = palettes;
   // Keep the previously active palette selected if it still exists
@@ -762,26 +775,20 @@ const CONFETTI_COLORS = ['#ff453a', '#ff9f0a', '#ffd60a', '#30d158', '#64d2ff', 
 
 /**
  * Named "magic palette" easter eggs: naming a new Color Library palette
- * one of these words (case-insensitive, matched against the trimmed
- * "New palette" input) seeds it with a themed color set instead of
- * starting empty, plus a little flourish - a confetti burst in the
- * seeded palette's own colors for most of them (see the "matrix" special
- * case in newPaletteSave's listener) - alongside the Konami code
- * (bindKonamiCode) and the Gallery's paw parade (see gallery.js) as this
- * app's other hidden delighters.
+ * one of these three words (case-insensitive, matched against the
+ * trimmed "New palette" input) seeds it with a themed color set instead
+ * of starting empty, plus a little flourish - a confetti burst in the
+ * seeded palette's own colors for rainbow/gameboy, or matrixRain's own
+ * effect for matrix (see newPaletteSave's listener) - alongside the
+ * Konami code (bindKonamiCode) and the Gallery's paw parade (see
+ * gallery.js) as this app's other hidden delighters. Kept small and
+ * genuinely gimmicky on purpose - everything else themed lives in
+ * PREDEFINED_PALETTES instead, as ordinary always-visible palettes
+ * rather than a typed-name trick.
  */
 const MAGIC_PALETTES = {
   rainbow: ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#4b0082', '#8b00ff'],
   gameboy: ['#0f380f', '#306230', '#8bac0f', '#9bbc0f'],
-  vaporwave: ['#ff71ce', '#01cdfe', '#05ffa1', '#b967ff', '#fffb96'],
-  sunset: ['#ff9a00', '#ff6d00', '#ff3d00', '#ff006e', '#8338ec'],
-  ocean: ['#03045e', '#0077b6', '#00b4d8', '#90e0ef', '#caf0f8'],
-  candy: ['#ff6fb5', '#ffd23f', '#7bf1a8', '#4cc9f0', '#c77dff'],
-  autumn: ['#582f0e', '#7f4f24', '#a68a64', '#d4a373', '#bc6c25', '#dda15e'],
-  galaxy: ['#240046', '#3c096c', '#5a189a', '#7b2cbf', '#e0aaff'],
-  pastel: ['#ffadad', '#ffd6a5', '#fdffb6', '#caffbf', '#9bf6ff', '#a0c4ff', '#bdb2ff'],
-  monochrome: ['#000000', '#2b2b2b', '#555555', '#7f7f7f', '#aaaaaa', '#d4d4d4', '#ffffff'],
-  'old money': ['#1b263b', '#f5f0e6', '#2d4a3e', '#c19a6b', '#6d0f22', '#b08d57', '#3c3c3c'],
   // Its own effect (matrixRain) instead of confetti - a green-on-black
   // palette calls for something more thematic.
   matrix: ['#003b00', '#008f11', '#00ff41', '#00ff41', '#0d1a0d'],

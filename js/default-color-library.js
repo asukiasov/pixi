@@ -261,3 +261,27 @@ export const DEFAULT_MATERIAL_COLORS = [
   '#263238',
   '#000000',
 ];
+
+/**
+ * Predefined starter palettes, auto-created alongside "Material" on
+ * first-ever load (see workspace.js's loadColorPalettes) - unlike
+ * Material, these are regular, deletable palettes, just pre-populated
+ * content rather than an empty starting point. Distinct from
+ * MAGIC_PALETTES (workspace.js) - those three (rainbow, matrix,
+ * gameboy) stay hidden, typed-name easter eggs; these are ordinary,
+ * always-visible palettes from the moment the app is opened.
+ */
+export const PREDEFINED_PALETTES = {
+  Vaporwave: ['#ff71ce', '#01cdfe', '#05ffa1', '#b967ff', '#fffb96'],
+  Sunset: ['#ff9a00', '#ff6d00', '#ff3d00', '#ff006e', '#8338ec'],
+  Ocean: ['#03045e', '#0077b6', '#00b4d8', '#90e0ef', '#caf0f8'],
+  Candy: ['#ff6fb5', '#ffd23f', '#7bf1a8', '#4cc9f0', '#c77dff'],
+  Autumn: ['#582f0e', '#7f4f24', '#a68a64', '#d4a373', '#bc6c25', '#dda15e'],
+  Galaxy: ['#240046', '#3c096c', '#5a189a', '#7b2cbf', '#e0aaff'],
+  Pastel: ['#ffadad', '#ffd6a5', '#fdffb6', '#caffbf', '#9bf6ff', '#a0c4ff', '#bdb2ff'],
+  Monochrome: ['#000000', '#2b2b2b', '#555555', '#7f7f7f', '#aaaaaa', '#d4d4d4', '#ffffff'],
+  'Old Money': ['#1b263b', '#f5f0e6', '#2d4a3e', '#c19a6b', '#6d0f22', '#b08d57', '#3c3c3c'],
+  'Kit Kat': ['#d0021b', '#ffffff', '#3c1f14', '#7b4b2a'],
+  "M&M's": ['#ff0000', '#ff8c00', '#ffd700', '#00a651', '#0072ce', '#6f4e37'],
+  Snickers: ['#002d72', '#6f4e37', '#d2a679', '#f5deb3'],
+};

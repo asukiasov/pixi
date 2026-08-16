@@ -13,6 +13,8 @@ import {
 import { initCanvasSettings } from './canvas-settings.js';
 import { initExport } from './export.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
+import { decodeImageFile, hasTransparency, downsampleToImageData } from './image-import.js';
+import { thresholdToGrid } from './brush-import.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
 import { DEFAULT_MATERIAL_COLORS, PREDEFINED_PALETTES } from './default-color-library.js';
 import { bresenhamLine, strokeFreehandThick } from './engine.js';
@@ -653,6 +655,37 @@ let brushEditorPaintValue = true;
 let brushEditorWidth = BRUSH_EDITOR_SIZE;
 let brushEditorHeight = BRUSH_EDITOR_SIZE;
 
+// The decoded source image behind an "Import", if any (js/image-import.js's
+// decodeImageFile result - an ImageBitmap). Kept at module scope alongside
+// the grid state so a later W/H change can re-pixelate from the same
+// source instead of re-prompting for a file. Cleared whenever the editor
+// opens fresh, Cancel is pressed, or Clear is pressed (see
+// applyBrushEditorSourceImage's and bindBrushEditorOnce's callers) -
+// design.md's decision to keep Clear as pure "blank the grid", not a
+// separate "discard the import" control.
+let brushEditorSourceImage = null;
+
+/**
+ * Re-pixelates brushEditorSourceImage at the editor's current
+ * brushEditorWidth x brushEditorHeight, overwriting brushEditorGridState
+ * and the grid's DOM 'on' classes with the result. No-op if no image has
+ * been imported. Assumes rebuildBrushEditorGrid() already built the DOM
+ * cells at the current dimensions (called right after it, both on import
+ * and on every subsequent resize).
+ */
+function applyBrushEditorSourceImage() {
+  if (!brushEditorSourceImage) return;
+  const useAlpha = hasTransparency(brushEditorSourceImage);
+  const imageData = downsampleToImageData(brushEditorSourceImage, brushEditorWidth, brushEditorHeight);
+  brushEditorGridState = thresholdToGrid(imageData, brushEditorWidth, brushEditorHeight, useAlpha);
+  const grid = document.getElementById('brush-editor-grid');
+  grid.querySelectorAll('.brush-editor-cell').forEach((cell) => {
+    const x = Number(cell.dataset.x);
+    const y = Number(cell.dataset.y);
+    cell.classList.toggle('on', brushEditorGridState[y][x]);
+  });
+}
+
 /** (Re)builds the editor grid's cells to match brushEditorWidth x brushEditorHeight, clearing any painted pixels. */
 function rebuildBrushEditorGrid() {
   const grid = document.getElementById('brush-editor-grid');
@@ -695,11 +728,13 @@ function openBrushEditor() {
   widthInput.value = String(brushEditorWidth);
   heightInput.value = String(brushEditorHeight);
   document.getElementById('brush-editor-name').value = '';
+  brushEditorSourceImage = null; // fresh editor open forgets any prior import
   rebuildBrushEditorGrid();
   document.getElementById('brush-editor-panel').classList.remove('hidden');
 }
 
 function closeBrushEditor() {
+  brushEditorSourceImage = null; // Cancel (or Save closing the panel) forgets the import too
   document.getElementById('brush-editor-panel').classList.add('hidden');
 }
 
@@ -715,21 +750,43 @@ function bindBrushEditorOnce() {
   const nameInput = document.getElementById('brush-editor-name');
   const widthInput = document.getElementById('brush-editor-width');
   const heightInput = document.getElementById('brush-editor-height');
+  const importButton = document.getElementById('brush-editor-import');
+  const importInput = document.getElementById('brush-editor-import-input');
   const clearButton = document.getElementById('brush-editor-clear');
   const cancelButton = document.getElementById('brush-editor-cancel');
   const saveButton = document.getElementById('brush-editor-save');
 
-  // Changing size re-grids from scratch (painting so far doesn't carry
-  // over) — simplest behavior, and this is a brand-new brush each time.
+  // Changing size re-grids from scratch when nothing's been imported
+  // (painting so far doesn't carry over) — simplest behavior, and this is
+  // a brand-new brush each time. When an image *has* been imported,
+  // re-pixelate from that same source at the new size instead of
+  // clearing, so the user can dial in resolution before hand-tweaking.
   widthInput.addEventListener('change', () => {
     brushEditorWidth = clampBrushEditorDimension(Number(widthInput.value), state.layerStack.width);
     widthInput.value = String(brushEditorWidth);
     rebuildBrushEditorGrid();
+    applyBrushEditorSourceImage();
   });
   heightInput.addEventListener('change', () => {
     brushEditorHeight = clampBrushEditorDimension(Number(heightInput.value), state.layerStack.height);
     heightInput.value = String(brushEditorHeight);
     rebuildBrushEditorGrid();
+    applyBrushEditorSourceImage();
+  });
+
+  importButton.addEventListener('click', () => importInput.click());
+  importInput.addEventListener('change', async () => {
+    const file = importInput.files?.[0];
+    // Reset now (not after decoding) so picking the same file twice in a
+    // row still fires 'change' the second time - a file input only fires
+    // on a value change, and re-selecting the same path wouldn't count as
+    // one unless the value is cleared first.
+    importInput.value = '';
+    if (!file) return;
+    const image = await decodeImageFile(file);
+    if (!image) return; // unsupported/corrupt file - fail silently, no crash
+    brushEditorSourceImage = image;
+    applyBrushEditorSourceImage();
   });
 
   function setCellFromEvent(clientX, clientY, isFirst) {
@@ -757,6 +814,11 @@ function bindBrushEditorOnce() {
   });
 
   clearButton.addEventListener('click', () => {
+    // Clear is pure "blank the grid", including forgetting any import -
+    // it doesn't distinguish "just resized" from "was imported" (see
+    // design.md's decision), so a resize after Clear no longer
+    // re-pixelates until another Import.
+    brushEditorSourceImage = null;
     brushEditorGridState = makeEmptyBrushEditorGrid(brushEditorWidth, brushEditorHeight);
     grid.querySelectorAll('.brush-editor-cell').forEach((c) => c.classList.remove('on'));
   });

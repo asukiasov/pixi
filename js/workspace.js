@@ -133,9 +133,17 @@ let brushesPanelGrid = null;
 let deleteBrushButton = null;
 let layersPanel = null;
 let layersPanelToggle = null;
+let layersPanelHeader = null;
 let layersPanelBlendSelect = null;
 let layersPanelOpacitySlider = null;
 let layersPanelOpacityReadout = null;
+let layersPanelOpacityToggle = null;
+let layersPanelOpacityNumber = null;
+let layersPanelOpacityPopover = null;
+let colorLibraryPanel = null;
+let colorLibraryHeader = null;
+let rightSidebar = null;
+let rightSidebarToggle = null;
 let foregroundSwatchEl = null;
 let backgroundSwatchEl = null;
 
@@ -317,7 +325,23 @@ function syncLayersPanelToolbar() {
   layersPanelBlendSelect.value = layer.blendMode;
   const opacityPercent = Math.round(layer.opacity * 100);
   layersPanelOpacitySlider.value = String(opacityPercent);
+  layersPanelOpacityNumber.value = String(opacityPercent);
   layersPanelOpacityReadout.textContent = `${opacityPercent}%`;
+}
+
+/**
+ * Syncs the Layers panel's collapsed/expanded DOM state to
+ * state.layersPanelVisible - collapsing hides everything but the header
+ * (see .layers-panel.collapsed in style.css), letting the Color Library
+ * panel above grow into the freed space. Called by both the panel
+ * header click and the pre-existing bottom-bar toggle
+ * (#layers-panel-toggle), which share this one flag.
+ */
+function syncLayersCollapse() {
+  const collapsed = !state.layersPanelVisible;
+  layersPanel.classList.toggle('collapsed', collapsed);
+  layersPanelHeader.setAttribute('aria-expanded', String(!collapsed));
+  layersPanelToggle.classList.toggle('active', !collapsed);
 }
 
 function renderLayersPanel() {
@@ -499,6 +523,18 @@ async function loadColorPalettes() {
     activePaletteId = colorPalettes[0].id;
   }
   renderColorLibraryPanel();
+}
+
+/**
+ * Syncs the Color Library panel's collapsed/expanded DOM state to
+ * state.colorLibraryCollapsed - collapsing hides everything but the
+ * header (see .color-library-panel.collapsed in style.css), letting the
+ * Layers panel below grow into the freed space.
+ */
+function syncColorLibraryCollapse() {
+  const collapsed = state.colorLibraryCollapsed;
+  colorLibraryPanel.classList.toggle('collapsed', collapsed);
+  colorLibraryHeader.setAttribute('aria-expanded', String(!collapsed));
 }
 
 /**
@@ -783,12 +819,24 @@ function bindTooltips() {
       // Top-bar buttons sit close together horizontally - a tooltip to
       // the right would cover the next button - so those show below
       // instead. The vertical tools sidebar keeps showing to the right.
+      // .right-sidebar buttons sit near the viewport's right edge, so a
+      // tooltip to the right would render partly or fully off-screen -
+      // those show to the left instead (see .tool-tooltip.left-side).
       const isTopbar = target.closest('.workspace-topbar') !== null;
+      const isRightSidebar = !isTopbar && target.closest('.right-sidebar') !== null;
       tooltipEl.classList.toggle('below', isTopbar);
+      tooltipEl.classList.toggle('left-side', isRightSidebar);
       if (isTopbar) {
         tooltipEl.style.left = `${rect.left + rect.width / 2}px`;
         tooltipEl.style.top = `${rect.bottom + 10}px`;
         tooltipEl.style.transform = 'translateX(-50%)';
+      } else if (isRightSidebar) {
+        // Measured after the content above is set (width depends on the
+        // text), so the tooltip's own width is known before positioning.
+        const tooltipRect = tooltipEl.getBoundingClientRect();
+        tooltipEl.style.left = `${rect.left - tooltipRect.width - 12}px`;
+        tooltipEl.style.top = `${rect.top + rect.height / 2}px`;
+        tooltipEl.style.transform = 'translateY(-50%)';
       } else {
         tooltipEl.style.left = `${rect.right + 12}px`;
         tooltipEl.style.top = `${rect.top + rect.height / 2}px`;
@@ -973,6 +1021,79 @@ function closeColorPicker() {
   document.getElementById('color-picker-popover').classList.add('hidden');
 }
 
+/**
+ * Positions and shows #layers-panel-opacity-popover anchored below the
+ * Layers toolbar row (#layers-panel-opacity-toggle) - same
+ * clamp-to-viewport approach as openColorPicker above, adapted to open
+ * below rather than to the side since the toggle sits inside the right
+ * sidebar's narrow column.
+ */
+function openLayersOpacityPopover() {
+  layersPanelOpacityPopover.classList.remove('hidden'); // unhide before measuring (see openColorPicker)
+  const rect = layersPanelOpacityToggle.getBoundingClientRect();
+  const popRect = layersPanelOpacityPopover.getBoundingClientRect();
+  const margin = 8;
+
+  let left = rect.right - popRect.width;
+  left = Math.max(margin, Math.min(left, window.innerWidth - popRect.width - margin));
+
+  let top = rect.bottom + 6;
+  top = Math.max(margin, Math.min(top, window.innerHeight - popRect.height - margin));
+
+  layersPanelOpacityPopover.style.left = `${left}px`;
+  layersPanelOpacityPopover.style.top = `${top}px`;
+  layersPanelOpacityNumber.focus();
+}
+
+function closeLayersOpacityPopover() {
+  layersPanelOpacityPopover.classList.add('hidden');
+}
+
+/**
+ * Wires a panel header (e.g. #layers-panel-header,
+ * #color-library-header) for Photoshop-accordion-style collapse: click
+ * anywhere on the header row, not just a dedicated icon, to
+ * collapse/expand. Ignores clicks landing on an interactive control
+ * inside the header (e.g. Color Library's add/delete-palette buttons,
+ * Layers' "+ Layer" button) so those keep working normally instead of
+ * also toggling collapse. `onToggle` owns updating the underlying state
+ * and syncing the DOM (see syncLayersCollapse/syncColorLibraryCollapse).
+ */
+function bindPanelHeaderCollapse(headerEl, onToggle) {
+  headerEl.addEventListener('click', (e) => {
+    if (e.target.closest('button, select, input')) return;
+    onToggle();
+  });
+  headerEl.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    if (e.target !== headerEl) return;
+    e.preventDefault();
+    onToggle();
+  });
+}
+
+/**
+ * Mouse-wheel adjusts a range slider's value by one step per notch while
+ * hovering it, without needing to grab the thumb - common desktop-app
+ * slider convention (Photoshop, Figma). Scrolling up increases, down
+ * decreases; dispatches a real "input" event so it flows through the
+ * slider's existing listener the same as a drag would. preventDefault
+ * suppresses the page scroll the wheel would otherwise trigger.
+ */
+function bindSliderWheel(slider) {
+  slider.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const step = Number(slider.step) || 1;
+    const min = Number(slider.min);
+    const max = Number(slider.max);
+    const direction = e.deltaY < 0 ? 1 : -1;
+    const next = Math.max(min, Math.min(max, Number(slider.value) + direction * step));
+    if (next === Number(slider.value)) return;
+    slider.value = String(next);
+    slider.dispatchEvent(new Event('input', { bubbles: true }));
+  }, { passive: false });
+}
+
 function bindDomOnce() {
   toolButtons = document.querySelectorAll('.tool-button[data-tool]');
   pixelPerfectToggle = document.getElementById('pixel-perfect-toggle');
@@ -1037,6 +1158,12 @@ function bindDomOnce() {
     state.pencilOpacity = value / 100;
     pencilOpacityReadout.textContent = `${value}%`;
   });
+
+  // Mouse wheel adjusts Size/Opacity by one step per notch while
+  // hovering the slider, without needing to grab the thumb - common
+  // desktop-app slider convention (Photoshop, Figma).
+  bindSliderWheel(pencilSizeSlider);
+  bindSliderWheel(pencilOpacitySlider);
 
   // Color Library sequence toggle - on/off, same pattern as Rectangle's
   // Filled toggle below. Mutually exclusive with Rainbow (both are
@@ -1219,6 +1346,8 @@ function bindDomOnce() {
 
   // Color Library panel: named, persisted palettes (see design.md's
   // "one Dexie record per palette" decision).
+  colorLibraryPanel = document.getElementById('color-library-panel');
+  colorLibraryHeader = document.getElementById('color-library-header');
   colorLibraryGrid = document.getElementById('color-library-grid');
   colorLibrarySelect = document.getElementById('color-library-select');
   deletePaletteButton = document.getElementById('delete-palette-button');
@@ -1228,6 +1357,16 @@ function bindDomOnce() {
   const newPaletteName = document.getElementById('new-palette-name');
   const newPaletteSave = document.getElementById('new-palette-save');
   const newPaletteCancel = document.getElementById('new-palette-cancel');
+
+  // Collapse-to-header (Photoshop-accordion style) for Color Library and
+  // Layers - see syncColorLibraryCollapse/syncLayersCollapse below and
+  // bindPanelHeaderCollapse's doc comment for the click/keyboard handling
+  // shared between them.
+  syncColorLibraryCollapse();
+  bindPanelHeaderCollapse(colorLibraryHeader, () => {
+    state.colorLibraryCollapsed = !state.colorLibraryCollapsed;
+    syncColorLibraryCollapse();
+  });
 
   loadColorPalettes(); // async; renders the panel once palettes arrive
 
@@ -1273,19 +1412,31 @@ function bindDomOnce() {
     await loadColorPalettes();
   });
 
-  // Layers panel: its own show/hide toggle, independent of the Brushes
-  // panel's tool-scoped visibility (toggling one never touches the other).
+  // Layers panel: collapse-to-header via its own header click, plus the
+  // pre-existing bottom-bar toggle (#layers-panel-toggle) - both drive
+  // and reflect the same state.layersPanelVisible flag (see
+  // syncLayersCollapse), so either control collapses/expands the panel
+  // identically. Independent of the Brushes panel's tool-scoped
+  // visibility (toggling one never touches the other).
   layersPanel = document.getElementById('layers-panel');
+  layersPanelHeader = document.getElementById('layers-panel-header');
   layersPanelToggle = document.getElementById('layers-panel-toggle');
+  syncLayersCollapse();
   layersPanelToggle.addEventListener('click', () => {
     state.layersPanelVisible = !state.layersPanelVisible;
-    layersPanel.classList.toggle('hidden', !state.layersPanelVisible);
-    layersPanelToggle.classList.toggle('active', state.layersPanelVisible);
+    syncLayersCollapse();
+  });
+  bindPanelHeaderCollapse(layersPanelHeader, () => {
+    state.layersPanelVisible = !state.layersPanelVisible;
+    syncLayersCollapse();
   });
 
   // Layers panel toolbar (Blend mode + Opacity) - edits whichever layer
   // is active, Photoshop-style, rather than living inline in every row
-  // (see buildLayerRow/syncLayersPanelToolbar).
+  // (see buildLayerRow/syncLayersPanelToolbar). One line: Blend mode
+  // sized to its own text, Opacity as a button that opens a small
+  // popover (slider + number field) instead of an always-visible
+  // slider - see openLayersOpacityPopover/closeLayersOpacityPopover.
   layersPanelBlendSelect = document.getElementById('layers-panel-blend-select');
   for (const mode of BLEND_MODES) {
     const option = document.createElement('option');
@@ -1299,18 +1450,62 @@ function bindDomOnce() {
     commit();
   });
 
-  layersPanelOpacitySlider = document.getElementById('layers-panel-opacity-slider');
+  layersPanelOpacityToggle = document.getElementById('layers-panel-opacity-toggle');
   layersPanelOpacityReadout = document.getElementById('layers-panel-opacity-readout');
-  layersPanelOpacitySlider.addEventListener('input', () => {
-    const value = Number(layersPanelOpacitySlider.value);
-    // Live-update the canvas while dragging, but don't rebuild the
-    // panel (that would fight the slider mid-drag) or commit every tick.
-    state.layerStack.setOpacity(state.layerStack.getActiveIndex(), value / 100);
-    layersPanelOpacityReadout.textContent = `${value}%`;
+  layersPanelOpacitySlider = document.getElementById('layers-panel-opacity-slider');
+  layersPanelOpacityNumber = document.getElementById('layers-panel-opacity-number');
+  layersPanelOpacityPopover = document.getElementById('layers-panel-opacity-popover');
+
+  function applyLayerOpacity(value, { commitChange } = {}) {
+    const clamped = Math.max(0, Math.min(100, value));
+    // Live-update the canvas while dragging/typing, but don't rebuild
+    // the panel (that would fight an in-progress edit) or commit every
+    // tick - only on the final value (slider "change", number "change").
+    state.layerStack.setOpacity(state.layerStack.getActiveIndex(), clamped / 100);
+    layersPanelOpacityReadout.textContent = `${clamped}%`;
+    layersPanelOpacitySlider.value = String(clamped);
+    layersPanelOpacityNumber.value = String(clamped);
     state.canvasView.render();
+    if (commitChange) commit();
+  }
+
+  layersPanelOpacitySlider.addEventListener('input', () => {
+    applyLayerOpacity(Number(layersPanelOpacitySlider.value));
   });
   layersPanelOpacitySlider.addEventListener('change', () => {
-    commit();
+    applyLayerOpacity(Number(layersPanelOpacitySlider.value), { commitChange: true });
+  });
+  layersPanelOpacityNumber.addEventListener('change', () => {
+    applyLayerOpacity(Number(layersPanelOpacityNumber.value) || 0, { commitChange: true });
+  });
+
+  layersPanelOpacityToggle.addEventListener('click', () => {
+    if (layersPanelOpacityPopover.classList.contains('hidden')) {
+      openLayersOpacityPopover();
+    } else {
+      closeLayersOpacityPopover();
+    }
+  });
+  // Close on outside click/Escape, same pattern as #color-picker-popover.
+  document.addEventListener('pointerdown', (e) => {
+    if (layersPanelOpacityPopover.classList.contains('hidden')) return;
+    if (layersPanelOpacityPopover.contains(e.target)) return;
+    if (e.target === layersPanelOpacityToggle || layersPanelOpacityToggle.contains(e.target)) return;
+    closeLayersOpacityPopover();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !layersPanelOpacityPopover.classList.contains('hidden')) closeLayersOpacityPopover();
+  });
+
+  // Whole right-sidebar visibility toggle (Color Library + Brushes +
+  // Layers together), independent of each panel's own collapsed state
+  // above - VSCode "toggle sidebar" style.
+  rightSidebar = document.getElementById('right-sidebar');
+  rightSidebarToggle = document.getElementById('right-sidebar-toggle');
+  rightSidebarToggle.addEventListener('click', () => {
+    state.rightSidebarVisible = !state.rightSidebarVisible;
+    rightSidebar.classList.toggle('hidden', !state.rightSidebarVisible);
+    rightSidebarToggle.classList.toggle('active', state.rightSidebarVisible);
   });
 
   // Zoom: +/- buttons and the three presets all just call the CanvasView
@@ -1596,7 +1791,14 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     colorLibrarySequence: false,
     rectangleFilled: false,
     squareConstraint: false,
+    // Despite the name, this now means "expanded" rather than "shown" -
+    // collapsing the Layers panel (via its header or #layers-panel-toggle)
+    // no longer removes it, just shrinks it to its header row (see
+    // syncLayersCollapse). Kept as one boolean/name rather than renamed,
+    // since every call site already reads naturally either way.
     layersPanelVisible: true,
+    colorLibraryCollapsed: false,
+    rightSidebarVisible: true,
     selection: null,
     dragStart: null,
     dragCurrent: null,
@@ -1642,8 +1844,11 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   document.getElementById('brush-spacing').value = '1';
   document.getElementById('brush-rotation').value = '0';
   pixelPerfectToggle.classList.remove('active');
-  layersPanel.classList.remove('hidden');
-  layersPanelToggle.classList.add('active');
+  syncLayersCollapse();
+  syncColorLibraryCollapse();
+  closeLayersOpacityPopover();
+  rightSidebar.classList.remove('hidden');
+  rightSidebarToggle.classList.add('active');
   // Default tool is Pencil, so the panel starts visible; sliders/readouts
   // reset to match state.pencilSize/pencilOpacity's defaults (1, 1).
   pencilOptionsPanel.classList.remove('hidden');

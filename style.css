@@ -419,6 +419,17 @@ body {
   border-bottom-color: #2c2c2e;
 }
 
+/* .right-sidebar buttons sit near the viewport's right edge - a tooltip
+   to the right (the default, tuned for the left .tools-sidebar) would
+   render partly or fully off-screen. Shown to the left instead, arrow
+   mirrored to point at the button from the tooltip's right edge. */
+.tool-tooltip.left-side::after {
+  right: auto;
+  left: 100%;
+  border-right-color: transparent;
+  border-left-color: #2c2c2e;
+}
+
 .tool-tooltip-shortcut {
   color: #9a9a9e;
   font-weight: 500;
@@ -597,21 +608,47 @@ body {
   overflow: hidden;
 }
 
+/* Bottom-most section (see .right-sidebar's order comment in index.html)
+   - fills whatever's left after Color Library's bounded height and
+   Brushes' own cap, mirroring Color Library's old flex:1 role. */
 .layers-panel {
-  max-height: 35%;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  border-bottom: 1px solid #2c2c2e;
+  border-top: 1px solid #2c2c2e;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Collapsed: only the header stays visible (see .panel-header/.layers-
+   panel-body below) - the panel itself shrinks to the header's content
+   height instead of continuing to claim flex space. */
+.layers-panel.collapsed {
   flex: none;
 }
 
 .layers-panel-header {
   display: flex;
   align-items: center;
+  gap: 0.3rem;
   justify-content: space-between;
   padding: 0.4rem 0.5rem;
+  flex: none;
+}
+
+.layers-panel-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.layers-panel.collapsed .layers-panel-body {
+  display: none;
 }
 
 .layers-panel-header h2 {
+  flex: 1;
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -624,58 +661,132 @@ body {
   font-size: 0.8rem;
 }
 
+/* Shared by .layers-panel-header and .color-library-header - the whole
+   row is a click target that collapses/expands the panel down to just
+   this header (Photoshop-accordion style), not only the chevron icon.
+   Interactive controls inside the row (the "+ Layer" button, the
+   header-actions icon buttons) stop propagation in JS so clicking them
+   doesn't also toggle the collapse. */
+.panel-header {
+  cursor: pointer;
+}
+
+.panel-collapse-chevron {
+  flex: none;
+  font-size: 1.1rem;
+  color: #a0a0a5;
+  transition: transform 0.15s ease;
+}
+
+/* Collapsed state rotates the chevron from pointing down (expanded) to
+   pointing right, the common accordion convention. */
+.panel-header[aria-expanded="false"] .panel-collapse-chevron {
+  transform: rotate(-90deg);
+}
+
 /* Photoshop-style toolbar: Blend mode + Opacity, editing whichever
    layer is active - not per-row (see syncLayersPanelToolbar in
-   js/workspace.js). */
+   js/workspace.js). One row (see index.html's toolbar comment for why
+   the prior two-row layout no longer applies): the Blend select is
+   sized to its own text instead of the full row width, freeing room for
+   the Opacity button on the same line. */
 .layers-panel-toolbar {
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+  align-items: center;
+  gap: 0.4rem;
   padding: 0.4rem 0.5rem;
   border-top: 1px solid #2c2c2e;
   border-bottom: 1px solid #2c2c2e;
   background: #232325;
 }
 
+/* Takes the row's remaining width (Opacity next to it is sized to its
+   own compact content instead - see .layers-panel-opacity-toggle).
+   appearance: none + a custom background-image chevron, not the native
+   OS control - Safari otherwise renders <select> with its own puffy
+   chrome that ignores the dark background/border set here. */
 .layers-panel-blend-select {
-  width: 100%;
-  background: #2c2c2e;
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: #2c2c2e url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23a0a0a5' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") no-repeat right 0.3rem center / 1rem;
+  background-color: #2c2c2e;
   color: inherit;
   border: 1px solid #48484a;
   border-radius: 0.3rem;
   font-size: 0.75rem;
-  padding: 0.25rem 0.3rem;
+  padding: 0.25rem 1.4rem 0.25rem 0.4rem;
 }
 
-.layers-panel-opacity {
+/* Opens #layers-panel-opacity-popover on click - see openLayersOpacityPopover
+   in js/workspace.js. Icon, not the word "Opacity" - reclaims space at
+   the sidebar's narrowest clamped width (see .right-sidebar); a tooltip
+   (data-tooltip) still names it, same icon-only convention the Pencil
+   Size/Opacity sliders use. Sized to its own content (flex: none), not
+   flex-grown to fill the row - Blend mode above takes the rest instead.
+   appearance: none - Safari otherwise renders <button> with its own
+   native chrome (visibly lighter background, rounder corners) that
+   overrides the dark background/border set here. */
+.layers-panel-opacity-toggle {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  flex: 1 1 auto;
-  min-width: 0;
+  gap: 0.25rem;
+  flex: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background: #2c2c2e;
+  border: 1px solid #48484a;
+  border-radius: 0.3rem;
+  color: inherit;
+  font: inherit;
+  padding: 0.25rem 0.4rem;
+  cursor: pointer;
 }
 
-/* Icon, not the word "Opacity" - reclaims space this row needs at the
-   sidebar's narrowest clamped width (see .right-sidebar); a tooltip on
-   the row (data-tooltip) still names it. Matches the icon-only
-   convention the Pencil Size/Opacity sliders already use. */
 .layers-panel-opacity-icon {
   flex: none;
   font-size: 1rem;
   color: #a0a0a5;
 }
 
-.layers-panel-opacity-slider {
-  flex: 1 1 auto;
-  min-width: 2rem;
-}
-
 .layers-panel-opacity-readout {
   flex: none;
-  font-size: 0.7rem;
-  color: #a0a0a5;
-  width: 2rem;
-  text-align: right;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+/* Popover holding the actual slider + a number field for direct entry -
+   position via fixed + JS, clamped to the viewport, same pattern as
+   #color-picker-popover (see openColorPicker/openLayersOpacityPopover in
+   js/workspace.js). Lives outside .right-sidebar (index.html) so that
+   panel's own overflow-y:auto can't clip it. */
+.opacity-popover {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #2c2c2e;
+  border: 1px solid #48484a;
+  border-radius: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  z-index: 50;
+}
+
+.layers-panel-opacity-slider {
+  width: 8rem;
+}
+
+.layers-panel-opacity-number {
+  width: 3rem;
+  background: #1c1c1e;
+  color: inherit;
+  border: 1px solid #48484a;
+  border-radius: 0.3rem;
+  padding: 0.2rem 0.3rem;
+  font-size: 0.8rem;
 }
 
 .layers-panel-list {
@@ -1002,22 +1113,23 @@ body {
 
 /* Second section of the right-sidebar (see .right-sidebar above), shown
    only while the Brush tool is active — see js/workspace.js. Capped at
-   35% like Layers so the always-visible Color Library panel below still
-   gets its share of space when Brushes is shown. */
+   35% like Layers used to be, so it doesn't crowd out Color Library
+   above or Layers below when shown. */
 .brushes-panel {
   flex: none;
   max-height: 35%;
   overflow-y: auto;
 }
 
-/* Third section - always visible (not tool-scoped), named/persisted
-   palettes of user-added colors. flex:1 fills whatever's left after
-   Layers (and Brushes, when shown). */
+/* Top-most section (see .right-sidebar's order comment in index.html) -
+   bounded to a fixed height range regardless of window height, rather
+   than growing to fill remaining space (Layers does that now instead -
+   see .layers-panel). */
 .color-library-panel {
-  flex: 1;
-  min-height: 0;
+  flex: none;
+  max-height: clamp(200px, 30vh, 250px);
   overflow-y: auto;
-  border-top: 1px solid #2c2c2e;
+  border-bottom: 1px solid #2c2c2e;
   display: flex;
   flex-direction: column;
 }
@@ -1025,17 +1137,30 @@ body {
 .color-library-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.3rem;
   padding: 0.4rem 0.5rem;
   flex: none;
 }
 
 .color-library-header h2 {
+  flex: 1;
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #a0a0a5;
   margin: 0;
+}
+
+.color-library-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Collapsed: only the header stays visible (mirrors .layers-panel.collapsed). */
+.color-library-panel.collapsed .color-library-body {
+  display: none;
 }
 
 .color-library-header-actions {
@@ -1086,10 +1211,12 @@ body {
   font-size: 0.75rem;
 }
 
+/* Smaller swatches (~19px, was ~26px) so more rows fit within the
+   panel's now-bounded height (see .color-library-panel). */
 .color-library-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(1.6rem, 1fr));
-  gap: 0.3rem;
+  grid-template-columns: repeat(auto-fill, minmax(19px, 1fr));
+  gap: 0.25rem;
   padding: 0 0.5rem 0.5rem;
   overflow-y: auto;
 }

@@ -122,12 +122,11 @@ proposed/implemented/archived before the next starts:
     all remaining space, and compresses Layers' Blend mode/Opacity onto
     one row. Raised directly, with reference screenshots.
 
-Status: **2a, 2b, 2c1, 2c2, 2d, 2e, 2f, 2h, 2i, 2j, 2k, 2l all done and
-archived** — specs live at `openspec/specs/` (`layers`, `local-
-persistence`, `gallery`, `canvas-settings`, `brushes`, `shape-tools`,
-`pixel-drawing-engine`, `canvas-navigation`, `color-library`, `url-
-routing`); archives under `openspec/changes/archive/`. **2c3 not yet
-proposed. 2g proposed, not yet implemented** (0 tasks done).
+Status: **all sub-changes (2a–2l) done and archived** — specs live at
+`openspec/specs/` (`layers`, `local-persistence`, `gallery`, `canvas-
+settings`, `brushes`, `shape-tools`, `pixel-drawing-engine`, `canvas-
+navigation`, `color-library`, `url-routing`, `export`); archives under
+`openspec/changes/archive/`. **Phase 2 is complete.**
 
 ## Phase 3 — Supabase Auth + sync
 

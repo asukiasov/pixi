@@ -121,12 +121,36 @@ proposed/implemented/archived before the next starts:
     shape), bounds Color Library's height instead of letting it fill
     all remaining space, and compresses Layers' Blend mode/Opacity onto
     one row. Raised directly, with reference screenshots.
+  - **2m — Brush import from image**: an "Import" entry point in the
+    Brushes panel that opens a file picker, decodes the image, and
+    pre-fills the existing custom-brush grid editor (2c1) via
+    alpha-based thresholding (falling back to brightness-based
+    thresholding for fully-opaque images) at the editor's current W/H —
+    producing a monochrome silhouette brush, not a full-color stamp.
+    Changing W/H afterward re-pixelates from the stored source image
+    instead of clearing, so the user can dial in resolution before
+    hand-tweaking and saving through the same editor. Raised directly;
+    to be built in parallel with 2n via git worktrees, sharing a small
+    image-decode/downsample utility.
+  - **2n — Color Library import from image**: an "Import" entry point
+    in the Color Library panel that opens a file picker, downsamples
+    the image to a fixed internal grid purely as a color-extraction
+    step (the grid itself isn't user-facing), and extracts a
+    user-adjustable number of representative colors via clustering
+    (e.g. median-cut) rather than raw top-N-by-frequency, so
+    anti-aliasing/gradients don't crowd the result with near-duplicate
+    shades. Shows a live preview (adjust color count, watch it
+    re-extract) before naming and saving as a new palette through the
+    existing "+ New Palette" flow (2f). Raised directly; to be built in
+    parallel with 2m via git worktrees, sharing a small image-decode/
+    downsample utility.
 
-Status: **all sub-changes (2a–2l) done and archived** — specs live at
-`openspec/specs/` (`layers`, `local-persistence`, `gallery`, `canvas-
-settings`, `brushes`, `shape-tools`, `pixel-drawing-engine`, `canvas-
-navigation`, `color-library`, `url-routing`, `export`); archives under
-`openspec/changes/archive/`. **Phase 2 is complete.**
+Status: **2a–2l done and archived** — specs live at `openspec/specs/`
+(`layers`, `local-persistence`, `gallery`, `canvas-settings`, `brushes`,
+`shape-tools`, `pixel-drawing-engine`, `canvas-navigation`,
+`color-library`, `url-routing`, `export`); archives under
+`openspec/changes/archive/`. **2m and 2n proposed, not yet implemented**
+(0 tasks done each).
 
 ## Phase 3 — Supabase Auth + sync
 

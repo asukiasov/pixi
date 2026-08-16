@@ -17,8 +17,21 @@ import { drawRectangle, clipToSelection } from './shape-tools.js';
 import { DEFAULT_MATERIAL_COLORS, PREDEFINED_PALETTES } from './default-color-library.js';
 import { bresenhamLine, strokeFreehandThick } from './engine.js';
 import { confirmDialog } from './confirm-dialog.js';
+import { decodeImageFile, downsampleToImageData } from './image-import.js';
+import { extractPalette } from './color-extraction.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
+
+// Fixed internal sample grid for Color Library image import
+// (2n-color-library-image-import) - purely a color-reduction step before
+// median-cut clustering, never shown to the user (see design.md's
+// "downsample before clustering" decision). 64x64 = 4096 sample pixels,
+// plenty to represent an image's color distribution regardless of the
+// source image's actual resolution.
+const COLOR_IMPORT_SAMPLE_SIZE = 64;
+const COLOR_IMPORT_MIN_COUNT = 2;
+const COLOR_IMPORT_MAX_COUNT = 32;
+const COLOR_IMPORT_DEFAULT_COUNT = 8;
 
 const RAINBOW_HUE_STEP = 20; // degrees per brush placed, in Rainbow mode
 
@@ -1456,6 +1469,90 @@ function bindDomOnce() {
   const newPaletteSave = document.getElementById('new-palette-save');
   const newPaletteCancel = document.getElementById('new-palette-cancel');
 
+  // Import palette from image (2n-color-library-image-import): file
+  // picker -> decode -> downsample once (cached) -> extractPalette on
+  // demand, re-run live as the color-count control changes.
+  const importPaletteButton = document.getElementById('import-palette-button');
+  const importInput = document.getElementById('color-library-import-input');
+  const importPreviewRow = document.getElementById('import-preview-row');
+  const importPreviewGrid = document.getElementById('import-preview-grid');
+  const importPreviewCount = document.getElementById('import-preview-count');
+  const importPreviewName = document.getElementById('import-preview-name');
+  const importPreviewSave = document.getElementById('import-preview-save');
+  const importPreviewCancel = document.getElementById('import-preview-cancel');
+  // Cached downsampled ImageData from the current import, so re-extracting
+  // on a color-count change never re-decodes/re-downsamples the source
+  // image (see design.md's live-preview decision). null when no import
+  // preview is open.
+  let importSampleImageData = null;
+  let importPreviewColors = [];
+
+  function renderImportPreview() {
+    importPreviewGrid.innerHTML = '';
+    for (const hex of importPreviewColors) {
+      const swatch = document.createElement('div');
+      swatch.className = 'color-library-swatch';
+      swatch.style.background = hex;
+      importPreviewGrid.appendChild(swatch);
+    }
+  }
+
+  function reExtractImportPreview() {
+    if (!importSampleImageData) return;
+    const count = Math.min(
+      COLOR_IMPORT_MAX_COUNT,
+      Math.max(COLOR_IMPORT_MIN_COUNT, Math.round(Number(importPreviewCount.value)) || COLOR_IMPORT_DEFAULT_COUNT)
+    );
+    importPreviewCount.value = String(count);
+    importPreviewColors = extractPalette(importSampleImageData, count);
+    renderImportPreview();
+  }
+
+  function closeImportPreview() {
+    importPreviewRow.classList.add('hidden');
+    importSampleImageData = null;
+    importPreviewColors = [];
+    importInput.value = ''; // allow re-picking the same file
+  }
+
+  importPaletteButton.addEventListener('click', () => {
+    importInput.click();
+  });
+
+  importInput.addEventListener('change', async () => {
+    const file = importInput.files?.[0];
+    if (!file) return;
+    let image;
+    try {
+      image = await decodeImageFile(file);
+    } catch {
+      importInput.value = ''; // unsupported/corrupt file - no-op, let the user retry
+      return;
+    }
+    importSampleImageData = downsampleToImageData(image, COLOR_IMPORT_SAMPLE_SIZE, COLOR_IMPORT_SAMPLE_SIZE);
+    importPreviewCount.value = String(COLOR_IMPORT_DEFAULT_COUNT);
+    importPreviewName.value = '';
+    newPaletteRow.classList.add('hidden'); // mutually exclusive with the plain "+ New Palette" row
+    importPreviewRow.classList.remove('hidden');
+    reExtractImportPreview();
+  });
+
+  importPreviewCount.addEventListener('change', reExtractImportPreview);
+  importPreviewCount.addEventListener('input', reExtractImportPreview);
+
+  importPreviewCancel.addEventListener('click', () => {
+    closeImportPreview();
+  });
+
+  importPreviewSave.addEventListener('click', async () => {
+    const name = importPreviewName.value.trim();
+    if (!name) return; // nothing entered - no-op, stay open
+    const created = await createColorPalette(name, [...importPreviewColors]);
+    activePaletteId = created.id;
+    closeImportPreview();
+    await loadColorPalettes();
+  });
+
   // Collapse-to-header (Photoshop-accordion style) for Color Library and
   // Layers - see syncColorLibraryCollapse/syncLayersCollapse below and
   // bindPanelHeaderCollapse's doc comment for the click/keyboard handling
@@ -1478,6 +1575,7 @@ function bindDomOnce() {
   });
 
   addPaletteButton.addEventListener('click', () => {
+    closeImportPreview(); // mutually exclusive with the import preview row
     newPaletteName.value = '';
     newPaletteRow.classList.remove('hidden');
     newPaletteName.focus();

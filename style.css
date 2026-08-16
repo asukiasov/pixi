@@ -1269,6 +1269,61 @@ body {
   font-size: 0.75rem;
 }
 
+/* Import preview (2n-color-library-image-import) - mirrors
+   .new-palette-row's naming-row styling, plus a swatch preview above the
+   controls that updates live as the color-count input changes. */
+.import-preview-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0 0.5rem 0.4rem;
+  flex: none;
+}
+
+.import-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(19px, 1fr));
+  gap: 0.25rem;
+}
+
+.import-preview-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.import-preview-controls label {
+  font-size: 0.75rem;
+  color: #a0a0a5;
+}
+
+.import-preview-controls input[type='number'] {
+  width: 3.2rem;
+  padding: 0.3rem 0.4rem;
+  background: #2c2c2e;
+  border: 1px solid #48484a;
+  color: inherit;
+  border-radius: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.import-preview-controls input[type='text'] {
+  flex: 1;
+  min-width: 6rem;
+  padding: 0.3rem 0.4rem;
+  background: #2c2c2e;
+  border: 1px solid #48484a;
+  color: inherit;
+  border-radius: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.import-preview-controls .tool-button {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.75rem;
+}
+
 /* Smaller swatches (~19px, was ~26px) so more rows fit within the
    panel's now-bounded height (see .color-library-panel). */
 .color-library-grid {

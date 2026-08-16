@@ -350,6 +350,13 @@
             <button type="button" id="add-palette-button" class="tool-button icon-button" aria-label="Add palette" data-tooltip="New palette">
               <span class="material-symbols-outlined">add</span>
             </button>
+            <!-- Import a palette from an image (2n-color-library-image-import)
+                 - opens the hidden file input below; the real UI is the
+                 import-preview row that appears once a file is picked. -->
+            <button type="button" id="import-palette-button" class="tool-button icon-button" aria-label="Import palette from image" data-tooltip="Import from image">
+              <span class="material-symbols-outlined">image</span>
+            </button>
+            <input type="file" id="color-library-import-input" accept="image/*" class="hidden" />
             <button type="button" id="delete-palette-button" class="tool-button icon-button no-buzz" aria-label="Delete palette" data-tooltip="Delete palette">
               <span class="material-symbols-outlined">delete</span>
             </button>
@@ -361,6 +368,20 @@
             <input type="text" id="new-palette-name" placeholder="Palette name" />
             <button type="button" id="new-palette-save" class="tool-button">Save</button>
             <button type="button" id="new-palette-cancel" class="tool-button">Cancel</button>
+          </div>
+          <!-- Import preview (2n-color-library-image-import): appears after a
+               file is picked, before anything is saved - live swatches +
+               adjustable color count + name + Save/Cancel, mirroring
+               #new-palette-row's naming pattern. -->
+          <div id="import-preview-row" class="import-preview-row hidden">
+            <div id="import-preview-grid" class="import-preview-grid"></div>
+            <div class="import-preview-controls">
+              <label for="import-preview-count">Colors</label>
+              <input type="number" id="import-preview-count" min="2" max="32" value="8" />
+              <input type="text" id="import-preview-name" placeholder="Palette name" />
+              <button type="button" id="import-preview-save" class="tool-button">Save</button>
+              <button type="button" id="import-preview-cancel" class="tool-button">Cancel</button>
+            </div>
           </div>
           <div id="color-library-grid" class="color-library-grid"></div>
         </div>

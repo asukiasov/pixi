@@ -728,6 +728,9 @@ function bindBrushEditorOnce() {
 
 const CONFETTI_COLORS = ['#ff453a', '#ff9f0a', '#ffd60a', '#30d158', '#64d2ff', '#0a84ff', '#bf5af2'];
 
+// ROYGBIV, for the "name a palette 'rainbow'" easter egg below.
+const RAINBOW_EASTER_EGG_COLORS = ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#4b0082', '#8b00ff'];
+
 /** Shared confetti burst, from a given screen point, with a configurable piece count/spread. */
 function confettiBurst(originX, originY, count, maxDistance) {
   const container = document.createElement('div');
@@ -1392,10 +1395,20 @@ function bindDomOnce() {
   newPaletteSave.addEventListener('click', async () => {
     const name = newPaletteName.value.trim();
     if (!name) return; // nothing entered - no-op, stay open
-    const created = await createColorPalette(name);
+    // Easter egg: naming a palette "rainbow" seeds it with an actual
+    // rainbow instead of starting empty, plus a little confetti burst
+    // from the grid - a small reward for typing the magic word into the
+    // Color Library, alongside the Konami code (bindKonamiCode) and the
+    // Gallery's paw parade (see gallery.js) as this app's other two.
+    const isRainbow = name.toLowerCase() === 'rainbow';
+    const created = await createColorPalette(name, isRainbow ? [...RAINBOW_EASTER_EGG_COLORS] : []);
     activePaletteId = created.id;
     newPaletteRow.classList.add('hidden');
     await loadColorPalettes();
+    if (isRainbow) {
+      const gridRect = colorLibraryGrid.getBoundingClientRect();
+      confettiBurst(gridRect.left + gridRect.width / 2, gridRect.top, 24, 160);
+    }
   });
 
   deletePaletteButton.addEventListener('click', async () => {

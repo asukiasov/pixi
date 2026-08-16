@@ -254,9 +254,22 @@ on/off, independent of any project's canvas). Before drawing, the editor
 SHALL let the user choose the grid's width and height, each independently
 constrained to a minimum of 3 and a maximum of the current project's
 canvas width/height respectively (so a brush can never be larger than the
-canvas it would be used on); changing the size re-grids from a blank
-pattern. Saving with a name adds it to the brush picker as a new brush,
-usable exactly like a built-in one. Canceling discards it.
+canvas it would be used on). The editor SHALL also offer an "Import"
+control that opens a file picker (`image/*`); choosing an image decodes
+it and pre-fills the grid at the editor's current width/height by
+thresholding the image to on/off cells, instead of starting blank -
+alpha-based (mostly-opaque downsampled regions become "on") when the
+image has any transparency, falling back to brightness-based
+thresholding (darker regions become "on") when the image is fully
+opaque. The imported result is a monochrome silhouette only - the
+image's own colors are discarded, matching every other brush's "placed
+in the current drawing color" behavior. Changing the grid's size SHALL
+re-grid from a blank pattern when no image has been imported (as
+before), or re-pixelate from the stored source image at the new size
+when one has. Either way, the user can still hand-edit cells before
+saving. Saving with a name adds it to the brush picker as a new brush,
+usable exactly like a built-in one. Canceling discards it (imported or
+hand-drawn).
 
 #### Scenario: Creating a custom brush
 - **WHEN** the user opens the brush editor, toggles a pattern of cells on,
@@ -279,6 +292,43 @@ usable exactly like a built-in one. Canceling discards it.
 #### Scenario: Canceling brush creation
 - **WHEN** the user opens the brush editor and cancels instead of saving
 - **THEN** no new brush is added
+
+#### Scenario: Importing a transparent-background image
+- **WHEN** the user imports a PNG icon with a transparent background and
+  an opaque silhouette
+- **THEN** the editor's grid pre-fills with "on" cells matching the
+  opaque region and "off" cells matching the transparent region, at the
+  editor's current width/height
+
+#### Scenario: Importing a fully-opaque image
+- **WHEN** the user imports a JPG or other image with no transparency
+- **THEN** the editor's grid pre-fills using brightness thresholding
+  (darker regions become "on") instead of producing an all-"on" solid
+  block
+
+#### Scenario: Imported brush uses the current drawing color, not the image's colors
+- **WHEN** the user saves a brush created from an imported image and
+  places it while drawing in a specific color
+- **THEN** the placed pixels use that current drawing color, not any
+  color sampled from the original image
+
+#### Scenario: Resizing after import re-pixelates instead of clearing
+- **WHEN** the user imports an image into the editor, then changes the
+  width or height
+- **THEN** the grid re-pixelates from the same source image at the new
+  size, rather than clearing to blank
+
+#### Scenario: Resizing with no import still clears, as before
+- **WHEN** the user hand-draws in the editor (no image imported) and
+  changes the width or height
+- **THEN** the grid re-grids from a blank pattern, exactly as before this
+  change
+
+#### Scenario: Hand-editing an imported result before saving
+- **WHEN** the user imports an image, then manually toggles a few cells
+  in the resulting grid, then saves
+- **THEN** the saved brush reflects the hand-edited pattern, not the raw
+  pixelated result
 
 ### Requirement: Custom brushes persist across projects
 A saved custom brush SHALL be stored locally (IndexedDB) and available in

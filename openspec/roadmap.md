@@ -145,12 +145,14 @@ proposed/implemented/archived before the next starts:
     parallel with 2m via git worktrees, sharing a small image-decode/
     downsample utility.
 
-Status: **2a–2l done and archived** — specs live at `openspec/specs/`
-(`layers`, `local-persistence`, `gallery`, `canvas-settings`, `brushes`,
-`shape-tools`, `pixel-drawing-engine`, `canvas-navigation`,
-`color-library`, `url-routing`, `export`); archives under
-`openspec/changes/archive/`. **2m and 2n proposed, not yet implemented**
-(0 tasks done each).
+Status: **all sub-changes (2a–2n) done and archived** — specs live at
+`openspec/specs/` (`layers`, `local-persistence`, `gallery`, `canvas-
+settings`, `brushes`, `shape-tools`, `pixel-drawing-engine`, `canvas-
+navigation`, `color-library`, `url-routing`, `export`); archives under
+`openspec/changes/archive/`. **Phase 2 is complete.** 2m and 2n were
+built in parallel via separate git worktrees, sharing a small
+`js/image-import.js` decode/downsample utility that each change created
+independently and which was reconciled on merge (see that merge commit).
 
 ## Phase 3 — Supabase Auth + sync
 

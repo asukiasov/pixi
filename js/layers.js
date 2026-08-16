@@ -16,13 +16,19 @@ const BLEND_MODE_TO_COMPOSITE_OP = {
 };
 
 class Layer {
-  constructor(name, width, height, background = 'transparent') {
+  constructor(name, width, height, background = 'transparent', isBackground = false) {
     this.id = crypto.randomUUID();
     this.name = name;
     this.engine = new PixelEngine(width, height, background);
     this.visible = true;
     this.opacity = 1;
     this.blendMode = 'normal';
+    // Locked-in-position "Background" layer (Photoshop/Aseprite-style) -
+    // set only for a white-background canvas's one starting layer (see
+    // LayerStack's constructor), never reassigned afterward. See
+    // moveLayerUp/moveLayerDown's reorder lock and workspace.js's Eraser
+    // exception for the two places this actually changes behavior.
+    this.isBackground = isBackground;
   }
 }
 
@@ -35,7 +41,10 @@ export class LayerStack {
   constructor(width, height, background = 'transparent') {
     this.#width = width;
     this.#height = height;
-    this.#layers = [new Layer('Layer 1', width, height, background)];
+    // Only a white-background canvas's starting layer becomes the
+    // Background layer - transparent canvases get a regular starting
+    // layer, exactly as before this flag existed.
+    this.#layers = [new Layer('Layer 1', width, height, background, background === 'white')];
   }
 
   get width() {
@@ -95,12 +104,18 @@ export class LayerStack {
 
   moveLayerUp(index) {
     if (index < 0 || index >= this.#layers.length - 1) return false;
+    // Refuse if either swapped slot holds the Background layer - not just
+    // the layer being moved. A swap moves *both* layers, so a regular
+    // layer swapping into the Background layer's slot would relocate it
+    // just as much as moving it directly would.
+    if (this.#layers[index].isBackground || this.#layers[index + 1].isBackground) return false;
     this.#swap(index, index + 1);
     return true;
   }
 
   moveLayerDown(index) {
     if (index <= 0 || index >= this.#layers.length) return false;
+    if (this.#layers[index].isBackground || this.#layers[index - 1].isBackground) return false;
     this.#swap(index, index - 1);
     return true;
   }
@@ -141,6 +156,7 @@ export class LayerStack {
         visible: l.visible,
         opacity: l.opacity,
         blendMode: l.blendMode,
+        isBackground: l.isBackground,
       })),
       activeIndex: this.#activeIndex,
     };
@@ -149,7 +165,7 @@ export class LayerStack {
   /** Restores state previously captured by snapshot(). */
   restore(snapshot) {
     this.#layers = snapshot.layers.map((s) => {
-      const layer = new Layer(s.name, this.#width, this.#height, 'transparent');
+      const layer = new Layer(s.name, this.#width, this.#height, 'transparent', s.isBackground);
       layer.id = s.id;
       layer.engine.data.set(s.data);
       layer.visible = s.visible;
@@ -177,16 +193,24 @@ export class LayerStack {
         visible: l.visible,
         opacity: l.opacity,
         blendMode: l.blendMode,
+        isBackground: l.isBackground,
       })),
       activeLayerIndex: this.#activeIndex,
     };
   }
 
-  /** Reconstructs a full LayerStack from a record produced by toProjectRecord(). */
+  /**
+   * Reconstructs a full LayerStack from a record produced by
+   * toProjectRecord(). `isBackground` defaults falsy (`s.isBackground`
+   * reads `undefined`) for records saved before this field existed - see
+   * design.md's Migration/Risk note: an old white-background project's
+   * starting layer simply behaves as a regular layer, not retroactively
+   * upgraded.
+   */
   static fromProjectRecord(record) {
     const stack = new LayerStack(record.width, record.height, 'transparent');
     stack.#layers = record.layers.map((s) => {
-      const layer = new Layer(s.name, record.width, record.height, 'transparent');
+      const layer = new Layer(s.name, record.width, record.height, 'transparent', !!s.isBackground);
       layer.id = s.id;
       layer.engine.data.set(new Uint8ClampedArray(s.data));
       layer.visible = s.visible;
@@ -208,7 +232,7 @@ export class LayerStack {
     const copyHeight = Math.min(this.#height, height);
 
     this.#layers = this.#layers.map((l) => {
-      const newLayer = new Layer(l.name, width, height, 'transparent');
+      const newLayer = new Layer(l.name, width, height, 'transparent', l.isBackground);
       newLayer.id = l.id;
       newLayer.visible = l.visible;
       newLayer.opacity = l.opacity;
@@ -235,7 +259,7 @@ export class LayerStack {
     const newHeight = oldWidth;
 
     this.#layers = this.#layers.map((l) => {
-      const newLayer = new Layer(l.name, newWidth, newHeight, 'transparent');
+      const newLayer = new Layer(l.name, newWidth, newHeight, 'transparent', l.isBackground);
       newLayer.id = l.id;
       newLayer.visible = l.visible;
       newLayer.opacity = l.opacity;

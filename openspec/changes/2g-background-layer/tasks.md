@@ -1,14 +1,14 @@
 ## 1. Layer model
 
-- [ ] 1.1 `js/layers.js`: `Layer` gains `isBackground` (default `false`);
+- [x] 1.1 `js/layers.js`: `Layer` gains `isBackground` (default `false`);
       `LayerStack`'s constructor sets it `true` on the starting layer
       only when `background === 'white'`
-- [ ] 1.2 `js/layers.js`: `moveLayerUp`/`moveLayerDown` no-op when the
+- [x] 1.2 `js/layers.js`: `moveLayerUp`/`moveLayerDown` no-op when the
       target layer's `isBackground` is `true`
-- [ ] 1.3 `js/layers.js`: `toProjectRecord`/`fromProjectRecord` persist
+- [x] 1.3 `js/layers.js`: `toProjectRecord`/`fromProjectRecord` persist
       `isBackground` per layer (defaults falsy for old records with no
       such field - see design.md's Migration/Risk note)
-- [ ] 1.4 Unit tests (`node --test`): white background → starting layer
+- [x] 1.4 Unit tests (`node --test`): white background → starting layer
       `isBackground === true`; transparent background → `false`;
       `moveLayerUp`/`moveLayerDown` are no-ops on a Background layer
       (stack order unchanged) but work normally on others; round-trip
@@ -17,29 +17,29 @@
 
 ## 2. Layers panel UI
 
-- [ ] 2.1 `js/workspace.js`: `buildLayerRow()` shows a lock icon
+- [x] 2.1 `js/workspace.js`: `buildLayerRow()` shows a lock icon
       (Material Symbols `lock`, added to the `icon_names` subsetting
       list) next to the Background layer's name, and disables its
       up/down reorder buttons regardless of stacking position
-- [ ] 2.2 Confirm a newly-added layer (via "+ Layer") is never marked
+- [x] 2.2 Confirm a newly-added layer (via "+ Layer") is never marked
       `isBackground`, even when added while a Background layer exists
 
 ## 3. Eraser exception
 
-- [ ] 3.1 `js/workspace.js`: `pencilOrEraserApplyPixel(engine)` - when
+- [x] 3.1 `js/workspace.js`: `pencilOrEraserApplyPixel(engine)` - when
       the active layer's `isBackground` is `true` and the tool is
       Eraser, use `(x, y) => engine.setPixelBlended(x, y,
       state.backgroundColor, state.pencilOpacity)` instead of
       `erasePixelBlended`; every other case (non-Background layer, or
       Pencil) unchanged
-- [ ] 3.2 Confirm the active layer is read once per stroke (matching the
+- [x] 3.2 Confirm the active layer is read once per stroke (matching the
       existing `strokeEngine` capture-once-per-drag pattern), not
       re-checked per pixel
 
 ## 4. Verification
 
-- [ ] 4.1 Re-run full `node --test` suite
-- [ ] 4.2 Playwright smoke pass: create a white-background canvas,
+- [x] 4.1 Re-run full `node --test` suite
+- [x] 4.2 Playwright smoke pass: create a white-background canvas,
       confirm its one layer shows a lock icon and disabled reorder
       buttons; create a transparent-background canvas, confirm no lock
       icon and normal reorder buttons; on the white-background canvas,

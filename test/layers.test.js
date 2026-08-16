@@ -17,6 +17,77 @@ describe('LayerStack construction', () => {
   });
 });
 
+describe('Background layer (2g-background-layer)', () => {
+  test('white background flags the starting layer as Background', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    assert.equal(stack.getActiveLayer().isBackground, true);
+  });
+
+  test('transparent background does not flag the starting layer', () => {
+    const stack = new LayerStack(4, 4, 'transparent');
+    assert.equal(stack.getActiveLayer().isBackground, false);
+  });
+
+  test('a newly added layer is never the Background layer', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const added = stack.addLayer('B');
+    assert.equal(added.isBackground, false);
+  });
+
+  test('moveLayerUp/moveLayerDown are no-ops on the Background layer', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    stack.addLayer('B');
+    const before = stack.getLayers();
+    assert.equal(stack.moveLayerUp(0), false);
+    assert.deepEqual(stack.getLayers(), before);
+    // Move 'B' up above nothing (already topmost) is unaffected by this;
+    // confirm moveLayerDown on 'B' (index 1) into the Background layer's
+    // slot is also refused, purely because the *target* slot (0) holds
+    // the Background layer.
+    assert.equal(stack.moveLayerDown(1), false);
+    assert.deepEqual(stack.getLayers(), before);
+  });
+
+  test('moveLayerUp/moveLayerDown work normally on non-Background layers', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    stack.addLayer('B');
+    stack.addLayer('C');
+    // B (1) and C (2) are both regular layers - reordering between them
+    // is unaffected by the Background layer at index 0.
+    const result = stack.moveLayerUp(1);
+    assert.equal(result, true);
+    assert.equal(stack.getLayers()[2].name, 'B');
+  });
+
+  test('snapshot/restore preserves isBackground', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    stack.addLayer('B');
+    const snap = stack.snapshot();
+    stack.restore(snap);
+    const layers = stack.getLayers();
+    assert.equal(layers[0].isBackground, true);
+    assert.equal(layers[1].isBackground, false);
+  });
+
+  test('toProjectRecord/fromProjectRecord round-trips isBackground', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    stack.addLayer('B');
+    const record = stack.toProjectRecord();
+    const restored = LayerStack.fromProjectRecord(record);
+    const layers = restored.getLayers();
+    assert.equal(layers[0].isBackground, true);
+    assert.equal(layers[1].isBackground, false);
+  });
+
+  test('a record with no isBackground field defaults to false', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const record = stack.toProjectRecord();
+    delete record.layers[0].isBackground; // simulate a pre-existing saved project
+    const restored = LayerStack.fromProjectRecord(record);
+    assert.equal(restored.getLayers()[0].isBackground, false);
+  });
+});
+
 describe('addLayer', () => {
   test('adds a transparent layer directly above the active one, and it becomes active', () => {
     const stack = new LayerStack(4, 4, 'white');
@@ -94,7 +165,11 @@ describe('deleteLayer', () => {
 
 describe('reordering', () => {
   test('moveLayerUp swaps with the layer above', () => {
-    const stack = new LayerStack(4, 4, 'white');
+    // 'transparent', not 'white' - a white-background starting layer is
+    // now the locked Background layer (see 2g-background-layer), which
+    // this test isn't about; a regular layer at index 0 is what actually
+    // exercises the generic swap being tested here.
+    const stack = new LayerStack(4, 4, 'transparent');
     stack.addLayer('B');
     const [a, b] = stack.getLayers();
     stack.setActiveLayer(0);
@@ -112,7 +187,9 @@ describe('reordering', () => {
   });
 
   test('moveLayerDown swaps with the layer below', () => {
-    const stack = new LayerStack(4, 4, 'white');
+    // 'transparent', not 'white' - see the matching comment on
+    // 'moveLayerUp swaps with the layer above' above.
+    const stack = new LayerStack(4, 4, 'transparent');
     stack.addLayer('B');
     const [a, b] = stack.getLayers();
     const result = stack.moveLayerDown(1);

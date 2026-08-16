@@ -256,20 +256,22 @@ constrained to a minimum of 3 and a maximum of the current project's
 canvas width/height respectively (so a brush can never be larger than the
 canvas it would be used on). The editor SHALL also offer an "Import"
 control that opens a file picker (`image/*`); choosing an image decodes
-it and pre-fills the grid at the editor's current width/height by
-thresholding the image to on/off cells, instead of starting blank -
-alpha-based (mostly-opaque downsampled regions become "on") when the
-image has any transparency, falling back to brightness-based
-thresholding (darker regions become "on") when the image is fully
-opaque. The imported result is a monochrome silhouette only - the
-image's own colors are discarded, matching every other brush's "placed
-in the current drawing color" behavior. Changing the grid's size SHALL
-re-grid from a blank pattern when no image has been imported (as
-before), or re-pixelate from the stored source image at the new size
-when one has. Either way, the user can still hand-edit cells before
-saving. Saving with a name adds it to the brush picker as a new brush,
-usable exactly like a built-in one. Canceling discards it (imported or
-hand-drawn).
+it - via the browser's standard bitmap decoder, falling back to an
+`<img>`-element-based decode when that fails (covering formats such as
+SVG that the standard decoder doesn't support) - and pre-fills the grid
+at the editor's current width/height by thresholding the image to on/off
+cells, instead of starting blank - alpha-based (mostly-opaque
+downsampled regions become "on") when the image has any transparency,
+falling back to brightness-based thresholding (darker regions become
+"on") when the image is fully opaque. The imported result is a
+monochrome silhouette only - the image's own colors are discarded,
+matching every other brush's "placed in the current drawing color"
+behavior. Changing the grid's size SHALL re-grid from a blank pattern
+when no image has been imported (as before), or re-pixelate from the
+stored source image at the new size when one has. Either way, the user
+can still hand-edit cells before saving. Saving with a name adds it to
+the brush picker as a new brush, usable exactly like a built-in one.
+Canceling discards it (imported or hand-drawn).
 
 #### Scenario: Creating a custom brush
 - **WHEN** the user opens the brush editor, toggles a pattern of cells on,

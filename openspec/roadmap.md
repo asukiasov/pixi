@@ -195,7 +195,47 @@ becomes the next priority:
 - **Import** screen (.aseprite, reference images, palette files)
 - Animation timeline / onion skinning — explicitly out of scope for now, see
   CLAUDE.md non-goals; would need its own roadmap discussion if ever revisited
-- **Custom brush creation** — a way to draw your own pattern (mini pixel
-  grid editor) and save it into the Brush picker alongside Heart, instead
-  of only shipping predefined shapes. Raised while building 2c1's Brush
-  tool; explicitly deferred, not a priority right now.
+- **UI polish pass — refine the design window by window, panel by
+  panel.** Raised directly on 2026-08-17, after 2m/2n shipped and real
+  usage surfaced rough edges. An open-ended initiative, not one change -
+  work through it screen by screen, panel by panel, pulling in one
+  design/bug item at a time rather than batching.
+
+  Resolved so far:
+  - ~~`2n`'s Import icon rendered broken (overlapping "I"/"MAG" text)~~ -
+    fixed directly (no OpenSpec change - pure bug fix, no behavior
+    change): the `image` Material Symbol was missing from `index.html`'s
+    font `icon_names` subset, so it fell back to literal ligature text.
+  - ~~Layer thumbnails didn't update live while drawing~~ - fixed
+    directly (no OpenSpec change): the drawing-stroke, bucket-fill, and
+    selection-delete commit paths called `commit()` but never
+    `renderLayersPanel()`, unlike every structural layer action (add/
+    delete/reorder/visibility/rename).
+  - ~~`2m`'s SVG import silently failed~~, ~~`2n`'s color-count input
+    shifted position as the preview grew~~, and ~~`2m`'s Import button
+    was a full-width text button in its own row~~ - all three fixed
+    together via `2o-image-import-refinements` (archived): SVG now
+    decodes via an `<img>`-element fallback when `createImageBitmap`
+    fails; `2n`'s import preview became an anchored popover (fixed-height
+    swatch grid, not just `max-height` - the first attempt still let
+    shorter previews shift position, caught by the Playwright pass and
+    corrected); `2m`'s Import control is now an icon button in the
+    editor's header row. The brush editor itself stayed a docked panel
+    (confirmed with the user, not converted to a popover).
+
+  Still open:
+  - Light/dark/system-match theme toggle - a new button near the
+    right-sidebar hide toggle (top bar, right end). Currently the app
+    is single-theme (dark only, no toggle exists) - this is a new
+    capability, not a bug.
+  - Right-sidebar hide/show (`#right-sidebar-toggle`) should slide the
+    panel out/in (animated), not just toggle visibility instantly as it
+    does today.
+  - Color Library sequence mode (the "cycle through the active palette
+    per pixel" toggle, see the `brushes` spec's "Color Library sequence
+    mode (Pencil and Brush)" requirement) is currently a separate toggle
+    button duplicated per tool (Pencil's `#pencil-library-toggle`,
+    Brush's `#brush-library-toggle`) rather than one standardized
+    control - raised for consistency with how the "1:1" proportion
+    toggle is a single shared control under the main tools rather than
+    per-tool duplicates.

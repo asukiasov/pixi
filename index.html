@@ -29,6 +29,11 @@
     <p id="gallery-empty-state" class="gallery-empty-state hidden">
       No projects yet — tap "+ New Canvas" to start one.
     </p>
+    <!-- Cache sanity check, not a feature - lets you tell a stale cached
+         copy apart from the real latest deploy. Populated from
+         js/version.js (see app.js), which scripts/stamp-version.sh keeps
+         current. -->
+    <p id="version-badge" class="version-badge"></p>
   </main>
 
   <main id="screen-new-canvas" class="screen hidden">

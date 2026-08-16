@@ -35,9 +35,24 @@ body {
 /* Gallery screen */
 
 #screen-gallery {
+  position: relative;
   padding: 1rem;
   gap: 1rem;
   overflow-y: auto;
+}
+
+/* Bottom-right corner of the Gallery screen only - see index.html's
+   comment for why. Deliberately tiny/low-contrast: a diagnostic, not UI
+   chrome anyone's meant to notice unless they're looking for it. */
+.version-badge {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.4rem;
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.65rem;
+  color: #48484a;
+  pointer-events: none;
 }
 
 .gallery-header {

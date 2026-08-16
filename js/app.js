@@ -5,12 +5,21 @@ import { initGallery } from './gallery.js';
 import { loadProject } from './persistence.js';
 import { LayerStack } from './layers.js';
 import { parseRoute, navigate, onRouteChange } from './router.js';
+import { VERSION } from './version.js';
 
 const screens = {
   gallery: document.getElementById('screen-gallery'),
   newCanvas: document.getElementById('screen-new-canvas'),
   workspace: document.getElementById('screen-workspace'),
 };
+
+// Cache sanity check - see index.html's #version-badge comment and
+// scripts/stamp-version.sh for how this gets kept current.
+{
+  const badge = document.getElementById('version-badge');
+  const builtAt = VERSION.builtAt ? new Date(VERSION.builtAt).toLocaleString() : 'unstamped';
+  badge.textContent = `${VERSION.commit} · ${builtAt}`;
+}
 
 // Blocks Safari's native pinch-to-zoom of the whole page (bug: pinching
 // over the right sidebar on iPad zoomed the entire app UI, not the

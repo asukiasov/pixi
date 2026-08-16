@@ -112,15 +112,22 @@ proposed/implemented/archived before the next starts:
     that edits whichever layer is active. Presentation only; no change
     to what the panel can do. Raised directly, with a reference
     screenshot.
+  - **2l — Right-panel redesign**: reorders the right sidebar (Color
+    Library above Layers, since color selection is used more often
+    while drawing), adds a VSCode-style whole-sidebar show/hide toggle
+    independent of each panel's own state, makes both panel headers
+    collapse-to-header (Photoshop-accordion style, folding 2d's
+    Layers-panel hide/show and 2k's shared-controls layout into this
+    shape), bounds Color Library's height instead of letting it fill
+    all remaining space, and compresses Layers' Blend mode/Opacity onto
+    one row. Raised directly, with reference screenshots.
 
-Status: **2a done** — archived at
-`openspec/changes/archive/2026-08-14-2a-layers/`, spec lives at
-`openspec/specs/layers/`. **2b done** — archived at
-`openspec/changes/archive/2026-08-14-2b-local-persistence-gallery/`, specs
-live at `openspec/specs/local-persistence/`, `openspec/specs/gallery/`,
-`openspec/specs/canvas-settings/`. **2c1 in progress. 2j done (stacks on
-top of 2c1's shape-tools capability). 2d, 2e, 2c2, 2f, 2h, 2i, 2j, 2k
-done** (none yet archived). **2c3, 2g proposed, not yet implemented.**
+Status: **2a, 2b, 2c1, 2c2, 2d, 2e, 2f, 2h, 2i, 2j, 2k, 2l all done and
+archived** — specs live at `openspec/specs/` (`layers`, `local-
+persistence`, `gallery`, `canvas-settings`, `brushes`, `shape-tools`,
+`pixel-drawing-engine`, `canvas-navigation`, `color-library`, `url-
+routing`); archives under `openspec/changes/archive/`. **2c3 not yet
+proposed. 2g proposed, not yet implemented** (0 tasks done).
 
 ## Phase 3 — Supabase Auth + sync
 

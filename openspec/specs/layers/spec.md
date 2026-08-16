@@ -121,3 +121,109 @@ fill actions are.
 - **WHEN** the user deletes a layer and then taps Undo
 - **THEN** the deleted layer reappears in its original position with its
   original content and settings
+
+### Requirement: Layers panel position in the right sidebar
+The Layers panel SHALL be the bottom-most section of the right sidebar,
+below the Color Library panel and the Brushes panel (when Brushes is
+shown), rather than the topmost section. Superseded from this
+requirement's original form (a right-side sidebar alongside Brushes,
+with no defined order) once Color Library moved above both.
+
+#### Scenario: Layers renders below Color Library and Brushes
+- **WHEN** the Workspace screen is open
+- **THEN** the Layers panel appears below the Color Library panel in the
+  right sidebar, and below the Brushes panel whenever Brushes is also
+  visible
+
+### Requirement: Layers panel collapse
+The user SHALL be able to collapse the Layers panel down to just its
+header row (hiding the toolbar and layer list, but not the header
+itself) by clicking the panel header, and expand it again the same way.
+The existing bottom-bar Layers toggle button SHALL drive and reflect
+this same collapsed state, so either control collapses or expands the
+panel identically. Superseded from this requirement's original form (a
+toggle that fully hid/showed the panel) once the panel became
+collapsible to its header row instead of disappearing entirely.
+
+#### Scenario: Collapsing via the panel header
+- **WHEN** the user clicks the Layers panel header
+- **THEN** the toolbar and layer list disappear, only the header row
+  remains, and the Color Library panel above grows to use the freed
+  vertical space
+
+#### Scenario: Expanding via the panel header
+- **WHEN** the user clicks the header of a collapsed Layers panel
+- **THEN** the toolbar and layer list reappear showing the current layer
+  stack, unaffected by having been collapsed
+
+#### Scenario: Bottom-bar toggle and header stay in sync
+- **WHEN** the user collapses the Layers panel via the bottom-bar Layers
+  button
+- **THEN** the panel header shows the collapsed state (e.g. its chevron
+  points the collapsed direction), and clicking the header then expands
+  it; the reverse also holds when collapsing via the header first
+
+#### Scenario: Independent of the Brushes panel
+- **WHEN** the user collapses the Layers panel while the Brush tool is
+  active (Brushes panel visible)
+- **THEN** the Brushes panel remains visible, unaffected by the Layers
+  panel's collapsed state
+
+### Requirement: Layers panel shows a live thumbnail per layer
+Each layer's row in the Layers panel SHALL show a thumbnail preview of
+that layer's actual current pixel content, not a generic placeholder.
+The thumbnail SHALL reflect the layer's content after any change (draw,
+resize, rotate) the next time the panel re-renders.
+
+#### Scenario: Thumbnail reflects drawn content
+- **WHEN** the user draws on a layer and the Layers panel re-renders
+- **THEN** that layer's thumbnail shows the new content
+
+### Requirement: Opacity and Blend mode apply to the active layer via shared controls
+The Layers panel SHALL offer one Opacity control and one Blend mode
+selector, editing whichever layer is currently active, rather than
+separate controls duplicated in every row. Selecting a different layer
+SHALL update these controls to reflect that layer's own Opacity and
+Blend mode. The two SHALL fit on a single row: the Blend mode selector
+sized to its own content rather than the full row width, and Opacity
+presented as a directly-editable numeric field (0-100) rather than an
+always-visible slider - clicking the Opacity field SHALL open a slider
+in a small popover for drag-to-set, and typing a value directly in the
+field SHALL also work without opening the popover. Revised from this
+requirement's original form (a full-width Blend selector above an
+always-visible Opacity slider, stacked on two rows) once both were
+compressed onto one line.
+
+#### Scenario: Selecting a layer syncs the shared controls
+- **WHEN** the user selects a different layer in the panel
+- **THEN** the Opacity control and Blend mode selector update to show
+  that layer's own values
+
+#### Scenario: Changing Opacity or Blend mode affects only the active layer
+- **WHEN** the user adjusts the shared Opacity control or Blend mode
+  selector
+- **THEN** only the currently active layer's opacity/blend mode changes
+
+#### Scenario: Blend mode and Opacity share one row
+- **WHEN** the Layers panel toolbar is visible
+- **THEN** the Blend mode selector and the Opacity control both appear
+  on the same row, without wrapping to a second line at the sidebar's
+  normal width
+
+#### Scenario: Typing an opacity value directly
+- **WHEN** the user types a number into the Opacity field and confirms
+  it
+- **THEN** the active layer's opacity updates to that value, the same as
+  dragging the slider would
+
+#### Scenario: Adjusting opacity via the popover slider
+- **WHEN** the user clicks the Opacity field and drags the slider that
+  appears in the popover
+- **THEN** the active layer's opacity updates live as the slider moves,
+  and the numeric field reflects the current value
+
+#### Scenario: Popover closes without committing an in-progress edit incorrectly
+- **WHEN** the user clicks outside the open Opacity popover, or presses
+  Escape
+- **THEN** the popover closes and the active layer's opacity remains
+  whatever value was last set

@@ -262,9 +262,21 @@ function setColorLibrarySequence(enabled) {
  * (erasePixelBlended) instead - two different operations, not "blend
  * toward a color" reused for both (see design.md's rationale). Shared by
  * onDrawStart and onDrawMove so the two can't drift apart.
+ *
+ * Exception (2g-background-layer): erasing the Background layer reveals
+ * state.backgroundColor instead of producing transparency - checked once
+ * here, against the *active* layer at the point the stroke starts (the
+ * same layer `engine` already targets, per this function's callers), not
+ * re-checked per pixel - a layer's isBackground can't change mid-stroke.
+ * Implemented as a setPixelBlended paint with the Background color, not a
+ * new alpha-manipulation op - it's exactly Pencil-style compositing with
+ * a different source color (see design.md).
  */
 function pencilOrEraserApplyPixel(engine) {
   if (state.currentTool === 'eraser') {
+    if (state.layerStack.getActiveLayer()?.isBackground) {
+      return (x, y) => engine.setPixelBlended(x, y, state.backgroundColor, state.pencilOpacity);
+    }
     return (x, y) => engine.erasePixelBlended(x, y, state.pencilOpacity);
   }
   // Rainbow and Color Library sequence both cycle per unique pixel placed,
@@ -352,7 +364,7 @@ function renderLayersPanel() {
   // Topmost layer (end of the bottom-to-top array) listed first.
   for (let i = layers.length - 1; i >= 0; i--) {
     const layer = layers[i];
-    state.layersPanelList.appendChild(buildLayerRow(layer, i, i === activeIndex, layers.length));
+    state.layersPanelList.appendChild(buildLayerRow(layer, i, i === activeIndex, layers));
   }
 
   state.addLayerButton.disabled = layers.length >= 8;
@@ -368,7 +380,8 @@ function renderLayersPanel() {
  * closer fit for a touch-first app anyway). Blend mode/Opacity are NOT
  * here - see the panel-level toolbar/syncLayersPanelToolbar.
  */
-function buildLayerRow(layer, index, isActive, layerCount) {
+function buildLayerRow(layer, index, isActive, layers) {
+  const layerCount = layers.length;
   const row = document.createElement('div');
   row.className = 'layer-row' + (isActive ? ' active' : '');
   row.addEventListener('click', (e) => {
@@ -401,12 +414,29 @@ function buildLayerRow(layer, index, isActive, layerCount) {
     renderLayersPanel();
   });
 
+  // Background layer (2g-background-layer): locked in stacking position -
+  // a small lock icon next to its name, reorder buttons disabled
+  // regardless of where it sits (LayerStack.moveLayerUp/moveLayerDown
+  // already refuse the move too - this is the matching UI state, not the
+  // only enforcement).
+  let lockIcon = null;
+  if (layer.isBackground) {
+    lockIcon = document.createElement('span');
+    lockIcon.className = 'material-symbols-outlined layer-lock-icon';
+    lockIcon.textContent = 'lock';
+    lockIcon.title = 'Background layer - locked in position';
+  }
+
+  // A swap moves both layers involved (see LayerStack.moveLayerUp/
+  // moveLayerDown's matching comment), so a button is disabled not just
+  // when its own layer is the Background layer, but also when the
+  // neighbor it would swap into is - either way the move is refused.
   const upButton = document.createElement('button');
   upButton.type = 'button';
   upButton.className = 'layer-reorder-button';
   upButton.innerHTML = '<span class="material-symbols-outlined">arrow_upward</span>';
   upButton.title = 'Move layer up';
-  upButton.disabled = index === layerCount - 1;
+  upButton.disabled = index === layerCount - 1 || layer.isBackground || !!layers[index + 1]?.isBackground;
   upButton.addEventListener('click', () => {
     state.layerStack.moveLayerUp(index);
     state.canvasView.render();
@@ -419,7 +449,7 @@ function buildLayerRow(layer, index, isActive, layerCount) {
   downButton.className = 'layer-reorder-button';
   downButton.innerHTML = '<span class="material-symbols-outlined">arrow_downward</span>';
   downButton.title = 'Move layer down';
-  downButton.disabled = index === 0;
+  downButton.disabled = index === 0 || layer.isBackground || !!layers[index - 1]?.isBackground;
   downButton.addEventListener('click', () => {
     state.layerStack.moveLayerDown(index);
     state.canvasView.render();
@@ -449,7 +479,9 @@ function buildLayerRow(layer, index, isActive, layerCount) {
   actions.className = 'layer-row-actions';
   actions.append(upButton, downButton, deleteButton);
 
-  row.append(visibilityButton, thumbnail, nameInput, actions);
+  row.append(visibilityButton, thumbnail, nameInput);
+  if (lockIcon) row.append(lockIcon);
+  row.append(actions);
   return row;
 }
 
@@ -728,8 +760,62 @@ function bindBrushEditorOnce() {
 
 const CONFETTI_COLORS = ['#ff453a', '#ff9f0a', '#ffd60a', '#30d158', '#64d2ff', '#0a84ff', '#bf5af2'];
 
-// ROYGBIV, for the "name a palette 'rainbow'" easter egg below.
-const RAINBOW_EASTER_EGG_COLORS = ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#4b0082', '#8b00ff'];
+/**
+ * Named "magic palette" easter eggs: naming a new Color Library palette
+ * one of these words (case-insensitive, matched against the trimmed
+ * "New palette" input) seeds it with a themed color set instead of
+ * starting empty, plus a little flourish - a confetti burst in the
+ * seeded palette's own colors for most of them (see the "matrix" special
+ * case in newPaletteSave's listener) - alongside the Konami code
+ * (bindKonamiCode) and the Gallery's paw parade (see gallery.js) as this
+ * app's other hidden delighters.
+ */
+const MAGIC_PALETTES = {
+  rainbow: ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#4b0082', '#8b00ff'],
+  gameboy: ['#0f380f', '#306230', '#8bac0f', '#9bbc0f'],
+  vaporwave: ['#ff71ce', '#01cdfe', '#05ffa1', '#b967ff', '#fffb96'],
+  sunset: ['#ff9a00', '#ff6d00', '#ff3d00', '#ff006e', '#8338ec'],
+  ocean: ['#03045e', '#0077b6', '#00b4d8', '#90e0ef', '#caf0f8'],
+  candy: ['#ff6fb5', '#ffd23f', '#7bf1a8', '#4cc9f0', '#c77dff'],
+  autumn: ['#582f0e', '#7f4f24', '#a68a64', '#d4a373', '#bc6c25', '#dda15e'],
+  galaxy: ['#240046', '#3c096c', '#5a189a', '#7b2cbf', '#e0aaff'],
+  pastel: ['#ffadad', '#ffd6a5', '#fdffb6', '#caffbf', '#9bf6ff', '#a0c4ff', '#bdb2ff'],
+  monochrome: ['#000000', '#2b2b2b', '#555555', '#7f7f7f', '#aaaaaa', '#d4d4d4', '#ffffff'],
+  'old money': ['#1b263b', '#f5f0e6', '#2d4a3e', '#c19a6b', '#6d0f22', '#b08d57', '#3c3c3c'],
+  // Its own effect (matrixRain) instead of confetti - a green-on-black
+  // palette calls for something more thematic.
+  matrix: ['#003b00', '#008f11', '#00ff41', '#00ff41', '#0d1a0d'],
+};
+
+const MATRIX_RAIN_CHARS = '01ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ'.split('');
+const MATRIX_RAIN_COLUMNS = 14;
+
+/**
+ * The "matrix" magic palette's own effect (see MAGIC_PALETTES) - a brief
+ * cascade of falling green characters instead of the shared confetti
+ * burst every other magic palette uses. Self-removing, no state.
+ */
+function matrixRain() {
+  const container = document.createElement('div');
+  container.className = 'matrix-rain';
+  document.body.appendChild(container);
+  for (let i = 0; i < MATRIX_RAIN_COLUMNS; i++) {
+    const column = document.createElement('div');
+    column.className = 'matrix-rain-column';
+    column.style.left = `${(i / (MATRIX_RAIN_COLUMNS - 1)) * 100}%`;
+    column.style.animationDelay = `${Math.random() * 0.6}s`;
+    column.style.animationDuration = `${1.4 + Math.random() * 0.8}s`;
+    let text = '';
+    for (let j = 0; j < 18; j++) {
+      text += MATRIX_RAIN_CHARS[Math.floor(Math.random() * MATRIX_RAIN_CHARS.length)] + '\n';
+    }
+    column.textContent = text;
+    container.appendChild(column);
+  }
+  // Longest column's animation-duration (2.2s) plus its animation-delay
+  // (up to 0.6s) - long enough for every column to finish before cleanup.
+  setTimeout(() => container.remove(), 2800);
+}
 
 /** Shared confetti burst, from a given screen point, with a configurable piece count/spread. */
 function confettiBurst(originX, originY, count, maxDistance) {
@@ -1395,19 +1481,20 @@ function bindDomOnce() {
   newPaletteSave.addEventListener('click', async () => {
     const name = newPaletteName.value.trim();
     if (!name) return; // nothing entered - no-op, stay open
-    // Easter egg: naming a palette "rainbow" seeds it with an actual
-    // rainbow instead of starting empty, plus a little confetti burst
-    // from the grid - a small reward for typing the magic word into the
-    // Color Library, alongside the Konami code (bindKonamiCode) and the
-    // Gallery's paw parade (see gallery.js) as this app's other two.
-    const isRainbow = name.toLowerCase() === 'rainbow';
-    const created = await createColorPalette(name, isRainbow ? [...RAINBOW_EASTER_EGG_COLORS] : []);
+    // Magic palette easter eggs - see MAGIC_PALETTES.
+    const magicName = name.toLowerCase();
+    const magicColors = MAGIC_PALETTES[magicName];
+    const created = await createColorPalette(name, magicColors ? [...magicColors] : []);
     activePaletteId = created.id;
     newPaletteRow.classList.add('hidden');
     await loadColorPalettes();
-    if (isRainbow) {
-      const gridRect = colorLibraryGrid.getBoundingClientRect();
-      confettiBurst(gridRect.left + gridRect.width / 2, gridRect.top, 24, 160);
+    if (magicColors) {
+      if (magicName === 'matrix') {
+        matrixRain();
+      } else {
+        const gridRect = colorLibraryGrid.getBoundingClientRect();
+        confettiBurst(gridRect.left + gridRect.width / 2, gridRect.top, 24, 160);
+      }
     }
   });
 

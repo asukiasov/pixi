@@ -832,7 +832,8 @@ body {
 .layer-row.active .layer-name-input,
 .layer-row.active .layer-reorder-button,
 .layer-row.active .layer-delete-button,
-.layer-row.active .layer-visibility-toggle {
+.layer-row.active .layer-visibility-toggle,
+.layer-row.active .layer-lock-icon {
   color: #fff;
 }
 
@@ -883,6 +884,14 @@ body {
 .layer-name-input:focus {
   border-color: #48484a;
   outline: none;
+}
+
+/* Background layer (2g-background-layer) - locked in stacking position,
+   see buildLayerRow in js/workspace.js. */
+.layer-lock-icon {
+  flex: none;
+  font-size: 0.9rem;
+  color: #a0a0a5;
 }
 
 .layer-row-actions {
@@ -1514,6 +1523,46 @@ body {
   }
   100% {
     transform: translate(var(--dx), calc(var(--dy) + 160px)) rotate(var(--rot));
+    opacity: 0;
+  }
+}
+
+/* The "matrix" magic palette's own effect (see MAGIC_PALETTES/matrixRain
+   in js/workspace.js) - falling green characters instead of confetti. */
+.matrix-rain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+  overflow: hidden;
+}
+
+.matrix-rain-column {
+  position: absolute;
+  top: 0;
+  white-space: pre;
+  font-family: ui-monospace, monospace;
+  font-size: 1rem;
+  line-height: 1.1;
+  color: #00ff41;
+  text-shadow: 0 0 6px #00ff41;
+  animation-name: matrix-rain-fall;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+/* Viewport-relative units (not the column's own height, e.g. -100%/200%
+   of a ~300px-tall text block) - otherwise the whole fall stays off the
+   top edge, however far the animation runs (a real bug caught while
+   verifying: -100%/200% of the element's own height never actually
+   crossed into the visible viewport). */
+@keyframes matrix-rain-fall {
+  from {
+    transform: translateY(-100vh);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100vh);
     opacity: 0;
   }
 }

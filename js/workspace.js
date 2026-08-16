@@ -11,6 +11,7 @@ import {
   deleteColorPalette,
 } from './persistence.js';
 import { initCanvasSettings } from './canvas-settings.js';
+import { initExport } from './export.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
 import { DEFAULT_MATERIAL_COLORS, PREDEFINED_PALETTES } from './default-color-library.js';
@@ -125,6 +126,7 @@ let shiftHeld = false;
 let squareConstraintPanel = null;
 let squareConstraintToggle = null;
 let canvasSettingsControls = null;
+let exportControls = null;
 let toolButtons = null;
 let pixelPerfectToggle = null;
 let paletteRow = null;
@@ -1703,15 +1705,18 @@ function bindDomOnce() {
     button.click();
   });
 
-  state.exportButton.addEventListener('click', async () => {
-    const blob = await state.layerStack.toPNGBlob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'pixi-export.png';
-    a.click();
-    URL.revokeObjectURL(url);
-    celebrateExport(state.exportButton);
+  exportControls = initExport({
+    getProjectName: () => state.projectName,
+    async onExport({ scale, format, skipBackground, filename }) {
+      const blob = await state.layerStack.toPNGBlob({ scale, format, skipBackground });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      celebrateExport(state.exportButton);
+    },
   });
 
   // Every action auto-saves, so there's nothing to lose by leaving — no
@@ -1983,6 +1988,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   canvasSettingsControls.setCurrentSize(layerStack.width, layerStack.height);
   canvasSettingsControls.setCurrentName(projectName);
   canvasSettingsControls.close();
+  exportControls.close();
 
   // Selections don't persist with the project (see shape-tools spec) — a
   // freshly opened project always starts with none.

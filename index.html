@@ -265,6 +265,42 @@
         </div>
       </div>
 
+      <!-- Popover anchored to the top bar's download icon (#export-button),
+           same clamped-to-viewport pattern as #canvas-settings-panel
+           (js/export.js). Scale, format, and the transparent-background
+           toggle are transient UI state - reset to their defaults every
+           time the popover opens, not persisted with the project. -->
+      <div id="export-panel" class="canvas-settings-panel export-panel hidden">
+        <div class="canvas-settings-row canvas-settings-header-row">
+          <h2>Export</h2>
+          <button type="button" id="export-close" class="icon-button" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="canvas-settings-row export-scale-row" role="radiogroup" aria-label="Scale">
+          <button type="button" class="tool-button export-scale-option active" data-scale="1">1x</button>
+          <button type="button" class="tool-button export-scale-option" data-scale="2">2x</button>
+          <button type="button" class="tool-button export-scale-option" data-scale="4">4x</button>
+          <button type="button" class="tool-button export-scale-option" data-scale="8">8x</button>
+        </div>
+        <div class="canvas-settings-row export-format-row" role="radiogroup" aria-label="Format">
+          <button type="button" class="tool-button export-format-option active" data-format="png">PNG</button>
+          <button type="button" class="tool-button export-format-option" data-format="webp">WebP</button>
+          <button type="button" class="tool-button export-format-option" data-format="jpg">JPG</button>
+        </div>
+        <div class="canvas-settings-row">
+          <label id="export-transparent-label">
+            <input type="checkbox" id="export-transparent-background" />
+            Transparent background
+          </label>
+        </div>
+        <div class="canvas-settings-row">
+          <button type="button" id="export-download" class="tool-button export-download-button">
+            <span class="material-symbols-outlined">download</span> Export
+          </button>
+        </div>
+      </div>
+
       <div id="palette-row" class="palette-row"></div>
 
       <div id="selection-controls" class="selection-controls hidden">

@@ -603,6 +603,40 @@ body {
   font-size: 0.9rem;
 }
 
+/* Export popover - reuses .canvas-settings-panel's base popover styling
+   (position/size/background/border), just its own content rows below. */
+.export-scale-row,
+.export-format-row {
+  gap: 0.4rem;
+}
+
+.export-scale-option,
+.export-format-option {
+  flex: 1;
+  text-align: center;
+}
+
+.export-scale-option.active,
+.export-format-option.active {
+  border-color: #0a84ff;
+  background: rgba(10, 132, 255, 0.15);
+}
+
+#export-transparent-label.disabled {
+  opacity: 0.5;
+}
+
+.export-download-button {
+  flex: 1;
+  justify-content: center;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #0a84ff;
+  border-color: #0a84ff;
+  color: white;
+}
+
 /* Right-side sidebar (Layers + Brushes) — a fixed-width column, sibling of
    workspace-main. Layers is always relevant (own show/hide toggle in the
    bottom bar); Brushes is scoped to the Brush tool (js/workspace.js) —

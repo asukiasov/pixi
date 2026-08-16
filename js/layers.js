@@ -14,6 +14,11 @@ const BLEND_MODE_TO_COMPOSITE_OP = {
   screen: 'screen',
   overlay: 'overlay',
 };
+const MIME_TYPES = { png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg' };
+// No quality UI (see design.md's Non-Goals) - a fixed default keeps the
+// Export popover simple; pixel art has little tolerance for visible
+// compression artifacts anyway.
+const LOSSY_QUALITY = 0.92;
 
 class Layer {
   constructor(name, width, height, background = 'transparent', isBackground = false) {
@@ -282,8 +287,13 @@ export class LayerStack {
    * Composites all visible layers bottom-to-top onto an offscreen canvas
    * using native globalAlpha/globalCompositeOperation, and returns that
    * canvas. Requires a DOM, like PixelEngine.toPNGBlob().
+   *
+   * `skipBackground` (Export's "Transparent background" override) omits
+   * any layer with `isBackground: true` from compositing entirely, as if
+   * it were hidden - see the `export` capability spec for why this drops
+   * the whole layer rather than just its fill color.
    */
-  #compositeToCanvas() {
+  #compositeToCanvas({ skipBackground = false } = {}) {
     const canvas = document.createElement('canvas');
     canvas.width = this.#width;
     canvas.height = this.#height;
@@ -291,6 +301,7 @@ export class LayerStack {
 
     for (const layer of this.#layers) {
       if (!layer.visible) continue;
+      if (skipBackground && layer.isBackground) continue;
 
       const layerCanvas = document.createElement('canvas');
       layerCanvas.width = this.#width;
@@ -315,9 +326,40 @@ export class LayerStack {
     return canvas.getContext('2d').getImageData(0, 0, this.#width, this.#height);
   }
 
-  /** The composited result as a PNG Blob, at native resolution. */
-  toPNGBlob() {
-    const canvas = this.#compositeToCanvas();
-    return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  /**
+   * The composited result as an image Blob.
+   *
+   * `scale` (default 1) upscales the composited image via a second
+   * offscreen canvas with image smoothing disabled, so each source pixel
+   * becomes a sharp-edged scale×scale block - no blending at pixel
+   * boundaries. `skipBackground` (default false) is passed straight
+   * through to #compositeToCanvas() - see its doc comment. `format`
+   * (default 'png') selects PNG, WebP, or JPG; JPG has no alpha channel,
+   * so it's flattened onto an opaque white backdrop before encoding
+   * instead of leaving transparent pixels to the browser's default
+   * (black). Calling with no arguments reproduces the exact
+   * native-resolution PNG, Background-included output this method
+   * always produced.
+   */
+  toPNGBlob({ skipBackground = false, scale = 1, format = 'png' } = {}) {
+    let canvas = this.#compositeToCanvas({ skipBackground });
+    const needsWhiteFlatten = format === 'jpg';
+    if (scale > 1 || needsWhiteFlatten) {
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = this.#width * scale;
+      outCanvas.height = this.#height * scale;
+      const ctx = outCanvas.getContext('2d');
+      if (needsWhiteFlatten) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, outCanvas.width, outCanvas.height);
+      }
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(canvas, 0, 0, outCanvas.width, outCanvas.height);
+      canvas = outCanvas;
+    }
+    const mimeType = MIME_TYPES[format] ?? MIME_TYPES.png;
+    // The quality argument is ignored by the lossless PNG encoder, so
+    // passing it unconditionally is harmless - simpler than branching.
+    return new Promise((resolve) => canvas.toBlob(resolve, mimeType, LOSSY_QUALITY));
   }
 }

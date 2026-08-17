@@ -85,6 +85,7 @@ function buildProjectTile(project, onOpenProject, refresh) {
 
   const img = document.createElement('img');
   img.className = 'gallery-thumbnail';
+  img.alt = project.name;
   if (project.thumbnail) {
     // Not revoked: thumbnails are tiny and the grid only rebuilds on
     // Gallery visits, not continuously — an accepted simplification for

@@ -39,12 +39,19 @@ export function initMagneticHover(els) {
   const elements = Array.from(els ?? []).filter(Boolean);
   if (elements.length === 0) return;
 
-  // Listens on document, not each button's own parent: proximity should
-  // trigger from any direction (e.g. approaching from the canvas below
-  // the topbar), and scoping to a container the pointer isn't
-  // necessarily inside of would mean pointermove events over sibling
-  // containers never bubble to the listener at all.
-  document.addEventListener('pointermove', (e) => {
+  // Raw pointermove events can fire far more often than the display
+  // refreshes (especially for Apple Pencil hover input). The actual
+  // read/write pass below - getBoundingClientRect() per button, then
+  // style writes - only needs to happen once per rendered frame, so it's
+  // coalesced through requestAnimationFrame: each pointermove just
+  // records the latest coordinates (no layout work) and schedules a
+  // single pending rAF; the rAF callback does the real pass using
+  // whatever coordinates were most recent by the time it runs.
+  let pendingX = 0;
+  let pendingY = 0;
+  let rafId = null;
+
+  function runPass(x, y) {
     // Pass 1: find the nearest in-range, enabled button. Distances are
     // recorded per element so pass 2 doesn't recompute them.
     let closest = null;
@@ -55,8 +62,8 @@ export function initMagneticHover(els) {
       if (el.disabled) continue;
 
       const rect = el.getBoundingClientRect();
-      const dx = e.clientX - (rect.left + rect.width / 2);
-      const dy = e.clientY - (rect.top + rect.height / 2);
+      const dx = x - (rect.left + rect.width / 2);
+      const dy = y - (rect.top + rect.height / 2);
       const distance = Math.hypot(dx, dy);
       if (distance > ACTIVATION_RADIUS) continue;
 
@@ -86,9 +93,32 @@ export function initMagneticHover(els) {
       el.style.setProperty('--pull-scale', scale.toFixed(4));
       el.classList.add('magnetic-active');
     }
+  }
+
+  // Listens on document, not each button's own parent: proximity should
+  // trigger from any direction (e.g. approaching from the canvas below
+  // the topbar), and scoping to a container the pointer isn't
+  // necessarily inside of would mean pointermove events over sibling
+  // containers never bubble to the listener at all.
+  document.addEventListener('pointermove', (e) => {
+    pendingX = e.clientX;
+    pendingY = e.clientY;
+
+    if (rafId !== null) return; // a pass is already scheduled for this frame
+    rafId = requestAnimationFrame(() => {
+      rafId = null;
+      runPass(pendingX, pendingY);
+    });
   });
 
   document.addEventListener('pointerleave', () => {
+    // Cancel any pass still waiting on the next frame so it can't run
+    // after the leave and re-add `.magnetic-active` on top of this clear.
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+
     for (const el of elements) {
       el.classList.remove('magnetic-active');
     }

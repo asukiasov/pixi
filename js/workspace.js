@@ -873,12 +873,18 @@ const MAGIC_PALETTES = {
 const MATRIX_RAIN_CHARS = '01ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ'.split('');
 const MATRIX_RAIN_COLUMNS = 14;
 
+// Checked once, like js/app.js's platform detection - the OS-level
+// reduced-motion preference isn't expected to change mid-session.
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 /**
  * The "matrix" magic palette's own effect (see MAGIC_PALETTES) - a brief
  * cascade of falling green characters instead of the shared confetti
- * burst every other magic palette uses. Self-removing, no state.
+ * burst every other magic palette uses. Self-removing, no state. Skipped
+ * entirely under prefers-reduced-motion, since it's purely decorative.
  */
 function matrixRain() {
+  if (prefersReducedMotion) return;
   const container = document.createElement('div');
   container.className = 'matrix-rain';
   document.body.appendChild(container);
@@ -924,8 +930,13 @@ function confettiBurst(originX, originY, count, maxDistance) {
   setTimeout(() => container.remove(), 1600);
 }
 
-/** A little celebration for finishing a piece - bursts from the Export button, cleans up after itself. */
+/**
+ * A little celebration for finishing a piece - bursts from the Export
+ * button, cleans up after itself. Skipped under prefers-reduced-motion,
+ * since it's purely decorative.
+ */
 function celebrateExport(originEl) {
+  if (prefersReducedMotion) return;
   const origin = originEl.getBoundingClientRect();
   confettiBurst(origin.left + origin.width / 2, origin.top + origin.height / 2, 28, 220);
 }

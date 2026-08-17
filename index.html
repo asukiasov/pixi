@@ -205,6 +205,21 @@
       <div id="square-constraint-options" class="rectangle-options hidden">
         <button type="button" id="square-constraint-toggle" class="tool-button square-constraint-button" aria-label="1:1 proportion" data-tooltip="1:1 proportion (like holding Shift)">1:1</button>
       </div>
+
+      <!-- Color Library sequence toggle - shown for Pencil and Brush, not
+           Eraser (nothing to cycle through when Eraser doesn't paint a
+           color at all). One shared control under the main tools rather
+           than a per-tool duplicate - same "dedicated panel, shown/hidden
+           by the tool-switch handler" pattern as #square-constraint-options
+           above (see js/workspace.js). Cycles through the active Color
+           Library palette per unique pixel/stamp placed, the same way
+           Rainbow cycles hues, instead of using a single foreground color
+           - see setColorLibrarySequence in js/workspace.js. -->
+      <div id="library-sequence-options" class="rectangle-options hidden">
+        <button type="button" id="library-sequence-toggle" class="tool-button icon-button" aria-label="Color Library sequence" data-tooltip="Color Library sequence">
+          <span class="material-symbols-outlined">palette</span>
+        </button>
+      </div>
     </aside>
 
     <div class="workspace-main">
@@ -224,13 +239,6 @@
             <input type="range" id="pencil-opacity-slider" class="vertical-slider" min="1" max="100" value="100" aria-label="Opacity" />
             <span id="pencil-opacity-readout" class="pencil-options-readout">100%</span>
           </div>
-          <!-- Pencil only (hidden for Eraser, see js/workspace.js) - cycles
-               through the active Color Library palette per unique pixel
-               placed, the same way Rainbow cycles hues, instead of using
-               a single foreground color. -->
-          <button type="button" id="pencil-library-toggle" class="tool-button icon-button" aria-label="Color Library sequence" data-tooltip="Color Library sequence">
-            <span class="material-symbols-outlined">palette</span>
-          </button>
         </div>
       </div>
 
@@ -424,14 +432,6 @@
           </button>
           <button type="button" id="delete-brush-button" class="tool-button icon-button no-buzz" disabled title="Delete selected brush">
             <span class="material-symbols-outlined">delete</span>
-          </button>
-          <!-- Same Color Library sequence toggle as Pencil's
-               (#pencil-library-toggle) - a separate DOM instance since
-               #pencil-options (Pencil/Eraser only) and #brushes-panel
-               (Brush only) are never both visible at once, both wired to
-               the same state.colorLibrarySequence flag in js/workspace.js. -->
-          <button type="button" id="brush-library-toggle" class="tool-button icon-button" aria-label="Color Library sequence" data-tooltip="Color Library sequence">
-            <span class="material-symbols-outlined">palette</span>
           </button>
         </div>
 

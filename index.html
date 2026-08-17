@@ -4,6 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Pixi</title>
+  <!-- Colors the browser UI chrome (mobile address bar, task switcher) to
+       match the app's current theme. Static fallback here (dark, this
+       app's original/default look); js/theme.js keeps `content` in sync
+       with the resolved light/dark theme as the user toggles it. -->
+  <meta name="theme-color" content="#1c1c1e" />
   <link rel="stylesheet" href="style.css" />
   <!-- Resolves bare "dexie" imports in js/persistence.js to a CDN build, no
        npm/bundler for the shipped app. Node resolves the same bare
@@ -17,7 +22,7 @@
        original range query pulled the full variable font (~4MB, ~30s on a
        slow connection, icons invisible until it finished); this is a few
        KB. Keep icon_names in sync with the icons used in this file. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,colorize,undo,redo,add,remove,delete,visibility,visibility_off,restart_alt,swap_horiz,close,home,grid_on,layers,settings,download,arrow_upward,arrow_downward,rotate_left,rotate_right,check_box_outline_blank,check_box,palette,arrow_selector_tool,playlist_add,opacity,dock_to_right,expand_more,lock,image" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=edit,ink_eraser,format_color_fill,brush,horizontal_rule,rectangle,crop_free,back_hand,colorize,undo,redo,add,remove,delete,visibility,visibility_off,restart_alt,swap_horiz,close,home,grid_on,layers,settings,download,arrow_upward,arrow_downward,rotate_left,rotate_right,check_box_outline_blank,check_box,palette,arrow_selector_tool,playlist_add,opacity,dock_to_right,expand_more,lock,image,light_mode,dark_mode,brightness_auto" />
 </head>
 <body>
   <main id="screen-gallery" class="screen">
@@ -99,6 +104,14 @@
            closest to the panel it controls - see js/workspace.js. -->
       <button type="button" id="right-sidebar-toggle" class="tool-button icon-button active magnetic-hover" aria-label="Right panel" data-tooltip="Right panel">
         <span class="material-symbols-outlined">dock_to_right</span>
+      </button>
+      <!-- Light/dark/system theme toggle. Right end of the top bar, after
+           the right-sidebar toggle - see js/theme.js. Icon/label/tooltip
+           are set by initThemeToggle() to reflect the current preference
+           (light_mode/dark_mode/brightness_auto); the values below are
+           just the pre-JS fallback (system is the default preference). -->
+      <button type="button" id="theme-toggle" class="tool-button icon-button magnetic-hover" aria-label="Theme: System" data-tooltip="Theme: System">
+        <span class="material-symbols-outlined">brightness_auto</span>
       </button>
     </header>
 

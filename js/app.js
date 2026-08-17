@@ -7,6 +7,7 @@ import { LayerStack } from './layers.js';
 import { parseRoute, navigate, onRouteChange } from './router.js';
 import { VERSION } from './version.js';
 import { initMagneticHover } from './magnetic-hover.js';
+import { initThemeToggle } from './theme.js';
 
 const screens = {
   gallery: document.getElementById('screen-gallery'),
@@ -64,6 +65,15 @@ initMagneticHover([
   ...document.querySelectorAll('.workspace-topbar button'),
   ...document.querySelectorAll('.tools-sidebar [data-tool]'),
 ]);
+
+// Light/dark/system theme toggle - applies the persisted/system-resolved
+// theme immediately and wires the top-bar button. Runs once here (not per
+// Workspace open, unlike e.g. #right-sidebar-toggle in js/workspace.js):
+// the button is a static element present for the whole page lifetime, and
+// the resolved theme applies globally (Gallery/New Canvas included, via
+// style.css's tokens keying off `data-theme` on <html>), not just inside
+// the Workspace screen where the button happens to live. See js/theme.js.
+initThemeToggle(document.getElementById('theme-toggle'));
 
 function showScreen(name) {
   for (const [key, el] of Object.entries(screens)) {

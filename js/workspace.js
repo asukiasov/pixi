@@ -411,6 +411,7 @@ function buildLayerRow(layer, index, isActive, layers) {
   visibilityButton.className = 'layer-visibility-toggle icon-button';
   visibilityButton.innerHTML = `<span class="material-symbols-outlined">${layer.visible ? 'visibility' : 'visibility_off'}</span>`;
   visibilityButton.title = layer.visible ? 'Hide layer' : 'Show layer';
+  visibilityButton.setAttribute('aria-label', layer.visible ? 'Hide layer' : 'Show layer');
   visibilityButton.addEventListener('click', () => {
     state.layerStack.setVisibility(index, !layer.visible);
     state.canvasView.render();
@@ -452,6 +453,7 @@ function buildLayerRow(layer, index, isActive, layers) {
   upButton.className = 'layer-reorder-button';
   upButton.innerHTML = '<span class="material-symbols-outlined">arrow_upward</span>';
   upButton.title = 'Move layer up';
+  upButton.setAttribute('aria-label', 'Move layer up');
   upButton.disabled = index === layerCount - 1 || layer.isBackground || !!layers[index + 1]?.isBackground;
   upButton.addEventListener('click', () => {
     state.layerStack.moveLayerUp(index);
@@ -465,6 +467,7 @@ function buildLayerRow(layer, index, isActive, layers) {
   downButton.className = 'layer-reorder-button';
   downButton.innerHTML = '<span class="material-symbols-outlined">arrow_downward</span>';
   downButton.title = 'Move layer down';
+  downButton.setAttribute('aria-label', 'Move layer down');
   downButton.disabled = index === 0 || layer.isBackground || !!layers[index - 1]?.isBackground;
   downButton.addEventListener('click', () => {
     state.layerStack.moveLayerDown(index);
@@ -478,6 +481,7 @@ function buildLayerRow(layer, index, isActive, layers) {
   deleteButton.className = 'layer-delete-button icon-button no-buzz';
   deleteButton.innerHTML = '<span class="material-symbols-outlined">delete</span>';
   deleteButton.title = 'Delete layer';
+  deleteButton.setAttribute('aria-label', 'Delete layer');
   deleteButton.disabled = layerCount <= 1;
   deleteButton.addEventListener('click', async () => {
     const proceed = await confirmDialog({

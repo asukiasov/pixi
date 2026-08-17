@@ -35,6 +35,13 @@ export function initNewCanvasScreen({ onCanvasCreated }) {
     });
   });
 
+  function clearPresetSelection() {
+    presetButtons.forEach((b) => b.classList.remove('active'));
+  }
+
+  customWidthInput.addEventListener('input', clearPresetSelection);
+  customHeightInput.addEventListener('input', clearPresetSelection);
+
   function currentBackground() {
     return [...backgroundRadios].find((r) => r.checked)?.value ?? 'transparent';
   }

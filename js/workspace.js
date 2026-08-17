@@ -906,8 +906,18 @@ const MATRIX_RAIN_CHARS = '01ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁ
 const MATRIX_RAIN_COLUMNS = 14;
 
 // Checked once, like js/app.js's platform detection - the OS-level
-// reduced-motion preference isn't expected to change mid-session.
-const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// reduced-motion preference isn't expected to change mid-session. Guarded
+// for `window` being undefined: this runs at module-eval time (not inside
+// a function), so it fires the instant anything imports this module -
+// including test/workspace.test.js, which imports js/workspace.js
+// directly under plain Node with no DOM/browser shim. (Unlike js/theme.js,
+// which only touches `window` inside functions its tests can stub
+// `globalThis.window` for before calling - not an option for a reference
+// that runs before any test code gets to execute.)
+const prefersReducedMotion =
+  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : false;
 
 /**
  * The "matrix" magic palette's own effect (see MAGIC_PALETTES) - a brief

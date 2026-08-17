@@ -31,7 +31,7 @@ Everything below is either already-decided (shown filled in) or open
 | Square-constraint ("1:1") toggle | ❌ | ✅ | ✅ | tied to Rectangle/Selection |
 | Hand / pan | ✅ | ✅ | ✅ | bundled with zoom/pan |
 | Eyedropper | ❌ | ✅ | ✅ | |
-| Symmetry / mirror drawing mode | ? | ? | ? | new capability (shipped 2026-08-18, `openspec/changes/archive/2026-08-18-5-add-symmetry-drawing-mode`); not yet discussed for tier split |
+| Symmetry / mirror drawing mode | ❌ | ❌ | ✅ | new capability (shipped 2026-08-18, `openspec/changes/archive/2026-08-18-5-add-symmetry-drawing-mode`); not yet discussed for tier split |
 
 ## Brush
 
@@ -63,7 +63,7 @@ Everything below is either already-decided (shown filled in) or open
 | Import palette from image             | ❌ | ❌ | ✅ | |
 | Delete palette                        | ❌ | ✅ | ✅ | |
 | Multiple palettes + select dropdown   | ❌ | ✅ | ✅ | |
-| Palette-aware color ramp generator    | ? | ? | ? | new capability (shipped 2026-08-18, `openspec/changes/archive/2026-08-18-7-add-palette-color-ramp-generator`); not yet discussed for tier split |
+| Palette-aware color ramp generator    | ❌ | ❌ | ✅ | new capability (shipped 2026-08-18, `openspec/changes/archive/2026-08-18-7-add-palette-color-ramp-generator`); not yet discussed for tier split |
 
 ## Layers
 

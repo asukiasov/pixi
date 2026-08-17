@@ -673,6 +673,26 @@ body {
   overflow: hidden;
 }
 
+/* AUD-11: #right-sidebar-toggle collapses this via width (not .hidden's
+   display:none, which can't be animated and made workspace-main's
+   reflow an instant snap) - shrinking to 0 lets workspace-main (a flex
+   sibling) grow into the freed space smoothly across the same
+   transition instead of jumping. border-left-color also fades so the
+   1px seam doesn't linger as a visible sliver at width 0. JS
+   (setRightSidebarVisible in js/workspace.js) also sets `inert` while
+   collapsed, since width:0 alone doesn't remove the now-invisible
+   content from tab order. */
+.right-sidebar.right-sidebar-collapsed {
+  width: 0;
+  border-left-color: transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .right-sidebar {
+    transition: width 0.2s ease, border-left-color 0.2s ease;
+  }
+}
+
 /* Bottom-most section (see .right-sidebar's order comment in index.html)
    - fills whatever's left after Color Library's bounded height and
    Brushes' own cap, mirroring Color Library's old flex:1 role. */

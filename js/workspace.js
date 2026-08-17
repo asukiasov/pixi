@@ -358,6 +358,23 @@ function syncLayersPanelToolbar() {
 }
 
 /**
+ * Syncs the whole right-sidebar's (Color Library + Brushes + Layers)
+ * collapsed/expanded DOM state to state.rightSidebarVisible - AUD-11.
+ * Collapsing animates the sidebar's width to 0 (see
+ * .right-sidebar-collapsed in style.css, which also handles
+ * prefers-reduced-motion) rather than snapping via display:none, so the
+ * canvas area beside it (a flex sibling) reflows smoothly too. `inert`
+ * is set while collapsed so its now width:0 content can't be tabbed
+ * into or interacted with, mirroring how .hidden elements are already
+ * unreachable.
+ */
+function setRightSidebarVisible(visible) {
+  rightSidebar.classList.toggle('right-sidebar-collapsed', !visible);
+  rightSidebar.inert = !visible;
+  rightSidebarToggle.classList.toggle('active', visible);
+}
+
+/**
  * Syncs the Layers panel's collapsed/expanded DOM state to
  * state.layersPanelVisible - collapsing hides everything but the header
  * (see .layers-panel.collapsed in style.css), letting the Color Library
@@ -1819,8 +1836,7 @@ function bindDomOnce() {
   rightSidebarToggle = document.getElementById('right-sidebar-toggle');
   rightSidebarToggle.addEventListener('click', () => {
     state.rightSidebarVisible = !state.rightSidebarVisible;
-    rightSidebar.classList.toggle('hidden', !state.rightSidebarVisible);
-    rightSidebarToggle.classList.toggle('active', state.rightSidebarVisible);
+    setRightSidebarVisible(state.rightSidebarVisible);
   });
 
   // Zoom: +/- buttons and the three presets all just call the CanvasView
@@ -2166,8 +2182,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   syncLayersCollapse();
   syncColorLibraryCollapse();
   closeLayersOpacityPopover();
-  rightSidebar.classList.remove('hidden');
-  rightSidebarToggle.classList.add('active');
+  setRightSidebarVisible(true);
   // Default tool is Pencil, so the panel starts visible; sliders/readouts
   // reset to match state.pencilSize/pencilOpacity's defaults (1, 1).
   pencilOptionsPanel.classList.remove('hidden');

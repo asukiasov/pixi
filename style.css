@@ -124,6 +124,8 @@ body {
   justify-content: center;
   padding: 0;
   cursor: pointer;
+  /* AUD-5: contain the icon-font-failure fallback text (see .icon-button). */
+  overflow: hidden;
 }
 
 .gallery-tile-delete .material-symbols-outlined {
@@ -212,6 +214,21 @@ body {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   font-size: 1.4rem;
   line-height: 1;
+}
+
+/* AUD-5: if js/icon-font-fallback.js detects (via the CSS Font Loading
+   API) that the Material Symbols font never actually loaded, it flags
+   <html class="icon-font-failed">. Without the font, every
+   .material-symbols-outlined span renders its literal ligature text
+   ("home", "undo", "expand_more", ...) - the fixed-size/overflow:hidden
+   containment added to each icon-only button class above keeps that text
+   from bleeding into neighbors, but a clipped fragment of garbled text is
+   still worse than no icon at all. Hide it outright once confirmed
+   failed; every icon button already has an aria-label and/or
+   data-tooltip (js/workspace.js's tool-tooltip), so the control stays
+   identifiable and accessible with a blank glyph slot. */
+.icon-font-failed .material-symbols-outlined {
+  visibility: hidden;
 }
 
 /* Rectangle Filled toggle's icon - raw SVG, not a font glyph (see
@@ -376,6 +393,10 @@ body {
   justify-content: center;
   padding: 0;
   position: relative;
+  /* AUD-5: see .icon-button's identical comment - same icon-font-
+     failure containment for the tool rail, which uses bare .tool-button
+     (not .icon-button) for its icon-only buttons. */
+  overflow: hidden;
 }
 
 /* Custom tooltip, from data-tooltip/data-shortcut - not the native title
@@ -459,6 +480,18 @@ body {
   height: 2.6rem;
   padding: 0;
   cursor: pointer;
+  /* AUD-5: if the Material Symbols icon font fails to load (blocked
+     network, offline, ad-blocker), the .material-symbols-outlined span
+     renders its literal ligature text ("home", "undo", etc.) instead of
+     a glyph. Without this, that text is wider than the fixed box above
+     and bleeds into neighboring buttons. This clips it to "blank-ish
+     button" instead - see .icon-font-failed below for hiding the text
+     outright once detected. Every .icon-button-classed element inherits
+     this from here, including the width/height overrides further down
+     this file (color-picker-popover-header, color-library-header-
+     actions, zoom-controls, bottom-bar-group) since none of them unset
+     overflow. */
+  overflow: hidden;
 }
 
 /* iOS 26 / Apple Pencil-style "magnetic hover" for the top bar
@@ -741,6 +774,17 @@ body {
   font-size: 1.1rem;
   color: #a0a0a5;
   transition: transform 0.15s ease;
+  /* AUD-5: unlike this file's other icon-only elements, this one had no
+     fixed footprint at all - just font-size - so icon-font-failure
+     fallback text ("expand_more") would grow the box and push the rest
+     of the panel-header row. Pin it to a square matching the font-size
+     and clip anything wider. */
+  width: 1.1rem;
+  height: 1.1rem;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Collapsed state rotates the chevron from pointing down (expanded) to
@@ -897,6 +941,8 @@ body {
   font-size: 1rem;
   padding: 0;
   cursor: pointer;
+  /* AUD-5: contain the icon-font-failure fallback text (see .icon-button). */
+  overflow: hidden;
 }
 
 .layer-visibility-toggle .material-symbols-outlined,
@@ -964,6 +1010,8 @@ body {
   font-size: 0.9rem;
   padding: 0;
   cursor: pointer;
+  /* AUD-5: contain the icon-font-failure fallback text (see .icon-button). */
+  overflow: hidden;
 }
 
 .layer-reorder-button .material-symbols-outlined {
@@ -1064,6 +1112,8 @@ body {
   justify-content: center;
   cursor: pointer;
   z-index: 1;
+  /* AUD-5: contain the icon-font-failure fallback text (see .icon-button). */
+  overflow: hidden;
 }
 
 .fg-bg-corner-button .material-symbols-outlined {

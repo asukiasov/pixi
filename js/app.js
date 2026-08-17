@@ -8,12 +8,19 @@ import { parseRoute, navigate, onRouteChange } from './router.js';
 import { VERSION } from './version.js';
 import { initMagneticHover } from './magnetic-hover.js';
 import { initThemeToggle } from './theme.js';
+import { initIconFontFallback } from './icon-font-fallback.js';
 
 const screens = {
   gallery: document.getElementById('screen-gallery'),
   newCanvas: document.getElementById('screen-new-canvas'),
   workspace: document.getElementById('screen-workspace'),
 };
+
+// AUD-5: detect whether the Material Symbols icon font (index.html's
+// fonts.googleapis.com <link>) actually loaded, and fall back to hiding
+// the raw ligature text (style.css's .icon-font-failed rule) if not.
+// See js/icon-font-fallback.js.
+initIconFontFallback();
 
 // Cache sanity check - see index.html's #version-badge comment and
 // scripts/stamp-version.sh for how this gets kept current.

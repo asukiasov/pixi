@@ -42,11 +42,11 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --color-bg: #f2f2f7;
+  --color-bg: #ececf0;
   --color-surface: #ffffff;
-  --color-surface-alt: #eceef1;
-  --color-track: #d1d1d6;
-  --color-border: #d1d1d6;
+  --color-surface-alt: #e4e4e9;
+  --color-track: #c6c6cc;
+  --color-border: #a3a3a9;
   --color-text: #1c1c1e;
   --color-text-secondary: #6c6c70;
   --color-text-tertiary: #707074;

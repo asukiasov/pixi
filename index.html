@@ -3,6 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <!-- Un-deferred classic script (not type="module" - those always defer,
+       see the file's own comment for why that matters here), loaded
+       before the stylesheet so the resolved theme is on <html> before
+       the browser's first paint - prevents a dark-then-light flash for
+       light/system-light users. Must stay early in <head>, ahead of
+       anything that would let the page start rendering first. -->
+  <script src="js/theme-boot.js"></script>
   <title>Pixi</title>
   <!-- Colors the browser UI chrome (mobile address bar, task switcher) to
        match the app's current theme. Static fallback here (dark, this

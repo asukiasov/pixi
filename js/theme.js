@@ -39,7 +39,7 @@ const ICONS = {
 // var itself since that requires a layout-triggering computed-style read;
 // these are static and cheap to duplicate here.
 const THEME_COLOR = {
-  light: '#f2f2f7',
+  light: '#ececf0',
   dark: '#1c1c1e',
 };
 

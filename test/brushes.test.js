@@ -123,6 +123,34 @@ describe('placeBrush', () => {
     // top-left = (0-1, 0-1) = (-1,-1); only (0,0) of the pattern is in-bounds
     assert.deepEqual(engine.getPixel(0, 0), [1, 2, 3, 255]);
   });
+
+  test('defaults to no mirroring when symmetryMode is omitted', () => {
+    const engine = new PixelEngine(20, 20, 'transparent');
+    const brush = { id: 'dot', name: 'Dot', width: 1, height: 1, pixels: [[0, 0]] };
+    placeBrush(engine, 3, 3, brush, [255, 0, 0, 255]);
+    assert.deepEqual(engine.getPixel(3, 3), [255, 0, 0, 255]);
+    // Nothing mirrored on the opposite side of the canvas.
+    assert.deepEqual(engine.getPixel(16, 3), [0, 0, 0, 0]);
+  });
+
+  test('horizontal symmetryMode mirrors the placed pixels across the canvas center (5-add-symmetry-drawing-mode)', () => {
+    const engine = new PixelEngine(20, 20, 'transparent');
+    const brush = { id: 'dot', name: 'Dot', width: 1, height: 1, pixels: [[0, 0]] };
+    placeBrush(engine, 3, 3, brush, [255, 0, 0, 255], 0, 'horizontal');
+    assert.deepEqual(engine.getPixel(3, 3), [255, 0, 0, 255]);
+    // mirroredX = width - 1 - x = 20 - 1 - 3 = 16
+    assert.deepEqual(engine.getPixel(16, 3), [255, 0, 0, 255]);
+  });
+
+  test('both symmetryMode places up to 4 mirrored copies', () => {
+    const engine = new PixelEngine(20, 20, 'transparent');
+    const brush = { id: 'dot', name: 'Dot', width: 1, height: 1, pixels: [[0, 0]] };
+    placeBrush(engine, 3, 3, brush, [255, 0, 0, 255], 0, 'both');
+    assert.deepEqual(engine.getPixel(3, 3), [255, 0, 0, 255]);
+    assert.deepEqual(engine.getPixel(16, 3), [255, 0, 0, 255]);
+    assert.deepEqual(engine.getPixel(3, 16), [255, 0, 0, 255]);
+    assert.deepEqual(engine.getPixel(16, 16), [255, 0, 0, 255]);
+  });
 });
 
 describe('rainbowColor', () => {

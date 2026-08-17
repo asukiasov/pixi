@@ -68,28 +68,28 @@
     <!-- Top bar: navigation/toggles/settings/export, icon-only. Separate
          from the tool rail below - these aren't drawing tools. -->
     <header class="workspace-topbar">
-      <button type="button" id="back-to-gallery-button" class="tool-button icon-button" aria-label="Gallery" data-tooltip="Gallery">
+      <button type="button" id="back-to-gallery-button" class="tool-button icon-button magnetic-hover" aria-label="Gallery" data-tooltip="Gallery">
         <span class="material-symbols-outlined">home</span>
       </button>
-      <button type="button" id="pixel-perfect-toggle" class="tool-button icon-button" aria-label="Pixel-perfect" data-tooltip="Pixel-perfect">
+      <button type="button" id="pixel-perfect-toggle" class="tool-button icon-button magnetic-hover" aria-label="Pixel-perfect" data-tooltip="Pixel-perfect">
         <span class="material-symbols-outlined">grid_on</span>
       </button>
-      <button type="button" id="layers-panel-toggle" class="tool-button icon-button active" aria-label="Layers" data-tooltip="Layers">
+      <button type="button" id="layers-panel-toggle" class="tool-button icon-button active magnetic-hover" aria-label="Layers" data-tooltip="Layers">
         <span class="material-symbols-outlined">layers</span>
       </button>
-      <button type="button" id="canvas-settings-toggle" class="tool-button icon-button" aria-label="Canvas Settings" data-tooltip="Canvas Settings">
+      <button type="button" id="canvas-settings-toggle" class="tool-button icon-button magnetic-hover" aria-label="Canvas Settings" data-tooltip="Canvas Settings">
         <span class="material-symbols-outlined">settings</span>
       </button>
-      <button type="button" id="export-button" class="tool-button icon-button" aria-label="Export PNG" data-tooltip="Export PNG">
+      <button type="button" id="export-button" class="tool-button icon-button magnetic-hover" aria-label="Export PNG" data-tooltip="Export PNG">
         <span class="material-symbols-outlined">download</span>
       </button>
 
       <div class="workspace-topbar-spacer"></div>
 
-      <button type="button" id="undo-button" class="tool-button icon-button" disabled aria-label="Undo" data-tooltip="Undo">
+      <button type="button" id="undo-button" class="tool-button icon-button magnetic-hover" disabled aria-label="Undo" data-tooltip="Undo">
         <span class="material-symbols-outlined">undo</span>
       </button>
-      <button type="button" id="redo-button" class="tool-button icon-button" disabled aria-label="Redo" data-tooltip="Redo">
+      <button type="button" id="redo-button" class="tool-button icon-button magnetic-hover" disabled aria-label="Redo" data-tooltip="Redo">
         <span class="material-symbols-outlined">redo</span>
       </button>
       <!-- VSCode-style whole-panel toggle: hides/shows the entire right
@@ -97,7 +97,7 @@
            of each panel's own collapsed state (#layers-panel-toggle above
            only affects the Layers panel). Right end of the top bar,
            closest to the panel it controls - see js/workspace.js. -->
-      <button type="button" id="right-sidebar-toggle" class="tool-button icon-button active" aria-label="Right panel" data-tooltip="Right panel">
+      <button type="button" id="right-sidebar-toggle" class="tool-button icon-button active magnetic-hover" aria-label="Right panel" data-tooltip="Right panel">
         <span class="material-symbols-outlined">dock_to_right</span>
       </button>
     </header>
@@ -105,34 +105,34 @@
     <div class="workspace-body">
     <!-- 1. Tools: vertical icon rail, Photoshop-style. -->
     <aside id="tools-sidebar" class="tools-sidebar">
-      <button type="button" class="tool-button" data-tool="move" aria-label="Move" data-tooltip="Move" data-shortcut="V">
+      <button type="button" class="tool-button magnetic-hover" data-tool="move" aria-label="Move" data-tooltip="Move" data-shortcut="V">
         <span class="material-symbols-outlined">arrow_selector_tool</span>
       </button>
-      <button type="button" class="tool-button" data-tool="pencil" aria-label="Pencil" data-tooltip="Pencil" data-shortcut="P">
+      <button type="button" class="tool-button magnetic-hover" data-tool="pencil" aria-label="Pencil" data-tooltip="Pencil" data-shortcut="P">
         <span class="material-symbols-outlined">edit</span>
       </button>
-      <button type="button" class="tool-button" data-tool="eraser" aria-label="Eraser" data-tooltip="Eraser" data-shortcut="E">
+      <button type="button" class="tool-button magnetic-hover" data-tool="eraser" aria-label="Eraser" data-tooltip="Eraser" data-shortcut="E">
         <span class="material-symbols-outlined">ink_eraser</span>
       </button>
-      <button type="button" class="tool-button" data-tool="bucket" aria-label="Bucket" data-tooltip="Bucket" data-shortcut="G">
+      <button type="button" class="tool-button magnetic-hover" data-tool="bucket" aria-label="Bucket" data-tooltip="Bucket" data-shortcut="G">
         <span class="material-symbols-outlined">format_color_fill</span>
       </button>
-      <button type="button" class="tool-button" data-tool="brush" aria-label="Brush" data-tooltip="Brush" data-shortcut="B">
+      <button type="button" class="tool-button magnetic-hover" data-tool="brush" aria-label="Brush" data-tooltip="Brush" data-shortcut="B">
         <span class="material-symbols-outlined">brush</span>
       </button>
-      <button type="button" class="tool-button" data-tool="line" aria-label="Line" data-tooltip="Line" data-shortcut="L">
+      <button type="button" class="tool-button magnetic-hover" data-tool="line" aria-label="Line" data-tooltip="Line" data-shortcut="L">
         <span class="material-symbols-outlined">horizontal_rule</span>
       </button>
-      <button type="button" class="tool-button" data-tool="rectangle" aria-label="Rectangle" data-tooltip="Rectangle" data-shortcut="R">
+      <button type="button" class="tool-button magnetic-hover" data-tool="rectangle" aria-label="Rectangle" data-tooltip="Rectangle" data-shortcut="R">
         <span class="material-symbols-outlined">rectangle</span>
       </button>
-      <button type="button" class="tool-button" data-tool="selection" aria-label="Select" data-tooltip="Select (click outside or Esc to deselect)" data-shortcut="M">
+      <button type="button" class="tool-button magnetic-hover" data-tool="selection" aria-label="Select" data-tooltip="Select (click outside or Esc to deselect)" data-shortcut="M">
         <span class="material-symbols-outlined">crop_free</span>
       </button>
-      <button type="button" class="tool-button" data-tool="hand" aria-label="Hand (pan)" data-tooltip="Hand" data-shortcut="H">
+      <button type="button" class="tool-button magnetic-hover" data-tool="hand" aria-label="Hand (pan)" data-tooltip="Hand" data-shortcut="H">
         <span class="material-symbols-outlined">back_hand</span>
       </button>
-      <button type="button" class="tool-button" data-tool="eyedropper" aria-label="Eyedropper" data-tooltip="Eyedropper" data-shortcut="I">
+      <button type="button" class="tool-button magnetic-hover" data-tool="eyedropper" aria-label="Eyedropper" data-tooltip="Eyedropper" data-shortcut="I">
         <span class="material-symbols-outlined">colorize</span>
       </button>
 

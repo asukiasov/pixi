@@ -6,6 +6,7 @@ import { loadProject } from './persistence.js';
 import { LayerStack } from './layers.js';
 import { parseRoute, navigate, onRouteChange } from './router.js';
 import { VERSION } from './version.js';
+import { initMagneticHover } from './magnetic-hover.js';
 
 const screens = {
   gallery: document.getElementById('screen-gallery'),
@@ -52,6 +53,17 @@ const screens = {
 if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
   document.documentElement.classList.add('ios-platform');
 }
+
+// See js/magnetic-hover.js. Top bar + tool rail buttons are registered
+// together, in one call, not two separate ones - exclusivity ("only the
+// nearest button reacts") is computed across whatever set a single call
+// receives, so this is what makes a top bar button and a tool rail
+// button mutually exclusive (see openspec/specs/topbar-magnetic-hover
+// and openspec/changes/extend-magnetic-hover-tool-rail).
+initMagneticHover([
+  ...document.querySelectorAll('.workspace-topbar button'),
+  ...document.querySelectorAll('.tools-sidebar [data-tool]'),
+]);
 
 function showScreen(name) {
   for (const [key, el] of Object.entries(screens)) {

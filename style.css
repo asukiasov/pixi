@@ -461,6 +461,22 @@ body {
   cursor: pointer;
 }
 
+/* iOS 26 / Apple Pencil-style "magnetic hover" for the top bar
+   (openspec/changes/adopt-magnetic-hover-topbar) - see
+   js/magnetic-hover.js. Position/scale and transition live in CSS;
+   magnetic-hover.js only ever sets the --pull-x/--pull-y/--pull-scale
+   custom properties and toggles the .magnetic-active class (on at most
+   one button at a time - see that change's "Exclusive activation"
+   requirement). No glow/halo - real iOS 26 doesn't have one either, per
+   feedback. */
+.magnetic-hover {
+  transition: transform 150ms ease-out;
+}
+
+.magnetic-hover.magnetic-active {
+  transform: translate(var(--pull-x, 0), var(--pull-y, 0)) scale(var(--pull-scale, 1));
+}
+
 .workspace-main {
   display: flex;
   flex-direction: column;
@@ -698,7 +714,7 @@ body {
 
 .layers-panel-header h2 {
   flex: 1;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #a0a0a5;
@@ -1202,7 +1218,7 @@ body {
 
 .color-library-header h2 {
   flex: 1;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #a0a0a5;
@@ -1345,7 +1361,7 @@ body {
 }
 
 .brushes-panel-header h2 {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #a0a0a5;
@@ -1555,7 +1571,15 @@ body {
 }
 
 .zoom-controls .tool-button:not(.icon-button) {
-  padding: 0.5rem 0.6rem;
+  /* Explicit height (not just padding) to match .zoom-controls
+     .icon-button's fixed 2.2rem - the -/+ icon buttons and these text
+     presets (100%/Fit/Fill) sit in the same row and previously rendered
+     at slightly different heights (padding + line-height doesn't equal
+     a fixed height), a visible mismatch in the bottom bar. */
+  display: flex;
+  align-items: center;
+  height: 2.2rem;
+  padding: 0 0.6rem;
   font-size: 0.8rem;
 }
 

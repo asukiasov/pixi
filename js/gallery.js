@@ -111,6 +111,7 @@ function buildProjectTile(project, onOpenProject, refresh) {
   deleteButton.className = 'gallery-tile-delete';
   deleteButton.innerHTML = '<span class="material-symbols-outlined">delete</span>';
   deleteButton.title = 'Delete project';
+  deleteButton.setAttribute('aria-label', 'Delete project');
   deleteButton.addEventListener('click', async (e) => {
     e.stopPropagation();
     const proceed = await confirmDialog({

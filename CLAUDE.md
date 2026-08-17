@@ -49,6 +49,12 @@ different halves of the work and must not be conflated.
 - They do not define requirements and do not replace `openspec/specs/`. They
   govern design exploration, coding discipline, and review/merge hygiene once
   a change already has an OpenSpec proposal.
+- `web-design-guidelines` reviews UI code (markup/CSS/JS touching layout,
+  interaction, or accessibility) against the Web Interface Guidelines. Run it
+  before `requesting-code-review` on any change that touches `index.html`,
+  `css/*`, or a tool's DOM/interaction code — the general code review does not
+  substitute for it. It's also part of `auditing-tool-improvements`'s
+  screen-by-screen heuristics pass.
 
 ## Rule of thumb
 

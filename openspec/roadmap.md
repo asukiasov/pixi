@@ -222,20 +222,34 @@ becomes the next priority:
     corrected); `2m`'s Import control is now an icon button in the
     editor's header row. The brush editor itself stayed a docked panel
     (confirmed with the user, not converted to a popover).
+  - ~~Light/dark/system-match theme toggle~~ - shipped: `js/theme.js` +
+    `js/theme-boot.js` (FOUC handling), a toggle near the right-sidebar
+    hide toggle, `test/theme.test.js`.
+  - ~~Right-sidebar hide/show should slide, not snap~~ - fixed directly
+    (AUD-11, no OpenSpec change - see below on why): `#right-sidebar`
+    now animates `width`/`border-left-color` on toggle (0.2s,
+    `prefers-reduced-motion`-gated, same pattern the magnetic-hover buzz
+    animation already used), with `inert` applied while collapsed.
+  - ~~Color Library sequence mode duplicated per tool
+    (`#pencil-library-toggle`/`#brush-library-toggle`)~~ - fixed
+    directly (AUD-12): consolidated into one shared
+    `#library-sequence-toggle` in `#library-sequence-options`, modeled
+    on `#square-constraint-toggle`'s existing single-shared-control
+    pattern (tool-scoped visibility: shown for Pencil/Brush, hidden
+    otherwise) instead of two DOM instances driving one flag.
 
-  Still open:
-  - Light/dark/system-match theme toggle - a new button near the
-    right-sidebar hide toggle (top bar, right end). Currently the app
-    is single-theme (dark only, no toggle exists) - this is a new
-    capability, not a bug.
-  - Right-sidebar hide/show (`#right-sidebar-toggle`) should slide the
-    panel out/in (animated), not just toggle visibility instantly as it
-    does today.
-  - Color Library sequence mode (the "cycle through the active palette
-    per pixel" toggle, see the `brushes` spec's "Color Library sequence
-    mode (Pencil and Brush)" requirement) is currently a separate toggle
-    button duplicated per tool (Pencil's `#pencil-library-toggle`,
-    Brush's `#brush-library-toggle`) rather than one standardized
-    control - raised for consistency with how the "1:1" proportion
-    toggle is a single shared control under the main tools rather than
-    per-tool duplicates.
+  A dated, per-finding audit register (id/severity/state, one row per
+  issue) lives under `docs/audits/` going forward - e.g.
+  `docs/audits/2026-08-17-ui-polish-audit.md` - rather than folding new
+  findings into this roadmap section. AUD-11/AUD-12 above were real
+  behavior changes and CLAUDE.md's own process would normally route
+  them through `/opsx:propose` before implementation; they were
+  implemented directly at the user's explicit request instead, so
+  `openspec/specs/` (`canvas-navigation` for the sidebar animation,
+  `brushes` for the consolidated toggle) has not been updated to
+  reflect them - worth a spec sync pass so the specs don't drift from
+  what's actually built.
+
+  Still open: none from this pass currently tracked here - see
+  `docs/audits/` for the fuller, itemized register (includes items still
+  `needs-recheck` or intentionally not pursued).

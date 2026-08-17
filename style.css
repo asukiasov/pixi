@@ -1355,8 +1355,11 @@ body {
    otherwise win the cascade on width/height (its selector doesn't set
    padding, so that part of #color-picker-add's rule already wins - but
    width/height need an explicit override here, not just higher specificity,
-   since a property only cascades against rules that set that property). */
-#color-picker-add {
+   since a property only cascades against rules that set that property).
+   #color-picker-generate-ramp (7-add-palette-color-ramp-generator) shares
+   the same override, same reasoning. */
+#color-picker-add,
+#color-picker-generate-ramp {
   display: flex;
   align-items: center;
   justify-content: center;

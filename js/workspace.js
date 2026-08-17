@@ -16,6 +16,7 @@ import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js'
 import { decodeImageFile, hasTransparency, downsampleToImageData } from './image-import.js';
 import { thresholdToGrid } from './brush-import.js';
 import { extractPalette } from './color-extraction.js';
+import { generateColorRamp } from './color-ramp.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
 import { DEFAULT_MATERIAL_COLORS, PREDEFINED_PALETTES } from './default-color-library.js';
 import { bresenhamLine, strokeFreehandThick } from './engine.js';
@@ -34,6 +35,12 @@ const COLOR_IMPORT_SAMPLE_SIZE = 64;
 const COLOR_IMPORT_MIN_COUNT = 2;
 const COLOR_IMPORT_MAX_COUNT = 32;
 const COLOR_IMPORT_DEFAULT_COUNT = 8;
+
+// Color ramp generator (7-add-palette-color-ramp-generator) - step-count
+// bounds and default, per spec.
+const RAMP_MIN_STEPS = 3;
+const RAMP_MAX_STEPS = 9;
+const RAMP_DEFAULT_STEPS = 5;
 
 const RAINBOW_HUE_STEP = 20; // degrees per brush placed, in Rainbow mode
 
@@ -1567,11 +1574,16 @@ function bindDomOnce() {
   document.getElementById('color-picker-close').addEventListener('click', closeColorPicker);
 
   // Close on outside click/Escape, not just the explicit close button -
-  // standard popover behavior.
+  // standard popover behavior. Clicks inside #ramp-preview-row don't
+  // count as "outside" here even though it's a sibling, not a descendant,
+  // of #color-picker-popover - it's opened from this popover's own
+  // "Generate ramp" button, so closing the color picker out from under an
+  // in-progress ramp preview would be surprising.
   document.addEventListener('pointerdown', (e) => {
     if (colorPickerPopover.classList.contains('hidden')) return;
     if (colorPickerPopover.contains(e.target)) return;
     if (e.target.closest('#foreground-swatch, #background-swatch')) return;
+    if (document.getElementById('ramp-preview-row').contains(e.target)) return;
     closeColorPicker();
   });
   document.addEventListener('keydown', (e) => {
@@ -1761,6 +1773,101 @@ function bindDomOnce() {
     activePaletteId = created.id;
     closeImportPreview();
     await loadColorPalettes();
+  });
+
+  // Generate ramp (7-add-palette-color-ramp-generator): a source color
+  // (whichever swatch the color-picker popover is editing, or the current
+  // Foreground color from the Color Library header) + step count ->
+  // generateColorRamp -> live preview -> Confirm adds every generated
+  // color to the active palette via addColorToPalette, same "extract,
+  // preview, then save" shape as the import-palette flow above.
+  const rampPreviewRow = document.getElementById('ramp-preview-row');
+  const rampPreviewClose = document.getElementById('ramp-preview-close');
+  const rampPreviewGrid = document.getElementById('ramp-preview-grid');
+  const rampPreviewSteps = document.getElementById('ramp-preview-steps');
+  const rampPreviewConfirm = document.getElementById('ramp-preview-confirm');
+  const rampPreviewCancel = document.getElementById('ramp-preview-cancel');
+  const colorPickerGenerateRamp = document.getElementById('color-picker-generate-ramp');
+  const libraryGenerateRampButton = document.getElementById('library-generate-ramp-button');
+  // Source color (hex) and preview colors for the ramp currently open;
+  // null/empty when no ramp preview is open.
+  let rampSourceHex = null;
+  let rampPreviewColors = [];
+  let rampAnchorEl = null;
+
+  function renderRampPreview() {
+    rampPreviewGrid.innerHTML = '';
+    for (const hex of rampPreviewColors) {
+      const swatch = document.createElement('div');
+      swatch.className = 'color-library-swatch';
+      swatch.style.background = hex;
+      rampPreviewGrid.appendChild(swatch);
+    }
+  }
+
+  function regenerateRampPreview() {
+    if (!rampSourceHex) return;
+    const steps = Math.min(
+      RAMP_MAX_STEPS,
+      Math.max(RAMP_MIN_STEPS, Math.round(Number(rampPreviewSteps.value)) || RAMP_DEFAULT_STEPS)
+    );
+    rampPreviewSteps.value = String(steps);
+    rampPreviewColors = generateColorRamp(rampSourceHex, steps);
+    renderRampPreview();
+  }
+
+  function closeRampPreview() {
+    rampPreviewRow.classList.add('hidden');
+    rampSourceHex = null;
+    rampPreviewColors = [];
+    rampAnchorEl = null;
+  }
+
+  function openRampPreview(rgba, anchorEl) {
+    closeImportPreview(); // mutually exclusive with the other Color Library popovers
+    rampSourceHex = rgbaToHex(rgba);
+    rampAnchorEl = anchorEl;
+    rampPreviewSteps.value = String(RAMP_DEFAULT_STEPS);
+    // Unhide before measuring - .hidden is display:none, which has no box
+    // to read a size from (see positionPanelBelow's callers).
+    rampPreviewRow.classList.remove('hidden');
+    positionPanelBelow(rampPreviewRow, anchorEl);
+    regenerateRampPreview();
+  }
+
+  colorPickerGenerateRamp.addEventListener('click', () => {
+    const current = colorPickerTarget === 'background' ? state.backgroundColor : state.foregroundColor;
+    openRampPreview(current, colorPickerGenerateRamp);
+  });
+
+  libraryGenerateRampButton.addEventListener('click', () => {
+    openRampPreview(state.foregroundColor, libraryGenerateRampButton);
+  });
+
+  rampPreviewSteps.addEventListener('change', regenerateRampPreview);
+  rampPreviewSteps.addEventListener('input', regenerateRampPreview);
+
+  rampPreviewClose.addEventListener('click', closeRampPreview);
+  rampPreviewCancel.addEventListener('click', closeRampPreview);
+
+  rampPreviewConfirm.addEventListener('click', async () => {
+    for (const hex of rampPreviewColors) {
+      await addColorToPalette(activePaletteId, hex);
+    }
+    closeRampPreview();
+    await loadColorPalettes();
+  });
+
+  // Close on outside click/Escape too, not just the explicit close button
+  // - standard popover behavior, same as the import-preview popover above.
+  document.addEventListener('pointerdown', (e) => {
+    if (rampPreviewRow.classList.contains('hidden')) return;
+    if (rampPreviewRow.contains(e.target)) return;
+    if (rampAnchorEl && (e.target === rampAnchorEl || rampAnchorEl.contains(e.target))) return;
+    closeRampPreview();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !rampPreviewRow.classList.contains('hidden')) closeRampPreview();
   });
 
   // Collapse-to-header (Photoshop-accordion style) for Color Library and

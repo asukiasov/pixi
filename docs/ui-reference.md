@@ -159,9 +159,13 @@ Bottom of the left tools sidebar, Photoshop-style overlapping stack:
 (native `<input type=color>`), `#color-picker-hex` (hex text entry,
 double-click to copy, `#color-picker-copied` "Copied!" flash), RGB
 number inputs (`#color-picker-r/g/b`), `#color-picker-add` ("Add to
-palette", adds to the active Color Library palette). **Does not exist on
-iOS** — `#add-current-color-button` in the Color Library header (below)
-is the only add-to-palette path there.
+palette", adds to the active Color Library palette), `#color-picker-
+generate-ramp` ("Generate ramp", opens `#ramp-preview-row` for whichever
+swatch — foreground or background — this popover is currently editing).
+**Does not exist on iOS** — `#add-current-color-button` in the Color
+Library header (below) is the only add-to-palette path there; the ramp
+generator's `#library-generate-ramp-button` (below) is likewise the only
+ramp-generation path on iOS.
 
 Spec: `color-library` (FG/BG model), `canvas-creation`/`layers`
 (Background layer interaction, `2g`).
@@ -204,7 +208,10 @@ the per-panel states.
   `#add-current-color-button` (playlist_add, add current FG to active
   palette), `#add-palette-button` (add, new palette), `#import-palette-button`
   (image icon, opens `#color-library-import-input` file picker →
-  `#import-preview-row` popover), `#delete-palette-button` (delete
+  `#import-preview-row` popover), `#library-generate-ramp-button`
+  (gradient icon, generates a shading ramp from the current Foreground
+  color → `#ramp-preview-row` popover, spec `color-library`,
+  `7-add-palette-color-ramp-generator`), `#delete-palette-button` (delete
   current palette).
 - `#color-library-select` — dropdown to switch palette once more than
   one exists (alphabetically sorted).
@@ -218,6 +225,20 @@ the per-panel states.
   an earlier version that still shifted). `#import-preview-grid` (live
   swatch preview), `#import-preview-count` (2–32 colors, re-extracts via
   median-cut on change), `#import-preview-name`, Save/Cancel.
+- `#ramp-preview-row` — popover anchored to whichever button opened it
+  (`#library-generate-ramp-button` in this header, or `#color-picker-
+  generate-ramp` in `#color-picker-popover` above), same fixed-position/
+  clamped-to-viewport pattern as `#import-preview-row`. Source color is
+  the current Foreground color (header button) or whichever swatch
+  `#color-picker-popover` is editing (popover button).
+  `#ramp-preview-grid` (live swatch preview, `js/color-ramp.js`'s
+  `generateColorRamp`, dark→light through the source hue with a hue/
+  saturation shift at the extremes), `#ramp-preview-steps` (3–9 steps,
+  default 5, regenerates live on change), Confirm/Cancel
+  (`#ramp-preview-confirm`/`#ramp-preview-cancel`) — Confirm adds every
+  previewed color to the active palette via `addColorToPalette` and
+  refreshes the panel; Cancel discards the preview with no palette
+  changes. Spec: `color-library` (`7-add-palette-color-ramp-generator`).
 
 **Brushes** (`#brushes-panel`, spec `brushes`, shown only while Brush
 tool is active):
@@ -253,10 +274,10 @@ tool is active):
 ## Cross-cutting patterns worth knowing before auditing
 
 - **Popover positioning**: `#color-picker-popover`, `#canvas-settings-panel`,
-  `#export-panel`, `#import-preview-row`, `#layers-panel-opacity-popover`
-  all use `position: fixed` + JS (`getBoundingClientRect`), clamped to
-  the viewport — check each one's clamping at small viewport sizes /
-  near screen edges.
+  `#export-panel`, `#import-preview-row`, `#ramp-preview-row`,
+  `#layers-panel-opacity-popover` all use `position: fixed` + JS
+  (`getBoundingClientRect`), clamped to the viewport — check each one's
+  clamping at small viewport sizes / near screen edges.
 - **Tool-scoped visibility**: `#rectangle-options`, `#square-constraint-options`,
   `#pencil-options`, `#brushes-panel`'s Brush-only controls all
   show/hide based on active tool in `js/workspace.js` — worth checking

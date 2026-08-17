@@ -68,6 +68,7 @@ magnetic cursor attraction, see `topbar-magnetic-hover` spec):
 |---|---|---|---|
 | `#back-to-gallery-button` | home | Back to Gallery | |
 | `#pixel-perfect-toggle` | grid_on | Pixel-perfect line toggle | on/off, no popover |
+| `#symmetry-toggle` | flip | Symmetry/mirror drawing mode | 4-state cycle (off/horizontal/vertical/both) on each click, no popover - see below |
 | `#layers-panel-toggle` | layers | Collapse/expand Layers panel | mirrors Layers panel header's own collapse state |
 | `#canvas-settings-toggle` | settings | Open Canvas Settings popover | anchored popover, see below |
 | `#export-button` | download | Open Export popover | anchored popover, see below |
@@ -75,6 +76,23 @@ magnetic cursor attraction, see `topbar-magnetic-hover` spec):
 | `#undo-button` | undo | Undo | disabled when nothing to undo |
 | `#redo-button` | redo | Redo | disabled when nothing to redo |
 | `#right-sidebar-toggle` | dock_to_right | Hide/show whole right sidebar | slides open/closed (AUD-11, 2026-08-17); respects `prefers-reduced-motion` |
+
+`#symmetry-toggle` (5-add-symmetry-drawing-mode, 2026-08-17): each click
+advances `state.symmetryMode` through `off → horizontal → vertical → both →
+off`. `.active` (shared accent styling with every other topbar toggle) is
+set whenever the mode isn't `off`; a small letter badge
+(`data-symmetry-mode` attribute, styled in `style.css`) shows H/V/4 so the
+three "on" states stay visually distinguishable from each other. The
+button's `aria-label`/tooltip text updates with the current mode (e.g.
+"Symmetry: horizontal"). While a mode is active, every pixel the Pencil,
+Eraser, or Brush tool writes is mirrored live across the canvas's fixed
+center axis/axes, committed as part of the same stroke/undo step as the
+original - Bucket, Line, Rectangle, Selection, and Move are unaffected.
+Session-only state, like `#pixel-perfect-toggle` - resets to `off` on
+reload or reopening a project. Implementation: `js/symmetry.js`
+(`mirrorApplyPixel`, the pure mirror/dedup helper), wired into
+`js/workspace.js` (Pencil/Eraser) and `js/brushes.js` (`placeBrush`).
+Spec: `symmetry-drawing`.
 
 ### Left tools sidebar (`#tools-sidebar`)
 

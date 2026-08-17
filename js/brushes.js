@@ -6,6 +6,8 @@
 // Custom brushes are built the same way (see pixelsFromGrid) and persisted
 // via js/persistence.js, not stored in this file.
 
+import { mirrorApplyPixel } from './symmetry.js';
+
 const HEART_PATTERN = [
   '.XX...XX.',
   'XXXX.XXXX',
@@ -109,12 +111,22 @@ function rotatedBrushPixels(brush, angleDegrees) {
  * (default 0) rotates the pattern around its own center before placing -
  * used by the Brush tool's Rotation setting, which advances the angle by a
  * fixed step per placement along a drag.
+ *
+ * `symmetryMode` (5-add-symmetry-drawing-mode, default 'off' - a no-op)
+ * mirrors every placed pixel across `engine`'s center axis/axes via
+ * mirrorApplyPixel, the same helper Pencil/Eraser wrap their applyPixel
+ * with (see js/workspace.js's withSymmetry) - kept here rather than at
+ * every call site since placeBrush is Brush's one placement seam,
+ * mirroring the "wrap applyPixel, don't fork the stroke tracer" approach
+ * from design.md for Brush's own (non-applyPixel-shaped) placement API.
  */
-export function placeBrush(engine, centerX, centerY, brush, rgba, angleDegrees = 0) {
+export function placeBrush(engine, centerX, centerY, brush, rgba, angleDegrees = 0, symmetryMode = 'off') {
   const topLeftX = centerX - Math.floor(brush.width / 2);
   const topLeftY = centerY - Math.floor(brush.height / 2);
   for (const [dx, dy] of rotatedBrushPixels(brush, angleDegrees)) {
-    engine.setPixel(topLeftX + dx, topLeftY + dy, rgba);
+    const x = topLeftX + dx;
+    const y = topLeftY + dy;
+    mirrorApplyPixel(x, y, (mx, my) => engine.setPixel(mx, my, rgba), symmetryMode, engine.width, engine.height);
   }
 }
 

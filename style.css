@@ -1262,8 +1262,15 @@ body {
   flex: none;
 }
 
+/* Name input + Save/Cancel on one line - at the sidebar's narrowest
+   clamped width (see .right-sidebar) the two buttons alone eat most of
+   the row, leaving the flex:1 input too little space for its own
+   placeholder text. flex-wrap lets the input drop to its own line above
+   the buttons instead of clipping, same technique as
+   .brush-editor-row:last-child's button-wrap comment above. */
 .new-palette-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.3rem;
   margin: 0 0.5rem 0.4rem;
   flex: none;
@@ -1271,7 +1278,7 @@ body {
 
 .new-palette-row input {
   flex: 1;
-  min-width: 0;
+  min-width: 6rem;
   padding: 0.3rem 0.4rem;
   background: #2c2c2e;
   border: 1px solid #48484a;

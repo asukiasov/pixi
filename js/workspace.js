@@ -126,6 +126,20 @@ function isSquareConstrained() {
   return shiftHeld || state.squareConstraint;
 }
 
+/**
+ * Whether the Color Library sequence toggle (#library-sequence-toggle,
+ * shared by Pencil and Brush - see #library-sequence-options in
+ * index.html) should be visible for the given tool. Not Eraser: nothing
+ * to cycle through when Eraser doesn't paint a color at all. Exported as
+ * a pure predicate so the show/hide rule is unit-testable (see
+ * test/workspace.test.js) without needing a DOM harness for the rest of
+ * bindDomOnce - the actual wiring calls this from the tool-switch handler
+ * and initWorkspace's default-state reset.
+ */
+export function librarySequenceToggleVisibleForTool(tool) {
+  return tool === 'pencil' || tool === 'brush';
+}
+
 // Module-level state, not per-call: the Workspace screen is a singleton in
 // this app (one workspace <canvas>), reused across every project the user
 // opens or creates in a session. DOM listeners are bound exactly once, the
@@ -165,8 +179,8 @@ let backgroundSwatchEl = null;
 
 let zoomReadout = null;
 let pencilOptionsPanel = null;
-let pencilLibraryToggle = null;
-let brushLibraryToggle = null;
+let librarySequencePanel = null;
+let librarySequenceToggle = null;
 let rectangleOptionsPanel = null;
 
 // Named, persisted palettes of user-added colors (superseded the old
@@ -256,19 +270,16 @@ function colorForSequenceIndex(index) {
 }
 
 /**
- * Turns Color Library sequence on/off, keeping both its toggle buttons in
- * sync - #pencil-library-toggle (Pencil options panel) and
- * #brush-library-toggle (Brushes panel) are two separate DOM elements
- * (their parent panels are never both visible at once) wired to the same
- * `state.colorLibrarySequence` flag, so either one can turn it on/off and
- * both reflect the result. Mutually exclusive with Rainbow: enabling this
- * clears `state.brushRainbow`, the same way selecting Rainbow clears this.
+ * Turns Color Library sequence on/off and reflects the result on its
+ * toggle button (#library-sequence-toggle, shared by Pencil and Brush -
+ * see #library-sequence-options in index.html). Mutually exclusive with
+ * Rainbow: enabling this clears `state.brushRainbow`, the same way
+ * selecting Rainbow clears this.
  */
 function setColorLibrarySequence(enabled) {
   state.colorLibrarySequence = enabled;
   if (enabled) state.brushRainbow = false;
-  pencilLibraryToggle.classList.toggle('active', enabled);
-  brushLibraryToggle.classList.toggle('active', enabled);
+  librarySequenceToggle.classList.toggle('active', enabled);
 }
 
 /**
@@ -1350,15 +1361,20 @@ function bindDomOnce() {
       // Size/Opacity sliders: shared by Pencil and Eraser, hidden for
       // every other tool - same tool-scoped-visibility pattern as Brushes.
       pencilOptionsPanel.classList.toggle('hidden', state.currentTool !== 'pencil' && state.currentTool !== 'eraser');
-      // Color Library sequence toggle: Pencil only, not Eraser (nothing to
-      // cycle through when Eraser doesn't paint a color at all).
-      pencilLibraryToggle.classList.toggle('hidden', state.currentTool !== 'pencil');
       // Filled toggle: Rectangle only.
       rectangleOptionsPanel.classList.toggle('hidden', state.currentTool !== 'rectangle');
       // 1:1 proportion toggle: Rectangle and Selection.
       squareConstraintPanel.classList.toggle(
         'hidden',
         state.currentTool !== 'rectangle' && state.currentTool !== 'selection'
+      );
+      // Color Library sequence toggle: Pencil and Brush, not Eraser
+      // (nothing to cycle through when Eraser doesn't paint a color at
+      // all) - one shared control, same tool-scoped-visibility pattern as
+      // squareConstraintPanel above.
+      librarySequencePanel.classList.toggle(
+        'hidden',
+        !librarySequenceToggleVisibleForTool(state.currentTool)
       );
     });
   });
@@ -1396,17 +1412,6 @@ function bindDomOnce() {
   bindSliderWheel(pencilSizeSlider);
   bindSliderWheel(pencilOpacitySlider);
 
-  // Color Library sequence toggle - on/off, same pattern as Rectangle's
-  // Filled toggle below. Mutually exclusive with Rainbow (both are
-  // per-pixel color-cycling modes for the same applyPixel slot). Offered
-  // on both Pencil (this button) and Brush (#brush-library-toggle, below)
-  // - see setColorLibrarySequence.
-  pencilLibraryToggle = document.getElementById('pencil-library-toggle');
-  pencilLibraryToggle.addEventListener('click', () => {
-    setColorLibrarySequence(!state.colorLibrarySequence);
-    syncActiveSwatch();
-  });
-
   // Rectangle's Filled toggle - tool-scoped, same pattern as Pencil options.
   rectangleOptionsPanel = document.getElementById('rectangle-options');
   const rectangleFillToggle = document.getElementById('rectangle-fill-toggle');
@@ -1427,6 +1432,18 @@ function bindDomOnce() {
   squareConstraintToggle.addEventListener('click', () => {
     state.squareConstraint = !state.squareConstraint;
     squareConstraintToggle.classList.toggle('active', state.squareConstraint);
+  });
+
+  // Color Library sequence toggle - one shared control for Pencil and
+  // Brush (see #library-sequence-options above and setColorLibrarySequence),
+  // same tool-scoped-visibility pattern as squareConstraintPanel/-Toggle.
+  // Mutually exclusive with Rainbow (both are per-pixel color-cycling modes
+  // for the same applyPixel slot).
+  librarySequencePanel = document.getElementById('library-sequence-options');
+  librarySequenceToggle = document.getElementById('library-sequence-toggle');
+  librarySequenceToggle.addEventListener('click', () => {
+    setColorLibrarySequence(!state.colorLibrarySequence);
+    syncActiveSwatch();
   });
 
   renderPaletteRow();
@@ -1565,15 +1582,6 @@ function bindDomOnce() {
 
   addBrushButton.addEventListener('click', () => openBrushEditor());
   bindBrushEditorOnce();
-
-  // Same Color Library sequence toggle as Pencil's, offered for Brush too
-  // (see setColorLibrarySequence) - a separate button since #brushes-panel
-  // and #pencil-options are never both visible at once.
-  brushLibraryToggle = document.getElementById('brush-library-toggle');
-  brushLibraryToggle.addEventListener('click', () => {
-    setColorLibrarySequence(!state.colorLibrarySequence);
-    syncActiveSwatch();
-  });
 
   // Color Library panel: named, persisted palettes (see design.md's
   // "one Dexie record per palette" decision).
@@ -2205,9 +2213,8 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   document.getElementById('pencil-size-readout').textContent = '1px';
   document.getElementById('pencil-opacity-slider').value = '100';
   document.getElementById('pencil-opacity-readout').textContent = '100%';
-  pencilLibraryToggle.classList.remove('active');
-  pencilLibraryToggle.classList.remove('hidden'); // Pencil is the default tool
-  brushLibraryToggle.classList.remove('active');
+  librarySequenceToggle.classList.remove('active');
+  librarySequencePanel.classList.remove('hidden'); // Pencil is the default tool
   // Rectangle isn't the default tool, so its options start hidden.
   rectangleOptionsPanel.classList.add('hidden');
   document.getElementById('rectangle-fill-toggle').classList.remove('active');

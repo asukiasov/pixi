@@ -1003,8 +1003,8 @@ body {
   border-radius: 0.3rem;
 }
 
-.layer-name-input:focus {
-  border-color: var(--color-border);
+.layer-name-input:focus-visible {
+  border-color: var(--color-accent);
   outline: none;
 }
 

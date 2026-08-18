@@ -348,6 +348,13 @@ export class LayerStack {
    * pixels. Becomes the active layer. Returns false (no-op) if fewer than
    * 2 distinct valid indices are given, any index is out of range, or any
    * refers to the Background layer.
+   *
+   * A hidden layer among `indices` contributes nothing to the merged
+   * result (see #compositeSubset's `!layer.visible` skip) - same as it
+   * already contributes nothing to the on-screen composite. Its pixel
+   * content is still discarded from the stack once merged, recoverable
+   * only via Undo, so marking a hidden layer for merge is a deliberate
+   * "what you see is what gets merged" choice, not an oversight.
    */
   mergeLayers(indices) {
     if (!Array.isArray(indices)) return false;

@@ -2269,6 +2269,7 @@ function bindDomOnce() {
   // Every action auto-saves, so there's nothing to lose by leaving — no
   // confirmation prompt here (unlike Phase 1/2a's "New" control).
   backToGalleryButton.addEventListener('click', () => {
+    clearLayerMarks(); // marks are per-project UI state (merge-layers), not carried across projects
     state.onRequestGallery?.();
   });
 

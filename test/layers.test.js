@@ -382,3 +382,71 @@ describe('rotate90', () => {
     assert.deepEqual(stack.getLayers()[1].engine.getPixel(1, 0), [5, 5, 5, 255]);
   });
 });
+
+// mergeLayers/mergeDown's success path composites via a <canvas> (see
+// #compositeSubset, mirroring #compositeToCanvas), which this repo's
+// Node test harness has no DOM for - same boundary that already leaves
+// composite()/toPNGBlob() untested here (see this file's header comment
+// on LayerStack). Only the validation/refusal paths, which return before
+// touching the DOM, are unit-tested; the successful-merge pixel output is
+// covered by manual browser verification (merge-layers change's tasks.md
+// 4.2), not here.
+describe('mergeLayers', () => {
+  test('refuses fewer than 2 indices', () => {
+    const stack = new LayerStack(4, 4, 'transparent');
+    stack.addLayer('B');
+    const before = stack.getLayers();
+    assert.equal(stack.mergeLayers([]), false);
+    assert.equal(stack.mergeLayers([0]), false);
+    assert.deepEqual(stack.getLayers(), before);
+  });
+
+  test('refuses when any index is out of range', () => {
+    const stack = new LayerStack(4, 4, 'transparent');
+    stack.addLayer('B');
+    const before = stack.getLayers();
+    assert.equal(stack.mergeLayers([0, 5]), false);
+    assert.equal(stack.mergeLayers([-1, 1]), false);
+    assert.deepEqual(stack.getLayers(), before);
+  });
+
+  test('refuses when any index is the Background layer', () => {
+    const stack = new LayerStack(4, 4, 'white'); // index 0 is Background
+    stack.addLayer('B');
+    stack.addLayer('C');
+    const before = stack.getLayers();
+    assert.equal(stack.mergeLayers([0, 1]), false);
+    assert.deepEqual(stack.getLayers(), before);
+  });
+});
+
+describe('mergeDown', () => {
+  test('refuses when index is 0 (nothing below)', () => {
+    const stack = new LayerStack(4, 4, 'transparent');
+    stack.addLayer('B');
+    const before = stack.getLayers();
+    assert.equal(stack.mergeDown(0), false);
+    assert.deepEqual(stack.getLayers(), before);
+  });
+
+  test('refuses when index is out of range', () => {
+    const stack = new LayerStack(4, 4, 'transparent');
+    stack.addLayer('B');
+    assert.equal(stack.mergeDown(5), false);
+    assert.equal(stack.mergeDown(-1), false);
+  });
+
+  test('refuses on a single-layer stack', () => {
+    const stack = new LayerStack(4, 4, 'transparent');
+    assert.equal(stack.mergeDown(0), false);
+    assert.equal(stack.getLayers().length, 1);
+  });
+
+  test('refuses when the layer directly below is the Background layer', () => {
+    const stack = new LayerStack(4, 4, 'white'); // index 0 is Background
+    stack.addLayer('B'); // index 1
+    const before = stack.getLayers();
+    assert.equal(stack.mergeDown(1), false);
+    assert.deepEqual(stack.getLayers(), before);
+  });
+});

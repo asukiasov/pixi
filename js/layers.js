@@ -284,24 +284,25 @@ export class LayerStack {
   }
 
   /**
-   * Composites all visible layers bottom-to-top onto an offscreen canvas
-   * using native globalAlpha/globalCompositeOperation, and returns that
-   * canvas. Requires a DOM, like PixelEngine.toPNGBlob().
-   *
-   * `skipBackground` (Export's "Transparent background" override) omits
-   * any layer with `isBackground: true` from compositing entirely, as if
-   * it were hidden - see the `export` capability spec for why this drops
-   * the whole layer rather than just its fill color.
+   * Composites the layers at `indices` (bottom-to-top order, as given)
+   * onto an offscreen canvas using native globalAlpha/
+   * globalCompositeOperation, and returns that canvas. Requires a DOM,
+   * like PixelEngine.toPNGBlob(). Hidden layers among `indices` are
+   * skipped, same as the full-stack composite - a hidden layer contributes
+   * nothing to what's visibly there to merge. Shared by #compositeToCanvas
+   * (the full-stack case, for on-screen rendering/export) and
+   * mergeLayers() (an arbitrary subset, for the Merge layers operation) so
+   * both have exactly one compositing implementation.
    */
-  #compositeToCanvas({ skipBackground = false } = {}) {
+  #compositeSubset(indices) {
     const canvas = document.createElement('canvas');
     canvas.width = this.#width;
     canvas.height = this.#height;
     const ctx = canvas.getContext('2d');
 
-    for (const layer of this.#layers) {
+    for (const i of indices) {
+      const layer = this.#layers[i];
       if (!layer.visible) continue;
-      if (skipBackground && layer.isBackground) continue;
 
       const layerCanvas = document.createElement('canvas');
       layerCanvas.width = this.#width;
@@ -318,6 +319,75 @@ export class LayerStack {
       ctx.drawImage(layerCanvas, 0, 0);
     }
     return canvas;
+  }
+
+  /**
+   * Composites all layers bottom-to-top, applying `skipBackground`
+   * (Export's "Transparent background" override, which omits any layer
+   * with `isBackground: true` from compositing entirely, as if it were
+   * hidden - see the `export` capability spec for why this drops the
+   * whole layer rather than just its fill color) before delegating to
+   * #compositeSubset for the actual pixel work.
+   */
+  #compositeToCanvas({ skipBackground = false } = {}) {
+    const indices = this.#layers
+      .map((_, i) => i)
+      .filter((i) => !(skipBackground && this.#layers[i].isBackground));
+    return this.#compositeSubset(indices);
+  }
+
+  /**
+   * Merges the layers at `indices` (2 or more, none the Background layer)
+   * into one new layer: composites their pixel content - honoring each
+   * layer's own opacity/blend mode, via the same #compositeSubset path
+   * used for on-screen rendering/export - then removes the source layers
+   * and inserts the merged layer at the bottom-most source position. The
+   * merged layer takes the name of the topmost (highest-index) source
+   * layer, and always uses blend mode 'normal' at 100% opacity, since the
+   * source layers' own opacity/blend mode is already baked into its
+   * pixels. Becomes the active layer. Returns false (no-op) if fewer than
+   * 2 distinct valid indices are given, any index is out of range, or any
+   * refers to the Background layer.
+   */
+  mergeLayers(indices) {
+    if (!Array.isArray(indices)) return false;
+    const sorted = [...new Set(indices)].sort((a, b) => a - b);
+    if (sorted.length < 2) return false;
+    const inRange = sorted.every((i) => Number.isInteger(i) && i >= 0 && i < this.#layers.length);
+    if (!inRange) return false;
+    if (sorted.some((i) => this.#layers[i].isBackground)) return false;
+
+    const bottomIndex = sorted[0];
+    const topIndex = sorted[sorted.length - 1];
+    const name = this.#layers[topIndex].name;
+
+    const composited = this.#compositeSubset(sorted);
+    const imageData = composited.getContext('2d').getImageData(0, 0, this.#width, this.#height);
+    const mergedLayer = new Layer(name, this.#width, this.#height, 'transparent');
+    mergedLayer.engine.data.set(imageData.data);
+
+    // Remove highest index first so earlier splices don't shift the
+    // remaining indices out from under this loop.
+    for (let k = sorted.length - 1; k >= 0; k--) {
+      this.#layers.splice(sorted[k], 1);
+    }
+    this.#layers.splice(bottomIndex, 0, mergedLayer);
+    this.#activeIndex = bottomIndex;
+    return true;
+  }
+
+  /**
+   * Merges the layer at `index` into the layer directly below it (Photoshop's
+   * merge-down), via mergeLayers([index - 1, index]) - so the naming/blend
+   * mode/opacity rules match exactly (the higher index, i.e. the layer being
+   * merged down, wins the name). Refuses (no-op, returns false) when `index`
+   * is the bottom-most layer (nothing below), out of range, the stack has
+   * only one layer, or either layer in the pair is the Background layer.
+   */
+  mergeDown(index) {
+    if (!Number.isInteger(index) || index <= 0 || index >= this.#layers.length) return false;
+    if (this.#layers[index].isBackground || this.#layers[index - 1].isBackground) return false;
+    return this.mergeLayers([index - 1, index]);
   }
 
   /** The composited result as ImageData, for live rendering. */

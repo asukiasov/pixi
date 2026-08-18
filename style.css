@@ -1066,6 +1066,27 @@ body {
   color: #fff;
 }
 
+/* merge-layers: marked (multi-selected) layers, distinct from the single
+   active-layer highlight above - a soft fill plus an inset accent border,
+   so a row can show both active (solid fill) and marked (border) at once
+   without one obscuring the other. */
+.layer-row.marked {
+  background: var(--color-accent-soft);
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+/* A row that's both active and marked: keep the active row's solid fill
+   (and white text, from the .active rules above) rather than letting
+   .marked's lighter background win on equal specificity - only the
+   marked border needs to show through. Must repeat `background` here
+   (not just `box-shadow`), or cascade order alone decides which
+   background wins and the white active text ends up on the light
+   marked background instead. */
+.layer-row.active.marked {
+  background: var(--color-accent-strong);
+  box-shadow: inset 0 0 0 2px #fff;
+}
+
 .layer-visibility-toggle {
   flex: none;
   width: 1.4rem;

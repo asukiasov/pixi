@@ -161,6 +161,66 @@ export function librarySequenceToggleVisibleForTool(tool) {
   return tool === 'pencil' || tool === 'brush';
 }
 
+/**
+ * Pure state transition for Layers panel marking (multi-select) -
+ * merge-layers's marked set is distinct from the single active layer.
+ * `layers` is the current stack in bottom-to-top order (as from
+ * LayerStack.getLayers()), each needing only `id`/`isBackground`/
+ * `isReferenceImage`. `marked` is the current marked-id Set;
+ * `lastClickedId` is the id most recently clicked (of any kind), used as
+ * the Shift+click range anchor. A locked layer (Background or reference
+ * image - see LayerStack's private `#isLocked`) can never be marked,
+ * whichever click type targets it. Exported as a pure function so this
+ * logic is unit-testable (see test/workspace.test.js) without a DOM
+ * harness - the row click handler in buildLayerRow calls this and applies
+ * the result.
+ *
+ * - Cmd/Ctrl+click: toggles `clickedId` in the marked set, other marks
+ *   untouched. A no-op on the marked set itself if `clickedId` is a locked
+ *   layer (it can never be marked), but the anchor still updates.
+ * - Shift+click (with a prior `lastClickedId`): marks every unlocked
+ *   layer between `lastClickedId` and `clickedId` (inclusive), replacing
+ *   any prior marks. With no prior `lastClickedId`, falls back to plain
+ *   click behavior.
+ * - Plain click (no modifier): clears all marks, same as it would for any
+ *   other row - including a locked layer, which only can't itself become
+ *   marked, same as the Background layer already can become the active
+ *   layer today (a reference image layer cannot - see
+ *   LayerStack.setActiveLayer). The active-layer change itself is handled
+ *   by the caller.
+ */
+export function computeLayerMarkState({ marked, lastClickedId, clickedId, layers, metaOrCtrl, shift }) {
+  const isLocked = (l) => !!l?.isBackground || !!l?.isReferenceImage;
+  const clickedLayer = layers.find((l) => l.id === clickedId);
+  const clickedIsLocked = isLocked(clickedLayer);
+
+  if (metaOrCtrl) {
+    if (clickedIsLocked) return { marked, lastClickedId: clickedId };
+    const next = new Set(marked);
+    if (next.has(clickedId)) next.delete(clickedId);
+    else next.add(clickedId);
+    return { marked: next, lastClickedId: clickedId };
+  }
+
+  if (shift && lastClickedId != null) {
+    const lastIndex = layers.findIndex((l) => l.id === lastClickedId);
+    const clickedIndex = layers.findIndex((l) => l.id === clickedId);
+    if (lastIndex !== -1 && clickedIndex !== -1) {
+      const lo = Math.min(lastIndex, clickedIndex);
+      const hi = Math.max(lastIndex, clickedIndex);
+      const next = new Set();
+      for (let i = lo; i <= hi; i++) {
+        if (!isLocked(layers[i])) next.add(layers[i].id);
+      }
+      return { marked: next, lastClickedId: clickedId };
+    }
+  }
+
+  // Plain click, or Shift with no valid anchor: clears all marks and
+  // updates the anchor to this row, whether or not it's a locked layer.
+  return { marked: new Set(), lastClickedId: clickedId };
+}
+
 // Module-level state, not per-call: the Workspace screen is a singleton in
 // this app (one workspace <canvas>), reused across every project the user
 // opens or creates in a session. DOM listeners are bound exactly once, the
@@ -172,6 +232,21 @@ let domBound = false;
 // released mid-drag - the Rectangle and Selection tools check this on
 // every move.
 let shiftHeld = false;
+// Layers panel marking (multi-select), for merge-layers - transient UI
+// state, not persisted and not part of the undo snapshot (see design.md's
+// "Marking state lives in js/workspace.js, not LayerStack" decision).
+// markedLayerIds holds layer ids (not indices), so marks survive an
+// unrelated renderLayersPanel() re-run between a mark and a merge (e.g.
+// after a visibility toggle shifts nothing, but a reorder would shift
+// indices). lastMarkClickedLayerId is the Shift+click range anchor -
+// updated by every click (plain, Cmd/Ctrl, or Shift alike). Both reset on
+// layer add/delete and undo/redo (see clearLayerMarks below).
+let markedLayerIds = new Set();
+let lastMarkClickedLayerId = null;
+function clearLayerMarks() {
+  markedLayerIds = new Set();
+  lastMarkClickedLayerId = null;
+}
 let squareConstraintPanel = null;
 let squareConstraintToggle = null;
 let canvasSettingsControls = null;
@@ -249,6 +324,7 @@ function performUndo() {
   const snapshot = state.undoStack.undo();
   if (snapshot) {
     state.layerStack.restore(snapshot);
+    clearLayerMarks(); // restored indices may no longer match what was marked
     state.canvasView.render();
     renderLayersPanel();
     autoSave();
@@ -256,11 +332,42 @@ function performUndo() {
   updateUndoRedoButtons();
 }
 
+/**
+ * Cmd/Ctrl+E: merges the marked set (2+ layers) if one exists, otherwise
+ * merges the active layer down into the layer directly below it - see
+ * specs/layers/spec.md's "Merge marked layers"/"Merge active layer down"
+ * requirements (merge-layers). Marks are always cleared afterward,
+ * win or no-op, so a merge attempt never leaves stale marks referring to
+ * layers that no longer exist in their marked positions. Only a
+ * successful merge re-renders/commits - the no-op paths (bottom-most
+ * active layer, single-layer stack, Background layer involved) leave the
+ * stack and undo history untouched.
+ */
+function mergeMarkedOrActiveDown() {
+  const layers = state.layerStack.getLayers();
+  const markedIndices = layers
+    .map((layer, i) => (markedLayerIds.has(layer.id) ? i : -1))
+    .filter((i) => i !== -1);
+
+  const merged =
+    markedIndices.length >= 2
+      ? state.layerStack.mergeLayers(markedIndices)
+      : state.layerStack.mergeDown(state.layerStack.getActiveIndex());
+
+  clearLayerMarks();
+  if (!merged) return;
+
+  state.canvasView.render();
+  commit();
+  renderLayersPanel();
+}
+
 /** Shared by the Redo button and the Cmd/Ctrl+Shift+Z (or Ctrl+Y) shortcut. */
 function performRedo() {
   const snapshot = state.undoStack.redo();
   if (snapshot) {
     state.layerStack.restore(snapshot);
+    clearLayerMarks(); // restored indices may no longer match what was marked
     state.canvasView.render();
     renderLayersPanel();
     autoSave();
@@ -445,7 +552,8 @@ function renderLayersPanel() {
   // Topmost layer (end of the bottom-to-top array) listed first.
   for (let i = layers.length - 1; i >= 0; i--) {
     const layer = layers[i];
-    state.layersPanelList.appendChild(buildLayerRow(layer, i, i === activeIndex, layers));
+    const isMarked = markedLayerIds.has(layer.id);
+    state.layersPanelList.appendChild(buildLayerRow(layer, i, i === activeIndex, isMarked, layers));
   }
 
   state.addLayerButton.disabled = layers.length >= 8;
@@ -466,13 +574,31 @@ function renderLayersPanel() {
  * closer fit for a touch-first app anyway). Blend mode/Opacity are NOT
  * here - see the panel-level toolbar/syncLayersPanelToolbar.
  */
-function buildLayerRow(layer, index, isActive, layers) {
+function buildLayerRow(layer, index, isActive, isMarked, layers) {
   const layerCount = layers.length;
   const row = document.createElement('div');
-  row.className = 'layer-row' + (isActive ? ' active' : '');
+  row.className = 'layer-row' + (isActive ? ' active' : '') + (isMarked ? ' marked' : '');
   row.addEventListener('click', (e) => {
     if (e.target.closest('button, input')) return;
-    state.layerStack.setActiveLayer(index);
+    // Cmd/Ctrl+click toggles this layer's mark; Shift+click marks the
+    // contiguous range from the last-clicked row; a plain click keeps
+    // today's behavior (set active layer) and clears marks - see
+    // computeLayerMarkState's doc comment for the full rule set. Marking
+    // is independent of which layer is active except that a plain click
+    // still drives both.
+    const { marked, lastClickedId } = computeLayerMarkState({
+      marked: markedLayerIds,
+      lastClickedId: lastMarkClickedLayerId,
+      clickedId: layer.id,
+      layers,
+      metaOrCtrl: e.metaKey || e.ctrlKey,
+      shift: e.shiftKey,
+    });
+    markedLayerIds = marked;
+    lastMarkClickedLayerId = lastClickedId;
+    if (!(e.metaKey || e.ctrlKey || e.shiftKey)) {
+      state.layerStack.setActiveLayer(index);
+    }
     renderLayersPanel();
   });
 
@@ -565,6 +691,7 @@ function buildLayerRow(layer, index, isActive, layers) {
     });
     if (!proceed) return;
     state.layerStack.deleteLayer(index);
+    clearLayerMarks(); // remaining indices shifted; stale marks would misalign
     state.canvasView.render();
     commit();
     renderLayersPanel();
@@ -2091,6 +2218,15 @@ function bindDomOnce() {
     if (key === 'd') {
       e.preventDefault();
       clearSelection();
+      return;
+    }
+
+    // Cmd/Ctrl+E: merge layers (merge-layers) - Photoshop's own shortcut
+    // for this. Merges the marked set if 2+ layers are marked, otherwise
+    // merges the active layer down into the one below it.
+    if (key === 'e') {
+      e.preventDefault();
+      mergeMarkedOrActiveDown();
     }
   });
 
@@ -2146,12 +2282,14 @@ function bindDomOnce() {
   // Every action auto-saves, so there's nothing to lose by leaving — no
   // confirmation prompt here (unlike Phase 1/2a's "New" control).
   backToGalleryButton.addEventListener('click', () => {
+    clearLayerMarks(); // marks are per-project UI state (merge-layers), not carried across projects
     state.onRequestGallery?.();
   });
 
   state.addLayerButton.addEventListener('click', () => {
     const added = state.layerStack.addLayer();
     if (!added) return;
+    clearLayerMarks(); // remaining indices shifted; stale marks would misalign
     state.canvasView.render();
     commit();
     renderLayersPanel();

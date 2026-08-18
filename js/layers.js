@@ -43,6 +43,25 @@ class Layer {
     // export regardless of its own visibility - see
     // #compositeToCanvas's excludeReferenceImage option.
     this.isReferenceImage = isReferenceImage;
+    // (reference-image-original-resolution) Only meaningful when
+    // isReferenceImage is true. 'pixelated' (default, matches every other
+    // layer's implicit "nothing special") fits/downscales the source onto
+    // this stack's fixed pixel grid, same as before this field existed -
+    // engine.data always holds that fit, regardless of mode (see
+    // getRenderPlan's doc comment for why). 'original' additionally
+    // renders on-screen (only) at originalSourceBlob's native resolution,
+    // via LayerStack.getRenderPlan()/CanvasView - export/thumbnails
+    // (toPNGBlob) are unaffected by this field, they always use the
+    // engine buffer and always exclude the reference layer either way.
+    this.referenceMode = 'pixelated';
+    // (reference-image-original-resolution) The original, undecoded
+    // upload (a File/Blob) behind an 'original'-mode reference layer -
+    // null unless referenceMode is (or was) 'original'. Kept on the Layer
+    // itself, not module-scope in workspace.js (unlike the pre-existing
+    // referenceImageSourceImage/referenceImageSmoothing pattern for the
+    // pixelated fit), because it must survive toProjectRecord/
+    // fromProjectRecord - see those methods' doc comments.
+    this.originalSourceBlob = null;
   }
 }
 
@@ -115,13 +134,38 @@ export class LayerStack {
    * change the active layer - unlike addLayer, a reference layer is
    * never a drawing target, so there's nothing to activate.
    */
-  addReferenceImageLayer(pixelData, name = 'Reference') {
+  /**
+   * `referenceMode` ('pixelated', default, or 'original') and
+   * `originalSourceBlob` (the original upload, for 'original' mode - see
+   * Layer's own doc comment) are optional (reference-image-original-
+   * resolution); omitting both reproduces this method's exact prior
+   * behavior (a pixelated-only reference layer).
+   */
+  addReferenceImageLayer(pixelData, name = 'Reference', { referenceMode = 'pixelated', originalSourceBlob = null } = {}) {
     if (this.#layers.length >= MAX_LAYERS) return null;
     if (this.#layers.some((l) => l.isReferenceImage)) return null;
     const layer = new Layer(name, this.#width, this.#height, 'transparent', false, true);
     layer.engine.data.set(pixelData);
+    layer.referenceMode = referenceMode;
+    layer.originalSourceBlob = originalSourceBlob;
     this.#layers.push(layer);
     return layer;
+  }
+
+  /**
+   * (reference-image-original-resolution) Switches the reference image
+   * layer's rendering mode ('pixelated' or 'original') in place - position,
+   * name, opacity, visibility, and pixel data (engine.data - still the
+   * pixelated fit either way, see Layer's referenceMode doc comment)
+   * untouched. Refuses (returns false, unchanged stack) if there's no
+   * reference image layer, or `mode` isn't one of the two valid values.
+   */
+  setReferenceMode(mode) {
+    if (mode !== 'pixelated' && mode !== 'original') return false;
+    const layer = this.#layers.find((l) => l.isReferenceImage);
+    if (!layer) return false;
+    layer.referenceMode = mode;
+    return true;
   }
 
   /**
@@ -227,7 +271,16 @@ export class LayerStack {
     if (layer && BLEND_MODES.includes(blendMode)) layer.blendMode = blendMode;
   }
 
-  /** Deep-copies current state for the undo stack. */
+  /**
+   * Deep-copies current state for the undo stack. `referenceMode`/
+   * `originalSourceBlob` (reference-image-original-resolution) are
+   * included - restore() rebuilds fresh Layer instances, so anything not
+   * captured here would be silently lost on undo/redo, including the
+   * mode itself and (for 'original' mode) the source needed to keep
+   * rendering it without a re-upload. `originalSourceBlob` is copied by
+   * reference (a Blob is immutable), not cloned - same lightweight
+   * treatment as every other non-pixel field here.
+   */
   snapshot() {
     return {
       layers: this.#layers.map((l) => ({
@@ -239,6 +292,8 @@ export class LayerStack {
         blendMode: l.blendMode,
         isBackground: l.isBackground,
         isReferenceImage: l.isReferenceImage,
+        referenceMode: l.referenceMode,
+        originalSourceBlob: l.originalSourceBlob,
       })),
       activeIndex: this.#activeIndex,
     };
@@ -253,6 +308,8 @@ export class LayerStack {
       layer.visible = s.visible;
       layer.opacity = s.opacity;
       layer.blendMode = s.blendMode;
+      layer.referenceMode = s.referenceMode ?? 'pixelated';
+      layer.originalSourceBlob = s.originalSourceBlob ?? null;
       return layer;
     });
     this.#activeIndex = snapshot.activeIndex;
@@ -263,6 +320,14 @@ export class LayerStack {
    * each layer's pixel data becomes a standalone ArrayBuffer copy, not a
    * live typed-array view. No id/thumbnail/timestamps here - persistence.js
    * owns those.
+   *
+   * `referenceMode`/`originalSourceBlob` (reference-image-original-
+   * resolution): `originalSourceBlob` is only ever non-null for a
+   * reference layer that has been in 'original' mode, so a Pixelated-mode
+   * reference layer (or a project with none) adds no extra stored data
+   * beyond what every layer already stores - the field is simply `null`,
+   * same footprint as before this field existed. Dexie stores a Blob
+   * value directly (no base64/encoding step needed).
    */
   toProjectRecord() {
     return {
@@ -277,6 +342,8 @@ export class LayerStack {
         blendMode: l.blendMode,
         isBackground: l.isBackground,
         isReferenceImage: l.isReferenceImage,
+        referenceMode: l.referenceMode,
+        originalSourceBlob: l.originalSourceBlob,
       })),
       activeLayerIndex: this.#activeIndex,
     };
@@ -288,7 +355,13 @@ export class LayerStack {
    * (`s.isBackground`/`s.isReferenceImage` read `undefined`) for records
    * saved before those fields existed - see design.md's Migration/Risk
    * note: an old project's starting layer simply behaves as a regular
-   * layer, not retroactively upgraded.
+   * layer, not retroactively upgraded. `referenceMode` defaults
+   * 'pixelated' the same way (reference-image-original-resolution); a
+   * missing `originalSourceBlob` defaults null. Reconstructing the stored
+   * Blob back into on-screen Original-mode rendering needs no async
+   * decode step here - CanvasView derives an object URL from the Blob
+   * directly when it renders a 'reference-original' segment (see
+   * canvas-view.js), so this stays synchronous.
    */
   static fromProjectRecord(record) {
     const stack = new LayerStack(record.width, record.height, 'transparent');
@@ -299,6 +372,8 @@ export class LayerStack {
       layer.visible = s.visible;
       layer.opacity = s.opacity;
       layer.blendMode = s.blendMode;
+      layer.referenceMode = s.referenceMode ?? 'pixelated';
+      layer.originalSourceBlob = s.originalSourceBlob ?? null;
       return layer;
     });
     stack.#activeIndex = record.activeLayerIndex;
@@ -320,6 +395,8 @@ export class LayerStack {
       newLayer.visible = l.visible;
       newLayer.opacity = l.opacity;
       newLayer.blendMode = l.blendMode;
+      newLayer.referenceMode = l.referenceMode;
+      newLayer.originalSourceBlob = l.originalSourceBlob;
       for (let y = 0; y < copyHeight; y++) {
         for (let x = 0; x < copyWidth; x++) {
           newLayer.engine.setPixel(x, y, l.engine.getPixel(x, y));
@@ -347,6 +424,8 @@ export class LayerStack {
       newLayer.visible = l.visible;
       newLayer.opacity = l.opacity;
       newLayer.blendMode = l.blendMode;
+      newLayer.referenceMode = l.referenceMode;
+      newLayer.originalSourceBlob = l.originalSourceBlob;
       for (let y = 0; y < oldHeight; y++) {
         for (let x = 0; x < oldWidth; x++) {
           const color = l.engine.getPixel(x, y);
@@ -488,6 +567,60 @@ export class LayerStack {
   composite() {
     const canvas = this.#compositeToCanvas();
     return canvas.getContext('2d').getImageData(0, 0, this.#width, this.#height);
+  }
+
+  /**
+   * (reference-image-original-resolution) On-screen render instructions
+   * for CanvasView, as an ordered (bottom-to-top) array of segments:
+   * `{ type: 'raster', imageData }` (a same-size composited chunk of the
+   * stack, exactly like composite()'s output) or `{ type:
+   * 'reference-original', layer }` (the reference image layer, in
+   * 'original' mode, to be rendered at its own native resolution instead
+   * of through the fixed-size pixel buffer - see canvas-view.js).
+   *
+   * When there is no reference layer, or it's in 'pixelated' mode, or
+   * it's hidden, this returns the same single-segment output composite()
+   * always has (`[{ type: 'raster', imageData: <everything> }]`) - so a
+   * canvas with no Original-mode reference layer renders exactly as
+   * before this method existed. Only a *visible*, 'original'-mode
+   * reference layer splits the plan: the raster is composited in two
+   * pieces (the layers below the reference's stack index, and the layers
+   * above it - either half omitted if empty), with a 'reference-original'
+   * segment sandwiched between them, so on-screen stacking order matches
+   * the Layers panel exactly at every reorder position. Reuses
+   * #compositeSubset (already used by composite()/mergeLayers()) for both
+   * raster pieces - no new compositing math.
+   *
+   * Distinct from composite()/toPNGBlob(), which are both left completely
+   * unchanged by this method and by 'original' mode in general: export
+   * and thumbnails never consult getRenderPlan(), so Original-mode
+   * content can never leak into them (see design.md's "Export/thumbnail
+   * exclusion: unaffected" decision).
+   */
+  getRenderPlan() {
+    const refIndex = this.#layers.findIndex((l) => l.isReferenceImage);
+    const refLayer = refIndex === -1 ? null : this.#layers[refIndex];
+    const needsSplit = !!refLayer && refLayer.referenceMode === 'original' && refLayer.visible;
+
+    if (!needsSplit) {
+      return [{ type: 'raster', imageData: this.composite() }];
+    }
+
+    const allIndices = this.#layers.map((_, i) => i);
+    const belowIndices = allIndices.slice(0, refIndex);
+    const aboveIndices = allIndices.slice(refIndex + 1);
+
+    const plan = [];
+    if (belowIndices.length) {
+      const canvas = this.#compositeSubset(belowIndices);
+      plan.push({ type: 'raster', imageData: canvas.getContext('2d').getImageData(0, 0, this.#width, this.#height) });
+    }
+    plan.push({ type: 'reference-original', layer: refLayer });
+    if (aboveIndices.length) {
+      const canvas = this.#compositeSubset(aboveIndices);
+      plan.push({ type: 'raster', imageData: canvas.getContext('2d').getImageData(0, 0, this.#width, this.#height) });
+    }
+    return plan;
   }
 
   /**

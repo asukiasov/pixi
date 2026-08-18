@@ -278,6 +278,132 @@ describe('reference image layer (reference-image-layer)', () => {
   });
 });
 
+describe('reference image original-resolution mode (reference-image-original-resolution)', () => {
+  test('addReferenceImageLayer defaults to pixelated mode with no source blob', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    const added = stack.addReferenceImageLayer(pixels, 'Ref');
+    assert.equal(added.referenceMode, 'pixelated');
+    assert.equal(added.originalSourceBlob, null);
+  });
+
+  test('addReferenceImageLayer accepts an initial mode and source blob', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    const blob = new Blob(['fake image bytes']);
+    const added = stack.addReferenceImageLayer(pixels, 'Ref', { referenceMode: 'original', originalSourceBlob: blob });
+    assert.equal(added.referenceMode, 'original');
+    assert.equal(added.originalSourceBlob, blob);
+    // Pixel data is still seeded from the pixelated fit regardless of mode.
+    assert.deepEqual(added.engine.data.length, pixels.length);
+  });
+
+  test('setReferenceMode switches an existing reference layer in place', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    const added = stack.addReferenceImageLayer(pixels, 'Ref');
+    const result = stack.setReferenceMode('original');
+    assert.equal(result, true);
+    assert.equal(added.referenceMode, 'original');
+    // Position/name/id untouched.
+    assert.equal(stack.getLayers()[1], added);
+    assert.equal(added.name, 'Ref');
+  });
+
+  test('setReferenceMode refuses an invalid mode', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    const added = stack.addReferenceImageLayer(pixels, 'Ref');
+    assert.equal(stack.setReferenceMode('smoothed'), false);
+    assert.equal(added.referenceMode, 'pixelated');
+  });
+
+  test('setReferenceMode refuses when there is no reference image layer', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    assert.equal(stack.setReferenceMode('original'), false);
+  });
+
+  test('snapshot/restore preserves referenceMode and originalSourceBlob', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    const blob = new Blob(['fake']);
+    stack.addReferenceImageLayer(pixels, 'Ref', { referenceMode: 'original', originalSourceBlob: blob });
+    const snap = stack.snapshot();
+    stack.restore(snap);
+    const layer = stack.getLayers()[1];
+    assert.equal(layer.referenceMode, 'original');
+    assert.equal(layer.originalSourceBlob, blob);
+  });
+
+  test('undo (restore) after a mode toggle brings back the prior mode', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    const blob = new Blob(['fake']);
+    stack.addReferenceImageLayer(pixels, 'Ref', { referenceMode: 'original', originalSourceBlob: blob });
+    const beforeToggle = stack.snapshot();
+    stack.setReferenceMode('pixelated');
+    assert.equal(stack.getLayers()[1].referenceMode, 'pixelated');
+    stack.restore(beforeToggle);
+    assert.equal(stack.getLayers()[1].referenceMode, 'original');
+    assert.equal(stack.getLayers()[1].originalSourceBlob, blob);
+  });
+
+  test('toProjectRecord/fromProjectRecord round-trips referenceMode and originalSourceBlob', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    const blob = new Blob(['fake']);
+    stack.addReferenceImageLayer(pixels, 'Ref', { referenceMode: 'original', originalSourceBlob: blob });
+    const record = stack.toProjectRecord();
+    const restored = LayerStack.fromProjectRecord(record);
+    const layer = restored.getLayers()[1];
+    assert.equal(layer.referenceMode, 'original');
+    assert.equal(layer.originalSourceBlob, blob);
+  });
+
+  test('a Pixelated-mode reference layer round-trips with no source blob stored', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    stack.addReferenceImageLayer(pixels, 'Ref');
+    const record = stack.toProjectRecord();
+    assert.equal(record.layers[1].originalSourceBlob, null);
+    const restored = LayerStack.fromProjectRecord(record);
+    assert.equal(restored.getLayers()[1].referenceMode, 'pixelated');
+    assert.equal(restored.getLayers()[1].originalSourceBlob, null);
+  });
+
+  test('a record with no referenceMode field defaults to pixelated', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    stack.addReferenceImageLayer(pixels, 'Ref');
+    const record = stack.toProjectRecord();
+    delete record.layers[1].referenceMode; // simulate a pre-existing saved project
+    const restored = LayerStack.fromProjectRecord(record);
+    assert.equal(restored.getLayers()[1].referenceMode, 'pixelated');
+  });
+
+  test('resize preserves referenceMode and originalSourceBlob', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    const blob = new Blob(['fake']);
+    stack.addReferenceImageLayer(pixels, 'Ref', { referenceMode: 'original', originalSourceBlob: blob });
+    stack.resize(2, 2);
+    const layer = stack.getLayers()[1];
+    assert.equal(layer.referenceMode, 'original');
+    assert.equal(layer.originalSourceBlob, blob);
+  });
+
+  test('rotate90 preserves referenceMode and originalSourceBlob', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    const blob = new Blob(['fake']);
+    stack.addReferenceImageLayer(pixels, 'Ref', { referenceMode: 'original', originalSourceBlob: blob });
+    stack.rotate90('cw');
+    const layer = stack.getLayers()[1];
+    assert.equal(layer.referenceMode, 'original');
+    assert.equal(layer.originalSourceBlob, blob);
+  });
+});
+
 describe('addLayer', () => {
   test('adds a transparent layer directly above the active one, and it becomes active', () => {
     const stack = new LayerStack(4, 4, 'white');

@@ -707,15 +707,57 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
     renderLayersPanel();
   });
 
-  // Reference image layer only: toggles whether the last upload's
-  // downscale (js/image-import.js's fitImageToCanvas) was smoothed
-  // (blended average, can look flat/"vectorized" on a canvas this small)
-  // or nearest-neighbor (blockier, no blending) - see referenceImageSmoothing's
-  // own doc comment. Disabled if the source image isn't held in memory
-  // (e.g. after a page reload) since there's nothing to re-fit from
-  // without re-uploading.
-  let smoothingToggleButton = null;
+  // Reference image layer only (reference-image-original-resolution):
+  // toggles between 'pixelated' (fit/downscaled to this canvas's fixed
+  // pixel grid - today's original behavior) and 'original' (rendered
+  // on-screen at the source image's own native resolution - see
+  // js/layers.js's LayerStack.getRenderPlan()/js/canvas-view.js). The
+  // icon shows the CURRENT mode (same convention the smoothing toggle
+  // below already uses for its own two states). Switching TO 'pixelated'
+  // always works (the engine buffer already holds a valid pixelated fit
+  // regardless of mode - see Layer's referenceMode doc comment);
+  // switching TO 'original' needs the layer's originalSourceBlob, so the
+  // button is disabled when that's unavailable (e.g. a reference layer
+  // added before this feature existed, or one that somehow never got a
+  // source recorded) - there's nothing to render at native resolution
+  // without it.
+  let modeToggleButton = null;
   if (layer.isReferenceImage) {
+    const canGoOriginal = layer.referenceMode === 'original' || !!layer.originalSourceBlob;
+    modeToggleButton = document.createElement('button');
+    modeToggleButton.type = 'button';
+    modeToggleButton.className = 'layer-reference-mode-toggle icon-button no-buzz';
+    modeToggleButton.innerHTML = `<span class="material-symbols-outlined">${layer.referenceMode === 'original' ? 'image' : 'grid_on'}</span>`;
+    modeToggleButton.disabled = !canGoOriginal;
+    // A disabled control's tooltip must say WHY it's inert, not repeat
+    // enabled-state action text - see the smoothing toggle's identical
+    // rule below.
+    modeToggleButton.title = modeToggleButton.disabled
+      ? 'Upload a new reference image to enable Original resolution mode'
+      : layer.referenceMode === 'original'
+        ? 'Original resolution (un-pixelated) - click to switch to Pixelated (fit to canvas grid)'
+        : 'Pixelated (fit to canvas grid) - click to switch to Original resolution';
+    modeToggleButton.setAttribute('aria-label', 'Toggle reference image resolution mode');
+    modeToggleButton.addEventListener('click', () => {
+      state.layerStack.setReferenceMode(layer.referenceMode === 'original' ? 'pixelated' : 'original');
+      state.canvasView.render();
+      commit();
+      renderLayersPanel();
+    });
+  }
+
+  // Reference image layer, Pixelated mode only: toggles whether the last
+  // upload's downscale (js/image-import.js's fitImageToCanvas) was
+  // smoothed (blended average, can look flat/"vectorized" on a canvas
+  // this small) or nearest-neighbor (blockier, no blending) - see
+  // referenceImageSmoothing's own doc comment. Hidden entirely (not just
+  // disabled) in Original mode - reference-image-original-resolution's
+  // design.md: exposing a setting with no observable effect while
+  // Original mode is active would be confusing, not just redundant.
+  // Disabled if the source image isn't held in memory (e.g. after a page
+  // reload) since there's nothing to re-fit from without re-uploading.
+  let smoothingToggleButton = null;
+  if (layer.isReferenceImage && layer.referenceMode === 'pixelated') {
     smoothingToggleButton = document.createElement('button');
     smoothingToggleButton.type = 'button';
     smoothingToggleButton.className = 'layer-reference-smoothing-toggle icon-button no-buzz';
@@ -752,6 +794,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
 
   row.append(visibilityButton, thumbnail, nameInput);
   if (lockIcon) row.append(lockIcon);
+  if (modeToggleButton) row.append(modeToggleButton);
   if (smoothingToggleButton) row.append(smoothingToggleButton);
   row.append(actions);
   return row;
@@ -2376,11 +2419,20 @@ function bindDomOnce() {
     if (!file) return;
     const image = await decodeImageFile(file);
     if (!image) return; // unsupported/corrupt file - fail silently, no crash
-    referenceImageSmoothing = true; // every new upload starts smoothed; the row's toggle can flip it after
+    referenceImageSmoothing = true; // every new upload starts smoothed, in case Pixelated mode is chosen later
     const imageData = fitImageToCanvas(image, state.layerStack.width, state.layerStack.height, referenceImageSmoothing);
-    const added = state.layerStack.addReferenceImageLayer(imageData.data, 'Reference');
+    // reference-image-original-resolution: a fresh upload defaults to
+    // 'original' mode (see design.md's "Default mode" decision) - `file`
+    // (the raw upload, a Blob) is kept on the Layer itself as
+    // originalSourceBlob, both for on-screen Original-mode rendering
+    // (js/canvas-view.js) and so it survives a reload via
+    // toProjectRecord/fromProjectRecord.
+    const added = state.layerStack.addReferenceImageLayer(imageData.data, 'Reference', {
+      referenceMode: 'original',
+      originalSourceBlob: file,
+    });
     if (!added) return; // already has one, or at the 8-layer cap
-    referenceImageSourceImage = image; // kept for the smoothing toggle to re-fit from, see its own doc comment
+    referenceImageSourceImage = image; // kept for the Pixelated-mode smoothing toggle to re-fit from, see its own doc comment
     state.canvasView.render();
     commit();
     renderLayersPanel();

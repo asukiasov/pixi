@@ -720,11 +720,17 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
     smoothingToggleButton.type = 'button';
     smoothingToggleButton.className = 'layer-reference-smoothing-toggle icon-button no-buzz';
     smoothingToggleButton.innerHTML = `<span class="material-symbols-outlined">${referenceImageSmoothing ? 'blur_on' : 'blur_off'}</span>`;
-    smoothingToggleButton.title = referenceImageSmoothing
-      ? 'Smoothed downscale (may look flat/"vectorized") - click for a blockier, unsmoothed one'
-      : 'Blocky, unsmoothed downscale - click for a smoothed one';
-    smoothingToggleButton.setAttribute('aria-label', 'Toggle reference image smoothing');
     smoothingToggleButton.disabled = !referenceImageSourceImage;
+    // A disabled control's tooltip must say WHY it's inert (no source
+    // image held in memory - see referenceImageSourceImage's doc
+    // comment) rather than repeating the enabled-state action text,
+    // which reads as "clicking should do something" when it can't.
+    smoothingToggleButton.title = smoothingToggleButton.disabled
+      ? 'Re-upload the reference image to change smoothing (not available after a page reload)'
+      : referenceImageSmoothing
+        ? 'Smoothed downscale (may look flat/"vectorized") - click for a blockier, unsmoothed one'
+        : 'Blocky, unsmoothed downscale - click for a smoothed one';
+    smoothingToggleButton.setAttribute('aria-label', 'Toggle reference image smoothing');
     smoothingToggleButton.addEventListener('click', () => {
       referenceImageSmoothing = !referenceImageSmoothing;
       const imageData = fitImageToCanvas(

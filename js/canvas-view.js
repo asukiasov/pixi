@@ -292,6 +292,17 @@ export class CanvasView {
       this.#referenceImgEl.classList.remove('hidden');
     } else {
       this.#referenceImgEl.classList.add('hidden');
+      // The reference segment disappeared (layer deleted/hidden/switched
+      // to Pixelated mode, or a different project with no reference layer
+      // was loaded into this same long-lived CanvasView - see js/app.js's
+      // single reused instance) - revoke the now-orphaned object URL
+      // rather than leaving it live until some future Blob happens to
+      // replace it, which could be never for the rest of the session.
+      if (this.#referenceObjectUrl) {
+        URL.revokeObjectURL(this.#referenceObjectUrl);
+        this.#referenceObjectUrl = null;
+        this.#referenceObjectUrlBlob = null;
+      }
     }
   }
 

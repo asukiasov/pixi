@@ -600,7 +600,14 @@ export class LayerStack {
   getRenderPlan() {
     const refIndex = this.#layers.findIndex((l) => l.isReferenceImage);
     const refLayer = refIndex === -1 ? null : this.#layers[refIndex];
-    const needsSplit = !!refLayer && refLayer.referenceMode === 'original' && refLayer.visible;
+    // Also requires originalSourceBlob: a corrupted/partially-written
+    // record (referenceMode: 'original' but no stored source - the exact
+    // case design.md's Risks section names as the engine buffer's reason
+    // to exist) must fall through to the single-segment path below, so
+    // the layer still renders via its pixelated-fit engine buffer instead
+    // of vanishing outright (excluded from both raster halves, with
+    // nothing else to paint it).
+    const needsSplit = !!refLayer && refLayer.referenceMode === 'original' && refLayer.visible && !!refLayer.originalSourceBlob;
 
     if (!needsSplit) {
       return [{ type: 'raster', imageData: this.composite() }];

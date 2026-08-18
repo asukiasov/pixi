@@ -658,6 +658,19 @@ body {
   overflow: hidden;
   background: #e2e2e2;
   touch-action: none;
+  /* (reference-image-original-resolution) An 'original'-mode reference
+     layer's blend mode is applied via CSS mix-blend-mode on
+     .reference-original-overlay (js/canvas-view.js's render()), unlike
+     every other layer's blending, which stays contained inside a single
+     canvas's own globalCompositeOperation. mix-blend-mode blends against
+     everything painted earlier in the element's containing stacking
+     context, not just its DOM siblings - without isolation: isolate here,
+     a non-'normal' blend mode (multiply/screen/overlay, already settable
+     via the layer blend-mode dropdown) could blend against content
+     outside this container instead of just #workspace-canvas/
+     #aboveCanvasEl. isolation: isolate scopes it back to this container.
+  */
+  isolation: isolate;
 }
 
 #workspace-canvas {

@@ -139,6 +139,19 @@ replace-existing flow because it's simpler and matches this change's
 scope; a "replace reference image" affordance can be a later, separate
 enhancement if requested.
 
+### Thumbnails also exclude the reference layer (post-review addendum)
+`toPNGBlob`'s reference-layer exclusion (see "Export exclusion" above) is
+unconditional on the method itself, not scoped to the Export popover's
+call site — so gallery/project thumbnails (`js/workspace.js`'s
+`autoSave`, `js/new-canvas.js`), which also call `toPNGBlob()` with no
+options, never show the reference layer either. This is a deliberate
+side effect, confirmed during code review: a thumbnail is a preview of
+the finished artwork, closer in spirit to an export than to the live
+on-screen canvas (which still shows a visible reference layer via
+`composite()`), so this is the more useful default even though the
+`export` capability spec's own scenarios only constrain actual
+downloaded export files, not thumbnails.
+
 ### Persistence
 `toProjectRecord`/`fromProjectRecord` and the snapshot/restore paths
 (`js/layers.js` lines ~160–270) already serialize each layer's full pixel

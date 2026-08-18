@@ -122,13 +122,21 @@ export function downsampleToImageData(image, width, height) {
  *
  * Returns ImageData sized exactly width x height (the canvas's own
  * dimensions, transparent outside the fitted image), ready to hand to
- * LayerStack.addReferenceImageLayer.
+ * LayerStack.addReferenceImageLayer. A degenerate zero-width/zero-height
+ * source (e.g. a dimensionless SVG that somehow still reaches this point)
+ * is treated as "draw nothing" - returns a fully transparent
+ * width x height ImageData rather than dividing by zero into a
+ * scale of Infinity.
  */
 export function fitImageToCanvas(image, width, height) {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
+
+  if (image.width <= 0 || image.height <= 0) {
+    return ctx.getImageData(0, 0, width, height);
+  }
 
   const scale = Math.min(1, width / image.width, height / image.height);
   const drawWidth = image.width * scale;

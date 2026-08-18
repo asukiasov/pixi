@@ -396,6 +396,15 @@ export class LayerStack {
    * this isn't one of the caller-supplied options, it's unconditional on
    * every call, since export is the one place that guide layer must
    * never appear.
+   *
+   * Note this exclusion is unconditional on toPNGBlob itself, not just
+   * the Export popover's call site - so gallery/project thumbnails
+   * (js/workspace.js's autoSave, js/new-canvas.js), which also call
+   * toPNGBlob with no options, never show the reference layer either.
+   * Deliberate: a thumbnail is a preview of the finished artwork, closer
+   * in spirit to an export than to the live on-screen canvas, so this is
+   * the more useful default even though the `export` capability spec
+   * only constrains actual downloaded files.
    */
   toPNGBlob({ skipBackground = false, scale = 1, format = 'png' } = {}) {
     let canvas = this.#compositeToCanvas({ skipBackground, excludeReferenceImage: true });

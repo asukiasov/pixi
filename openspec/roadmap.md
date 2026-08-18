@@ -195,6 +195,18 @@ becomes the next priority:
 - **Import** screen (.aseprite, reference images, palette files)
 - Animation timeline / onion skinning — explicitly out of scope for now, see
   CLAUDE.md non-goals; would need its own roadmap discussion if ever revisited
+- ~~**Reference image layer (trace-over)**~~ — upload an image onto its
+  own layer as a visual guide (not downsampled/pixelated - kept at
+  original fidelity, only scaled down to fit the fixed canvas size when
+  the source is larger), so the user can draw pixel art on a separate
+  layer on top of it. The reference layer is locked like Phase 2g's
+  Background layer (non-drawable, reorder-disabled) and is always
+  excluded from export regardless of its visibility toggle. Distinct
+  from the "Import screen" idea above, which is about importing files as
+  editable content. Raised 2026-08-18; proposed and implemented via
+  `openspec/changes/reference-image-layer/` (tier-gating itself deferred
+  - see that change's proposal.md - since no Standard/Pro gating
+  mechanism exists in code yet).
 - **UI polish pass — refine the design window by window, panel by
   panel.** Raised directly on 2026-08-17, after 2m/2n shipped and real
   usage surfaced rough edges. An open-ended initiative, not one change -

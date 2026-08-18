@@ -547,6 +547,15 @@
         <div id="layers-panel-header" class="layers-panel-header panel-header" role="button" tabindex="0" aria-expanded="true">
           <span class="material-symbols-outlined panel-collapse-chevron">expand_more</span>
           <h2>Layers</h2>
+          <!-- reference-image-layer: trace-over guide upload, disabled once
+               one already exists on the canvas (LayerStack allows at most
+               one) - see js/workspace.js's addReferenceImageButton wiring.
+               Hidden file input below, same pattern as
+               #brush-editor-import-input / #color-library-import-input. -->
+          <button type="button" id="add-reference-image-button" class="tool-button icon-button" title="Add reference image" aria-label="Add reference image">
+            <span class="material-symbols-outlined">image</span>
+          </button>
+          <input type="file" id="add-reference-image-input" accept="image/*" class="hidden" aria-label="Reference image file" />
           <button type="button" id="add-layer-button" class="tool-button">+ Layer</button>
         </div>
         <div id="layers-panel-body" class="layers-panel-body">

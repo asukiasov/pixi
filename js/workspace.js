@@ -13,7 +13,7 @@ import {
 import { initCanvasSettings } from './canvas-settings.js';
 import { initExport } from './export.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
-import { decodeImageFile, hasTransparency, downsampleToImageData } from './image-import.js';
+import { decodeImageFile, hasTransparency, downsampleToImageData, fitImageToCanvas } from './image-import.js';
 import { thresholdToGrid } from './brush-import.js';
 import { extractPalette } from './color-extraction.js';
 import { generateColorRamp } from './color-ramp.js';
@@ -449,6 +449,11 @@ function renderLayersPanel() {
   }
 
   state.addLayerButton.disabled = layers.length >= 8;
+  // reference-image-layer: at most one reference image layer per canvas
+  // (also refused past the 8-layer cap, same as addLayerButton above) -
+  // LayerStack.addReferenceImageLayer enforces this too, this is just the
+  // matching disabled UI state.
+  state.addReferenceImageButton.disabled = layers.length >= 8 || layers.some((l) => l.isReferenceImage);
   syncLayersPanelToolbar();
 }
 
@@ -496,30 +501,35 @@ function buildLayerRow(layer, index, isActive, layers) {
     renderLayersPanel();
   });
 
-  // Background layer (2g-background-layer): locked in stacking position -
-  // a small lock icon next to its name, reorder buttons disabled
+  // Background layer (2g-background-layer) and reference image layer
+  // (reference-image-layer) are both locked in stacking position - a
+  // small lock icon next to its name, reorder buttons disabled
   // regardless of where it sits (LayerStack.moveLayerUp/moveLayerDown
   // already refuse the move too - this is the matching UI state, not the
   // only enforcement).
   let lockIcon = null;
-  if (layer.isBackground) {
+  if (layer.isBackground || layer.isReferenceImage) {
     lockIcon = document.createElement('span');
     lockIcon.className = 'material-symbols-outlined layer-lock-icon';
     lockIcon.textContent = 'lock';
-    lockIcon.title = 'Background layer - locked in position';
+    lockIcon.title = layer.isReferenceImage
+      ? 'Reference image layer - locked in position, non-drawable, excluded from export'
+      : 'Background layer - locked in position';
   }
 
   // A swap moves both layers involved (see LayerStack.moveLayerUp/
   // moveLayerDown's matching comment), so a button is disabled not just
-  // when its own layer is the Background layer, but also when the
-  // neighbor it would swap into is - either way the move is refused.
+  // when its own layer is locked (Background or reference image), but
+  // also when the neighbor it would swap into is - either way the move
+  // is refused.
+  const isLocked = (l) => l?.isBackground || l?.isReferenceImage;
   const upButton = document.createElement('button');
   upButton.type = 'button';
   upButton.className = 'layer-reorder-button';
   upButton.innerHTML = '<span class="material-symbols-outlined">arrow_upward</span>';
   upButton.title = 'Move layer up';
   upButton.setAttribute('aria-label', 'Move layer up');
-  upButton.disabled = index === layerCount - 1 || layer.isBackground || !!layers[index + 1]?.isBackground;
+  upButton.disabled = index === layerCount - 1 || isLocked(layer) || isLocked(layers[index + 1]);
   upButton.addEventListener('click', () => {
     state.layerStack.moveLayerUp(index);
     state.canvasView.render();
@@ -533,7 +543,7 @@ function buildLayerRow(layer, index, isActive, layers) {
   downButton.innerHTML = '<span class="material-symbols-outlined">arrow_downward</span>';
   downButton.title = 'Move layer down';
   downButton.setAttribute('aria-label', 'Move layer down');
-  downButton.disabled = index === 0 || layer.isBackground || !!layers[index - 1]?.isBackground;
+  downButton.disabled = index === 0 || isLocked(layer) || isLocked(layers[index - 1]);
   downButton.addEventListener('click', () => {
     state.layerStack.moveLayerDown(index);
     state.canvasView.render();
@@ -2147,6 +2157,32 @@ function bindDomOnce() {
     renderLayersPanel();
   });
 
+  // reference-image-layer: decode via the shared image-import.js helper
+  // (like Brush Import/Color Library Import), but skip their
+  // downsample/pixelate/quantize step entirely - fitImageToCanvas keeps
+  // full fidelity (no palette reduction, no forced pixelation), only
+  // scaling down (never up, never stretched) when the source is larger
+  // than the canvas. addReferenceImageButton is disabled by
+  // renderLayersPanel once a reference layer already exists, so this
+  // handler doesn't need its own guard beyond what addReferenceImageLayer
+  // already refuses.
+  state.addReferenceImageButton.addEventListener('click', () => state.addReferenceImageInput.click());
+  state.addReferenceImageInput.addEventListener('change', async () => {
+    const file = state.addReferenceImageInput.files?.[0];
+    // Reset now, not after decoding - see the matching comment on
+    // brush-editor-import-input's handler (js/workspace.js) for why.
+    state.addReferenceImageInput.value = '';
+    if (!file) return;
+    const image = await decodeImageFile(file);
+    if (!image) return; // unsupported/corrupt file - fail silently, no crash
+    const imageData = fitImageToCanvas(image, state.layerStack.width, state.layerStack.height);
+    const added = state.layerStack.addReferenceImageLayer(imageData.data, 'Reference');
+    if (!added) return; // already has one, or at the 8-layer cap
+    state.canvasView.render();
+    commit();
+    renderLayersPanel();
+  });
+
   state.selectionClearButton.addEventListener('click', clearSelection);
 
   state.selectionDeleteButton.addEventListener('click', () => {
@@ -2340,6 +2376,8 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     redoButton: document.getElementById('redo-button'),
     exportButton: document.getElementById('export-button'),
     addLayerButton: document.getElementById('add-layer-button'),
+    addReferenceImageButton: document.getElementById('add-reference-image-button'),
+    addReferenceImageInput: document.getElementById('add-reference-image-input'),
     layersPanelList: document.getElementById('layers-panel-list'),
     selectionControlsEl: document.getElementById('selection-controls'),
     selectionClearButton: document.getElementById('selection-clear-button'),

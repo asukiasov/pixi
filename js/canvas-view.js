@@ -30,6 +30,27 @@ export class CanvasView {
   #selectionOverlayEl;
   #selectionRect = null;
 
+  // (reference-image-original-resolution) Two more siblings, appended
+  // between #canvasEl and #selectionOverlayEl (so the selection marquee
+  // stays visually topmost, unchanged from before this existed), used
+  // only when LayerStack.getRenderPlan() splits into more than one
+  // segment - see #render()'s doc comment. #aboveCanvasEl is a second
+  // same-size pixel-buffer <canvas>, exactly like #canvasEl, for the
+  // stack's layers above an 'original'-mode reference layer.
+  // #referenceImgEl is an <img>, not a <canvas>: an 'original'-mode
+  // reference layer renders at its own native resolution, which a
+  // same-size pixel buffer can't represent (see design.md's "Rendering"
+  // section) - an <img> with `object-fit: contain` sized to the same CSS
+  // box as #canvasEl lets the browser's own smooth bitmap scaling produce
+  // the final on-screen size, never round-tripped through a tiny buffer.
+  // Both start hidden (style.css's .hidden) and are only shown while
+  // #render()'s current plan actually has a segment for them.
+  #aboveCanvasEl;
+  #aboveCtx;
+  #referenceImgEl;
+  #referenceObjectUrlBlob = null; // the Blob #referenceObjectUrl was created from, so we only re-create on an actual change
+  #referenceObjectUrl = null;
+
   constructor(canvasEl, containerEl, layerStack) {
     this.#canvasEl = canvasEl;
     this.#containerEl = containerEl;
@@ -47,8 +68,26 @@ export class CanvasView {
     canvasEl.addEventListener('pointerup', this.#onPointerUp);
     canvasEl.addEventListener('pointercancel', this.#onPointerUp);
 
+    // DOM order matters here (paints later siblings on top, no z-index
+    // involved): #referenceImgEl MUST be appended before #aboveCanvasEl,
+    // not after - it represents the stack segment *below* #aboveCanvasEl's
+    // (the layers above the reference), so it has to paint underneath it,
+    // exactly the opposite of the append order that would put it visually
+    // on top regardless of the reference layer's actual stack position.
+    this.#referenceImgEl = document.createElement('img');
+    this.#referenceImgEl.className = 'reference-original-overlay hidden';
+    this.#referenceImgEl.alt = '';
+    this.#containerEl.appendChild(this.#referenceImgEl);
+
+    this.#aboveCanvasEl = document.createElement('canvas');
+    this.#aboveCanvasEl.className = 'workspace-canvas-above-layer hidden';
+    this.#aboveCtx = this.#aboveCanvasEl.getContext('2d');
+    this.#containerEl.appendChild(this.#aboveCanvasEl);
+
     // A sibling overlay, not a canvas-drawn rectangle, so it never touches
     // pixel data — just a visual marker for the active selection (if any).
+    // Appended last (after the two elements above) so it stays the
+    // topmost sibling, as it always was.
     this.#selectionOverlayEl = document.createElement('div');
     this.#selectionOverlayEl.className = 'selection-overlay hidden';
     this.#containerEl.appendChild(this.#selectionOverlayEl);
@@ -93,6 +132,16 @@ export class CanvasView {
     const { width, height } = this.#layerStack;
     this.#canvasEl.width = width;
     this.#canvasEl.height = height;
+    // (reference-image-original-resolution) #aboveCanvasEl mirrors
+    // #canvasEl's own pixel-buffer/CSS-box size exactly - it holds the
+    // same kind of same-size raster content, just a different stack
+    // segment (see #render()). #referenceImgEl has no pixel buffer of
+    // its own (it's an <img>); it only needs the same CSS box, set
+    // below, so an 'original'-mode reference image's `object-fit:
+    // contain` sizing is computed against the same footprint the pixel
+    // canvases occupy.
+    this.#aboveCanvasEl.width = width;
+    this.#aboveCanvasEl.height = height;
 
     const containerRect = this.#containerEl.getBoundingClientRect();
     const fitScale = Math.max(
@@ -102,6 +151,18 @@ export class CanvasView {
     this.#baseScale = fitScale;
     this.#canvasEl.style.width = `${width * fitScale}px`;
     this.#canvasEl.style.height = `${height * fitScale}px`;
+    this.#aboveCanvasEl.style.width = `${width * fitScale}px`;
+    this.#aboveCanvasEl.style.height = `${height * fitScale}px`;
+    this.#referenceImgEl.style.width = `${width * fitScale}px`;
+    this.#referenceImgEl.style.height = `${height * fitScale}px`;
+    // Explicit width/height attributes too, not just CSS - the img's own
+    // pan/zoom sizing already comes entirely from the style properties
+    // above (re-applied on every resetView()/zoom change), but setting
+    // these avoids the element having no intrinsic size at all before its
+    // first layout pass (Web Interface Guidelines: images need explicit
+    // width/height).
+    this.#referenceImgEl.width = width * fitScale;
+    this.#referenceImgEl.height = height * fitScale;
     // Transparency checkerboard (see style.css): one checker square per
     // artwork pixel, so a 2x2 checker tile spans 2 pixels' worth of CSS px.
     this.#canvasEl.style.backgroundSize = `${fitScale * 2}px ${fitScale * 2}px`;
@@ -171,8 +232,78 @@ export class CanvasView {
     return Math.round(this.#baseScale * this.#scale * 100);
   }
 
+  /**
+   * (reference-image-original-resolution) Renders LayerStack.getRenderPlan()'s
+   * ordered segments across up to three sibling elements instead of always
+   * putImageData-ing one flat raster onto #canvasEl: #canvasEl always
+   * takes whichever raster segment sits *below* an 'original'-mode
+   * reference layer (or the single, whole-stack raster, when there's no
+   * such split - the plan's own single-segment shape for that case, so
+   * this reproduces the exact prior behavior whenever no visible
+   * 'original'-mode reference layer exists), #referenceImgEl takes the
+   * 'reference-original' segment (if present), and #aboveCanvasEl takes
+   * the raster segment above it (if present). DOM order (set in the
+   * constructor) already places these three in the right visual stacking
+   * order, so no z-index math is needed here - only content and
+   * show/hide per segment presence.
+   */
   render() {
-    this.#ctx.putImageData(this.#layerStack.composite(), 0, 0);
+    const plan = this.#layerStack.getRenderPlan();
+    const refPos = plan.findIndex((s) => s.type === 'reference-original');
+    const belowSeg = refPos === -1 ? plan[0] : (plan[refPos - 1] ?? null);
+    const refSeg = refPos === -1 ? null : plan[refPos];
+    const aboveSeg = refPos === -1 ? null : (plan[refPos + 1] ?? null);
+
+    if (belowSeg) {
+      this.#ctx.putImageData(belowSeg.imageData, 0, 0);
+    } else {
+      // No layers below the reference (it's bottom-most) - nothing to
+      // paint into #canvasEl itself; its transparency checkerboard shows
+      // through as if this segment didn't exist.
+      this.#ctx.clearRect(0, 0, this.#canvasEl.width, this.#canvasEl.height);
+    }
+
+    if (aboveSeg) {
+      this.#aboveCtx.putImageData(aboveSeg.imageData, 0, 0);
+      this.#aboveCanvasEl.classList.remove('hidden');
+    } else {
+      this.#aboveCanvasEl.classList.add('hidden');
+    }
+
+    if (refSeg && refSeg.layer.originalSourceBlob) {
+      const layer = refSeg.layer;
+      // Re-derive the <img> src only when the underlying Blob actually
+      // changed (not on every render() call, which happens on every
+      // pointermove while drawing) - createObjectURL/revokeObjectURL
+      // otherwise churns a new blob: URL many times a second for no
+      // reason. Same object reference, same URL, reused across renders.
+      if (layer.originalSourceBlob !== this.#referenceObjectUrlBlob) {
+        if (this.#referenceObjectUrl) URL.revokeObjectURL(this.#referenceObjectUrl);
+        this.#referenceObjectUrlBlob = layer.originalSourceBlob;
+        this.#referenceObjectUrl = layer.originalSourceBlob ? URL.createObjectURL(layer.originalSourceBlob) : null;
+        this.#referenceImgEl.src = this.#referenceObjectUrl ?? '';
+      }
+      this.#referenceImgEl.style.opacity = layer.opacity;
+      // The app's four blend modes (normal/multiply/screen/overlay) are
+      // also valid CSS mix-blend-mode keywords, so this maps 1:1 onto the
+      // same names #compositeToCanvas's BLEND_MODE_TO_COMPOSITE_OP uses
+      // for the raster segments - no lookup table needed.
+      this.#referenceImgEl.style.mixBlendMode = layer.blendMode;
+      this.#referenceImgEl.classList.remove('hidden');
+    } else {
+      this.#referenceImgEl.classList.add('hidden');
+      // The reference segment disappeared (layer deleted/hidden/switched
+      // to Pixelated mode, or a different project with no reference layer
+      // was loaded into this same long-lived CanvasView - see js/app.js's
+      // single reused instance) - revoke the now-orphaned object URL
+      // rather than leaving it live until some future Blob happens to
+      // replace it, which could be never for the rest of the session.
+      if (this.#referenceObjectUrl) {
+        URL.revokeObjectURL(this.#referenceObjectUrl);
+        this.#referenceObjectUrl = null;
+        this.#referenceObjectUrlBlob = null;
+      }
+    }
   }
 
   /**
@@ -195,12 +326,15 @@ export class CanvasView {
 
   #applyTransform() {
     const transform = `translate(${this.#panX}px, ${this.#panY}px) scale(${this.#scale})`;
-    this.#canvasEl.style.transformOrigin = '0 0';
-    this.#canvasEl.style.transform = transform;
-    // Sibling element at the same origin, so the identical transform keeps
-    // it aligned with the canvas through pan/zoom with no separate math.
-    this.#selectionOverlayEl.style.transformOrigin = '0 0';
-    this.#selectionOverlayEl.style.transform = transform;
+    // Every sibling element at the same origin gets the identical
+    // transform, so they all track pan/zoom in lockstep with no separate
+    // math per element - #aboveCanvasEl/#referenceImgEl
+    // (reference-image-original-resolution) join #selectionOverlayEl in
+    // reusing this same loop.
+    for (const el of [this.#canvasEl, this.#aboveCanvasEl, this.#referenceImgEl, this.#selectionOverlayEl]) {
+      el.style.transformOrigin = '0 0';
+      el.style.transform = transform;
+    }
   }
 
   #emitZoomChange() {

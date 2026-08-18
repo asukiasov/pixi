@@ -658,6 +658,19 @@ body {
   overflow: hidden;
   background: #e2e2e2;
   touch-action: none;
+  /* (reference-image-original-resolution) An 'original'-mode reference
+     layer's blend mode is applied via CSS mix-blend-mode on
+     .reference-original-overlay (js/canvas-view.js's render()), unlike
+     every other layer's blending, which stays contained inside a single
+     canvas's own globalCompositeOperation. mix-blend-mode blends against
+     everything painted earlier in the element's containing stacking
+     context, not just its DOM siblings - without isolation: isolate here,
+     a non-'normal' blend mode (multiply/screen/overlay, already settable
+     via the layer blend-mode dropdown) could blend against content
+     outside this container instead of just #workspace-canvas/
+     #aboveCanvasEl. isolation: isolate scopes it back to this container.
+  */
+  isolation: isolate;
 }
 
 #workspace-canvas {
@@ -695,6 +708,39 @@ body {
    CanvasView#setMoveMode. */
 #workspace-canvas.move-mode {
   cursor: move;
+}
+
+/* (reference-image-original-resolution) A second same-size pixel-buffer
+   canvas, sibling to #workspace-canvas, for the layer-stack segment above
+   an 'original'-mode reference layer - see CanvasView#render(). Same
+   position/crispness as #workspace-canvas; no cursor/background rules
+   (those stay owned by #workspace-canvas, the one element pointer events
+   and the transparency checkerboard are anchored to) and no pointer
+   events of its own, so drawing/panning interaction is unaffected by it
+   sitting visually on top. */
+.workspace-canvas-above-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  pointer-events: none;
+}
+
+/* (reference-image-original-resolution) An 'original'-mode reference
+   layer's on-screen rendering - deliberately NOT pixelated (that's the
+   entire point of this mode: the browser's own smooth bitmap scaling
+   from the source's native resolution, never round-tripped through the
+   canvas's tiny fixed-size pixel buffer). object-fit: contain matches
+   the pixelated mode's own "fit, centered, preserve aspect ratio,
+   never crop" behavior (js/image-import.js's fitImageToCanvas), just
+   expressed as a CSS box constraint instead of a downscaled buffer. */
+.reference-original-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 .selection-overlay {
@@ -1203,6 +1249,31 @@ span.layer-lock-icon {
   flex: none;
   font-size: 0.9rem;
   color: var(--color-text-secondary);
+}
+
+/* Reference image layer only (reference-image-original-resolution) -
+   toggles Pixelated vs. Original resolution mode, see buildLayerRow in
+   js/workspace.js. Sized identically to .layer-reference-smoothing-
+   toggle, which it sits next to (visible only in Pixelated mode). */
+.layer-reference-mode-toggle {
+  flex: none;
+  width: var(--icon-size-xs);
+  height: var(--icon-size-xs);
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 1rem;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.layer-reference-mode-toggle .material-symbols-outlined {
+  font-size: 1.1rem;
+}
+
+.layer-reference-mode-toggle:disabled {
+  opacity: 0.3;
 }
 
 /* Reference image layer only - toggles smoothed vs. blocky downscale on

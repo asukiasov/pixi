@@ -38,6 +38,23 @@
   --color-success: #34c759;
   --color-overlay: rgba(28, 28, 30, 0.92);
   --color-overlay-soft: rgba(28, 28, 30, 0.75);
+
+  /* Icon-button size scale (icon-button-size-system) - every icon-only
+     button's width/height is meant to read from one of these five steps
+     instead of a one-off literal. Values are the five distinct sizes
+     already in ad hoc use across the app before this change (Layers
+     panel row buttons, color picker popover header, Color Library
+     header actions [now reassigned to XS - see .color-library-header-
+     actions .icon-button], zoom controls, and the base .icon-button/tool
+     rail/bottom-bar undo-redo), so adopting them as named steps changes
+     no existing rendered size except where a selector below explicitly
+     switches steps. XS is also this scale's accessibility floor - see
+     that selector's own comment for why it doesn't go smaller. */
+  --icon-size-xs: 1.4rem;
+  --icon-size-s: 1.6rem;
+  --icon-size-m: 1.8rem;
+  --icon-size-l: 2.2rem;
+  --icon-size-xl: 2.6rem;
 }
 
 :root[data-theme="light"] {
@@ -493,8 +510,8 @@ body {
 }
 
 .tools-sidebar .tool-button {
-  width: 2.6rem;
-  height: 2.6rem;
+  width: var(--icon-size-xl);
+  height: var(--icon-size-xl);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -583,8 +600,13 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.6rem;
-  height: 2.6rem;
+  /* XL by default (icon-button-size-system) - the un-overridden size for
+     an icon-only button. Context selectors below (color-picker-popover-
+     header, color-library-header-actions, zoom-controls, layer row
+     buttons) override this to a smaller scale step where the surrounding
+     UI is more compact. */
+  width: var(--icon-size-xl);
+  height: var(--icon-size-xl);
   padding: 0;
   cursor: pointer;
   /* AUD-5: if the Material Symbols icon font fails to load (blocked
@@ -1046,6 +1068,18 @@ body {
 .layer-row {
   display: flex;
   align-items: center;
+  /* flex-wrap (icon-button-size-system) - a normal layer row (visibility,
+     thumbnail, name, reorder x2, delete) fits on one line even at the
+     sidebar's narrowest clamped width, but the reference image layer row
+     adds a lock icon and a smoothing toggle on top of that (see
+     buildLayerRow in js/workspace.js) and no realistic spacing budget fits
+     all 8 controls on one line at the sidebar's normal clamped width
+     without shrinking icons below this scale's XS floor (see :root's
+     --icon-size-xs comment). Wrapping - not overflow-x:auto's implicit
+     scrollbar (the overflow-pairing rule, same bug this container already
+     had) - keeps every control visible and reachable; only rows with more
+     controls than fit end up two lines tall. */
+  flex-wrap: wrap;
   gap: 0.4rem;
   padding: 0.3rem 0.4rem;
   border-top: 1px solid var(--color-surface);
@@ -1089,8 +1123,8 @@ body {
 
 .layer-visibility-toggle {
   flex: none;
-  width: 1.4rem;
-  height: 1.4rem;
+  width: var(--icon-size-xs);
+  height: var(--icon-size-xs);
   background: transparent;
   border: none;
   color: inherit;
@@ -1123,8 +1157,24 @@ body {
 }
 
 .layer-name-input {
-  flex: 1 1 4rem;
-  min-width: 3rem;
+  /* flex-basis (the "4rem") lowered from 4rem to 2rem, and min-width
+     from 3rem to 2rem (icon-button-size-system). Two separate reasons:
+     min-width - the reference image layer row adds a lock icon +
+     smoothing toggle alongside the usual visibility/thumbnail/reorder/
+     delete controls, and a 3rem floor left no room to shrink under that
+     extra load at the sidebar's normal clamped width, forcing .layer-row
+     wider than its container (the same overflow-pairing problem - see
+     .color-library-header-actions .icon-button's comment). flex-basis -
+     .layer-row's flex-wrap (added alongside this) decides whether a row
+     needs a second line using each item's flex-basis, not its post-
+     shrink size, so a 4rem basis was pushing ordinary (non-reference)
+     rows onto two lines even though they fit on one once name-input
+     actually shrinks. 2rem for both keeps ordinary rows on one line
+     while still leaving enough width to read a few characters of a
+     layer name while editing - it grows via flex-grow to fill any
+     leftover space on its line either way. */
+  flex: 1 1 2rem;
+  min-width: 2rem;
   background: transparent;
   border: 1px solid transparent;
   color: inherit;
@@ -1139,8 +1189,17 @@ body {
 }
 
 /* Background layer (2g-background-layer) - locked in stacking position,
-   see buildLayerRow in js/workspace.js. */
-.layer-lock-icon {
+   see buildLayerRow in js/workspace.js. `span.layer-lock-icon` (not just
+   `.layer-lock-icon`) (icon-button-size-system) - this element also
+   carries the bare `.material-symbols-outlined` class, and the Google
+   Fonts icon stylesheet (index.html's link, loaded after this file) ships
+   its own `.material-symbols-outlined { font-size: 24px }` default at the
+   same specificity; being later in the cascade, it silently won over this
+   rule's 0.9rem, rendering the lock icon at 24px instead of ~14px - found
+   while fixing the reference image layer row's overflow, where the extra
+   ~10px mattered. The added element-type qualifier raises this selector's
+   specificity just enough to win instead. */
+span.layer-lock-icon {
   flex: none;
   font-size: 0.9rem;
   color: var(--color-text-secondary);
@@ -1151,8 +1210,8 @@ body {
    .layer-visibility-toggle, which it sits next to. */
 .layer-reference-smoothing-toggle {
   flex: none;
-  width: 1.4rem;
-  height: 1.4rem;
+  width: var(--icon-size-xs);
+  height: var(--icon-size-xs);
   background: transparent;
   border: none;
   color: inherit;
@@ -1173,15 +1232,18 @@ body {
 .layer-row-actions {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  /* Tightened from 0.3rem (icon-button-size-system) to reclaim a little
+     more width for the reference image layer row's extra controls - see
+     .layer-name-input's min-width comment above for the full picture. */
+  gap: 0.2rem;
   flex: none;
 }
 
 .layer-reorder-button,
 .layer-delete-button {
   flex: none;
-  width: 1.4rem;
-  height: 1.4rem;
+  width: var(--icon-size-xs);
+  height: var(--icon-size-xs);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1339,8 +1401,8 @@ body {
 }
 
 .color-picker-popover-header .icon-button {
-  width: 1.6rem;
-  height: 1.6rem;
+  width: var(--icon-size-s);
+  height: var(--icon-size-s);
 }
 
 .color-picker-popover input[type='color'] {
@@ -1452,6 +1514,16 @@ body {
 
 .color-library-header h2 {
   flex: 1;
+  /* min-width: 0 lets this shrink below its text's natural width instead
+     of forcing the header row (and its 5 icon buttons) wider than the
+     sidebar at the clamp's narrower end (icon-button-size-system) - a
+     flex item's default min-width is auto (its content size), which
+     would otherwise win over flex:1's shrink. Truncates with an ellipsis
+     rather than wrapping/clipping raw, so the label stays legible. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1476,9 +1548,19 @@ body {
   gap: 0.3rem;
 }
 
+/* XS (icon-button-size-system), down from this container's original M
+   (1.8rem) - at the sidebar's normal clamped width these 5 buttons plus
+   the "COLOR LIBRARY" label (see .color-library-header h2's own comment)
+   didn't fit and .color-library-panel's overflow-y:auto silently turned
+   into overflow-x:auto too (the overflow-pairing rule - see .tool-
+   tooltip's comment above for this project's fuller writeup), hiding
+   buttons behind an easy-to-miss horizontal scrollbar instead of visibly
+   breaking. XS matches the Layers panel's row buttons directly below in
+   the same sidebar, so this also makes the sidebar's icon sizing more
+   consistent, not less. */
 .color-library-header-actions .icon-button {
-  width: 1.8rem;
-  height: 1.8rem;
+  width: var(--icon-size-xs);
+  height: var(--icon-size-xs);
 }
 
 .color-library-header-actions .material-symbols-outlined {
@@ -1807,8 +1889,8 @@ body {
 }
 
 .zoom-controls .icon-button {
-  width: 2.2rem;
-  height: 2.2rem;
+  width: var(--icon-size-l);
+  height: var(--icon-size-l);
 }
 
 .zoom-controls .tool-button:not(.icon-button) {
@@ -1836,8 +1918,8 @@ body {
    undo/redo are icon-only, unlike the rest of the bottom bar's text buttons. */
 .bottom-bar-group .icon-button {
   padding: 0;
-  width: 2.6rem;
-  height: 2.6rem;
+  width: var(--icon-size-xl);
+  height: var(--icon-size-xl);
 }
 
 .tool-button:disabled {

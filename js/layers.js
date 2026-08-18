@@ -21,7 +21,7 @@ const MIME_TYPES = { png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg' };
 const LOSSY_QUALITY = 0.92;
 
 class Layer {
-  constructor(name, width, height, background = 'transparent', isBackground = false) {
+  constructor(name, width, height, background = 'transparent', isBackground = false, isReferenceImage = false) {
     this.id = crypto.randomUUID();
     this.name = name;
     this.engine = new PixelEngine(width, height, background);
@@ -34,6 +34,15 @@ class Layer {
     // moveLayerUp/moveLayerDown's reorder lock and workspace.js's Eraser
     // exception for the two places this actually changes behavior.
     this.isBackground = isBackground;
+    // Locked, non-drawable "reference image" layer (reference-image-layer) -
+    // a trace-over guide added via LayerStack.addReferenceImageLayer(),
+    // never reassigned afterward. Independent of isBackground (a layer is
+    // never both): reorder-locked like the Background layer (see
+    // moveLayerUp/moveLayerDown), but additionally refused as an active
+    // (drawing-target) layer by setActiveLayer, and always excluded from
+    // export regardless of its own visibility - see
+    // #compositeToCanvas's excludeReferenceImage option.
+    this.isReferenceImage = isReferenceImage;
   }
 }
 
@@ -72,8 +81,16 @@ export class LayerStack {
     return this.#layers[this.#activeIndex];
   }
 
+  /**
+   * A reference image layer can never become the active (drawing-target)
+   * layer - see the "Reference image layer is non-drawable" requirement.
+   * Refusing here is the single choke point every drawing tool relies on
+   * (they all resolve their target through getActiveLayer()), so no
+   * per-tool check is needed elsewhere.
+   */
   setActiveLayer(index) {
     if (index < 0 || index >= this.#layers.length) return;
+    if (this.#layers[index].isReferenceImage) return;
     this.#activeIndex = index;
   }
 
@@ -84,6 +101,26 @@ export class LayerStack {
     const insertAt = this.#activeIndex + 1;
     this.#layers.splice(insertAt, 0, layer);
     this.#activeIndex = insertAt;
+    return layer;
+  }
+
+  /**
+   * Adds a locked reference image layer to the top of the stack, seeded
+   * from `pixelData` (a Uint8ClampedArray of RGBA bytes, width*height*4
+   * long, matching this stack's own dimensions - callers fit/scale the
+   * source image to that size before calling this, see
+   * js/image-import.js's fitImageToCanvas). Refuses (returns null,
+   * unchanged stack) if a reference image layer already exists (at most
+   * one per canvas) or the 8-layer cap is already reached. Does NOT
+   * change the active layer - unlike addLayer, a reference layer is
+   * never a drawing target, so there's nothing to activate.
+   */
+  addReferenceImageLayer(pixelData, name = 'Reference') {
+    if (this.#layers.length >= MAX_LAYERS) return null;
+    if (this.#layers.some((l) => l.isReferenceImage)) return null;
+    const layer = new Layer(name, this.#width, this.#height, 'transparent', false, true);
+    layer.engine.data.set(pixelData);
+    this.#layers.push(layer);
     return layer;
   }
 
@@ -109,20 +146,24 @@ export class LayerStack {
 
   moveLayerUp(index) {
     if (index < 0 || index >= this.#layers.length - 1) return false;
-    // Refuse if either swapped slot holds the Background layer - not just
-    // the layer being moved. A swap moves *both* layers, so a regular
-    // layer swapping into the Background layer's slot would relocate it
-    // just as much as moving it directly would.
-    if (this.#layers[index].isBackground || this.#layers[index + 1].isBackground) return false;
+    // Refuse if either swapped slot holds a locked layer (Background or
+    // reference image) - not just the layer being moved. A swap moves
+    // *both* layers, so a regular layer swapping into a locked layer's
+    // slot would relocate it just as much as moving it directly would.
+    if (this.#isLocked(this.#layers[index]) || this.#isLocked(this.#layers[index + 1])) return false;
     this.#swap(index, index + 1);
     return true;
   }
 
   moveLayerDown(index) {
     if (index <= 0 || index >= this.#layers.length) return false;
-    if (this.#layers[index].isBackground || this.#layers[index - 1].isBackground) return false;
+    if (this.#isLocked(this.#layers[index]) || this.#isLocked(this.#layers[index - 1])) return false;
     this.#swap(index, index - 1);
     return true;
+  }
+
+  #isLocked(layer) {
+    return layer.isBackground || layer.isReferenceImage;
   }
 
   #swap(i, j) {
@@ -162,6 +203,7 @@ export class LayerStack {
         opacity: l.opacity,
         blendMode: l.blendMode,
         isBackground: l.isBackground,
+        isReferenceImage: l.isReferenceImage,
       })),
       activeIndex: this.#activeIndex,
     };
@@ -170,7 +212,7 @@ export class LayerStack {
   /** Restores state previously captured by snapshot(). */
   restore(snapshot) {
     this.#layers = snapshot.layers.map((s) => {
-      const layer = new Layer(s.name, this.#width, this.#height, 'transparent', s.isBackground);
+      const layer = new Layer(s.name, this.#width, this.#height, 'transparent', s.isBackground, s.isReferenceImage);
       layer.id = s.id;
       layer.engine.data.set(s.data);
       layer.visible = s.visible;
@@ -199,6 +241,7 @@ export class LayerStack {
         opacity: l.opacity,
         blendMode: l.blendMode,
         isBackground: l.isBackground,
+        isReferenceImage: l.isReferenceImage,
       })),
       activeLayerIndex: this.#activeIndex,
     };
@@ -206,16 +249,16 @@ export class LayerStack {
 
   /**
    * Reconstructs a full LayerStack from a record produced by
-   * toProjectRecord(). `isBackground` defaults falsy (`s.isBackground`
-   * reads `undefined`) for records saved before this field existed - see
-   * design.md's Migration/Risk note: an old white-background project's
-   * starting layer simply behaves as a regular layer, not retroactively
-   * upgraded.
+   * toProjectRecord(). `isBackground`/`isReferenceImage` default falsy
+   * (`s.isBackground`/`s.isReferenceImage` read `undefined`) for records
+   * saved before those fields existed - see design.md's Migration/Risk
+   * note: an old project's starting layer simply behaves as a regular
+   * layer, not retroactively upgraded.
    */
   static fromProjectRecord(record) {
     const stack = new LayerStack(record.width, record.height, 'transparent');
     stack.#layers = record.layers.map((s) => {
-      const layer = new Layer(s.name, record.width, record.height, 'transparent', !!s.isBackground);
+      const layer = new Layer(s.name, record.width, record.height, 'transparent', !!s.isBackground, !!s.isReferenceImage);
       layer.id = s.id;
       layer.engine.data.set(new Uint8ClampedArray(s.data));
       layer.visible = s.visible;
@@ -237,7 +280,7 @@ export class LayerStack {
     const copyHeight = Math.min(this.#height, height);
 
     this.#layers = this.#layers.map((l) => {
-      const newLayer = new Layer(l.name, width, height, 'transparent', l.isBackground);
+      const newLayer = new Layer(l.name, width, height, 'transparent', l.isBackground, l.isReferenceImage);
       newLayer.id = l.id;
       newLayer.visible = l.visible;
       newLayer.opacity = l.opacity;
@@ -264,7 +307,7 @@ export class LayerStack {
     const newHeight = oldWidth;
 
     this.#layers = this.#layers.map((l) => {
-      const newLayer = new Layer(l.name, newWidth, newHeight, 'transparent', l.isBackground);
+      const newLayer = new Layer(l.name, newWidth, newHeight, 'transparent', l.isBackground, l.isReferenceImage);
       newLayer.id = l.id;
       newLayer.visible = l.visible;
       newLayer.opacity = l.opacity;
@@ -292,8 +335,16 @@ export class LayerStack {
    * any layer with `isBackground: true` from compositing entirely, as if
    * it were hidden - see the `export` capability spec for why this drops
    * the whole layer rather than just its fill color.
+   *
+   * `excludeReferenceImage` (reference-image-layer) omits any layer with
+   * `isReferenceImage: true`, unconditionally whenever the caller passes
+   * it - unlike `skipBackground`, this isn't an opt-in toggle's value,
+   * it's forced true by every export call site (toPNGBlob) and left
+   * false by on-screen rendering (composite()), so a visible reference
+   * layer still shows on-screen but never reaches an exported file. See
+   * the `export` capability spec's exclusion requirement.
    */
-  #compositeToCanvas({ skipBackground = false } = {}) {
+  #compositeToCanvas({ skipBackground = false, excludeReferenceImage = false } = {}) {
     const canvas = document.createElement('canvas');
     canvas.width = this.#width;
     canvas.height = this.#height;
@@ -302,6 +353,7 @@ export class LayerStack {
     for (const layer of this.#layers) {
       if (!layer.visible) continue;
       if (skipBackground && layer.isBackground) continue;
+      if (excludeReferenceImage && layer.isReferenceImage) continue;
 
       const layerCanvas = document.createElement('canvas');
       layerCanvas.width = this.#width;
@@ -339,10 +391,14 @@ export class LayerStack {
    * instead of leaving transparent pixels to the browser's default
    * (black). Calling with no arguments reproduces the exact
    * native-resolution PNG, Background-included output this method
-   * always produced.
+   * always produced. A reference image layer (reference-image-layer), if
+   * present, is always excluded here regardless of its own visibility -
+   * this isn't one of the caller-supplied options, it's unconditional on
+   * every call, since export is the one place that guide layer must
+   * never appear.
    */
   toPNGBlob({ skipBackground = false, scale = 1, format = 'png' } = {}) {
-    let canvas = this.#compositeToCanvas({ skipBackground });
+    let canvas = this.#compositeToCanvas({ skipBackground, excludeReferenceImage: true });
     const needsWhiteFlatten = format === 'jpg';
     if (scale > 1 || needsWhiteFlatten) {
       const outCanvas = document.createElement('canvas');

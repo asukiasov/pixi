@@ -88,6 +88,157 @@ describe('Background layer (2g-background-layer)', () => {
   });
 });
 
+describe('reference image layer (reference-image-layer)', () => {
+  test('addReferenceImageLayer adds a locked layer to the top of the stack from pixel data', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    pixels.set([9, 8, 7, 255], 0); // pixel (0,0)
+    const added = stack.addReferenceImageLayer(pixels, 'My Reference');
+    const layers = stack.getLayers();
+    assert.equal(layers.length, 2);
+    assert.equal(layers[1], added);
+    assert.equal(added.isReferenceImage, true);
+    assert.equal(added.name, 'My Reference');
+    assert.deepEqual(added.engine.getPixel(0, 0), [9, 8, 7, 255]);
+  });
+
+  test('addReferenceImageLayer does not make the new layer active', () => {
+    const stack = new LayerStack(4, 4, 'white'); // index 0 active
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    stack.addReferenceImageLayer(pixels, 'Ref');
+    assert.equal(stack.getActiveIndex(), 0); // unchanged - Background layer stays active
+  });
+
+  test('refuses a second reference image layer on the same canvas', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    const first = stack.addReferenceImageLayer(pixels, 'Ref 1');
+    const second = stack.addReferenceImageLayer(pixels, 'Ref 2');
+    assert.equal(second, null);
+    assert.equal(stack.getLayers().length, 2);
+    assert.equal(stack.getLayers()[1], first);
+  });
+
+  test('counts toward the 8-layer cap', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    for (let i = 0; i < 7; i++) stack.addLayer(`L${i}`);
+    assert.equal(stack.getLayers().length, 8);
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    const result = stack.addReferenceImageLayer(pixels, 'Ref');
+    assert.equal(result, null);
+    assert.equal(stack.getLayers().length, 8);
+  });
+
+  test('setActiveLayer refuses to activate a reference image layer', () => {
+    const stack = new LayerStack(4, 4, 'white'); // index 0 active
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    stack.addReferenceImageLayer(pixels, 'Ref'); // index 1, locked
+    stack.setActiveLayer(1);
+    assert.equal(stack.getActiveIndex(), 0); // refused, stayed on 0
+  });
+
+  test('setActiveLayer still works normally for regular layers', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    stack.addLayer('B'); // index 1, active
+    stack.setActiveLayer(0);
+    assert.equal(stack.getActiveIndex(), 0);
+  });
+
+  test('moveLayerUp/moveLayerDown are no-ops on the reference image layer', () => {
+    const stack = new LayerStack(4, 4, 'transparent');
+    stack.addLayer('B');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    stack.addReferenceImageLayer(pixels, 'Ref'); // index 2, topmost
+    const before = stack.getLayers();
+    assert.equal(stack.moveLayerDown(2), false);
+    assert.deepEqual(stack.getLayers(), before);
+  });
+
+  test('moveLayerUp/moveLayerDown refuse a swap into the reference layer slot', () => {
+    const stack = new LayerStack(4, 4, 'transparent');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    stack.addReferenceImageLayer(pixels, 'Ref'); // index 1, topmost, locked
+    // index 0 is a regular layer; moving it up would swap into the
+    // reference layer's slot, relocating it - must be refused just like
+    // the Background layer's matching case.
+    const result = stack.moveLayerUp(0);
+    assert.equal(result, false);
+  });
+
+  test('reference image layer can be deleted', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    stack.addReferenceImageLayer(pixels, 'Ref');
+    const result = stack.deleteLayer(1);
+    assert.equal(result, true);
+    assert.equal(stack.getLayers().length, 1);
+  });
+
+  test('a canvas can accept a new reference image layer after the old one is deleted', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    stack.addReferenceImageLayer(pixels, 'Ref 1');
+    stack.deleteLayer(1);
+    const second = stack.addReferenceImageLayer(pixels, 'Ref 2');
+    assert.notEqual(second, null);
+  });
+
+  test('snapshot/restore preserves isReferenceImage', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    stack.addReferenceImageLayer(pixels, 'Ref');
+    const snap = stack.snapshot();
+    stack.restore(snap);
+    const layers = stack.getLayers();
+    assert.equal(layers[0].isReferenceImage, false);
+    assert.equal(layers[1].isReferenceImage, true);
+  });
+
+  test('toProjectRecord/fromProjectRecord round-trips isReferenceImage and pixel data', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    pixels.set([1, 2, 3, 255], 0);
+    stack.addReferenceImageLayer(pixels, 'Ref');
+    const record = stack.toProjectRecord();
+    const restored = LayerStack.fromProjectRecord(record);
+    const layers = restored.getLayers();
+    assert.equal(layers[0].isReferenceImage, false);
+    assert.equal(layers[1].isReferenceImage, true);
+    assert.deepEqual(layers[1].engine.getPixel(0, 0), [1, 2, 3, 255]);
+  });
+
+  test('a record with no isReferenceImage field defaults to false', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const record = stack.toProjectRecord();
+    delete record.layers[0].isReferenceImage; // simulate a pre-existing saved project
+    const restored = LayerStack.fromProjectRecord(record);
+    assert.equal(restored.getLayers()[0].isReferenceImage, false);
+  });
+
+  test('resize preserves isReferenceImage', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    stack.addReferenceImageLayer(pixels, 'Ref');
+    stack.resize(2, 2);
+    assert.equal(stack.getLayers()[1].isReferenceImage, true);
+  });
+
+  test('rotate90 preserves isReferenceImage', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    stack.addReferenceImageLayer(pixels, 'Ref');
+    stack.rotate90('cw');
+    assert.equal(stack.getLayers()[1].isReferenceImage, true);
+  });
+
+  test('regular layers are unaffected: isReferenceImage defaults false', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    stack.addLayer('B');
+    assert.equal(stack.getLayers()[0].isReferenceImage, false);
+    assert.equal(stack.getLayers()[1].isReferenceImage, false);
+  });
+});
+
 describe('addLayer', () => {
   test('adds a transparent layer directly above the active one, and it becomes active', () => {
     const stack = new LayerStack(4, 4, 'white');

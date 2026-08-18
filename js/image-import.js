@@ -114,21 +114,30 @@ export function downsampleToImageData(image, width, height) {
  * never up or stretched.
  *
  * - If the source already fits within width x height, it's drawn at 1:1
- *   with smoothing off, centered - no scaling at all, so no interpolation
- *   softens a single source pixel.
- * - If the source is larger in either dimension, it's scaled down (with
- *   smoothing on, to average down cleanly) to the largest size that fits
- *   within width x height without cropping, centered on both axes.
+ *   regardless of `smooth` - no scaling at all, so there's nothing to
+ *   interpolate.
+ * - If the source is larger in either dimension, it's scaled down to the
+ *   largest size that fits within width x height without cropping,
+ *   centered on both axes. `smooth` (default true) controls whether that
+ *   downscale averages/blends the source region behind each output pixel
+ *   (smooth photographic look, but on a canvas this small - 16-128px -
+ *   most real photos collapse into flat, low-detail color blocks, which
+ *   reads as "vectorized"; see the reference-image-layer follow-up's
+ *   design.md) or nearest-neighbor-samples it (blockier, more literally
+ *   "pixelated," no blending) - both still lose the same real detail to
+ *   the tiny target resolution, this only changes how that loss looks.
+ *   Callers re-run this from the same source image when the user flips
+ *   the toggle (js/workspace.js's referenceImageSmoothing).
  *
  * Returns ImageData sized exactly width x height (the canvas's own
  * dimensions, transparent outside the fitted image), ready to hand to
- * LayerStack.addReferenceImageLayer. A degenerate zero-width/zero-height
- * source (e.g. a dimensionless SVG that somehow still reaches this point)
- * is treated as "draw nothing" - returns a fully transparent
- * width x height ImageData rather than dividing by zero into a
- * scale of Infinity.
+ * LayerStack.addReferenceImageLayer/updateReferenceImageData. A
+ * degenerate zero-width/zero-height source (e.g. a dimensionless SVG that
+ * somehow still reaches this point) is treated as "draw nothing" -
+ * returns a fully transparent width x height ImageData rather than
+ * dividing by zero into a scale of Infinity.
  */
-export function fitImageToCanvas(image, width, height) {
+export function fitImageToCanvas(image, width, height, smooth = true) {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -144,7 +153,7 @@ export function fitImageToCanvas(image, width, height) {
   const offsetX = (width - drawWidth) / 2;
   const offsetY = (height - drawHeight) / 2;
 
-  ctx.imageSmoothingEnabled = scale < 1;
+  ctx.imageSmoothingEnabled = smooth && scale < 1;
   ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
   return ctx.getImageData(0, 0, width, height);
 }

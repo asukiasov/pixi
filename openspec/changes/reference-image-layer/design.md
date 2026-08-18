@@ -22,7 +22,9 @@ decoded image at native resolution instead.
 
 **Goals:**
 - Represent a locked layer *kind* distinct from the Background layer:
-  non-drawable, reorder-locked, unconditionally export-excluded.
+  non-drawable, unconditionally export-excluded, and (unlike Background)
+  freely reorderable rather than position-locked - see "Position lock"
+  below, revised 2026-08-18 after launch.
 - Reuse `decodeImageFile` for decode; do not touch its downsample path.
 - Keep the change additive to `js/layers.js`'s existing lock pattern
   rather than replacing `isBackground`.
@@ -30,9 +32,14 @@ decoded image at native resolution instead.
 **Non-Goals:**
 - Tier gating (Standard/Pro) — explicitly out of scope, per proposal.md;
   no such mechanism exists in the codebase yet.
-- Any editing of the reference image after upload (crop, reposition,
-  opacity-only-via-layer-opacity is fine since that's the existing Layer
-  opacity mechanism, but no dedicated pan/zoom/re-fit UI is in scope here).
+- Any editing of the reference image after upload beyond the smoothing
+  toggle (crop, reposition, opacity-only-via-layer-opacity is fine since
+  that's the existing Layer opacity mechanism, but no dedicated pan/zoom/
+  re-fit UI is in scope here).
+- Restoring resolution/detail lost to the fixed canvas size — the
+  smoothing toggle (added 2026-08-18) changes how that loss looks, not
+  how much of it there is; see its own decision section for the fuller
+  fix that was considered and deferred.
 - Supporting more than one reference image layer per canvas.
 - Changing Brush Import (2m) or Color Library Import (2n) in any way.
 
@@ -70,13 +77,41 @@ purposes (selection state doesn't change), consistent with
 `setActiveLayer` refusing it. The row still shows its visibility toggle,
 lock icon, and delete control — those aren't activation.
 
-### Reorder lock: extend the existing `isBackground` OR-condition
-`moveLayerUp`/`moveLayerDown`'s existing guards
-(`this.#layers[index].isBackground || this.#layers[index + 1].isBackground`)
-become `(layer.isBackground || layer.isReferenceImage)` on both sides of
-each swap — same pattern, same rationale (a swap can relocate a locked
-layer even when it isn't the one being dragged), just checking the OR of
-both lock flags instead of one.
+### Position lock: Background only, not the reference layer (revised 2026-08-18)
+**Superseded decision, kept for history:** the original design reorder-
+locked the reference layer the same way as Background, extending
+`moveLayerUp`/`moveLayerDown`'s existing `isBackground` OR-guard to also
+check `isReferenceImage`. Live testing immediately after launch showed
+this was wrong in practice: `addReferenceImageLayer` always inserts at
+the top of the stack, and with no way to move it, it permanently sat
+above every drawing layer at full opacity — the user could draw, but
+could never see the result underneath it. An opacity-based fix (default
+the reference layer to ~50% opacity) was considered and explicitly
+rejected in favor of letting the user reorder it instead, since that
+solves the problem directly (draw on a layer positioned above the
+reference, exactly the trace-over workflow this feature is for) without
+an automatic opacity change nobody asked for.
+
+**Current decision:** split the single `#isLocked` concept into two:
+- `#isPositionLocked(layer)` → `layer.isBackground` only. Used by
+  `moveLayerUp`/`moveLayerDown` (and the matching UI disabled-state logic
+  in `buildLayerRow`) — the reference layer is excluded from this check,
+  so it moves like a regular layer, including swapping with regular
+  layers on either side. The only remaining restriction is Background's:
+  a swap that would relocate Background out of its slot is still refused,
+  same rationale as before (a swap moves both layers, so a regular layer
+  or the reference layer swapping into Background's slot would relocate
+  it just as much as moving it directly would).
+- `#isLocked(layer)` → unchanged, still `isBackground || isReferenceImage`.
+  Still used by `setActiveLayer` (indirectly, via its own
+  `isReferenceImage` check), `mergeLayers`/`mergeDown`, and
+  `computeLayerMarkState` (`js/workspace.js`) — the reference layer stays
+  non-drawable, non-mergeable, and non-markable regardless of where it
+  sits in the stack. Only its *position* lock was removed.
+
+`addReferenceImageLayer` still inserts at the top of the stack by
+default (unchanged) — the fix is that the user can now move it from
+there, not a change to where it starts.
 
 ### Export exclusion: unconditional, not an opt-in override
 `#compositeToCanvas` gets a new, unconditional filter step —
@@ -128,6 +163,60 @@ standard, not zero scaling ever. Recorded here as a resolved assumption,
 not left open, since it changes acceptance criteria; see Open Questions
 below for the one piece still genuinely deferrable (upload UI details).
 
+### Smoothing toggle (added 2026-08-18, post-launch follow-up)
+Live testing surfaced that the "fit-to-canvas" tension above has a real
+visible cost the original design underestimated: on a 16-128px canvas,
+smoothing a detailed source image down to fit averages away nearly all
+of its detail into flat color regions, which the user described as the
+result looking "vectorized." This doesn't restore lost resolution (still
+out of scope — see below), but gives the user a choice in how that loss
+looks, which was judged worth the small added surface.
+
+**Two approaches were considered:**
+- **Decouple the reference layer from the pixel grid entirely** (keep it
+  at original resolution, rendered as a smooth overlay independent of
+  `LayerStack`'s fixed-size buffer, closer to how Aseprite/Procreate's
+  reference layers work) — the more complete fix, since it would actually
+  restore detail rather than just changing how the loss looks. **Rejected
+  for this change**: it stops the reference layer from being a normal
+  `LayerStack` layer, a much larger change to the compositing/export/
+  persistence model this proposal already established. Left as a
+  possible future change if the smaller fix here proves insufficient.
+- **Keep it a `LayerStack` layer, add a smoothing on/off toggle** —
+  chosen. `js/image-import.js`'s `fitImageToCanvas(image, width, height,
+  smooth = true)` gains a `smooth` parameter controlling
+  `ctx.imageSmoothingEnabled` during the downscale (only relevant when
+  the source is larger than the canvas — at 1:1 there's nothing to
+  smooth either way). `off` nearest-neighbor-samples instead of
+  averaging: blockier, no blending, but loses exactly the same amount of
+  real detail to the tiny target resolution — this changes how the loss
+  looks, not how much there is.
+
+**Implementation:**
+- `LayerStack.updateReferenceImageData(pixelData)`: overwrites the
+  existing reference layer's pixel buffer in place (position, name, id
+  untouched) — used to re-fit without re-adding the layer.
+- `js/workspace.js` keeps the decoded source image at module scope
+  (`referenceImageSourceImage`) alongside the current setting
+  (`referenceImageSmoothing`, default `true`), the same "keep the source
+  around so a later setting change can re-derive from it" pattern
+  `brushEditorSourceImage` already uses for the Brush editor's W/H
+  changes. A toggle button in the reference layer's row (`buildLayerRow`)
+  flips the setting, re-runs `fitImageToCanvas` from the stored source,
+  and calls `updateReferenceImageData`. Disabled when no source is held
+  (page reload, or after the reference layer was deleted) since there's
+  nothing to re-fit from without re-uploading — matching the Brush
+  editor's same limitation, not a new one.
+- Both module-level variables reset to `null`/`true` in `initWorkspace`
+  (new/switched project) and whenever the reference layer is deleted (a
+  later fresh upload shouldn't silently inherit a deleted layer's source
+  or setting).
+- `index.html`'s Material Symbols `icon_names` subset gets `blur_on`/
+  `blur_off` added (alphabetical, per its own comment) — the toggle's
+  icon. Missing icon names previously broke rendering entirely (see
+  `openspec/roadmap.md`'s UI-polish-pass history on the `image` icon), so
+  this was checked proactively rather than discovered as a second bug.
+
 ### Upload entry point
 "Add reference image" is a new button in the Layers panel toolbar
 (alongside the existing Add/Delete controls), opening a hidden
@@ -173,11 +262,22 @@ already does per its own code comment.
   "fidelity" precisely in this doc (no pixelation/quantization, scaling
   only to fit the fixed canvas) and calling out the distinction from
   2m/2n explicitly in both the proposal and the spec's scenario language.
+  **Materialized in practice** (2026-08-18): a detailed source image on a
+  small canvas visibly reads as "vectorized" after the smoothed downscale
+  - confirmed by live testing, not just a theoretical risk. Partially
+  addressed by the smoothing toggle (see its own decision section); full
+  resolution restoration remains out of scope (Non-Goals).
 - [Large source images decoded via `decodeViaImgElement`'s SVG fallback
   path have no explicit intrinsic size (150×150 default) if the SVG lacks
   width/height/viewBox] → Same known limitation `image-import.js` already
   documents for 2m/2n; this change inherits it, unchanged, no new
   mitigation needed since every consumer already accepts it.
+- [Reference-locking the layer to the top of the stack with no way to
+  move it made it permanently occlude the canvas at full opacity] →
+  **Materialized in practice** (2026-08-18): confirmed by live testing
+  immediately after launch. Fixed by making the reference layer
+  reorderable (see "Position lock" decision) rather than adjusting
+  opacity automatically.
 
 ## Open Questions
 

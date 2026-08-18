@@ -129,6 +129,27 @@ describe('reference image layer (reference-image-layer)', () => {
     assert.equal(stack.getLayers().length, 8);
   });
 
+  test('updateReferenceImageData overwrites the reference image layer in place', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    const added = stack.addReferenceImageLayer(pixels, 'Ref');
+    const newPixels = new Uint8ClampedArray(4 * 4 * 4);
+    newPixels.set([1, 2, 3, 255], 0);
+    const result = stack.updateReferenceImageData(newPixels);
+    assert.equal(result, true);
+    assert.deepEqual(added.engine.getPixel(0, 0), [1, 2, 3, 255]);
+    // Position/name/id untouched.
+    const layers = stack.getLayers();
+    assert.equal(layers[1], added);
+    assert.equal(layers[1].name, 'Ref');
+  });
+
+  test('updateReferenceImageData refuses when there is no reference image layer', () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    assert.equal(stack.updateReferenceImageData(pixels), false);
+  });
+
   test('setActiveLayer refuses to activate a reference image layer', () => {
     const stack = new LayerStack(4, 4, 'white'); // index 0 active
     const pixels = new Uint8ClampedArray(4 * 4 * 4);
@@ -144,25 +165,43 @@ describe('reference image layer (reference-image-layer)', () => {
     assert.equal(stack.getActiveIndex(), 0);
   });
 
-  test('moveLayerUp/moveLayerDown are no-ops on the reference image layer', () => {
+  // Unlike Background, the reference image layer is NOT position-locked -
+  // it's freely reorderable so the user can move it out from between
+  // their drawing layers and the canvas view, instead of it permanently
+  // sitting on top. See moveLayerUp/moveLayerDown's doc comment.
+  test('moveLayerDown works normally on the reference image layer', () => {
     const stack = new LayerStack(4, 4, 'transparent');
-    stack.addLayer('B');
+    stack.addLayer('B'); // index 1
     const pixels = new Uint8ClampedArray(4 * 4 * 4);
     stack.addReferenceImageLayer(pixels, 'Ref'); // index 2, topmost
-    const before = stack.getLayers();
-    assert.equal(stack.moveLayerDown(2), false);
-    assert.deepEqual(stack.getLayers(), before);
+    const result = stack.moveLayerDown(2);
+    assert.equal(result, true);
+    const layers = stack.getLayers();
+    assert.equal(layers[1].isReferenceImage, true);
+    assert.equal(layers[2].name, 'B');
   });
 
-  test('moveLayerUp/moveLayerDown refuse a swap into the reference layer slot', () => {
+  test('a regular layer can move up past the reference image layer', () => {
     const stack = new LayerStack(4, 4, 'transparent');
+    stack.addLayer('B'); // index 1
     const pixels = new Uint8ClampedArray(4 * 4 * 4);
-    stack.addReferenceImageLayer(pixels, 'Ref'); // index 1, topmost, locked
-    // index 0 is a regular layer; moving it up would swap into the
-    // reference layer's slot, relocating it - must be refused just like
-    // the Background layer's matching case.
-    const result = stack.moveLayerUp(0);
-    assert.equal(result, false);
+    stack.addReferenceImageLayer(pixels, 'Ref'); // index 2, topmost
+    const result = stack.moveLayerUp(1); // 'B' swaps with the reference layer
+    assert.equal(result, true);
+    const layers = stack.getLayers();
+    assert.equal(layers[1].isReferenceImage, true);
+    assert.equal(layers[2].name, 'B');
+  });
+
+  test('moveLayerUp/moveLayerDown still refuse a swap into the Background layer slot', () => {
+    const stack = new LayerStack(4, 4, 'white'); // index 0 is Background
+    const pixels = new Uint8ClampedArray(4 * 4 * 4);
+    stack.addReferenceImageLayer(pixels, 'Ref'); // index 1, topmost
+    const before = stack.getLayers();
+    // Moving the reference layer down would swap into Background's slot,
+    // relocating it - must still be refused.
+    assert.equal(stack.moveLayerDown(1), false);
+    assert.deepEqual(stack.getLayers(), before);
   });
 
   test('reference image layer can be deleted', () => {

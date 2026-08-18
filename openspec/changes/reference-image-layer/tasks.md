@@ -83,3 +83,41 @@
       scheduled" entry for "Reference image layer (trace-over)" to point
       at this change / mark it scheduled, per this project's existing
       convention for other formalized roadmap items
+
+## 6. Post-launch follow-up (2026-08-18, live testing)
+
+Two real usability problems surfaced testing the shipped feature live:
+the reference layer permanently blocked the canvas view (always on top,
+no way to move it), and a detailed source image downscaled to the small
+fixed canvas sizes read as "vectorized" (flat color blocks). See
+design.md's "Position lock" and "Smoothing toggle" decisions.
+
+- [x] 6.1 `js/layers.js`: split `#isLocked` into `#isPositionLocked`
+      (Background only) and `#isLocked` (unchanged, `isBackground ||
+      isReferenceImage`); `moveLayerUp`/`moveLayerDown` use the former, so
+      the reference layer is now reorderable
+- [x] 6.2 `js/layers.js`: add `updateReferenceImageData(pixelData)` to
+      overwrite the reference layer's pixel buffer in place, for the
+      smoothing toggle to re-fit without re-adding the layer
+- [x] 6.3 `js/image-import.js`: `fitImageToCanvas` gains a `smooth`
+      parameter (default `true`) controlling `imageSmoothingEnabled`
+      during the downscale
+- [x] 6.4 `js/workspace.js`: module-scope `referenceImageSourceImage`/
+      `referenceImageSmoothing` (mirroring `brushEditorSourceImage`'s
+      pattern), a smoothing-toggle button in the reference layer's row,
+      reset on project switch (`initWorkspace`) and on layer deletion
+- [x] 6.5 `js/workspace.js`: `buildLayerRow`'s reorder-button
+      disabled-state logic and lock-icon tooltip updated for the
+      reference layer no longer being position-locked
+- [x] 6.6 `index.html`: add `blur_on`/`blur_off` to the Material Symbols
+      `icon_names` subset (alphabetical, per its own comment) for the new
+      toggle's icon
+- [x] 6.7 Unit tests (`test/layers.test.js`): reorder now succeeds for
+      the reference layer (both directions), still refuses a swap into
+      Background's slot, `updateReferenceImageData` success/refusal
+- [x] 6.8 Playwright/manual verification: reference layer moved below a
+      drawing layer reveals previously-hidden strokes; smoothing toggle
+      flips the icon and visibly changes the fit; icon font renders
+      `blur_on`/`blur_off` correctly (not literal ligature text)
+- [x] 6.9 `specs/layers/spec.md` and design.md updated to match (this
+      task group's own artifacts)

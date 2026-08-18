@@ -125,6 +125,25 @@ export class LayerStack {
   }
 
   /**
+   * Overwrites the existing reference image layer's pixel data in place,
+   * without touching its position, name, or any other layer - used when
+   * the "smoothing" toggle changes (js/workspace.js's
+   * referenceImageSmoothing) and the source image needs re-fitting at the
+   * new setting, the same "re-derive from the stored source, don't
+   * re-prompt" pattern the Brush editor's Import uses for W/H changes.
+   * `pixelData` is a Uint8ClampedArray already sized to this stack's
+   * width*height*4, as from js/image-import.js's fitImageToCanvas.
+   * Refuses (returns false, unchanged stack) if there's no reference
+   * image layer to update.
+   */
+  updateReferenceImageData(pixelData) {
+    const layer = this.#layers.find((l) => l.isReferenceImage);
+    if (!layer) return false;
+    layer.engine.data.set(pixelData);
+    return true;
+  }
+
+  /**
    * Removes the layer at `index`, refusing if it's the only one. If the
    * removed layer was active, the layer directly below it becomes active
    * (or the new topmost layer, if the removed one was at the bottom).
@@ -144,22 +163,38 @@ export class LayerStack {
     return true;
   }
 
+  /**
+   * The reference image layer is freely reorderable (moved up/down like
+   * any regular layer) - unlike Background, which must always stay fixed
+   * in its slot. Reordering is how the user gets it out from between
+   * their drawing layers and the canvas view - see the reference-image-
+   * layer follow-up's design.md for why an opacity-based fix was rejected
+   * in favor of this. Only Background is position-locked; #isLocked below
+   * (still isBackground || isReferenceImage) covers the separate
+   * "non-drawable, non-mergeable, non-markable" restrictions, which are
+   * unaffected by this and still apply to the reference layer regardless
+   * of where it sits.
+   */
   moveLayerUp(index) {
     if (index < 0 || index >= this.#layers.length - 1) return false;
-    // Refuse if either swapped slot holds a locked layer (Background or
-    // reference image) - not just the layer being moved. A swap moves
-    // *both* layers, so a regular layer swapping into a locked layer's
-    // slot would relocate it just as much as moving it directly would.
-    if (this.#isLocked(this.#layers[index]) || this.#isLocked(this.#layers[index + 1])) return false;
+    // Refuse if either swapped slot holds a position-locked layer - not
+    // just the layer being moved. A swap moves *both* layers, so a
+    // regular layer swapping into Background's slot would relocate it
+    // just as much as moving it directly would.
+    if (this.#isPositionLocked(this.#layers[index]) || this.#isPositionLocked(this.#layers[index + 1])) return false;
     this.#swap(index, index + 1);
     return true;
   }
 
   moveLayerDown(index) {
     if (index <= 0 || index >= this.#layers.length) return false;
-    if (this.#isLocked(this.#layers[index]) || this.#isLocked(this.#layers[index - 1])) return false;
+    if (this.#isPositionLocked(this.#layers[index]) || this.#isPositionLocked(this.#layers[index - 1])) return false;
     this.#swap(index, index - 1);
     return true;
+  }
+
+  #isPositionLocked(layer) {
+    return layer.isBackground;
   }
 
   #isLocked(layer) {

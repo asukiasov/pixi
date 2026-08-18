@@ -1146,6 +1146,30 @@ body {
   color: var(--color-text-secondary);
 }
 
+/* Reference image layer only - toggles smoothed vs. blocky downscale on
+   the last upload, see buildLayerRow in js/workspace.js. Sized like
+   .layer-visibility-toggle, which it sits next to. */
+.layer-reference-smoothing-toggle {
+  flex: none;
+  width: 1.4rem;
+  height: 1.4rem;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 1rem;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.layer-reference-smoothing-toggle .material-symbols-outlined {
+  font-size: 1.1rem;
+}
+
+.layer-reference-smoothing-toggle:disabled {
+  opacity: 0.3;
+}
+
 .layer-row-actions {
   display: flex;
   align-items: center;

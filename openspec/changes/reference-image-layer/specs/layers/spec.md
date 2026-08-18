@@ -49,22 +49,37 @@ have no effect on it, even if some other mechanism attempts to target it.
 - **THEN** no drawing tool ever modifies its pixel content, regardless of
   which other layer is active
 
-### Requirement: Reference image layer is reorder-locked
-The reference image layer SHALL NOT be movable up or down in the stack,
-matching the Background layer's existing reorder-lock behavior. The
-Layers panel SHALL show a lock indicator on it and disable its reorder
-controls.
+### Requirement: Reference image layer is reorderable
+Unlike the Background layer, the reference image layer SHALL be freely
+movable up and down in the stack, same as a regular layer, so the user
+can position it below their drawing layers instead of it permanently
+covering the canvas view. It remains subject to the same
+position-locking rule that already applies around the Background layer:
+a move that would relocate the Background layer out of its fixed slot
+SHALL still be refused, whether the layer initiating the move is the
+reference image layer, a regular layer, or the Background layer itself.
+(Revised 2026-08-18, after live testing surfaced the reference layer
+permanently occluding the canvas at its original locked-on-top position
+— see design.md's "Position lock" decision. The original "reorder-locked"
+requirement this replaces is superseded, not additive.)
 
-#### Scenario: Reorder controls disabled for the reference layer
-- **WHEN** the Layers panel shows the reference image layer
-- **THEN** its move-up and move-down controls are disabled, and a lock
-  indicator is shown
+#### Scenario: Reference layer can be moved like a regular layer
+- **WHEN** the user clicks the reference image layer's move-up or
+  move-down control
+- **THEN** it swaps position with its neighbor in that direction, same as
+  a regular layer would, unless that neighbor is the Background layer
 
-#### Scenario: Reordering other layers around a locked reference layer
-- **WHEN** the user reorders two regular layers while a reference image
-  layer is elsewhere in the stack
+#### Scenario: Background layer's position stays fixed regardless of the mover
+- **WHEN** any move (of the reference image layer, a regular layer, or an
+  attempt to move the Background layer itself) would relocate the
+  Background layer from its slot
+- **THEN** the move is refused and no layer's position changes
+
+#### Scenario: Reordering other layers around the reference layer
+- **WHEN** the user reorders two regular layers while the reference image
+  layer sits elsewhere in the stack
 - **THEN** the reference image layer's own position in the stack does not
-  change
+  change (only layers directly involved in a swap move)
 
 ### Requirement: Reference image layer visibility and deletion
 The user SHALL be able to toggle the reference image layer's visibility
@@ -83,4 +98,42 @@ consistent with other layer changes.
 - **WHEN** the user deletes the reference image layer and at least one
   other layer exists
 - **THEN** it is removed from the stack, and the canvas can subsequently
-  accept a new reference image layer upload
+  accept a new reference image layer upload (starting fresh: no stored
+  source image or smoothing setting carries over to the new upload)
+
+### Requirement: Reference image smoothing toggle
+The user SHALL be able to toggle whether the reference image layer's
+downscale (when the source image is larger than the canvas) is smoothed
+(averaged/blended, the default) or unsmoothed (nearest-neighbor, blockier
+- see fitImageToCanvas's `smooth` parameter in design.md). Toggling
+re-fits the currently-stored source image at the new setting, replacing
+the layer's pixel content in place, without changing its name, position,
+or any other layer. The toggle SHALL be disabled when no source image is
+held in memory for the current reference layer (e.g. after a page
+reload, or if the reference layer was deleted and a fresh one hasn't been
+uploaded yet), since there is nothing to re-fit from without re-uploading.
+(Added 2026-08-18, after live testing showed that on the small fixed
+canvas sizes (16-128px) this feature supports, a smoothed downscale of a
+detailed source image can average away nearly all detail into flat color
+regions, which read as "vectorized." This does not by itself restore lost
+resolution — see design.md's "Smoothing toggle" decision for why a full
+decouple-from-the-pixel-grid redesign was considered and explicitly
+deferred in favor of this smaller-scoped fix.)
+
+#### Scenario: Toggling smoothing re-fits from the stored source
+- **WHEN** the user clicks the reference layer's smoothing toggle while
+  its source image is still held in memory
+- **THEN** the layer's pixel content is replaced with the source image
+  re-fit at the new smoothing setting; the layer's name, position, and
+  visibility are unchanged
+
+#### Scenario: Toggle is disabled without a held source image
+- **WHEN** no source image is held in memory for the current reference
+  layer (e.g. after a page reload)
+- **THEN** the smoothing toggle control is disabled
+
+#### Scenario: A new upload always starts smoothed
+- **WHEN** the user uploads a new reference image (after deleting a
+  previous one, or on a canvas that never had one)
+- **THEN** the initial fit uses smoothing on, regardless of what setting
+  a previous reference layer (if any) was last toggled to

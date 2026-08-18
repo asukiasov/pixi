@@ -627,35 +627,38 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
     renderLayersPanel();
   });
 
-  // Background layer (2g-background-layer) and reference image layer
-  // (reference-image-layer) are both locked in stacking position - a
-  // small lock icon next to its name, reorder buttons disabled
-  // regardless of where it sits (LayerStack.moveLayerUp/moveLayerDown
-  // already refuse the move too - this is the matching UI state, not the
-  // only enforcement).
+  // Background layer (2g-background-layer) is locked in stacking
+  // position; reference image layer (reference-image-layer) is locked
+  // against becoming the active/drawing layer, being merged, and being
+  // marked for merge, but - unlike Background - is freely reorderable,
+  // so the user can move it below their drawing layers instead of it
+  // permanently sitting on top blocking the view (see the
+  // reference-image-layer follow-up's design.md). The lock icon reflects
+  // both kinds of restriction; only the reorder buttons below care about
+  // which kind.
   let lockIcon = null;
   if (layer.isBackground || layer.isReferenceImage) {
     lockIcon = document.createElement('span');
     lockIcon.className = 'material-symbols-outlined layer-lock-icon';
     lockIcon.textContent = 'lock';
     lockIcon.title = layer.isReferenceImage
-      ? 'Reference image layer - locked in position, non-drawable, excluded from export'
+      ? 'Reference image layer - non-drawable, excluded from export, but can be reordered'
       : 'Background layer - locked in position';
   }
 
   // A swap moves both layers involved (see LayerStack.moveLayerUp/
   // moveLayerDown's matching comment), so a button is disabled not just
-  // when its own layer is locked (Background or reference image), but
-  // also when the neighbor it would swap into is - either way the move
-  // is refused.
-  const isLocked = (l) => l?.isBackground || l?.isReferenceImage;
+  // when its own layer is position-locked (Background only - reference
+  // image layers ARE reorderable), but also when the neighbor it would
+  // swap into is - either way the move is refused.
+  const isPositionLocked = (l) => l?.isBackground;
   const upButton = document.createElement('button');
   upButton.type = 'button';
   upButton.className = 'layer-reorder-button';
   upButton.innerHTML = '<span class="material-symbols-outlined">arrow_upward</span>';
   upButton.title = 'Move layer up';
   upButton.setAttribute('aria-label', 'Move layer up');
-  upButton.disabled = index === layerCount - 1 || isLocked(layer) || isLocked(layers[index + 1]);
+  upButton.disabled = index === layerCount - 1 || isPositionLocked(layer) || isPositionLocked(layers[index + 1]);
   upButton.addEventListener('click', () => {
     state.layerStack.moveLayerUp(index);
     state.canvasView.render();
@@ -669,7 +672,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   downButton.innerHTML = '<span class="material-symbols-outlined">arrow_downward</span>';
   downButton.title = 'Move layer down';
   downButton.setAttribute('aria-label', 'Move layer down');
-  downButton.disabled = index === 0 || isLocked(layer) || isLocked(layers[index - 1]);
+  downButton.disabled = index === 0 || isPositionLocked(layer) || isPositionLocked(layers[index - 1]);
   downButton.addEventListener('click', () => {
     state.layerStack.moveLayerDown(index);
     state.canvasView.render();
@@ -692,10 +695,50 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
     if (!proceed) return;
     state.layerStack.deleteLayer(index);
     clearLayerMarks(); // remaining indices shifted; stale marks would misalign
+    if (layer.isReferenceImage) {
+      // Forget the stored source - a future upload adds a new reference
+      // layer from scratch and should default back to smoothed, not
+      // silently reuse a deleted layer's source/setting.
+      referenceImageSourceImage = null;
+      referenceImageSmoothing = true;
+    }
     state.canvasView.render();
     commit();
     renderLayersPanel();
   });
+
+  // Reference image layer only: toggles whether the last upload's
+  // downscale (js/image-import.js's fitImageToCanvas) was smoothed
+  // (blended average, can look flat/"vectorized" on a canvas this small)
+  // or nearest-neighbor (blockier, no blending) - see referenceImageSmoothing's
+  // own doc comment. Disabled if the source image isn't held in memory
+  // (e.g. after a page reload) since there's nothing to re-fit from
+  // without re-uploading.
+  let smoothingToggleButton = null;
+  if (layer.isReferenceImage) {
+    smoothingToggleButton = document.createElement('button');
+    smoothingToggleButton.type = 'button';
+    smoothingToggleButton.className = 'layer-reference-smoothing-toggle icon-button no-buzz';
+    smoothingToggleButton.innerHTML = `<span class="material-symbols-outlined">${referenceImageSmoothing ? 'blur_on' : 'blur_off'}</span>`;
+    smoothingToggleButton.title = referenceImageSmoothing
+      ? 'Smoothed downscale (may look flat/"vectorized") - click for a blockier, unsmoothed one'
+      : 'Blocky, unsmoothed downscale - click for a smoothed one';
+    smoothingToggleButton.setAttribute('aria-label', 'Toggle reference image smoothing');
+    smoothingToggleButton.disabled = !referenceImageSourceImage;
+    smoothingToggleButton.addEventListener('click', () => {
+      referenceImageSmoothing = !referenceImageSmoothing;
+      const imageData = fitImageToCanvas(
+        referenceImageSourceImage,
+        state.layerStack.width,
+        state.layerStack.height,
+        referenceImageSmoothing
+      );
+      state.layerStack.updateReferenceImageData(imageData.data);
+      state.canvasView.render();
+      commit();
+      renderLayersPanel();
+    });
+  }
 
   const actions = document.createElement('div');
   actions.className = 'layer-row-actions';
@@ -703,6 +746,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
 
   row.append(visibilityButton, thumbnail, nameInput);
   if (lockIcon) row.append(lockIcon);
+  if (smoothingToggleButton) row.append(smoothingToggleButton);
   row.append(actions);
   return row;
 }
@@ -882,6 +926,19 @@ let brushEditorHeight = BRUSH_EDITOR_SIZE;
 // design.md's decision to keep Clear as pure "blank the grid", not a
 // separate "discard the import" control.
 let brushEditorSourceImage = null;
+
+// The decoded source image behind the reference image layer's last
+// upload (js/image-import.js's decodeImageFile result), and whether that
+// upload's downscale was smoothed - same "keep the source around so a
+// later setting change can re-derive from it" pattern as
+// brushEditorSourceImage above, for the smoothing toggle in the reference
+// layer's row (buildLayerRow). Reset in initWorkspace (new/switched
+// project - a stale source from a different project's reference layer
+// would be meaningless) and whenever the reference layer itself is
+// deleted (see the delete button's handler in buildLayerRow) - a later
+// upload always starts a fresh source and defaults back to smoothed.
+let referenceImageSourceImage = null;
+let referenceImageSmoothing = true;
 
 /**
  * Re-pixelates brushEditorSourceImage at the editor's current
@@ -2313,9 +2370,11 @@ function bindDomOnce() {
     if (!file) return;
     const image = await decodeImageFile(file);
     if (!image) return; // unsupported/corrupt file - fail silently, no crash
-    const imageData = fitImageToCanvas(image, state.layerStack.width, state.layerStack.height);
+    referenceImageSmoothing = true; // every new upload starts smoothed; the row's toggle can flip it after
+    const imageData = fitImageToCanvas(image, state.layerStack.width, state.layerStack.height, referenceImageSmoothing);
     const added = state.layerStack.addReferenceImageLayer(imageData.data, 'Reference');
     if (!added) return; // already has one, or at the 8-layer cap
+    referenceImageSourceImage = image; // kept for the smoothing toggle to re-fit from, see its own doc comment
     state.canvasView.render();
     commit();
     renderLayersPanel();
@@ -2471,6 +2530,11 @@ function redrawMovePreview() {
  * state for the new project.
  */
 export function initWorkspace({ projectId, projectName, layerStack, canvasView, onRequestGallery }) {
+  // A stale reference-image source from a previously open project would
+  // be meaningless (and could get re-fitted onto a differently-sized
+  // canvas) - see referenceImageSourceImage's own doc comment.
+  referenceImageSourceImage = null;
+  referenceImageSmoothing = true;
   state = {
     projectId,
     projectName,

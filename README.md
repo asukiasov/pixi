@@ -13,6 +13,27 @@ For the full feature set, current phase, and what's built vs. planned, see
 feature does, [`openspec/specs/`](openspec/specs/) is the source of truth —
 this README stays high-level on purpose rather than duplicating that.
 
+## Features
+
+Everything below is shipped and usable today (Phase 2, complete). See
+[`openspec/specs/`](openspec/specs/) for the full behavior of each.
+
+| Area | What it does |
+|---|---|
+| [Canvas creation](openspec/specs/canvas-creation/spec.md) | Fixed size presets (16/32/64/128px) or custom up to 256px, transparent or white background |
+| [Drawing engine](openspec/specs/pixel-drawing-engine/spec.md) | Pencil, eraser, bucket fill, pixel-perfect lines, undo/redo |
+| [Layers](openspec/specs/layers/spec.md) | Add, reorder, opacity, delete, blend modes, live per-layer thumbnails |
+| [Brushes](openspec/specs/brushes/spec.md) | Predefined and custom pixel-pattern stamps, click or drag to place, import a brush shape from an image |
+| [Shape tools](openspec/specs/shape-tools/spec.md) | Line, rectangle, and a rectangular selection tool (move/copy/delete a region) |
+| [Symmetry](openspec/specs/symmetry-drawing/spec.md) | Mirrors Pencil/Eraser/Brush strokes across configurable axes |
+| [Color Library](openspec/specs/color-library/spec.md) | Named, persisted color palettes; custom RGB/hex picker; eyedropper; import a palette from an image |
+| [Canvas navigation](openspec/specs/canvas-navigation/spec.md) | Zoom in/out, Fit/Fill Screen presets, pan (Hand tool) |
+| [Local persistence](openspec/specs/local-persistence/spec.md) | Projects save to IndexedDB automatically — usable fully offline, no account required |
+| [Gallery](openspec/specs/gallery/spec.md) | Home screen listing saved projects with thumbnails |
+| [Canvas settings](openspec/specs/canvas-settings/spec.md) | Resize, crop, or rotate an existing project |
+| [Export](openspec/specs/export/spec.md) | PNG export at native or scaled resolution, with a transparent-background toggle |
+| [URL routing](openspec/specs/url-routing/spec.md) | Hash-based routes per screen — reload or Back/Forward preserves the open project |
+
 ## Stack
 
 Vanilla HTML/CSS/JS with ES modules — **no build step, no bundler, no

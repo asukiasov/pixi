@@ -43,7 +43,8 @@ Everything below is shipped and usable today (Phase 2, complete). See
 Vanilla HTML/CSS/JS with ES modules — **no build step, no bundler, no
 framework**. `js/*.js` files are loaded directly by the browser;
 CDN-hosted packages are resolved via an [import map](index.html) rather
-than npm.
+than npm. Rendering is plain HTML5 Canvas 2D (`getContext('2d')`) — no
+WebGL, no WebGPU.
 
 - **Storage**: [Dexie.js](https://dexie.org/) over IndexedDB as the
   offline-first local cache — pixel art projects are saved locally and the
@@ -96,3 +97,7 @@ scripts/     One-off maintenance scripts (version stamping)
 For a map of every screen and pixel art tool in the UI (what each control
 does, where it lives in the DOM), see
 [`docs/ui-reference.md`](docs/ui-reference.md).
+
+## License
+
+[MIT](LICENSE)

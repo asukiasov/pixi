@@ -4,6 +4,10 @@ A browser-based pixel art drawing tool. Fixed small canvas sizes
 (16/32/64/128px, or custom up to 256px), layers, a full drawing toolset,
 local persistence, and export — no animation/frame timeline in this phase.
 
+This is a standalone web app, not a library — there's no npm package, no
+mount API, and no framework component to embed in another codebase. Run
+it as-is (see Running it locally) or fork the repo.
+
 ![Pixi's Workspace screen: a pixel art scene open with the Layers panel and Color Library visible in the right sidebar](docs/screen.png)
 
 **Live demo:** https://asukiasov.github.io/pixi/ — no install, try it now.

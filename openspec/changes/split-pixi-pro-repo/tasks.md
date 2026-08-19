@@ -35,18 +35,20 @@
       as an additive module (starting point, not a rewrite), wired into
       `pixi`'s existing extension points from outside the submodule, per
       design.md's "Extraction before addition" and "no engine forking"
-      decisions. Progress (2/8):
+      decisions. Progress (3/8):
       - [x] Symmetry/mirror drawing — extracted; added the generic
             `registerApplyPixelTransform` hook to `pixi`'s `workspace.js`/
             `brushes.js` for this and future features to register against.
       - [x] Pixel-perfect drawing toggle — extracted; added the generic
             `registerPathTransform` hook to `pixi`'s `engine.js`.
+      - [x] Rectangle fill/outline toggle — extracted; Standard's
+            Rectangle is now outline-only; added
+            `registerRectangleDrawOverride` to `pixi`'s `shape-tools.js`.
       - [ ] Layers panel and everything tied to it
       - [ ] Color Library (saved/named palettes, add-to-palette, import
             from image, ramp generator)
       - [ ] Canvas Settings (rename/resize/rotate)
       - [ ] Brush import from image
-      - [ ] Rectangle fill/outline toggle
       - [ ] Pencil/Eraser opacity slider
 - [ ] 2.3 Verify `pixi-pro`, built and run, has the full Standard + Pro
       toolset working end to end (manual smoke test against the tier

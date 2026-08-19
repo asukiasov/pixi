@@ -606,7 +606,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   visibilityButton.type = 'button';
   visibilityButton.className = 'layer-visibility-toggle icon-button';
   visibilityButton.innerHTML = `<span class="material-symbols-outlined">${layer.visible ? 'visibility' : 'visibility_off'}</span>`;
-  visibilityButton.title = layer.visible ? 'Hide layer' : 'Show layer';
+  visibilityButton.dataset.tooltip = layer.visible ? 'Hide layer' : 'Show layer';
   visibilityButton.setAttribute('aria-label', layer.visible ? 'Hide layer' : 'Show layer');
   visibilityButton.addEventListener('click', () => {
     state.layerStack.setVisibility(index, !layer.visible);
@@ -656,7 +656,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   upButton.type = 'button';
   upButton.className = 'layer-reorder-button';
   upButton.innerHTML = '<span class="material-symbols-outlined">arrow_upward</span>';
-  upButton.title = 'Move layer up';
+  upButton.dataset.tooltip = 'Move layer up';
   upButton.setAttribute('aria-label', 'Move layer up');
   upButton.disabled = index === layerCount - 1 || isPositionLocked(layer) || isPositionLocked(layers[index + 1]);
   upButton.addEventListener('click', () => {
@@ -670,7 +670,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   downButton.type = 'button';
   downButton.className = 'layer-reorder-button';
   downButton.innerHTML = '<span class="material-symbols-outlined">arrow_downward</span>';
-  downButton.title = 'Move layer down';
+  downButton.dataset.tooltip = 'Move layer down';
   downButton.setAttribute('aria-label', 'Move layer down');
   downButton.disabled = index === 0 || isPositionLocked(layer) || isPositionLocked(layers[index - 1]);
   downButton.addEventListener('click', () => {
@@ -684,7 +684,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   deleteButton.type = 'button';
   deleteButton.className = 'layer-delete-button icon-button no-buzz';
   deleteButton.innerHTML = '<span class="material-symbols-outlined">delete</span>';
-  deleteButton.title = 'Delete layer';
+  deleteButton.dataset.tooltip = 'Delete layer';
   deleteButton.setAttribute('aria-label', 'Delete layer');
   deleteButton.disabled = layerCount <= 1;
   deleteButton.addEventListener('click', async () => {
@@ -732,7 +732,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
     // A disabled control's tooltip must say WHY it's inert, not repeat
     // enabled-state action text - see the smoothing toggle's identical
     // rule below.
-    modeToggleButton.title = modeToggleButton.disabled
+    modeToggleButton.dataset.tooltip = modeToggleButton.disabled
       ? 'Upload a new reference image to enable Original resolution mode'
       : layer.referenceMode === 'original'
         ? 'Original resolution (un-pixelated) - click to switch to Pixelated (fit to canvas grid)'
@@ -767,7 +767,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
     // image held in memory - see referenceImageSourceImage's doc
     // comment) rather than repeating the enabled-state action text,
     // which reads as "clicking should do something" when it can't.
-    smoothingToggleButton.title = smoothingToggleButton.disabled
+    smoothingToggleButton.dataset.tooltip = smoothingToggleButton.disabled
       ? 'Re-upload the reference image to change smoothing (not available after a page reload)'
       : referenceImageSmoothing
         ? 'Smoothed downscale (may look flat/"vectorized") - click for a blockier, unsmoothed one'
@@ -1310,6 +1310,16 @@ function updateSymmetryToggle() {
  * [data-tooltip] element in the tools sidebar. Shows after a short delay
  * on hover/focus, to the right of the button; hides immediately on
  * leave/blur.
+ *
+ * Delegated on document (mouseover/mouseout, not a per-element
+ * querySelectorAll+addEventListener pass) so it also covers elements
+ * that don't exist yet at call time - the Layers panel's per-row
+ * buttons (js/workspace.js's buildLayerRow) are torn down and rebuilt
+ * on every renderLayersPanel() call, so a one-time binding would miss
+ * them entirely after the first render. mouseenter/mouseleave don't
+ * bubble, hence mouseover/mouseout + relatedTarget's closest() check
+ * below to still fire only on true enter/leave of a [data-tooltip]
+ * element, not every pointer move across its children.
  */
 function bindTooltips() {
   const tooltipEl = document.createElement('div');
@@ -1371,13 +1381,34 @@ function bindTooltips() {
     tooltipEl.classList.remove('visible');
   }
 
-  document.querySelectorAll('[data-tooltip]').forEach((el) => {
-    el.addEventListener('mouseenter', () => show(el));
-    el.addEventListener('mouseleave', hide);
-    el.addEventListener('focus', () => show(el));
-    el.addEventListener('blur', hide);
-    // A click (tool switch) shouldn't leave a stale tooltip lingering.
-    el.addEventListener('click', hide);
+  // mouseover/mouseout bubble (mouseenter/mouseleave don't), so one
+  // listener on document covers every current and future [data-tooltip]
+  // element. relatedTarget is where the pointer came from/is going -
+  // only firing show/hide when it's outside the matched element (not a
+  // move between its own children) reproduces mouseenter/mouseleave's
+  // "true boundary crossing" semantics under delegation.
+  document.addEventListener('mouseover', (e) => {
+    const target = e.target.closest('[data-tooltip]');
+    if (!target || target.contains(e.relatedTarget)) return;
+    show(target);
+  });
+  document.addEventListener('mouseout', (e) => {
+    const target = e.target.closest('[data-tooltip]');
+    if (!target || target.contains(e.relatedTarget)) return;
+    hide();
+  });
+  // focusin/focusout bubble (focus/blur don't) - same delegation need
+  // for keyboard nav onto a [data-tooltip] element.
+  document.addEventListener('focusin', (e) => {
+    const target = e.target.closest('[data-tooltip]');
+    if (target) show(target);
+  });
+  document.addEventListener('focusout', (e) => {
+    if (e.target.closest('[data-tooltip]')) hide();
+  });
+  // A click (tool switch) shouldn't leave a stale tooltip lingering.
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-tooltip]')) hide();
   });
 }
 

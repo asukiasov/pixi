@@ -263,6 +263,26 @@ body {
   border-color: var(--color-accent);
 }
 
+/* Hover feedback (button-hover-states) - every boxed button in the app
+   shares this one base (.preset-button, .tool-button), so one rule pair
+   covers all of them: topbar/tool-rail icons, Save/Cancel/Resize/Rotate
+   text buttons, Color Library/Brushes action buttons, etc. :not(:disabled)
+   - a disabled button darkening further on hover would read as if
+   hovering had some effect. Active buttons get their own step (toward
+   --color-accent-strong, the same token .active already darkens to
+   elsewhere) instead of the plain surface shift, so the accent fill
+   doesn't just look like it turned back to unselected. */
+.preset-button:not(:disabled):hover,
+.tool-button:not(:disabled):hover {
+  background: var(--color-surface-alt);
+}
+
+.preset-button.active:not(:disabled):hover,
+.tool-button.active:not(:disabled):hover {
+  background: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+}
+
 /* Symmetry toggle (#symmetry-toggle): a 4-state cycling control (off /
    horizontal / vertical / both), styled with the same .active accent
    treatment as every other topbar toggle plus a small letter badge (H/V/4)
@@ -544,7 +564,16 @@ body {
   border-radius: 0.4rem;
   padding: 0.45rem 0.7rem;
   font-size: 0.9rem;
-  white-space: nowrap;
+  /* Most tooltip text is a short label ("Undo", "Move layer up") that
+     should hug its content, not stretch to some fixed width - shrink-
+     to-fit (this element's default sizing) plus nowrap handles that.
+     A few (the reference-image layer's disabled-state explanations,
+     e.g. "Upload a new reference image to enable Original resolution
+     mode") are full sentences though, so this also caps width and lets
+     those specific ones wrap instead of producing a bubble wide enough
+     to run off-screen. */
+  max-width: 16rem;
+  white-space: normal;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.1s ease;
@@ -621,6 +650,20 @@ body {
      actions, zoom-controls, bottom-bar-group) since none of them unset
      overflow. */
   overflow: hidden;
+}
+
+/* Hover feedback (button-hover-states) - covers every icon-only button
+   carrying this class, boxed or bare: bare ones (add-layer-button, the
+   panel-header-actions row, the Layers panel's per-row buttons, close
+   buttons) had no background at rest, so this is what makes them read
+   as interactive at all; already-boxed ones (.tool-button.icon-button
+   combos) already get a hover background from .tool-button:hover above
+   - the border-radius here just applies the same corner treatment
+   bare buttons get, in case it differs momentarily from .tool-button's
+   own 0.5rem at rest. */
+.icon-button:not(:disabled):hover {
+  background: var(--color-surface-alt);
+  border-radius: 0.3rem;
 }
 
 /* iOS 26 / Apple Pencil-style "magnetic hover" for the top bar
@@ -971,6 +1014,26 @@ body {
   border: none;
 }
 
+/* This rule's own background: transparent above and the shared
+   .icon-button:not(:disabled):hover rule (button-hover-states) are
+   equal specificity (0,3,0 each) - as the later rule in the file, this
+   one would otherwise win even on hover and silently cancel the hover
+   background. Repeating it here, scoped to :hover, restores it. */
+.panel-header-actions .tool-button.icon-button:not(:disabled):hover {
+  background: var(--color-surface-alt);
+}
+
+/* 1.1rem, matching .layer-visibility-toggle/.layer-delete-button's own
+   glyph-in-XS-box ratio elsewhere in this sidebar (icon-button-size-
+   system) - was 1rem on Color Library's buttons only, leaving a visibly
+   bigger gap around the glyph than that established ratio (~25% more),
+   and unset on the Layers panel's reference-image button, which fell
+   back to .material-symbols-outlined's default 1.4rem and nearly filled
+   its XS box edge-to-edge. One shared rule fixes both. */
+.panel-header-actions .tool-button.icon-button .material-symbols-outlined {
+  font-size: 1.1rem;
+}
+
 /* Add-layer button: S size, no surrounding button chrome - deliberately
    bare .icon-button (no .tool-button) so it reads as a plain glyph next
    to the reference-image button's boxed icon rather than a second
@@ -984,6 +1047,14 @@ body {
   background: transparent;
   border: none;
   color: inherit;
+}
+
+/* The ID selector above outranks the shared .icon-button:hover rule
+   (button-hover-states) regardless of source order, so its background:
+   transparent wins even while hovering unless repeated here at the
+   same ID specificity. */
+#add-layer-button.icon-button:not(:disabled):hover {
+  background: var(--color-surface-alt);
 }
 
 /* Dropping .tool-button above also drops .tool-button:disabled's dimming
@@ -1131,6 +1202,11 @@ body {
   font: inherit;
   padding: 0.25rem 0.4rem;
   cursor: pointer;
+}
+
+/* Hover feedback (button-hover-states). */
+.layers-panel-opacity-toggle:hover {
+  background: var(--color-surface-alt);
 }
 
 .layers-panel-opacity-icon {
@@ -1414,6 +1490,15 @@ span.layer-lock-icon {
   opacity: 0.3;
 }
 
+/* Hover feedback (button-hover-states) - the one icon-only class in this
+   file that doesn't carry .icon-button (see that class's own hover rule,
+   which already covers .layer-delete-button/.layer-visibility-toggle),
+   so it needs its own copy of the same treatment. */
+.layer-reorder-button:not(:disabled):hover {
+  background: var(--color-surface-alt);
+  border-radius: 0.3rem;
+}
+
 .palette-row {
   display: flex;
   gap: 0.35rem;
@@ -1433,6 +1518,16 @@ span.layer-lock-icon {
 
 .palette-swatch.active {
   border-color: var(--color-accent);
+}
+
+/* Hover feedback (button-hover-states) - a border-color shift, not a
+   background fill like the icon/tool buttons above, since a swatch's
+   background IS the color it represents and can't be repurposed for
+   hover without misrepresenting that color. :not(.active) so hovering
+   a swatch never reads as "this one's no longer selected" by
+   overwriting the accent border the .active rule above sets. */
+.palette-swatch:not(.active):hover {
+  border-color: var(--color-text-secondary);
 }
 
 .palette-swatch.rainbow-swatch {
@@ -1486,6 +1581,13 @@ span.layer-lock-icon {
   background: #000000;
 }
 
+/* Hover feedback (button-hover-states) - border-color shift, same
+   reasoning as .palette-swatch:hover above (background is the actual
+   foreground/background color, can't be repurposed for hover). */
+.fg-bg-swatch:hover {
+  border-color: var(--color-text-secondary);
+}
+
 /* Small corner icons on the swatch stack (Photoshop-style), not
    full-size buttons stacked above/below it. */
 .fg-bg-corner-button {
@@ -1518,6 +1620,11 @@ span.layer-lock-icon {
 .reset-corner {
   bottom: -0.2rem;
   left: -0.2rem;
+}
+
+/* Hover feedback (button-hover-states). */
+.fg-bg-corner-button:hover {
+  background: var(--color-surface-alt);
 }
 
 /* Color picker popover - opened by clicking the Foreground or Background
@@ -1695,14 +1802,10 @@ span.layer-lock-icon {
   display: none;
 }
 
-/* Row layout (display/gap/flex-wrap) comes from the shared
-   .panel-header-actions. Sizing/chrome (XS, no border/background) comes
-   from the shared .panel-header-actions .tool-button.icon-button rule
-   above - these 5 buttons don't need their own override. */
-
-.color-library-header-actions .material-symbols-outlined {
-  font-size: 1rem;
-}
+/* Row layout (display/gap/flex-wrap), sizing, chrome (XS, no border/
+   background), and glyph size all come from the shared
+   .panel-header-actions / .panel-header-actions .tool-button.icon-
+   button rules above - these 5 buttons don't need their own override. */
 
 .color-library-select {
   margin: 0 0.5rem 0.4rem;
@@ -1806,6 +1909,12 @@ span.layer-lock-icon {
   border-color: var(--color-accent);
 }
 
+/* Hover feedback (button-hover-states) - same reasoning as
+   .palette-swatch:hover. */
+.color-library-swatch:not(.active):hover {
+  border-color: var(--color-text-secondary);
+}
+
 .color-library-empty {
   grid-column: 1 / -1;
   padding: 0 0.5rem 0.5rem;
@@ -1869,6 +1978,12 @@ span.layer-lock-icon {
 
 .brush-swatch.active {
   border-color: var(--color-accent);
+}
+
+/* Hover feedback (button-hover-states) - same reasoning as
+   .palette-swatch:hover. */
+.brush-swatch:not(.active):hover {
+  border-color: var(--color-text-secondary);
 }
 
 /* Preview of the brush pattern itself (black on white), not its name -

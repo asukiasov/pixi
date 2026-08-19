@@ -378,9 +378,11 @@
            cross-session, unlike the fixed preset palette-row. -->
       <div id="color-library-panel" class="color-library-panel">
         <div id="color-library-header" class="color-library-header panel-header" role="button" tabindex="0" aria-expanded="true">
-          <span class="material-symbols-outlined panel-collapse-chevron">expand_more</span>
-          <h2>Color Library</h2>
-          <div class="color-library-header-actions">
+          <div class="panel-header-top">
+            <h2>Color Library</h2>
+            <span class="material-symbols-outlined panel-collapse-chevron">expand_more</span>
+          </div>
+          <div class="panel-header-actions color-library-header-actions">
             <!-- Adds the current Foreground color to the active palette
                  - always available regardless of platform, unlike the
                  color-picker popover's own "Add to palette" (that
@@ -545,18 +547,33 @@
            #right-sidebar above for why. -->
       <div id="layers-panel" class="layers-panel">
         <div id="layers-panel-header" class="layers-panel-header panel-header" role="button" tabindex="0" aria-expanded="true">
-          <span class="material-symbols-outlined panel-collapse-chevron">expand_more</span>
-          <h2>Layers</h2>
-          <!-- reference-image-layer: trace-over guide upload, disabled once
-               one already exists on the canvas (LayerStack allows at most
-               one) - see js/workspace.js's addReferenceImageButton wiring.
-               Hidden file input below, same pattern as
-               #brush-editor-import-input / #color-library-import-input. -->
-          <button type="button" id="add-reference-image-button" class="tool-button icon-button" title="Add reference image" aria-label="Add reference image">
-            <span class="material-symbols-outlined">image_arrow_up</span>
-          </button>
-          <input type="file" id="add-reference-image-input" accept="image/*" class="hidden" aria-label="Reference image file" />
-          <button type="button" id="add-layer-button" class="tool-button">+ Layer</button>
+          <div class="panel-header-top">
+            <h2>Layers</h2>
+            <span class="material-symbols-outlined panel-collapse-chevron">expand_more</span>
+          </div>
+          <div class="panel-header-actions layers-panel-header-actions">
+            <!-- reference-image-layer: trace-over guide upload, disabled once
+                 one already exists on the canvas (LayerStack allows at most
+                 one) - see js/workspace.js's addReferenceImageButton wiring.
+                 Hidden file input below, same pattern as
+                 #brush-editor-import-input / #color-library-import-input. -->
+            <button type="button" id="add-reference-image-button" class="tool-button icon-button" title="Add reference image" aria-label="Add reference image">
+              <span class="material-symbols-outlined">image_arrow_up</span>
+            </button>
+            <input type="file" id="add-reference-image-input" accept="image/*" class="hidden" aria-label="Reference image file" />
+            <!-- Not a Material Symbols glyph - "layers_add" isn't a real
+                 icon in that set (checked its codepoints file directly),
+                 so this is the raw SVG the design gave us, inlined the
+                 same way #rectangle-fill-toggle's icon is (see its own
+                 comment) - currentColor fill via .layers-add-icon below. -->
+            <button type="button" id="add-layer-button" class="icon-button" aria-label="Add layer" data-tooltip="Add layer">
+              <svg class="layers-add-icon" viewBox="0 0 18.9 19" xmlns="http://www.w3.org/2000/svg">
+                <polygon points="9 16.5 1.7 10.8 0 12 9 19 18 12.1 14.7 12.1 9 16.5" />
+                <polygon points="12.9 10 12.9 9.4 11.6 9.4 11.6 9.4 9 11.5 3.2 7 9 2.5 11.6 4.6 11.6 4.6 12.9 4.6 12.9 4 12.9 3 9 0 0 7 9 14 12.9 11 12.9 10" />
+                <polygon points="13.4 10.5 13.4 8.5 11.4 8.5 11.4 5.5 13.4 5.5 13.4 3.5 16.4 3.5 16.4 5.5 18.4 5.5 18.4 8.5 16.4 8.5 16.4 10.5 13.4 10.5" />
+              </svg>
+            </button>
+          </div>
         </div>
         <div id="layers-panel-body" class="layers-panel-body">
           <!-- One row: Blend mode sized to its own text, Opacity as a

@@ -921,10 +921,9 @@ body {
 }
 
 .layers-panel-header {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  justify-content: space-between;
+  /* Row layout (display/flex-direction/gap) comes from the shared
+     .panel-header (panel-header-design) - this rule only owns what's
+     specific to the Layers panel's header. */
   padding: 0.4rem 0.5rem;
   flex: none;
 }
@@ -949,19 +948,83 @@ body {
   margin: 0;
 }
 
-.layers-panel-header .tool-button {
-  padding: 0.3rem 0.6rem;
-  font-size: 0.8rem;
+/* M (icon-button-size-system), matching .color-library-header-actions
+   .icon-button's size below now that both panels' action icons sit on
+   their own row (panel-header-design) instead of competing with the
+   panel name for width, which is what forced these down to a cramped
+   XS/padded-text size in the single-row layout. */
+.layers-panel-header-actions .icon-button {
+  width: var(--icon-size-m);
+  height: var(--icon-size-m);
+}
+
+/* Add-layer button: S size, no surrounding button chrome - deliberately
+   bare .icon-button (no .tool-button) so it reads as a plain glyph next
+   to the reference-image button's boxed icon rather than a second
+   button. background/border/color reset matches .layer-visibility-
+   toggle/.layer-delete-button's identical "glyph, not a button" pattern
+   below - .icon-button alone doesn't reset the browser's default button
+   chrome, only .tool-button does. */
+#add-layer-button.icon-button {
+  width: var(--icon-size-s);
+  height: var(--icon-size-s);
+  background: transparent;
+  border: none;
+  color: inherit;
+}
+
+/* Dropping .tool-button above also drops .tool-button:disabled's dimming
+   (workspace.js disables this button at the 8-layer cap) - replaced
+   here so hitting the cap still reads as disabled, not just inert. */
+#add-layer-button.icon-button:disabled {
+  opacity: 0.4;
+}
+
+/* Raw SVG (not a font glyph - see index.html's comment on #add-layer-
+   button), so unlike .material-symbols-outlined's font-size this is a
+   literal box size. Smaller than the S 1.6rem button box, matching
+   .rectangle-fill-icon's own button-to-glyph ratio (currentColor fills
+   edge-to-edge with no font side-bearing, so it needs more headroom
+   than a font glyph at the same nominal size would). */
+.layers-add-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: currentColor;
 }
 
 /* Shared by .layers-panel-header and .color-library-header - the whole
-   row is a click target that collapses/expands the panel down to just
+   block is a click target that collapses/expands the panel down to just
    this header (Photoshop-accordion style), not only the chevron icon.
-   Interactive controls inside the row (the "+ Layer" button, the
-   header-actions icon buttons) stop propagation in JS so clicking them
-   doesn't also toggle the collapse. */
+   Interactive controls inside it (the header-actions icon buttons) stop
+   propagation in JS so clicking them doesn't also toggle the collapse.
+   Two stacked rows (panel-header-design) - the name/chevron row on top,
+   the action icons on their own row below - instead of everything
+   crammed into one row, which is what previously forced the action
+   icons down to an XS/cramped size to keep from overflowing the
+   sidebar (see .color-library-header-actions .icon-button's comment). */
 .panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
   cursor: pointer;
+}
+
+/* Row 1: panel name left, collapse chevron pinned to the right edge (the
+   name's flex: 1 - set on .layers-panel-header h2/.color-library-header
+   h2 - absorbs the row's slack so the chevron doesn't have to). */
+.panel-header-top {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* Row 2: the header's action icon buttons, wrapping onto more lines
+   instead of overflowing if the sidebar is narrower than the full set. */
+.panel-header-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 .panel-collapse-chevron {
@@ -1576,9 +1639,9 @@ span.layer-lock-icon {
 }
 
 .color-library-header {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
+  /* Row layout (display/flex-direction/gap) comes from the shared
+     .panel-header (panel-header-design) - this rule only owns what's
+     specific to the Color Library header. */
   padding: 0.4rem 0.5rem;
   flex: none;
 }
@@ -1614,28 +1677,26 @@ span.layer-lock-icon {
   display: none;
 }
 
-.color-library-header-actions {
-  display: flex;
-  gap: 0.3rem;
-}
+/* Row layout (display/gap/flex-wrap) comes from the shared
+   .panel-header-actions (panel-header-design). */
 
-/* XS (icon-button-size-system), down from this container's original M
-   (1.8rem) - at the sidebar's normal clamped width these 5 buttons plus
-   the "COLOR LIBRARY" label (see .color-library-header h2's own comment)
-   didn't fit and .color-library-panel's overflow-y:auto silently turned
-   into overflow-x:auto too (the overflow-pairing rule - see .tool-
-   tooltip's comment above for this project's fuller writeup), hiding
-   buttons behind an easy-to-miss horizontal scrollbar instead of visibly
-   breaking. XS matches the Layers panel's row buttons directly below in
-   the same sidebar, so this also makes the sidebar's icon sizing more
-   consistent, not less. */
+/* M (icon-button-size-system). Was XS - forced that small because these
+   5 buttons used to share a single row with the "COLOR LIBRARY" label
+   itself (see .color-library-header h2's own comment) and would
+   otherwise overflow, silently turning .color-library-panel's
+   overflow-y:auto into overflow-x:auto too (the overflow-pairing rule -
+   see .tool-tooltip's comment above for this project's fuller writeup)
+   and hiding buttons behind an easy-to-miss horizontal scrollbar. Now
+   that the actions sit on their own row below the name/chevron row
+   (panel-header-design), that width pressure is gone, so this matches
+   .layers-panel-header-actions .icon-button's size instead. */
 .color-library-header-actions .icon-button {
-  width: var(--icon-size-xs);
-  height: var(--icon-size-xs);
+  width: var(--icon-size-m);
+  height: var(--icon-size-m);
 }
 
 .color-library-header-actions .material-symbols-outlined {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
 }
 
 .color-library-select {

@@ -262,7 +262,6 @@ let zoomReadout = null;
 let pencilOptionsPanel = null;
 let librarySequencePanel = null;
 let librarySequenceToggle = null;
-let rectangleOptionsPanel = null;
 
 // Named, persisted palettes of user-added colors (superseded the old
 // flat, unpersisted customSwatches list - see 2f-color-library-panel).
@@ -1670,8 +1669,6 @@ function bindDomOnce() {
       // Size/Opacity sliders: shared by Pencil and Eraser, hidden for
       // every other tool - same tool-scoped-visibility pattern as Brushes.
       pencilOptionsPanel.classList.toggle('hidden', state.currentTool !== 'pencil' && state.currentTool !== 'eraser');
-      // Filled toggle: Rectangle only.
-      rectangleOptionsPanel.classList.toggle('hidden', state.currentTool !== 'rectangle');
       // 1:1 proportion toggle: Rectangle and Selection.
       squareConstraintPanel.classList.toggle(
         'hidden',
@@ -1715,18 +1712,6 @@ function bindDomOnce() {
   // desktop-app slider convention (Photoshop, Figma).
   bindSliderWheel(pencilSizeSlider);
   bindSliderWheel(pencilOpacitySlider);
-
-  // Rectangle's Filled toggle - tool-scoped, same pattern as Pencil options.
-  rectangleOptionsPanel = document.getElementById('rectangle-options');
-  const rectangleFillToggle = document.getElementById('rectangle-fill-toggle');
-  const rectangleFillIconOutline = document.getElementById('rectangle-fill-icon-outline');
-  const rectangleFillIconFilled = document.getElementById('rectangle-fill-icon-filled');
-  rectangleFillToggle.addEventListener('click', () => {
-    state.rectangleFilled = !state.rectangleFilled;
-    rectangleFillToggle.classList.toggle('active', state.rectangleFilled);
-    rectangleFillIconOutline.classList.toggle('hidden', state.rectangleFilled);
-    rectangleFillIconFilled.classList.toggle('hidden', !state.rectangleFilled);
-  });
 
   // 1:1 proportion toggle - Rectangle and Selection, a persistent
   // touchscreen-friendly equivalent of holding Shift (see
@@ -2505,8 +2490,7 @@ function drawShapePreview() {
       state.dragStart.y,
       state.dragCurrent.x,
       state.dragCurrent.y,
-      rgba,
-      state.rectangleFilled
+      rgba
     );
   }
   clipToSelection(state.strokeEngine, state.strokeBackup, state.selection);
@@ -2603,7 +2587,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     pencilSize: 1,
     pencilOpacity: 1,
     colorLibrarySequence: false,
-    rectangleFilled: false,
     squareConstraint: false,
     // Despite the name, this now means "expanded" rather than "shown" -
     // collapsing the Layers panel (via its header or #layers-panel-toggle)
@@ -2672,11 +2655,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   document.getElementById('pencil-opacity-readout').textContent = '100%';
   librarySequenceToggle.classList.remove('active');
   librarySequencePanel.classList.remove('hidden'); // Pencil is the default tool
-  // Rectangle isn't the default tool, so its options start hidden.
-  rectangleOptionsPanel.classList.add('hidden');
-  document.getElementById('rectangle-fill-toggle').classList.remove('active');
-  document.getElementById('rectangle-fill-icon-outline').classList.remove('hidden');
-  document.getElementById('rectangle-fill-icon-filled').classList.add('hidden');
   // Neither Rectangle nor Selection is the default tool, so this starts
   // hidden too.
   squareConstraintPanel.classList.add('hidden');

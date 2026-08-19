@@ -3,23 +3,33 @@
 // design.md) so there's nothing for it here.
 
 /**
- * Draws a rectangle between two corners (in either drag direction),
- * outline (perimeter only) or filled (every pixel in the bounding box).
+ * Pro extension point (split-pixi-pro-repo): `pixi-pro` registers a
+ * rectangle-draw override here (e.g. filled rectangles - Standard's
+ * baseline is outline-only) via registerRectangleDrawOverride. Called
+ * before drawRectangle's own outline logic with the same arguments minus
+ * `rgba`'s caller-facing shape; returning `true` means the override drew
+ * the rectangle itself and drawRectangle's outline fallback is skipped,
+ * `false`/no registration falls through to outline. No-op passthrough
+ * when no Pro module is present.
  */
-export function drawRectangle(engine, x0, y0, x1, y1, rgba, filled) {
+let rectangleDrawOverride = null;
+export function registerRectangleDrawOverride(fn) {
+  rectangleDrawOverride = fn;
+}
+
+/**
+ * Draws a rectangle between two corners (in either drag direction) as an
+ * outline (perimeter only) - Standard's only rectangle mode. A registered
+ * Pro override (see registerRectangleDrawOverride, e.g. a "Filled" toggle)
+ * gets first refusal on drawing it instead.
+ */
+export function drawRectangle(engine, x0, y0, x1, y1, rgba) {
+  if (rectangleDrawOverride && rectangleDrawOverride(engine, x0, y0, x1, y1, rgba)) return;
+
   const minX = Math.min(x0, x1);
   const maxX = Math.max(x0, x1);
   const minY = Math.min(y0, y1);
   const maxY = Math.max(y0, y1);
-
-  if (filled) {
-    for (let y = minY; y <= maxY; y++) {
-      for (let x = minX; x <= maxX; x++) {
-        engine.setPixel(x, y, rgba);
-      }
-    }
-    return;
-  }
 
   for (let x = minX; x <= maxX; x++) {
     engine.setPixel(x, minY, rgba);

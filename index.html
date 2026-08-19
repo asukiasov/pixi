@@ -209,23 +209,6 @@
 
       <!-- Shown only while Pencil or Eraser is active (js/workspace.js),
            same tool-scoped-visibility pattern the Brushes panel uses. -->
-      <!-- Rectangle's Filled toggle - tool-scoped like Pencil options below. -->
-      <div id="rectangle-options" class="rectangle-options hidden">
-        <!-- Inline SVGs (Material Symbols' actual "rectangle" glyph,
-             outline and solid-fill variants), not the font icon used
-             elsewhere - the subsetted icon webfont only bakes a single
-             fixed FILL-axis point (0, outline), so it can't render a
-             true solid variant of the same glyph at runtime; these two
-             raw paths are fetched once from Google's static icon SVG
-             CDN, same source as the font, and swapped via visibility
-             instead. Was check_box/check_box_outline_blank - changed
-             per feedback that those didn't read as "filled rectangle". -->
-        <button type="button" id="rectangle-fill-toggle" class="tool-button icon-button" aria-label="Filled" data-tooltip="Filled rectangle">
-          <svg id="rectangle-fill-icon-outline" class="rectangle-fill-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M80-160v-640h800v640H80Zm80-80h640v-480H160v480Zm0 0v-480 480Z"/></svg>
-          <svg id="rectangle-fill-icon-filled" class="rectangle-fill-icon hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M80-160v-640h800v640H80Z"/></svg>
-        </button>
-      </div>
-
       <!-- 1:1 (square) proportion toggle - shown for Rectangle and
            Selection, an on/off equivalent of holding Shift while
            dragging (see squareDragCurrent/shiftHeld in js/workspace.js)

@@ -332,16 +332,6 @@ body {
   visibility: hidden;
 }
 
-/* Rectangle Filled toggle's icon - raw SVG, not a font glyph (see
-   index.html for why). currentColor so it follows the button's text
-   color exactly like the font icons do (including the active/blue
-   state via .tool-button.active). */
-.rectangle-fill-icon {
-  width: 1.3rem;
-  height: 1.3rem;
-  fill: currentColor;
-}
-
 .workspace-screen {
   /* .screen's default column direction now holds: the topbar sits above
      everything, and .workspace-body (below) is its own row - tools

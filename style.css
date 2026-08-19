@@ -913,11 +913,18 @@ body {
   flex-direction: column;
 }
 
-/* Collapsed: only the header stays visible (see .panel-header/.layers-
-   panel-body below) - the panel itself shrinks to the header's content
-   height instead of continuing to claim flex space. */
+/* Collapsed: only the header's name/chevron row stays visible (see
+   .panel-header/.layers-panel-body below) - the panel itself shrinks to
+   that row's content height instead of continuing to claim flex space.
+   The action-icons row collapses away too (panel-header-design), same
+   as .color-library-panel.collapsed below - a collapsed accordion
+   header shows just the title, not its toolbar. */
 .layers-panel.collapsed {
   flex: none;
+}
+
+.layers-panel.collapsed .panel-header-actions {
+  display: none;
 }
 
 .layers-panel-header {
@@ -948,14 +955,20 @@ body {
   margin: 0;
 }
 
-/* M (icon-button-size-system), matching .color-library-header-actions
-   .icon-button's size below now that both panels' action icons sit on
-   their own row (panel-header-design) instead of competing with the
-   panel name for width, which is what forced these down to a cramped
-   XS/padded-text size in the single-row layout. */
-.layers-panel-header-actions .icon-button {
-  width: var(--icon-size-m);
-  height: var(--icon-size-m);
+/* XS (icon-button-size-system) and no button chrome - shared by every
+   boxed action icon in a panel-header-actions row (the reference-image
+   button here, the 5 Color Library buttons below). .tool-button in the
+   selector deliberately excludes #add-layer-button, which isn't boxed
+   to begin with (it has its own bare/S-size rule above) and shouldn't
+   pick up this XS override. background/border reset matches
+   .layer-visibility-toggle/.layer-delete-button's identical "glyph, not
+   a button" pattern - .icon-button alone doesn't reset .tool-button's
+   border/background, only removing .tool-button itself does. */
+.panel-header-actions .tool-button.icon-button {
+  width: var(--icon-size-xs);
+  height: var(--icon-size-xs);
+  background: transparent;
+  border: none;
 }
 
 /* Add-layer button: S size, no surrounding button chrome - deliberately
@@ -1672,31 +1685,23 @@ span.layer-lock-icon {
   overflow-y: auto;
 }
 
-/* Collapsed: only the header stays visible (mirrors .layers-panel.collapsed). */
+/* Collapsed: only the header's name/chevron row stays visible (mirrors
+   .layers-panel.collapsed). */
 .color-library-panel.collapsed .color-library-body {
   display: none;
 }
 
-/* Row layout (display/gap/flex-wrap) comes from the shared
-   .panel-header-actions (panel-header-design). */
-
-/* M (icon-button-size-system). Was XS - forced that small because these
-   5 buttons used to share a single row with the "COLOR LIBRARY" label
-   itself (see .color-library-header h2's own comment) and would
-   otherwise overflow, silently turning .color-library-panel's
-   overflow-y:auto into overflow-x:auto too (the overflow-pairing rule -
-   see .tool-tooltip's comment above for this project's fuller writeup)
-   and hiding buttons behind an easy-to-miss horizontal scrollbar. Now
-   that the actions sit on their own row below the name/chevron row
-   (panel-header-design), that width pressure is gone, so this matches
-   .layers-panel-header-actions .icon-button's size instead. */
-.color-library-header-actions .icon-button {
-  width: var(--icon-size-m);
-  height: var(--icon-size-m);
+.color-library-panel.collapsed .panel-header-actions {
+  display: none;
 }
 
+/* Row layout (display/gap/flex-wrap) comes from the shared
+   .panel-header-actions. Sizing/chrome (XS, no border/background) comes
+   from the shared .panel-header-actions .tool-button.icon-button rule
+   above - these 5 buttons don't need their own override. */
+
 .color-library-header-actions .material-symbols-outlined {
-  font-size: 1.3rem;
+  font-size: 1rem;
 }
 
 .color-library-select {

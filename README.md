@@ -4,7 +4,9 @@ A browser-based pixel art drawing tool. Fixed small canvas sizes
 (16/32/64/128px, or custom up to 256px), layers, a full drawing toolset,
 local persistence, and export — no animation/frame timeline in this phase.
 
-Live at: https://asukiasov.github.io/pixi/
+![Pixi's Workspace screen: a pixel art scene open with the Layers panel and Color Library visible in the right sidebar](docs/screen.png)
+
+**Live demo:** https://asukiasov.github.io/pixi/ — no install, try it now.
 
 For the full feature set, current phase, and what's built vs. planned, see
 [`openspec/roadmap.md`](openspec/roadmap.md). For exactly what each shipped
@@ -19,7 +21,8 @@ packages (Dexie today, Supabase/Stripe later) are resolved via an
 [import map](index.html) rather than npm.
 
 - **Storage**: [Dexie.js](https://dexie.org/) over IndexedDB as the
-  offline-first local cache — the app is fully usable signed out.
+  offline-first local cache — pixel art projects are saved locally and the
+  app is fully usable signed out.
 - **Later phases (not yet built)**: Supabase (Auth/Postgres/Storage/Edge
   Functions) and Stripe Checkout, both additive on top of the local-first
   core — see `openspec/roadmap.md` Phases 3–4 and
@@ -49,8 +52,9 @@ npm install   # first time only - installs test-only dependencies
 npm test      # runs node --test test/**/*.test.js
 ```
 
-Tests cover DOM-free logic (engine, layers, undo, persistence, routing,
-brushes, shape tools) directly under Node. Anything requiring a real
+Tests cover DOM-free logic (e.g. engine, layers, undo, persistence,
+routing, brushes, shape tools, symmetry, color library — see `test/` for
+the full, current list) directly under Node. Anything requiring a real
 `<canvas>`/DOM (compositing, rendering) is verified with a Playwright
 smoke pass instead — see individual OpenSpec changes'
 `tasks.md` under `openspec/changes/archive/` for what was checked.
@@ -67,6 +71,10 @@ badge in the Gallery screen's corner. It's a cache sanity check only
 version number — run the script and push after deploying to keep it
 current.
 
+Separately, [git tags and GitHub Releases](https://github.com/asukiasov/pixi/releases)
+mark real version points (`v0.1.0`, `v0.2.0`, ...) — cut at the end of each
+roadmap phase or a notable batch of shipped changes, not on every commit.
+
 ## Project structure
 
 ```
@@ -80,11 +88,6 @@ docs/        Reference docs that don't belong in openspec/ (e.g. Supabase schema
 scripts/     One-off maintenance scripts (version stamping)
 ```
 
-## Contributing / process
-
-This project uses OpenSpec (see [`openspec/`](openspec/)) for requirements
-and Superpowers skills for execution discipline — see
-[`CLAUDE.md`](CLAUDE.md) for the full process. Short version: new features
-start with a proposal under `openspec/changes/`, get implemented against
-that plan, and are folded into `openspec/specs/` when archived. Bug fixes
-with no behavior/requirement impact can skip straight to a fix.
+For a map of every screen and pixel art tool in the UI (what each control
+does, where it lives in the DOM), see
+[`docs/ui-reference.md`](docs/ui-reference.md).

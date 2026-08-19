@@ -483,14 +483,10 @@
         <div id="brush-editor-panel" class="brush-editor-panel hidden">
           <div class="brush-editor-row brush-editor-header-row">
             <h2>New Brush</h2>
-            <!-- Import an image to pre-fill the grid (2m-brush-image-import),
-                 icon-only + header-row position per 2o-image-import-
-                 refinements - same "image" icon Color Library's Import
-                 control uses for the same action. -->
-            <button type="button" id="brush-editor-import" class="tool-button icon-button" aria-label="Import from image" data-tooltip="Import from image">
-              <span class="material-symbols-outlined">image</span>
-            </button>
-            <input type="file" id="brush-editor-import-input" accept="image/*" class="hidden" />
+            <!-- Pro-only (split-pixi-pro-repo): Import an image to
+                 pre-fill the grid. Present in pixi-pro's own index.html
+                 (own copy of this markup) but not here - see
+                 js/workspace.js's setBrushEditorGrid. -->
           </div>
           <div class="brush-editor-row">
             <input type="text" id="brush-editor-name" placeholder="Brush name" />

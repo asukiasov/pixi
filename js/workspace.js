@@ -13,8 +13,7 @@ import {
 import { initCanvasSettings } from './canvas-settings.js';
 import { initExport } from './export.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
-import { decodeImageFile, hasTransparency, downsampleToImageData, fitImageToCanvas } from './image-import.js';
-import { thresholdToGrid } from './brush-import.js';
+import { decodeImageFile, downsampleToImageData, fitImageToCanvas } from './image-import.js';
 import { extractPalette } from './color-extraction.js';
 import { generateColorRamp } from './color-ramp.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
@@ -975,22 +974,17 @@ let brushEditorPaintValue = true;
 let brushEditorWidth = BRUSH_EDITOR_SIZE;
 let brushEditorHeight = BRUSH_EDITOR_SIZE;
 
-// The decoded source image behind an "Import", if any (js/image-import.js's
-// decodeImageFile result - an ImageBitmap). Kept at module scope alongside
-// the grid state so a later W/H change can re-pixelate from the same
-// source instead of re-prompting for a file. Cleared whenever the editor
-// opens fresh, Cancel is pressed, or Clear is pressed (see
-// applyBrushEditorSourceImage's and bindBrushEditorOnce's callers) -
-// design.md's decision to keep Clear as pure "blank the grid", not a
-// separate "discard the import" control.
-let brushEditorSourceImage = null;
+/** Pro extension point (split-pixi-pro-repo): the Brush editor's current grid size. */
+export function getBrushEditorSize() {
+  return { width: brushEditorWidth, height: brushEditorHeight };
+}
 
 // The decoded source image behind the reference image layer's last
 // upload (js/image-import.js's decodeImageFile result), and whether that
-// upload's downscale was smoothed - same "keep the source around so a
-// later setting change can re-derive from it" pattern as
-// brushEditorSourceImage above, for the smoothing toggle in the reference
-// layer's row (buildLayerRow). Reset in initWorkspace (new/switched
+// upload's downscale was smoothed - "keep the source around so a later
+// setting change can re-derive from it" (same pattern pixi-pro's Brush
+// editor Import uses, see setBrushEditorGrid), for the smoothing toggle
+// in the reference layer's row (buildLayerRow). Reset in initWorkspace (new/switched
 // project - a stale source from a different project's reference layer
 // would be meaningless) and whenever the reference layer itself is
 // deleted (see the delete button's handler in buildLayerRow) - a later
@@ -999,20 +993,22 @@ let referenceImageSourceImage = null;
 let referenceImageSmoothing = true;
 
 /**
- * Re-pixelates brushEditorSourceImage at the editor's current
- * brushEditorWidth x brushEditorHeight, overwriting brushEditorGridState
- * and the grid's DOM 'on' classes with the result. No-op if no image has
- * been imported. Assumes rebuildBrushEditorGrid() already built the DOM
- * cells at the current dimensions (called right after it, both on import
- * and on every subsequent resize).
+ * Pro extension point (split-pixi-pro-repo): overwrites brushEditorGridState
+ * and the grid's DOM 'on' classes with `grid` (same grid[y][x] boolean
+ * shape as makeEmptyBrushEditorGrid). Used by `pixi-pro`'s Brush editor
+ * "Import from image" (used to live directly in this file as
+ * applyBrushEditorSourceImage, thresholding a decoded image via
+ * js/brush-import.js's thresholdToGrid - see that repo's
+ * js/pro/brush-import.js) to apply its result, including on every
+ * subsequent width/height change - see bindBrushEditorOnce's width/
+ * height 'change' listeners, which pixi-pro adds its own to re-derive
+ * from its own remembered source image. Assumes rebuildBrushEditorGrid()
+ * already built the DOM cells at the current dimensions.
  */
-function applyBrushEditorSourceImage() {
-  if (!brushEditorSourceImage) return;
-  const useAlpha = hasTransparency(brushEditorSourceImage);
-  const imageData = downsampleToImageData(brushEditorSourceImage, brushEditorWidth, brushEditorHeight);
-  brushEditorGridState = thresholdToGrid(imageData, brushEditorWidth, brushEditorHeight, useAlpha);
-  const grid = document.getElementById('brush-editor-grid');
-  grid.querySelectorAll('.brush-editor-cell').forEach((cell) => {
+export function setBrushEditorGrid(grid) {
+  brushEditorGridState = grid;
+  const gridEl = document.getElementById('brush-editor-grid');
+  gridEl.querySelectorAll('.brush-editor-cell').forEach((cell) => {
     const x = Number(cell.dataset.x);
     const y = Number(cell.dataset.y);
     cell.classList.toggle('on', brushEditorGridState[y][x]);
@@ -1061,13 +1057,11 @@ function openBrushEditor() {
   widthInput.value = String(brushEditorWidth);
   heightInput.value = String(brushEditorHeight);
   document.getElementById('brush-editor-name').value = '';
-  brushEditorSourceImage = null; // fresh editor open forgets any prior import
   rebuildBrushEditorGrid();
   document.getElementById('brush-editor-panel').classList.remove('hidden');
 }
 
 function closeBrushEditor() {
-  brushEditorSourceImage = null; // Cancel (or Save closing the panel) forgets the import too
   document.getElementById('brush-editor-panel').classList.add('hidden');
 }
 
@@ -1083,43 +1077,23 @@ function bindBrushEditorOnce() {
   const nameInput = document.getElementById('brush-editor-name');
   const widthInput = document.getElementById('brush-editor-width');
   const heightInput = document.getElementById('brush-editor-height');
-  const importButton = document.getElementById('brush-editor-import');
-  const importInput = document.getElementById('brush-editor-import-input');
   const clearButton = document.getElementById('brush-editor-clear');
   const cancelButton = document.getElementById('brush-editor-cancel');
   const saveButton = document.getElementById('brush-editor-save');
 
-  // Changing size re-grids from scratch when nothing's been imported
-  // (painting so far doesn't carry over) — simplest behavior, and this is
-  // a brand-new brush each time. When an image *has* been imported,
-  // re-pixelate from that same source at the new size instead of
-  // clearing, so the user can dial in resolution before hand-tweaking.
+  // Changing size re-grids from scratch - a brand-new brush each time.
+  // (Pro's "Import from image", if present, adds its own listener here
+  // too - see setBrushEditorGrid - to re-pixelate from its remembered
+  // source at the new size instead, after this one clears the grid.)
   widthInput.addEventListener('change', () => {
     brushEditorWidth = clampBrushEditorDimension(Number(widthInput.value), state.layerStack.width);
     widthInput.value = String(brushEditorWidth);
     rebuildBrushEditorGrid();
-    applyBrushEditorSourceImage();
   });
   heightInput.addEventListener('change', () => {
     brushEditorHeight = clampBrushEditorDimension(Number(heightInput.value), state.layerStack.height);
     heightInput.value = String(brushEditorHeight);
     rebuildBrushEditorGrid();
-    applyBrushEditorSourceImage();
-  });
-
-  importButton.addEventListener('click', () => importInput.click());
-  importInput.addEventListener('change', async () => {
-    const file = importInput.files?.[0];
-    // Reset now (not after decoding) so picking the same file twice in a
-    // row still fires 'change' the second time - a file input only fires
-    // on a value change, and re-selecting the same path wouldn't count as
-    // one unless the value is cleared first.
-    importInput.value = '';
-    if (!file) return;
-    const image = await decodeImageFile(file);
-    if (!image) return; // unsupported/corrupt file - fail silently, no crash
-    brushEditorSourceImage = image;
-    applyBrushEditorSourceImage();
   });
 
   function setCellFromEvent(clientX, clientY, isFirst) {
@@ -1147,11 +1121,10 @@ function bindBrushEditorOnce() {
   });
 
   clearButton.addEventListener('click', () => {
-    // Clear is pure "blank the grid", including forgetting any import -
-    // it doesn't distinguish "just resized" from "was imported" (see
-    // design.md's decision), so a resize after Clear no longer
-    // re-pixelates until another Import.
-    brushEditorSourceImage = null;
+    // Clear is pure "blank the grid" (design.md's decision). Pro's own
+    // Import module, if present, adds its own listener on this same
+    // button to forget its remembered source image too, so a resize
+    // after Clear doesn't keep re-pixelating from a stale import.
     brushEditorGridState = makeEmptyBrushEditorGrid(brushEditorWidth, brushEditorHeight);
     grid.querySelectorAll('.brush-editor-cell').forEach((c) => c.classList.remove('on'));
   });

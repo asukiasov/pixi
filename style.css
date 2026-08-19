@@ -1064,16 +1064,36 @@ body {
   opacity: 0.4;
 }
 
-/* Raw SVG (not a font glyph - see index.html's comment on #add-layer-
-   button), so unlike .material-symbols-outlined's font-size this is a
-   literal box size. Smaller than the S 1.6rem button box, matching
-   .rectangle-fill-icon's own button-to-glyph ratio (currentColor fills
-   edge-to-edge with no font side-bearing, so it needs more headroom
-   than a font glyph at the same nominal size would). */
+/* Real image asset (assets/icons/layers_add.svg), not a font glyph or
+   hand-copied inline markup - see index.html's comment on #add-layer-
+   button. Rendered via CSS mask rather than <img> so it still recolors
+   with currentColor like every other icon button here (light/dark
+   theme, hover, disabled dimming) - an <img>'s pixels are opaque to
+   CSS, fixed at whatever colors the source file happens to use.
+   mask-mode: alpha (not the mask default, luminance) matters here
+   specifically: the source file draws its glyph in near-black with a
+   white accent for its own two-tone display, and under luminance
+   masking dark pixels read as "mostly transparent" - exactly backwards
+   from what a mask needs. Alpha mode goes off which pixels have ink at
+   all, regardless of what color that ink is, which is what actually
+   reproduces the glyph's shape. Sized like .rectangle-fill-icon
+   (smaller than the S 1.6rem button box - a filled shape with no font
+   side-bearing needs more headroom than a font glyph at the same
+   nominal size would). */
 .layers-add-icon {
+  display: block;
   width: 1.1rem;
   height: 1.1rem;
-  fill: currentColor;
+  background-color: currentColor;
+  mask-image: url('assets/icons/layers_add.svg');
+  mask-mode: alpha;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-image: url('assets/icons/layers_add.svg');
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
 }
 
 /* Shared by .layers-panel-header and .color-library-header - the whole

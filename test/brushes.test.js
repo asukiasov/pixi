@@ -124,32 +124,32 @@ describe('placeBrush', () => {
     assert.deepEqual(engine.getPixel(0, 0), [1, 2, 3, 255]);
   });
 
-  test('defaults to no mirroring when symmetryMode is omitted', () => {
+  test('defaults to no transform when applyPixelTransform is omitted', () => {
     const engine = new PixelEngine(20, 20, 'transparent');
     const brush = { id: 'dot', name: 'Dot', width: 1, height: 1, pixels: [[0, 0]] };
     placeBrush(engine, 3, 3, brush, [255, 0, 0, 255]);
     assert.deepEqual(engine.getPixel(3, 3), [255, 0, 0, 255]);
-    // Nothing mirrored on the opposite side of the canvas.
+    // No transform registered, so nothing placed anywhere else.
     assert.deepEqual(engine.getPixel(16, 3), [0, 0, 0, 0]);
   });
 
-  test('horizontal symmetryMode mirrors the placed pixels across the canvas center (5-add-symmetry-drawing-mode)', () => {
+  // Symmetry/mirror drawing itself moved to pixi-pro (split-pixi-pro-repo)
+  // - see that repo's test suite for mirrorApplyPixel coverage. This just
+  // proves placeBrush's `applyPixelTransform` hook is actually honored,
+  // via a stand-in transform (not mirroring) that any Pro module could
+  // register the same shape of.
+  test('honors an applyPixelTransform hook when one is given', () => {
     const engine = new PixelEngine(20, 20, 'transparent');
     const brush = { id: 'dot', name: 'Dot', width: 1, height: 1, pixels: [[0, 0]] };
-    placeBrush(engine, 3, 3, brush, [255, 0, 0, 255], 0, 'horizontal');
-    assert.deepEqual(engine.getPixel(3, 3), [255, 0, 0, 255]);
-    // mirroredX = width - 1 - x = 20 - 1 - 3 = 16
-    assert.deepEqual(engine.getPixel(16, 3), [255, 0, 0, 255]);
-  });
-
-  test('both symmetryMode places up to 4 mirrored copies', () => {
-    const engine = new PixelEngine(20, 20, 'transparent');
-    const brush = { id: 'dot', name: 'Dot', width: 1, height: 1, pixels: [[0, 0]] };
-    placeBrush(engine, 3, 3, brush, [255, 0, 0, 255], 0, 'both');
+    // Places at (x, y) and its mirror across x=19 - the same shape a Pro
+    // symmetry hook would use, without depending on that module.
+    const mirrorHorizontal = (applyPixel, hookEngine) => (x, y) => {
+      applyPixel(x, y);
+      applyPixel(hookEngine.width - 1 - x, y);
+    };
+    placeBrush(engine, 3, 3, brush, [255, 0, 0, 255], 0, mirrorHorizontal);
     assert.deepEqual(engine.getPixel(3, 3), [255, 0, 0, 255]);
     assert.deepEqual(engine.getPixel(16, 3), [255, 0, 0, 255]);
-    assert.deepEqual(engine.getPixel(3, 16), [255, 0, 0, 255]);
-    assert.deepEqual(engine.getPixel(16, 16), [255, 0, 0, 255]);
   });
 });
 

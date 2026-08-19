@@ -21,7 +21,6 @@ import { drawRectangle, clipToSelection } from './shape-tools.js';
 import { DEFAULT_MATERIAL_COLORS, PREDEFINED_PALETTES } from './default-color-library.js';
 import { bresenhamLine, strokeFreehandThick } from './engine.js';
 import { confirmDialog } from './confirm-dialog.js';
-import { mirrorApplyPixel } from './symmetry.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
 
@@ -43,19 +42,6 @@ const RAMP_MAX_STEPS = 9;
 const RAMP_DEFAULT_STEPS = 5;
 
 const RAINBOW_HUE_STEP = 20; // degrees per brush placed, in Rainbow mode
-
-// Symmetry/mirror drawing mode (5-add-symmetry-drawing-mode): #symmetry-toggle
-// cycles through these in order on each click. Labels double as the
-// tooltip/aria-label text (see updateSymmetryToggle) and as
-// #symmetry-toggle's data-symmetry-mode value, which style.css keys its
-// H/V/4 state badge off of.
-const SYMMETRY_MODES = ['off', 'horizontal', 'vertical', 'both'];
-const SYMMETRY_LABELS = {
-  off: 'Symmetry: off',
-  horizontal: 'Symmetry: horizontal',
-  vertical: 'Symmetry: vertical',
-  both: 'Symmetry: both',
-};
 
 const PALETTE = [
   '#000000', '#ffffff', '#9d9d9d', '#4a4a4a',
@@ -253,7 +239,6 @@ let canvasSettingsControls = null;
 let exportControls = null;
 let toolButtons = null;
 let pixelPerfectToggle = null;
-let symmetryToggle = null;
 let paletteRow = null;
 let brushesPanel = null;
 let brushesPanelGrid = null;
@@ -447,18 +432,23 @@ function pencilOrEraserApplyPixel(engine) {
 }
 
 /**
- * Wraps an `applyPixel(x, y, index)` callback (as returned by
- * pencilOrEraserApplyPixel) with mirroring when `state.symmetryMode !==
- * 'off'` (5-add-symmetry-drawing-mode), a no-op passthrough otherwise.
- * `index` is preserved across every mirrored copy of a given pixel rather
- * than incrementing per copy - it's Rainbow/Color-Library-sequence's
- * placement-order counter (see pencilOrEraserApplyPixel), and a mirrored
- * pixel is the same placement as its source, not a new one.
+ * Pro extension point (split-pixi-pro-repo): `pixi-pro` registers a
+ * transform here to wrap Pencil/Eraser/Brush's `applyPixel(x, y, index)`
+ * callback before pixels are set - e.g. symmetry/mirror drawing, which
+ * used to live directly in this file (see design.md's "Extraction before
+ * addition" decision for why a hook lives here instead). No-op passthrough
+ * when no Pro module is present. `registerApplyPixelTransform`'s `fn` gets
+ * `(applyPixel, engine)` and must return a same-shaped `applyPixel`
+ * (`index` is a placement-order counter for Rainbow/Color-Library-sequence
+ * - see pencilOrEraserApplyPixel - and must be preserved, not incremented,
+ * across e.g. mirrored copies of one placement).
  */
-function withSymmetry(applyPixel, engine) {
-  if (state.symmetryMode === 'off') return applyPixel;
-  return (x, y, index) =>
-    mirrorApplyPixel(x, y, (mx, my) => applyPixel(mx, my, index), state.symmetryMode, engine.width, engine.height);
+let applyPixelTransform = null;
+export function registerApplyPixelTransform(fn) {
+  applyPixelTransform = fn;
+}
+function withProPixelTransform(applyPixel, engine) {
+  return applyPixelTransform ? applyPixelTransform(applyPixel, engine) : applyPixel;
 }
 
 function updateSelectionControls() {
@@ -1290,21 +1280,6 @@ function bindKonamiCode() {
 }
 
 /**
- * Reflects `state.symmetryMode` on #symmetry-toggle: `.active` (shared
- * accent styling with every other topbar toggle) whenever it's not 'off',
- * `data-symmetry-mode` for style.css's per-state H/V/4 badge, and the
- * aria-label/tooltip text - shared by the click handler and by
- * initWorkspace's per-project reset (see SYMMETRY_MODES/SYMMETRY_LABELS).
- */
-function updateSymmetryToggle() {
-  const mode = state.symmetryMode;
-  symmetryToggle.classList.toggle('active', mode !== 'off');
-  symmetryToggle.dataset.symmetryMode = mode;
-  symmetryToggle.setAttribute('aria-label', SYMMETRY_LABELS[mode]);
-  symmetryToggle.dataset.tooltip = SYMMETRY_LABELS[mode];
-}
-
-/**
  * Wires a single shared tooltip element (positioned via JS, not CSS
  * ::after — see style.css's .tool-tooltip comment for why) to every
  * [data-tooltip] element in the tools sidebar. Shows after a short delay
@@ -1675,7 +1650,6 @@ function positionPanelBelow(panel, anchorEl) {
 function bindDomOnce() {
   toolButtons = document.querySelectorAll('.tool-button[data-tool]');
   pixelPerfectToggle = document.getElementById('pixel-perfect-toggle');
-  symmetryToggle = document.getElementById('symmetry-toggle');
   paletteRow = document.getElementById('palette-row');
   brushesPanel = document.getElementById('brushes-panel');
   const backToGalleryButton = document.getElementById('back-to-gallery-button');
@@ -1722,12 +1696,6 @@ function bindDomOnce() {
   pixelPerfectToggle.addEventListener('click', () => {
     state.pixelPerfect = !state.pixelPerfect;
     pixelPerfectToggle.classList.toggle('active', state.pixelPerfect);
-  });
-
-  symmetryToggle.addEventListener('click', () => {
-    const nextIndex = (SYMMETRY_MODES.indexOf(state.symmetryMode) + 1) % SYMMETRY_MODES.length;
-    state.symmetryMode = SYMMETRY_MODES[nextIndex];
-    updateSymmetryToggle();
   });
 
   // Pencil/Eraser Size + Opacity - shared sliders with live readouts.
@@ -2569,7 +2537,7 @@ function redrawBrushPath() {
     if (i % state.brushSpacing !== 0) return;
     const rgba = colorForSequenceIndex(placementIndex);
     const angle = placementIndex * state.brushRotationStep;
-    placeBrush(state.strokeEngine, point.x, point.y, state.currentBrush, rgba, angle, state.symmetryMode);
+    placeBrush(state.strokeEngine, point.x, point.y, state.currentBrush, rgba, angle, applyPixelTransform);
     placementIndex++;
   });
   clipToSelection(state.strokeEngine, state.strokeBackup, state.selection);
@@ -2640,7 +2608,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     brushRotationStep: 0,
     brushPath: [],
     pixelPerfect: false,
-    symmetryMode: 'off',
     pencilSize: 1,
     pencilOpacity: 1,
     colorLibrarySequence: false,
@@ -2701,7 +2668,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   document.getElementById('brush-spacing').value = '1';
   document.getElementById('brush-rotation').value = '0';
   pixelPerfectToggle.classList.remove('active');
-  updateSymmetryToggle();
   syncLayersCollapse();
   syncColorLibraryCollapse();
   closeLayersOpacityPopover();
@@ -2864,7 +2830,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
         state.strokePoints,
         state.pencilSize,
         state.pixelPerfect,
-        withSymmetry(pencilOrEraserApplyPixel(activeEngine), activeEngine)
+        withProPixelTransform(pencilOrEraserApplyPixel(activeEngine), activeEngine)
       );
       clipToSelection(activeEngine, state.strokeBackup, state.selection);
       state.canvasView.render();
@@ -2922,7 +2888,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
         state.strokePoints,
         state.pencilSize,
         state.pixelPerfect,
-        withSymmetry(pencilOrEraserApplyPixel(state.strokeEngine), state.strokeEngine)
+        withProPixelTransform(pencilOrEraserApplyPixel(state.strokeEngine), state.strokeEngine)
       );
       clipToSelection(state.strokeEngine, state.strokeBackup, state.selection);
       state.canvasView.render();

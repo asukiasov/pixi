@@ -283,49 +283,6 @@ body {
   border-color: var(--color-accent-strong);
 }
 
-/* Symmetry toggle (#symmetry-toggle): a 4-state cycling control (off /
-   horizontal / vertical / both), styled with the same .active accent
-   treatment as every other topbar toggle plus a small letter badge (H/V/4)
-   so the three "on" states stay visually distinguishable from each other,
-   not just from off - see openspec/changes/5-add-symmetry-drawing-mode. */
-#symmetry-toggle {
-  position: relative;
-}
-
-#symmetry-toggle::after {
-  content: '';
-  position: absolute;
-  bottom: 0.15rem;
-  right: 0.15rem;
-  width: 0.85rem;
-  height: 0.85rem;
-  border-radius: 50%;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  color: var(--color-accent);
-  font-size: 0.55rem;
-  font-weight: 600;
-  line-height: 0.8rem;
-  text-align: center;
-  opacity: 0;
-  transition: opacity 150ms ease-out;
-}
-
-#symmetry-toggle[data-symmetry-mode='horizontal']::after {
-  content: 'H';
-  opacity: 1;
-}
-
-#symmetry-toggle[data-symmetry-mode='vertical']::after {
-  content: 'V';
-  opacity: 1;
-}
-
-#symmetry-toggle[data-symmetry-mode='both']::after {
-  content: '4';
-  opacity: 1;
-}
-
 .custom-size-row {
   display: flex;
   gap: 1rem;

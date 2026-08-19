@@ -6,7 +6,6 @@
 // Custom brushes are built the same way (see pixelsFromGrid) and persisted
 // via js/persistence.js, not stored in this file.
 
-import { mirrorApplyPixel } from './symmetry.js';
 
 const HEART_PATTERN = [
   '.XX...XX.',
@@ -112,21 +111,21 @@ function rotatedBrushPixels(brush, angleDegrees) {
  * used by the Brush tool's Rotation setting, which advances the angle by a
  * fixed step per placement along a drag.
  *
- * `symmetryMode` (5-add-symmetry-drawing-mode, default 'off' - a no-op)
- * mirrors every placed pixel across `engine`'s center axis/axes via
- * mirrorApplyPixel, the same helper Pencil/Eraser wrap their applyPixel
- * with (see js/workspace.js's withSymmetry) - kept here rather than at
- * every call site since placeBrush is Brush's one placement seam,
- * mirroring the "wrap applyPixel, don't fork the stroke tracer" approach
- * from design.md for Brush's own (non-applyPixel-shaped) placement API.
+ * `applyPixelTransform` (default `null` - a no-op), if given, is the same
+ * `(applyPixel, engine) => wrappedApplyPixel` hook shape Pencil/Eraser wrap
+ * their applyPixel with (see js/workspace.js's withProPixelTransform, e.g.
+ * for Pro's symmetry/mirror drawing) - kept here rather than at every call
+ * site since placeBrush is Brush's one placement seam, mirroring the "wrap
+ * applyPixel, don't fork the stroke tracer" approach from design.md for
+ * Brush's own (non-applyPixel-shaped) placement API.
  */
-export function placeBrush(engine, centerX, centerY, brush, rgba, angleDegrees = 0, symmetryMode = 'off') {
+export function placeBrush(engine, centerX, centerY, brush, rgba, angleDegrees = 0, applyPixelTransform = null) {
   const topLeftX = centerX - Math.floor(brush.width / 2);
   const topLeftY = centerY - Math.floor(brush.height / 2);
+  const setPixel = (x, y) => engine.setPixel(x, y, rgba);
+  const place = applyPixelTransform ? applyPixelTransform(setPixel, engine) : setPixel;
   for (const [dx, dy] of rotatedBrushPixels(brush, angleDegrees)) {
-    const x = topLeftX + dx;
-    const y = topLeftY + dy;
-    mirrorApplyPixel(x, y, (mx, my) => engine.setPixel(mx, my, rgba), symmetryMode, engine.width, engine.height);
+    place(topLeftX + dx, topLeftY + dy);
   }
 }
 

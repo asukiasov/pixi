@@ -395,28 +395,49 @@ function setColorLibrarySequence(enabled) {
 }
 
 /**
+ * Pro extension point (split-pixi-pro-repo): `pixi-pro` registers opacity-
+ * aware paint/erase here (e.g. Pencil/Eraser's Opacity setting, which used
+ * to live directly in this file as PixelEngine's setPixelBlended/
+ * erasePixelBlended - see that repo's js/pro/pencil-opacity.js for the
+ * blending math). No-op passthrough (plain overwrite / full erase, i.e.
+ * always-100%-opacity) when no Pro module is present.
+ */
+let blendedPaint = null;
+let blendedErase = null;
+export function registerBlendedPaint(fn) {
+  blendedPaint = fn;
+}
+export function registerBlendedErase(fn) {
+  blendedErase = fn;
+}
+function paintPixel(engine, x, y, rgba) {
+  return blendedPaint ? blendedPaint(engine, x, y, rgba) : engine.setPixel(x, y, rgba);
+}
+function erasePixel(engine, x, y) {
+  return blendedErase ? blendedErase(engine, x, y) : engine.setPixel(x, y, [0, 0, 0, 0]);
+}
+
+/**
  * Returns the per-pixel operation strokeFreehandThick should call for the
- * current tool: Pencil blends the draw color at pencilOpacity
- * (setPixelBlended), Eraser fades existing alpha at pencilOpacity
- * (erasePixelBlended) instead - two different operations, not "blend
- * toward a color" reused for both (see design.md's rationale). Shared by
- * onDrawStart and onDrawMove so the two can't drift apart.
+ * current tool: Pencil paints the draw color, Eraser erases (both via
+ * paintPixel/erasePixel above, Pro-overridable for opacity blending).
+ * Shared by onDrawStart and onDrawMove so the two can't drift apart.
  *
  * Exception (2g-background-layer): erasing the Background layer reveals
  * state.backgroundColor instead of producing transparency - checked once
  * here, against the *active* layer at the point the stroke starts (the
  * same layer `engine` already targets, per this function's callers), not
  * re-checked per pixel - a layer's isBackground can't change mid-stroke.
- * Implemented as a setPixelBlended paint with the Background color, not a
- * new alpha-manipulation op - it's exactly Pencil-style compositing with
- * a different source color (see design.md).
+ * Implemented as a paintPixel with the Background color, not a new
+ * alpha-manipulation op - it's exactly Pencil-style compositing with a
+ * different source color (see design.md).
  */
 function pencilOrEraserApplyPixel(engine) {
   if (state.currentTool === 'eraser') {
     if (state.layerStack.getActiveLayer()?.isBackground) {
-      return (x, y) => engine.setPixelBlended(x, y, state.backgroundColor, state.pencilOpacity);
+      return (x, y) => paintPixel(engine, x, y, state.backgroundColor);
     }
-    return (x, y) => engine.erasePixelBlended(x, y, state.pencilOpacity);
+    return (x, y) => erasePixel(engine, x, y);
   }
   // Rainbow and Color Library sequence both cycle per unique pixel placed,
   // same as Brush - the index strokeFreehandThick now passes is the
@@ -424,9 +445,9 @@ function pencilOrEraserApplyPixel(engine) {
   // Spacing-style skips don't exist here but dedup-skipped pixels still
   // don't throw off the cycle.
   if (state.brushRainbow || state.colorLibrarySequence) {
-    return (x, y, index) => engine.setPixelBlended(x, y, colorForSequenceIndex(index), state.pencilOpacity);
+    return (x, y, index) => paintPixel(engine, x, y, colorForSequenceIndex(index));
   }
-  return (x, y) => engine.setPixelBlended(x, y, state.foregroundColor, state.pencilOpacity);
+  return (x, y) => paintPixel(engine, x, y, state.foregroundColor);
 }
 
 /**
@@ -1604,7 +1625,7 @@ function bindPanelHeaderCollapse(headerEl, onToggle) {
  * slider's existing listener the same as a drag would. preventDefault
  * suppresses the page scroll the wheel would otherwise trigger.
  */
-function bindSliderWheel(slider) {
+export function bindSliderWheel(slider) {
   slider.addEventListener('wheel', (e) => {
     e.preventDefault();
     const step = Number(slider.step) || 1;
@@ -1688,12 +1709,11 @@ function bindDomOnce() {
   bindTooltips();
   bindKonamiCode();
 
-  // Pencil/Eraser Size + Opacity - shared sliders with live readouts.
+  // Pencil/Eraser Size - shared slider with live readout (Opacity is
+  // Pro-only, see js/pro/pencil-opacity-ui.js in pixi-pro).
   pencilOptionsPanel = document.getElementById('pencil-options');
   const pencilSizeSlider = document.getElementById('pencil-size-slider');
   const pencilSizeReadout = document.getElementById('pencil-size-readout');
-  const pencilOpacitySlider = document.getElementById('pencil-opacity-slider');
-  const pencilOpacityReadout = document.getElementById('pencil-opacity-readout');
 
   pencilSizeSlider.addEventListener('input', () => {
     const value = Number(pencilSizeSlider.value);
@@ -1701,17 +1721,10 @@ function bindDomOnce() {
     pencilSizeReadout.textContent = `${value}px`;
   });
 
-  pencilOpacitySlider.addEventListener('input', () => {
-    const value = Number(pencilOpacitySlider.value);
-    state.pencilOpacity = value / 100;
-    pencilOpacityReadout.textContent = `${value}%`;
-  });
-
-  // Mouse wheel adjusts Size/Opacity by one step per notch while
-  // hovering the slider, without needing to grab the thumb - common
-  // desktop-app slider convention (Photoshop, Figma).
+  // Mouse wheel adjusts Size by one step per notch while hovering the
+  // slider, without needing to grab the thumb - common desktop-app
+  // slider convention (Photoshop, Figma).
   bindSliderWheel(pencilSizeSlider);
-  bindSliderWheel(pencilOpacitySlider);
 
   // 1:1 proportion toggle - Rectangle and Selection, a persistent
   // touchscreen-friendly equivalent of holding Shift (see
@@ -2585,7 +2598,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     brushRotationStep: 0,
     brushPath: [],
     pencilSize: 1,
-    pencilOpacity: 1,
     colorLibrarySequence: false,
     squareConstraint: false,
     // Despite the name, this now means "expanded" rather than "shown" -
@@ -2646,13 +2658,11 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   syncColorLibraryCollapse();
   closeLayersOpacityPopover();
   setRightSidebarVisible(true);
-  // Default tool is Pencil, so the panel starts visible; sliders/readouts
-  // reset to match state.pencilSize/pencilOpacity's defaults (1, 1).
+  // Default tool is Pencil, so the panel starts visible; the slider/readout
+  // reset to match state.pencilSize's default (1).
   pencilOptionsPanel.classList.remove('hidden');
   document.getElementById('pencil-size-slider').value = '1';
   document.getElementById('pencil-size-readout').textContent = '1px';
-  document.getElementById('pencil-opacity-slider').value = '100';
-  document.getElementById('pencil-opacity-readout').textContent = '100%';
   librarySequenceToggle.classList.remove('active');
   librarySequencePanel.classList.remove('hidden'); // Pencil is the default tool
   // Neither Rectangle nor Selection is the default tool, so this starts

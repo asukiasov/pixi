@@ -37,48 +37,6 @@ export class PixelEngine {
   }
 
   /**
-   * Alpha-composites `rgba` (its own alpha scaled by `opacity`, 0-1) over
-   * the existing pixel using the standard "source-over" formula, instead
-   * of setPixel's full overwrite. At opacity 1 with a fully-opaque rgba
-   * (the normal case for a draw color), this is pixel-identical to
-   * setPixel. Used by the Pencil tool's Opacity setting.
-   */
-  setPixelBlended(x, y, rgba, opacity) {
-    if (!this.#inBounds(x, y)) return;
-    const dst = this.getPixel(x, y);
-    const srcA = (rgba[3] / 255) * opacity;
-    const dstA = dst[3] / 255;
-    const outA = srcA + dstA * (1 - srcA);
-    let outR = 0;
-    let outG = 0;
-    let outB = 0;
-    if (outA > 0) {
-      outR = (rgba[0] * srcA + dst[0] * dstA * (1 - srcA)) / outA;
-      outG = (rgba[1] * srcA + dst[1] * dstA * (1 - srcA)) / outA;
-      outB = (rgba[2] * srcA + dst[2] * dstA * (1 - srcA)) / outA;
-    }
-    this.setPixel(x, y, [Math.round(outR), Math.round(outG), Math.round(outB), Math.round(outA * 255)]);
-  }
-
-  /**
-   * Reduces the existing pixel's alpha by `opacity` (0-1) instead of
-   * blending toward a color - "fading out" existing content, which is
-   * what a partial-opacity erase means (blending toward a transparent
-   * *color* via setPixelBlended would barely affect an opaque pixel at
-   * low source alpha, not the same thing). RGB is preserved unless the
-   * result is fully transparent, in which case it's zeroed to match the
-   * existing eraser's [0, 0, 0, 0] convention (see strokeFreehand with a
-   * [0,0,0,0] rgba). Used by the Eraser tool's Opacity setting.
-   */
-  erasePixelBlended(x, y, opacity) {
-    if (!this.#inBounds(x, y)) return;
-    const dst = this.getPixel(x, y);
-    const newAlpha = Math.round(dst[3] * (1 - opacity));
-    const rgb = newAlpha === 0 ? [0, 0, 0] : [dst[0], dst[1], dst[2]];
-    this.setPixel(x, y, [...rgb, newAlpha]);
-  }
-
-  /**
    * Draws a freehand stroke through `points` (grid coordinates, in order).
    * Consecutive points are connected with a Bresenham line so drags that
    * skip grid cells between pointer-move events still produce a continuous

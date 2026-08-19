@@ -138,50 +138,9 @@ describe('floodFill', () => {
   });
 });
 
-describe('setPixelBlended', () => {
-  test('at opacity 1 with a fully-opaque color, matches setPixel', () => {
-    const e = new PixelEngine(2, 2, 'white');
-    e.setPixelBlended(0, 0, [10, 20, 30, 255], 1);
-    assert.deepEqual(px(e, 0, 0), [10, 20, 30, 255]);
-  });
-
-  test('at opacity 0.5 over an opaque pixel, blends toward the midpoint', () => {
-    const e = new PixelEngine(2, 2, 'white'); // dst = [255,255,255,255]
-    e.setPixelBlended(0, 0, [0, 0, 0, 255], 0.5);
-    // srcA=0.5, dstA=1 -> outA=1; outRGB = src*0.5 + dst*1*0.5 = 127.5 -> 128 (rounded)
-    assert.deepEqual(px(e, 0, 0), [128, 128, 128, 255]);
-  });
-
-  test('over a fully transparent pixel, produces the source color at reduced alpha', () => {
-    const e = new PixelEngine(2, 2, 'transparent');
-    e.setPixelBlended(0, 0, [200, 100, 50, 255], 0.5);
-    assert.deepEqual(px(e, 0, 0), [200, 100, 50, 128]);
-  });
-});
-
-describe('erasePixelBlended', () => {
-  test('at opacity 1, matches a full erase (zeroed RGB, alpha 0)', () => {
-    const e = new PixelEngine(2, 2, 'white');
-    e.erasePixelBlended(0, 0, 1);
-    assert.deepEqual(px(e, 0, 0), [0, 0, 0, 0]);
-  });
-
-  test('at opacity 0.5, halves existing alpha and leaves RGB unchanged', () => {
-    const e = new PixelEngine(2, 2, 'white'); // [255,255,255,255]
-    e.erasePixelBlended(0, 0, 0.5);
-    assert.deepEqual(px(e, 0, 0), [255, 255, 255, 128]);
-  });
-
-  test('repeated partial erases approach but never reach zero alpha in one call', () => {
-    const e = new PixelEngine(2, 2, 'white');
-    e.erasePixelBlended(0, 0, 0.5);
-    const first = px(e, 0, 0)[3];
-    e.erasePixelBlended(0, 0, 0.5);
-    const second = px(e, 0, 0)[3];
-    assert.ok(second < first);
-    assert.ok(second > 0);
-  });
-});
+// setPixelBlended/erasePixelBlended (Pencil/Eraser Opacity) moved to
+// pixi-pro (split-pixi-pro-repo) - see that repo's js/pro/pencil-opacity.js
+// and test suite for the blending math's own coverage.
 
 describe('circleOffsets', () => {
   test('size 1 is a single pixel at the center', () => {

@@ -24,9 +24,9 @@ existing project rule — needs a decision, not a fix).
 | RDOC-1 | "Pro version" is correctly absent — it doesn't exist yet | Content | — | not-an-issue |
 | RDOC-2 | "demo" is already in the README | Content | — | not-an-issue |
 | RDOC-3 | No feature/capability table — README is prose-only | Content/SEO/GEO | Med | done |
-| RDOC-4 | Flat, factual register reads as "dull" to the user | Content | — | tension |
-| RDOC-5 | GitHub About blurb missing "demo"/"preview" | SEO | Low | needs-recheck |
-| RDOC-6 | Social Preview image unset (GitHub fallback card shown) | SEO | Med | needs-recheck |
+| RDOC-4 | Flat, factual register reads as "dull" to the user | Content | — | kept (user decision) |
+| RDOC-5 | GitHub About blurb missing "demo"/"preview" | SEO | Low | done (user, via repo Settings) |
+| RDOC-6 | Social Preview image unset (GitHub fallback card shown) | SEO | Med | open — needs repo Settings, not a file edit |
 | RDOC-7 | `repo-docs-plan.md` versioning row is stale | staleness | — | done |
 
 ## Notes per finding
@@ -86,42 +86,33 @@ existing project rule — needs a decision, not a fix).
   "pixel art" repetition is reinforced without stuffing, voice stays
   third-person/factual.
 
-- **RDOC-4** — **tension, not a defect.** The user's "dull" reaction is
-  reading exactly what `docs/repo-voice.md` was written to produce:
-  third-person, no intensifiers, no exclamation points, constraints
-  stated as facts. That's a deliberate, documented decision (`repo-voice.md`
-  rules 1–2), not drift — repo-voice.md itself says this is "the default,
-  not a straitjacket" and allows justified deviation, but a README isn't
-  the kind of legal/security-notice exception the doc has in mind. Two
-  honest options for the user, not a fix for me to pick: (a) keep the
-  current register — it's intentional and matches the "solo-built tool,
-  not a funded startup" positioning `repo-voice.md` opens with; or (b)
-  soften the no-intensifiers rule specifically for the README's opening
-  section, which would mean editing `repo-voice.md` itself first — a
-  voice-doc change, not a README-only one, since every other doc is
-  checked against it. Flagging this explicitly rather than silently
-  either keeping or changing the tone.
+- **RDOC-4** — **kept, per user decision 2026-08-19.** The user's "dull"
+  reaction was reading exactly what `docs/repo-voice.md` was written to
+  produce: third-person, no intensifiers, no exclamation points,
+  constraints stated as facts. That's a deliberate, documented decision
+  (`repo-voice.md` rules 1–2), not drift. Presented as a choice rather
+  than picked unilaterally; the user chose to keep the current register.
+  No further action — not revisiting unless asked again.
 
-- **RDOC-5** — **needs-recheck, Low.** `docs/repo-docs-plan.md`'s "Now"
-  table already tracks this as an open item as of 2026-08-18: the GitHub
-  About blurb ("Browser-based pixel art editor — no build step, no
-  backend, runs entirely in the browser.") doesn't contain "demo" or
-  "preview," both real search terms. Suggested replacement already
-  drafted there: *"Browser-based pixel art editor — try the live demo,
-  no install. Draw, preview, and export pixel art in your browser."*
-  Carrying this forward rather than re-deriving it — no live fetch this
-  pass to confirm it's still unset, confirm via repo Settings before
-  editing.
+- **RDOC-5** — **done, via repo Settings (user, 2026-08-19).** The
+  GitHub About blurb now includes "demo" per the suggested wording
+  drafted in `docs/repo-docs-plan.md`. Not re-verified live this pass
+  (no network access in this environment) — taking the user's report at
+  face value; `repo-docs-plan.md`'s row should be updated to ✅ next time
+  that file is touched with live access.
 
-- **RDOC-6** — **needs-recheck, Med.** Also already tracked in
-  `docs/repo-docs-plan.md`: GitHub's Social Preview is unset, so shared
-  links (Slack, Twitter/X, Discord) render GitHub's generic
-  avatar-and-stats fallback card instead of `docs/screen.png`. This is
-  arguably the single highest-leverage item for "not interesting" as a
-  *first impression* — it's what a stranger sees before they even click
-  through to the README's text. No live fetch this pass to confirm it's
-  still unset; the plan doc's cropping note (1500×1229 vs. GitHub's
-  1280×640 recommendation, center-crop acceptable) still stands.
+- **RDOC-6** — **open — this is a repo Settings change, not a file
+  edit, so it can't be done from `README.md`.** GitHub's Social Preview
+  (the Open Graph image shown when the repo URL is shared on Slack,
+  Twitter/X, Discord, etc.) is a distinct setting from any image embedded
+  in the README's markdown — the screenshot already in `README.md` only
+  renders on the GitHub repo page itself, not in link-unfurl cards
+  elsewhere. Manual step: Settings → General → Social preview → upload
+  `docs/screen.png` (1500×1229 against GitHub's recommended 1280×640;
+  GitHub will center-crop it, which is acceptable per the original plan-
+  doc note). Arguably the single highest-leverage remaining item for
+  "not interesting" as a first impression, since it's what a stranger
+  sees before they even click through to the README's text.
 
 - **RDOC-7** — **open, staleness note (per skill's plan-doc check).**
   `docs/repo-docs-plan.md`'s "Now" table marks versioning as `⚠️ tagged

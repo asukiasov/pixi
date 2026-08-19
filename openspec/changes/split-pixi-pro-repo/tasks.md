@@ -5,9 +5,12 @@
       (`v0.2.0` already existed.)
 - [x] 1.3 Add `pixi` as a git submodule in `pixi-pro`, pinned to that tag
       (not tracking `main`).
-- [ ] 1.4 Set up `pixi-pro`'s top-level structure (Pro module directories,
-      entry point that loads the `pixi` submodule plus Pro-only files) —
-      no build step, matching `pixi`'s plain HTML/CSS/JS/ES-modules stack.
+- [x] 1.4 Set up `pixi-pro`'s top-level structure: `js/main.js` (entry
+      point, boots the `pixi` submodule then initializes Pro modules),
+      `js/pro/` (Pro module directory), `index.html` (own copy of `pixi`'s
+      shell, loading shared assets from `pixi/` and Pro-only assets from
+      this repo), `style-pro.css` (Pro-only CSS, additive on top of the
+      submodule's `style.css`). No build step, matching `pixi`'s stack.
 
 ## 2. Pro-only module split
 
@@ -32,7 +35,18 @@
       as an additive module (starting point, not a rewrite), wired into
       `pixi`'s existing extension points from outside the submodule, per
       design.md's "Extraction before addition" and "no engine forking"
-      decisions.
+      decisions. Progress (1/8):
+      - [x] Symmetry/mirror drawing — extracted; added the generic
+            `registerApplyPixelTransform` hook to `pixi`'s `workspace.js`/
+            `brushes.js` for this and future features to register against.
+      - [ ] Layers panel and everything tied to it
+      - [ ] Color Library (saved/named palettes, add-to-palette, import
+            from image, ramp generator)
+      - [ ] Pixel-perfect drawing toggle
+      - [ ] Canvas Settings (rename/resize/rotate)
+      - [ ] Brush import from image
+      - [ ] Rectangle fill/outline toggle
+      - [ ] Pencil/Eraser opacity slider
 - [ ] 2.3 Verify `pixi-pro`, built and run, has the full Standard + Pro
       toolset working end to end (manual smoke test against the tier
       matrix in `docs/superpowers/specs/2026-08-17-tier-matrix-worksheet.md`).

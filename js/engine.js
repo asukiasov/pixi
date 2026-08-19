@@ -82,13 +82,14 @@ export class PixelEngine {
    * Draws a freehand stroke through `points` (grid coordinates, in order).
    * Consecutive points are connected with a Bresenham line so drags that
    * skip grid cells between pointer-move events still produce a continuous
-   * stroke. When `pixelPerfect` is true, redundant corner pixels on
-   * diagonal turns are dropped so the line stays 1px thin (Aseprite-style).
+   * stroke. If a Pro path transform is registered (see
+   * registerPathTransform, e.g. pixel-perfect corner removal on diagonal
+   * turns, Aseprite-style), it runs on the raw path before pixels are set.
    */
-  strokeFreehand(points, rgba, pixelPerfect) {
+  strokeFreehand(points, rgba) {
     if (points.length === 0) return;
     const rawPath = interpolatePath(points);
-    const finalPath = pixelPerfect ? removeRedundantCorners(rawPath) : rawPath;
+    const finalPath = pathTransform ? pathTransform(rawPath) : rawPath;
     for (const p of finalPath) this.setPixel(p.x, p.y, rgba);
   }
 
@@ -234,29 +235,16 @@ export function bresenhamLine(x0, y0, x1, y1) {
 }
 
 /**
- * Aseprite-style pixel-perfect corner removal: walk the rasterized path and
- * whenever three consecutive pixels form an L-shaped corner (the first and
- * third are diagonal neighbors, the middle one is orthogonally adjacent to
- * both), drop the middle pixel so the diagonal stays a single pixel wide.
+ * Pro extension point (split-pixi-pro-repo): `pixi-pro` registers a raw-
+ * path transform here (e.g. pixel-perfect corner removal - see
+ * js/pro/pixel-perfect.js in that repo for the algorithm, which used to
+ * live directly in this file) via registerPathTransform. Runs on
+ * strokeFreehand/strokeFreehandThick's interpolated path before pixels are
+ * set. No-op passthrough when no Pro module is present.
  */
-function removeRedundantCorners(path) {
-  const out = [];
-  for (const p of path) {
-    if (out.length >= 2) {
-      const a = out[out.length - 2];
-      const b = out[out.length - 1];
-      const dxAP = p.x - a.x;
-      const dyAP = p.y - a.y;
-      const isDiagonalSkip = Math.abs(dxAP) === 1 && Math.abs(dyAP) === 1;
-      const bIsCorner =
-        (b.x === a.x + dxAP && b.y === a.y) || (b.x === a.x && b.y === a.y + dyAP);
-      if (isDiagonalSkip && bIsCorner) {
-        out.pop();
-      }
-    }
-    out.push(p);
-  }
-  return out;
+let pathTransform = null;
+export function registerPathTransform(fn) {
+  pathTransform = fn;
 }
 
 const circleOffsetsCache = new Map();
@@ -294,8 +282,9 @@ export function circleOffsets(size) {
  * and calls `applyPixel(x, y)` for the pixel operation instead of always
  * overwriting with a fixed color - lets the caller choose blended-paint
  * (Pencil) or alpha-reduction (Eraser) semantics (see PixelEngine's
- * setPixelBlended/erasePixelBlended). Pixel-perfect corner removal only
- * applies at size 1 - it has no meaning for a multi-pixel-wide stroke.
+ * setPixelBlended/erasePixelBlended). A registered Pro path transform (see
+ * registerPathTransform) only applies at size 1 - corner removal has no
+ * meaning for a multi-pixel-wide stroke.
  *
  * Every unique pixel touched by ANY stamp along the path gets exactly
  * one `applyPixel` call, computed by unioning every stamp's offsets
@@ -306,10 +295,10 @@ export function circleOffsets(size) {
  * purely from pointer-event timing. Deduping first makes the result
  * depend only on the path's geometry and Size, not stroke speed.
  */
-export function strokeFreehandThick(points, size, pixelPerfect, applyPixel) {
+export function strokeFreehandThick(points, size, applyPixel) {
   if (points.length === 0) return;
   const rawPath = interpolatePath(points);
-  const finalPath = size === 1 && pixelPerfect ? removeRedundantCorners(rawPath) : rawPath;
+  const finalPath = size === 1 && pathTransform ? pathTransform(rawPath) : rawPath;
   const offsets = circleOffsets(size);
   const touched = new Set();
   let index = 0;

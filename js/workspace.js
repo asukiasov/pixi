@@ -238,7 +238,6 @@ let squareConstraintToggle = null;
 let canvasSettingsControls = null;
 let exportControls = null;
 let toolButtons = null;
-let pixelPerfectToggle = null;
 let paletteRow = null;
 let brushesPanel = null;
 let brushesPanelGrid = null;
@@ -1649,7 +1648,6 @@ function positionPanelBelow(panel, anchorEl) {
 
 function bindDomOnce() {
   toolButtons = document.querySelectorAll('.tool-button[data-tool]');
-  pixelPerfectToggle = document.getElementById('pixel-perfect-toggle');
   paletteRow = document.getElementById('palette-row');
   brushesPanel = document.getElementById('brushes-panel');
   const backToGalleryButton = document.getElementById('back-to-gallery-button');
@@ -1692,11 +1690,6 @@ function bindDomOnce() {
 
   bindTooltips();
   bindKonamiCode();
-
-  pixelPerfectToggle.addEventListener('click', () => {
-    state.pixelPerfect = !state.pixelPerfect;
-    pixelPerfectToggle.classList.toggle('active', state.pixelPerfect);
-  });
 
   // Pencil/Eraser Size + Opacity - shared sliders with live readouts.
   pencilOptionsPanel = document.getElementById('pencil-options');
@@ -2503,7 +2496,7 @@ function drawShapePreview() {
         state.strokeEngine.setPixel(p.x, p.y, rainbowColor(i * RAINBOW_HUE_STEP));
       });
     } else {
-      state.strokeEngine.strokeFreehand([state.dragStart, state.dragCurrent], rgba, state.pixelPerfect);
+      state.strokeEngine.strokeFreehand([state.dragStart, state.dragCurrent], rgba);
     }
   } else if (state.currentTool === 'rectangle') {
     drawRectangle(
@@ -2607,7 +2600,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     brushSpacing: 1,
     brushRotationStep: 0,
     brushPath: [],
-    pixelPerfect: false,
     pencilSize: 1,
     pencilOpacity: 1,
     colorLibrarySequence: false,
@@ -2647,8 +2639,8 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     domBound = true;
   }
 
-  // The DOM (tool buttons, palette/brush swatches, pixel-perfect toggle) is
-  // bound once and reused across every project, but each freshly-opened
+  // The DOM (tool buttons, palette/brush swatches) is bound once and
+  // reused across every project, but each freshly-opened
   // project's `state` above resets to defaults — without this, opening a
   // different project left the *previous* project's tool/color highlighted
   // even though it no longer applied (e.g. the state was reset but a
@@ -2667,7 +2659,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   closeBrushEditor();
   document.getElementById('brush-spacing').value = '1';
   document.getElementById('brush-rotation').value = '0';
-  pixelPerfectToggle.classList.remove('active');
   syncLayersCollapse();
   syncColorLibraryCollapse();
   closeLayersOpacityPopover();
@@ -2829,7 +2820,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
       strokeFreehandThick(
         state.strokePoints,
         state.pencilSize,
-        state.pixelPerfect,
         withProPixelTransform(pencilOrEraserApplyPixel(activeEngine), activeEngine)
       );
       clipToSelection(activeEngine, state.strokeBackup, state.selection);
@@ -2887,7 +2877,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
       strokeFreehandThick(
         state.strokePoints,
         state.pencilSize,
-        state.pixelPerfect,
         withProPixelTransform(pencilOrEraserApplyPixel(state.strokeEngine), state.strokeEngine)
       );
       clipToSelection(state.strokeEngine, state.strokeBackup, state.selection);

@@ -57,67 +57,34 @@ describe('setPixel', () => {
 describe('strokeFreehand', () => {
   test('single point draws a single pixel', () => {
     const e = new PixelEngine(4, 4, 'transparent');
-    e.strokeFreehand([{ x: 1, y: 1 }], [10, 20, 30, 255], false);
+    e.strokeFreehand([{ x: 1, y: 1 }], [10, 20, 30, 255]);
     assert.deepEqual(px(e, 1, 1), [10, 20, 30, 255]);
   });
 
   test('straight horizontal line fills every pixel between endpoints', () => {
     const e = new PixelEngine(5, 5, 'transparent');
-    e.strokeFreehand(
-      [{ x: 0, y: 2 }, { x: 4, y: 2 }],
-      [255, 255, 255, 255],
-      false
-    );
+    e.strokeFreehand([{ x: 0, y: 2 }, { x: 4, y: 2 }], [255, 255, 255, 255]);
     for (let x = 0; x <= 4; x++) {
       assert.deepEqual(px(e, x, 2), [255, 255, 255, 255], `x=${x}`);
     }
   });
 
-  test('pixel-perfect off keeps the corner pixel of an L-shaped path', () => {
+  test('keeps the corner pixel of an L-shaped path when no Pro path transform is registered', () => {
+    // Pixel-perfect corner removal itself moved to pixi-pro
+    // (split-pixi-pro-repo) - see registerPathTransform in js/engine.js
+    // and that repo's test suite for the algorithm's own coverage. This
+    // just confirms the default (no transform registered) leaves the
+    // corner pixel (1,0) untouched.
     const e = new PixelEngine(5, 5, 'transparent');
-    // Same L-shaped path as the pixel-perfect-on test below, but with the
-    // toggle off: the corner pixel (1,0) should NOT be removed.
-    e.strokeFreehand(
-      [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }],
-      [255, 0, 0, 255],
-      false
-    );
+    e.strokeFreehand([{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }], [255, 0, 0, 255]);
     assert.deepEqual(px(e, 0, 0), [255, 0, 0, 255]);
     assert.deepEqual(px(e, 1, 0), [255, 0, 0, 255]);
     assert.deepEqual(px(e, 1, 1), [255, 0, 0, 255]);
   });
 
-  test('pixel-perfect on removes the redundant corner pixel on a diagonal', () => {
-    const e = new PixelEngine(5, 5, 'transparent');
-    // A clean diagonal path: (0,0) -> (1,1) -> (2,2)
-    e.strokeFreehand(
-      [{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 2 }],
-      [255, 0, 0, 255],
-      true
-    );
-    assert.deepEqual(px(e, 0, 0), [255, 0, 0, 255]);
-    assert.deepEqual(px(e, 1, 1), [255, 0, 0, 255]);
-    assert.deepEqual(px(e, 2, 2), [255, 0, 0, 255]);
-  });
-
-  test('pixel-perfect on thins an L-shaped corner produced by axis-aligned segments', () => {
-    const e = new PixelEngine(5, 5, 'transparent');
-    // Path goes right then up, producing a corner pixel at (1,0) between
-    // (0,0) and (1,1) that pixel-perfect mode should drop.
-    e.strokeFreehand(
-      [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }],
-      [255, 0, 0, 255],
-      true
-    );
-    assert.deepEqual(px(e, 0, 0), [255, 0, 0, 255]);
-    assert.deepEqual(px(e, 1, 1), [255, 0, 0, 255]);
-    // The corner pixel (1,0) should have been removed (left unset).
-    assert.deepEqual(px(e, 1, 0), [0, 0, 0, 0]);
-  });
-
   test('eraser (transparent rgba) writes fully transparent pixels regardless of background', () => {
     const e = new PixelEngine(4, 4, 'white');
-    e.strokeFreehand([{ x: 1, y: 1 }], [0, 0, 0, 0], false);
+    e.strokeFreehand([{ x: 1, y: 1 }], [0, 0, 0, 0]);
     assert.deepEqual(px(e, 1, 1), [0, 0, 0, 0]);
     assert.deepEqual(px(e, 0, 0), [255, 255, 255, 255]);
   });
@@ -242,7 +209,7 @@ describe('circleOffsets', () => {
 describe('strokeFreehandThick', () => {
   test('at size 1, touches exactly the same pixels a plain path would', () => {
     const touched = [];
-    strokeFreehandThick([{ x: 0, y: 0 }, { x: 2, y: 0 }], 1, false, (x, y) => touched.push([x, y]));
+    strokeFreehandThick([{ x: 0, y: 0 }, { x: 2, y: 0 }], 1, (x, y) => touched.push([x, y]));
     assert.deepEqual(touched, [[0, 0], [1, 0], [2, 0]]);
   });
 
@@ -252,7 +219,6 @@ describe('strokeFreehandThick', () => {
     strokeFreehandThick(
       [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }],
       5,
-      false,
       (x, y) => {
         calls++;
         const key = `${x},${y}`;
@@ -261,21 +227,6 @@ describe('strokeFreehandThick', () => {
       }
     );
     assert.equal(calls, seen.size);
-  });
-
-  test('pixel-perfect corner removal only applies at size 1', () => {
-    const size1 = [];
-    strokeFreehandThick([{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }], 1, true, (x, y) => size1.push([x, y]));
-    // Corner pixel (1,0) removed, same as strokeFreehand's pixel-perfect test.
-    assert.equal(size1.some(([x, y]) => x === 1 && y === 0), false);
-
-    const size3 = [];
-    strokeFreehandThick([{ x: 5, y: 5 }, { x: 6, y: 5 }, { x: 6, y: 6 }], 3, true, (x, y) => size3.push([x, y]));
-    // At size 3, no corner-removal - the corner cell is still covered by
-    // the size-3 stamp regardless (can't assert its exact absence the
-    // way size 1 does), so just confirm the call didn't throw and
-    // touched a nontrivial area.
-    assert.ok(size3.length > 3);
   });
 });
 

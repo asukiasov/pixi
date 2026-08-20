@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { test, describe, beforeEach } from 'node:test';
+import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createProject,
@@ -12,8 +12,11 @@ import {
   listCustomBrushes,
   deleteCustomBrush,
   _clearAllForTests,
+  _setStorageAdapter,
+  _resetStorageAdapter,
 } from '../js/persistence.js';
 import { LayerStack } from '../lib/pixel-engine/layers.js';
+import { createInMemoryAdapter } from '../lib/storage-adapter.js';
 
 beforeEach(async () => {
   await _clearAllForTests();
@@ -181,3 +184,44 @@ describe('deleteCustomBrush', () => {
 // addColorToPalette/deleteColorPalette (Color Library's palette CRUD)
 // moved to pixi-pro (split-pixi-pro-repo) - see that repo's
 // test/color-library-persistence.test.js for their coverage.
+
+describe('storage adapter substitution', () => {
+  // Proves pluggable-storage-adapter's "Host provides a custom backend"
+  // scenario: the same public call sites (createProject/saveProject/
+  // loadProject/listProjects/deleteProject/renameProject) work identically
+  // against a non-Dexie adapter, with no IndexedDB writes occurring.
+  afterEach(() => {
+    _resetStorageAdapter();
+  });
+
+  test('project CRUD works through an in-memory adapter, and IndexedDB stays empty', async () => {
+    _setStorageAdapter(createInMemoryAdapter());
+
+    const stack = new LayerStack(2, 2, 'transparent');
+    const created = await createProject(stack, 'In-memory project');
+    assert.ok(created.id);
+
+    stack.getActiveLayer().engine.setPixel(0, 0, [9, 8, 7, 255]);
+    await saveProject(created.id, stack);
+
+    const loaded = await loadProject(created.id);
+    assert.equal(loaded.name, 'In-memory project');
+    const restored = LayerStack.fromProjectRecord(loaded);
+    assert.deepEqual(restored.getActiveLayer().engine.getPixel(0, 0), [9, 8, 7, 255]);
+
+    await renameProject(created.id, 'Renamed in-memory project');
+    assert.equal((await loadProject(created.id)).name, 'Renamed in-memory project');
+
+    const all = await listProjects();
+    assert.equal(all.length, 1);
+
+    await deleteProject(created.id);
+    assert.equal(await loadProject(created.id), undefined);
+
+    // The Dexie-backed 'pixi' database (still the active adapter's target
+    // in every other test in this file) never saw this project.
+    _resetStorageAdapter();
+    assert.equal(await loadProject(created.id), undefined);
+    assert.equal((await listProjects()).length, 0);
+  });
+});

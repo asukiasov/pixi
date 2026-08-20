@@ -1,6 +1,6 @@
-// Dexie-backed project storage. DOM-free (thumbnail generation is the
-// caller's job, via LayerStack.toPNGBlob() which needs a canvas — see
-// design.md) so this module is directly unit-testable with Node's test
+// Dexie-backed project storage by default. DOM-free (thumbnail generation
+// is the caller's job, via LayerStack.toPNGBlob() which needs a canvas —
+// see design.md) so this module is directly unit-testable with Node's test
 // runner using fake-indexeddb, unlike engine.js/layers.js's canvas-only
 // methods.
 //
@@ -8,8 +8,19 @@
 // import map in index.html (pointing at an ESM CDN build, no npm/bundler
 // for the shipped app); Node resolves it from node_modules, installed here
 // purely so `node --test` can run this module at all.
+//
+// Project CRUD (createProject/saveProject/loadProject/listProjects/
+// deleteProject/renameProject) goes through `activeAdapter`, a pluggable
+// storage adapter (see lib/storage-adapter.js) — defaulting to
+// createDexieProjectAdapter(db) below, unchanged standalone behavior. A
+// host embedding Pixi (see the embeddable-editor-api capability) can
+// substitute its own adapter via _setStorageAdapter. customBrushes/
+// colorPalettes CRUD stays direct Dexie, unaffected — out of scope per
+// this change's design.md ("only project records are in scope for
+// embedding today").
 
 import Dexie from 'dexie';
+import { createDexieProjectAdapter } from '../lib/storage-adapter.js';
 
 // Exported (split-pixi-pro-repo): Color Library's palette CRUD moved to
 // pixi-pro (js/pro/color-library-persistence.js), since Color Library
@@ -43,6 +54,26 @@ function generateId() {
   return crypto.randomUUID();
 }
 
+let activeAdapter = createDexieProjectAdapter(db);
+
+/**
+ * Substitutes the storage adapter used by every project CRUD function
+ * below (create/save/load/list/delete/renameProject). Used by the
+ * embeddable editor API (lib/pixi.js) to route a mounted instance's
+ * persistence through a host-supplied adapter instead of IndexedDB, and
+ * by tests to verify a non-Dexie adapter works through these same call
+ * sites (pluggable-storage-adapter spec's "Host provides a custom
+ * backend" scenario).
+ */
+export function _setStorageAdapter(adapter) {
+  activeAdapter = adapter;
+}
+
+/** Test-only: restores the default Dexie-backed adapter. */
+export function _resetStorageAdapter() {
+  activeAdapter = createDexieProjectAdapter(db);
+}
+
 /**
  * Creates a new project record from a LayerStack and writes it immediately
  * — the record exists before any drawing happens, per the local-persistence
@@ -58,7 +89,7 @@ export async function createProject(layerStack, name = 'Untitled', thumbnail = n
     createdAt: now,
     updatedAt: now,
   };
-  await db.projects.put(record);
+  await activeAdapter.save(record);
   return record;
 }
 
@@ -66,34 +97,45 @@ export async function createProject(layerStack, name = 'Untitled', thumbnail = n
  * Updates an existing project's layer data (and thumbnail, if provided)
  * and bumps updatedAt. This is the auto-save write path — called from
  * workspace.js's commit(), the same point that already pushes an undo
- * snapshot after every completed action.
+ * snapshot after every completed action. A no-op if `id` doesn't exist
+ * (matches Dexie's own `.update()` semantics: silently does nothing
+ * rather than creating a new record), since the adapter interface's
+ * `save()` is a full-record upsert and would otherwise create a
+ * partial record from `updates` alone.
  */
 export async function saveProject(id, layerStack, thumbnail = null) {
-  const updates = {
+  const existing = await activeAdapter.load(id);
+  if (!existing) return;
+  const merged = {
+    ...existing,
     ...layerStack.toProjectRecord(),
+    id,
     updatedAt: Date.now(),
   };
-  if (thumbnail) updates.thumbnail = thumbnail;
-  await db.projects.update(id, updates);
+  if (thumbnail) merged.thumbnail = thumbnail;
+  await activeAdapter.save(merged);
 }
 
-/** Renames an existing project. */
+/** Renames an existing project. No-op if `id` doesn't exist. */
 export async function renameProject(id, name) {
-  await db.projects.update(id, { name, updatedAt: Date.now() });
+  const existing = await activeAdapter.load(id);
+  if (!existing) return;
+  await activeAdapter.save({ ...existing, name, updatedAt: Date.now() });
 }
 
 /** Returns the raw stored record (or undefined), ready for LayerStack.fromProjectRecord(). */
 export async function loadProject(id) {
-  return db.projects.get(id);
+  return activeAdapter.load(id);
 }
 
 /** All projects, most-recently-updated first — for the Gallery. */
 export async function listProjects() {
-  return db.projects.orderBy('updatedAt').reverse().toArray();
+  const all = await activeAdapter.list();
+  return [...all].sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export async function deleteProject(id) {
-  await db.projects.delete(id);
+  await activeAdapter.delete(id);
 }
 
 /**

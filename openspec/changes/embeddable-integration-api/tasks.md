@@ -15,12 +15,12 @@
 
 ## 2. Build the pluggable storage adapter (Phase 2)
 
-- [ ] 2.1 Define the storage adapter interface (`load(id)`, `save(record)`, `list()`, `delete(id)`) as a module, matching `js/persistence.js`'s existing project-record shape
-- [ ] 2.2 Wrap `js/persistence.js`'s existing Dexie calls (`createProject`, `saveProject`, `loadProject`, `renameProject`, delete) as the default adapter implementation of that interface — custom-brush and color-palette CRUD stay direct Dexie calls, unaffected
-- [ ] 2.3 Introduce an active-adapter mechanism (defaulting to the Dexie adapter) that `persistence.js`'s public functions delegate to, so call sites (`js/workspace.js`, `js/new-canvas.js`, `js/app.js`) are unchanged
-- [ ] 2.4 Run `npm test` — confirm persistence tests still pass against the default adapter
-- [ ] 2.5 Add a test double / in-memory adapter used only by tests to verify a non-Dexie adapter can be substituted and exercised through the same call sites
-- [ ] 2.6 Smoke-test the standalone app again (new project, auto-save, reload, Gallery, delete) — confirm no behavior change
+- [x] 2.1 Define the storage adapter interface (`load(id)`, `save(record)`, `list()`, `delete(id)`) as a module, matching `js/persistence.js`'s existing project-record shape (`lib/storage-adapter.js`, with a shared contract test suite run against every implementation)
+- [x] 2.2 Wrap `js/persistence.js`'s existing Dexie calls (`createProject`, `saveProject`, `loadProject`, `renameProject`, delete) as the default adapter implementation of that interface — custom-brush and color-palette CRUD stay direct Dexie calls, unaffected (`createDexieProjectAdapter`)
+- [x] 2.3 Introduce an active-adapter mechanism (defaulting to the Dexie adapter) that `persistence.js`'s public functions delegate to, so call sites (`js/workspace.js`, `js/new-canvas.js`, `js/app.js`) are unchanged (`_setStorageAdapter`/`_resetStorageAdapter`; `saveProject`/`renameProject` now no-op on a missing id, matching Dexie's `.update()` semantics exactly, since the adapter's `save()` is a full-record upsert)
+- [x] 2.4 Run `npm test` — confirm persistence tests still pass against the default adapter (all 13 pre-existing persistence tests pass unmodified; found and fixed the `package.json` test glob not picking up `lib/*.test.js` files directly under `lib/` — only one level deeper — while implementing this)
+- [x] 2.5 Add a test double / in-memory adapter used only by tests to verify a non-Dexie adapter can be substituted and exercised through the same call sites (`createInMemoryAdapter` + `test/persistence.test.js`'s new "storage adapter substitution" test, going through `createProject`/`saveProject`/`loadProject`/`renameProject`/`listProjects`/`deleteProject`, not the adapter directly)
+- [x] 2.6 Smoke-test the standalone app again (new project, auto-save, reload, Gallery, delete) — confirm no behavior change (verified via Playwright)
 
 ## 3. Build the mount API (Phase 3)
 

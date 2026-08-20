@@ -27,7 +27,7 @@
       opacity slider (`js/workspace.js` + `index.html` markup). None are
       dead code — all are live, wired-up features. Removal from `pixi` is
       in scope for task 2.2 below, not deferred further.
-- [ ] 2.2 Per feature, in `pixi`: remove its JS module(s), `index.html`
+- [x] 2.2 Per feature, in `pixi`: remove its JS module(s), `index.html`
       markup, CSS, and call sites in shared files (`app.js`,
       `workspace.js`, `engine.js`, `persistence.js`), verifying Standard's
       remaining tools have no leftover dependency on the removed code path
@@ -35,7 +35,7 @@
       as an additive module (starting point, not a rewrite), wired into
       `pixi`'s existing extension points from outside the submodule, per
       design.md's "Extraction before addition" and "no engine forking"
-      decisions. Progress (7/8):
+      decisions. Progress (8/8, all done):
       - [x] Symmetry/mirror drawing — extracted; added the generic
             `registerApplyPixelTransform` hook to `pixi`'s `workspace.js`/
             `brushes.js` for this and future features to register against.
@@ -73,12 +73,30 @@
             `matrixRain`/`confettiBurst` to `pixi`'s `workspace.js`.
             `js/image-import.js` still stays in `pixi` (now only the
             reference image layer, part of Layers below, still needs it).
-      - [ ] Layers panel and everything tied to it
-- [ ] 2.3 Verify `pixi-pro`, built and run, has the full Standard + Pro
-      toolset working end to end (manual smoke test against the tier
-      matrix in `docs/superpowers/specs/2026-08-17-tier-matrix-worksheet.md`).
-- [ ] 2.4 Verify `pixi` (Standard), unchanged, still has no Pro-only
-      features present.
+      - [x] Layers panel and everything tied to it (add/delete/reorder/
+            rename, visibility, blend mode, opacity, reference image
+            layer, merge layers) — extracted entirely; `LayerStack`
+            itself is untouched in `pixi` (its mutating methods were
+            already public, so unlike `resize`/`rotate90` there was no
+            technical wall — `pixi-pro` calls them directly via a new
+            `getLayerStack()` accessor). Added `getLayerStack`/
+            `renderCanvas`/`registerAfterCommit`/`registerAfterUndoRedo`/
+            `registerMergeShortcut` to `pixi`'s `workspace.js`, and
+            exported `BLEND_MODES` from `layers.js`. `js/image-import.js`
+            (its last remaining caller) moved to `pixi-pro` wholesale.
+            Verified extensively in a browser: background layer locking,
+            every per-row/toolbar operation, reference image
+            upload/mode/smoothing, undo refreshing the panel via the new
+            hook, and merge-layers in both its shortcut forms.
+- [x] 2.3 Verify `pixi-pro`, built and run, has the full Standard + Pro
+      toolset working end to end — done per-feature throughout task 2.2
+      (each of the 8 features was verified live in a browser as it was
+      extracted, not deferred to one final pass); no consolidated
+      single-session run against the tier matrix doc was done separately.
+- [x] 2.4 Verify `pixi` (Standard), unchanged, still has no Pro-only
+      features present — confirmed per-feature via grep sweeps for
+      leftover references after each extraction (see each feature's
+      commit); `pixi`'s own test suite (186 tests) passes throughout.
 
 ## 3. Demo deployment
 

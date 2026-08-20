@@ -100,28 +100,50 @@
 
 ## 3. Demo deployment
 
-- [ ] 3.1 Create a Cloudflare Pages project connected to the private
-      `pixi-pro` repo (GitHub App install with repo access).
-- [ ] 3.2 Configure auto-deploy on push/tag, no build command (static
-      files served as-is).
-- [ ] 3.3 Deploy and verify the live demo URL serves the full,
+- [x] 3.1 Create a Cloudflare Pages project connected to the private
+      `pixi-pro` repo (GitHub App install with repo access). Done via
+      Cloudflare's unified Workers-with-static-assets flow rather than
+      classic Pages — same outcome (git-connected, private repo), needed
+      a `wrangler.jsonc` (`assets.directory: "./"`) added to `pixi-pro`
+      since that flow's deploy command is `npx wrangler deploy`.
+- [x] 3.2 Configure auto-deploy on push/tag, no build command (static
+      files served as-is). Build command left blank; deploy command is
+      `npx wrangler deploy` (see 3.1).
+- [x] 3.3 Deploy and verify the live demo URL
+      (https://pixi-pro.asukiasov.workers.dev/) serves the full,
       unrestricted Pro app — no watermark, export/save fully functional.
-- [ ] 3.4 Confirm `pixi`'s existing GitHub Pages deploy is unaffected.
-- [ ] 3.5 Update public-facing demo links in `pixi`'s README (and any other
-      doc referencing "demo") to add the `pixi-pro` Cloudflare Pages demo
-      URL alongside the existing Standard GitHub Pages link, clearly
-      labeled so visitors know which is which (free Standard vs. paid Pro
-      demo).
+      Hit one bug along the way: `pixi-pro`'s submodule pin (`v0.2.0`)
+      predated the Pro extraction hooks, so Pro modules threw
+      `SyntaxError`s importing hooks like `registerApplyPixelTransform`
+      that didn't exist on that pin yet. Fixed by merging
+      `split-pixi-pro-repo` into `pixi`'s `main`, cutting `v0.3.0`, and
+      bumping the submodule pin — see `runbook.md` section 4.3 for the
+      repeatable process.
+- [x] 3.4 Confirm `pixi`'s existing GitHub Pages deploy is unaffected —
+      https://asukiasov.github.io/pixi/ verified live (200, correct
+      `<title>`) after the `main` merge/push.
+- [x] 3.5 Update public-facing demo links in `pixi`'s README (and any other
+      doc referencing "demo") to add the `pixi-pro` Cloudflare demo URL
+      alongside the existing Standard GitHub Pages link, clearly labeled
+      so visitors know which is which (free Standard vs. paid Pro demo).
+      Also fixed the README's Features table while in there — it still
+      listed Layers/Color Library/Canvas settings/pixel-perfect drawing
+      as shipped in Standard, stale since the extraction.
 
 ## 4. Access and distribution runbook
 
-- [ ] 4.1 Document the manual PayPal → GitHub-collaborator flow (where the
+- [x] 4.1 Document the manual PayPal → GitHub-collaborator flow (where the
       PayPal link lives, what the buyer sees after paying, expected
-      turnaround time) as an operator runbook.
-- [ ] 4.2 Document the manual release-zip alternative for buyers who
-      don't want/need ongoing GitHub access.
-- [ ] 4.3 Document the submodule-pin-bump process for when `pixi-pro`
-      should pick up a newer `pixi` release.
+      turnaround time) as an operator runbook. See `runbook.md` section
+      4.1 — flags one real gap found while documenting it: PayPal doesn't
+      collect the buyer's GitHub username, so there's currently no stated
+      channel for a buyer to send it.
+- [x] 4.2 Document the manual release-zip alternative for buyers who
+      don't want/need ongoing GitHub access. See `runbook.md` section 4.2.
+- [x] 4.3 Document the submodule-pin-bump process for when `pixi-pro`
+      should pick up a newer `pixi` release. See `runbook.md` section
+      4.3 — this is the exact process used to fix task 3.3's bug, written
+      up so it's repeatable.
 
 ## 5. Docs cleanup
 

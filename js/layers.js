@@ -7,7 +7,8 @@
 import { PixelEngine } from './engine.js';
 
 const MAX_LAYERS = 8;
-const BLEND_MODES = ['normal', 'multiply', 'screen', 'overlay'];
+/** Pro extension point (split-pixi-pro-repo): exported so pixi-pro's Layers panel UI can populate its blend-mode select without duplicating this list. */
+export const BLEND_MODES = ['normal', 'multiply', 'screen', 'overlay'];
 const BLEND_MODE_TO_COMPOSITE_OP = {
   normal: 'source-over',
   multiply: 'multiply',

@@ -32,7 +32,7 @@
        keep it sorted alphabetically — the Google Fonts API 400s the whole
        request (breaking every icon on the page, not just an unsorted one)
        if icon_names isn't in alphabetical order. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check_box,check_box_outline_blank,close,colorize,crop_free,dark_mode,delete,dock_to_right,download,edit,expand_more,format_color_fill,home,horizontal_rule,image_arrow_up,ink_eraser,layers,light_mode,lock,opacity,rectangle,redo,remove,restart_alt,swap_horiz,undo,visibility,visibility_off" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check_box,check_box_outline_blank,close,colorize,crop_free,dark_mode,delete,dock_to_right,download,edit,expand_more,format_color_fill,home,horizontal_rule,ink_eraser,light_mode,lock,rectangle,redo,remove,restart_alt,swap_horiz,undo,visibility,visibility_off" />
 </head>
 <body>
   <main id="screen-gallery" class="screen">
@@ -86,9 +86,11 @@
       <button type="button" id="back-to-gallery-button" class="tool-button icon-button magnetic-hover" aria-label="Gallery" data-tooltip="Gallery">
         <span class="material-symbols-outlined">home</span>
       </button>
-      <button type="button" id="layers-panel-toggle" class="tool-button icon-button active magnetic-hover" aria-label="Layers" data-tooltip="Layers">
-        <span class="material-symbols-outlined">layers</span>
-      </button>
+      <!-- Pro-only (split-pixi-pro-repo): Layers panel toggle. Present
+           in pixi-pro's own index.html (own copy of this markup) but not
+           here - see js/workspace.js's getLayerStack/renderCanvas/
+           commit/registerAfterCommit/registerAfterUndoRedo/
+           registerMergeShortcut/onWorkspaceReset. -->
       <button type="button" id="export-button" class="tool-button icon-button magnetic-hover" aria-label="Export PNG" data-tooltip="Export PNG">
         <span class="material-symbols-outlined">download</span>
       </button>
@@ -103,9 +105,10 @@
       </button>
       <!-- VSCode-style whole-panel toggle: hides/shows the entire right
            sidebar (Color Library + Brushes + Layers together), independent
-           of each panel's own collapsed state (#layers-panel-toggle above
-           only affects the Layers panel). Right end of the top bar,
-           closest to the panel it controls - see js/workspace.js. -->
+           of each panel's own collapsed state (Pro-only panels have their
+           own collapse toggles too - split-pixi-pro-repo). Right end of
+           the top bar, closest to the panel it controls - see
+           js/workspace.js. -->
       <button type="button" id="right-sidebar-toggle" class="tool-button icon-button active magnetic-hover" aria-label="Right panel" data-tooltip="Right panel">
         <span class="material-symbols-outlined">dock_to_right</span>
       </button>
@@ -367,73 +370,16 @@
         </div>
       </div>
 
-      <!-- Photoshop-style Layers panel: a shared toolbar (Blend mode +
-           Opacity, editing whichever layer is active) above a list of
-           compact single-row layers (thumbnail + name + visibility),
-           rather than each row carrying its own opacity/blend controls.
-           Reorder/delete stay as small per-row icons (Photoshop uses
-           drag-and-drop for reordering and a panel-level trash target;
-           this app has neither, so tap-to-reorder + a per-row delete
-           icon is the closest equivalent). Bottom-most section - see
-           #right-sidebar above for why. -->
-      <div id="layers-panel" class="layers-panel">
-        <div id="layers-panel-header" class="layers-panel-header panel-header" role="button" tabindex="0" aria-expanded="true">
-          <div class="panel-header-top">
-            <h2>Layers</h2>
-            <span class="material-symbols-outlined panel-collapse-chevron">expand_more</span>
-          </div>
-          <div class="panel-header-actions layers-panel-header-actions">
-            <!-- reference-image-layer: trace-over guide upload, disabled once
-                 one already exists on the canvas (LayerStack allows at most
-                 one) - see js/workspace.js's addReferenceImageButton wiring.
-                 Hidden file input below, same pattern as
-                 #brush-editor-import-input / #color-library-import-input. -->
-            <button type="button" id="add-reference-image-button" class="tool-button icon-button" aria-label="Add reference image" data-tooltip="Add reference image">
-              <span class="material-symbols-outlined">image_arrow_up</span>
-            </button>
-            <input type="file" id="add-reference-image-input" accept="image/*" class="hidden" aria-label="Reference image file" />
-            <!-- Not a Material Symbols glyph - "layers_add" isn't a real
-                 icon in that set (checked its codepoints file directly),
-                 so this uses the provided image asset (assets/icons/
-                 layers_add.svg - same real-file convention as the pan
-                 cursor's assets/cursors/pets.svg) instead of hand-copied
-                 inline markup. Empty span, not <img> - see
-                 .layers-add-icon in style.css for why (CSS mask, so it
-                 still recolors via currentColor like every other icon
-                 button here, light or dark theme). -->
-            <button type="button" id="add-layer-button" class="icon-button" aria-label="Add layer" data-tooltip="Add layer">
-              <span class="layers-add-icon"></span>
-            </button>
-          </div>
-        </div>
-        <div id="layers-panel-body" class="layers-panel-body">
-          <!-- One row: Blend mode sized to its own text, Opacity as a
-               small button showing the current percentage that opens a
-               popover (slider + number field) - Photoshop's own
-               click-to-reveal-slider interaction, replacing an
-               always-visible slider that couldn't share a line with
-               Blend mode at this sidebar's width. -->
-          <div class="layers-panel-toolbar">
-            <select id="layers-panel-blend-select" class="layers-panel-blend-select" aria-label="Blend mode"></select>
-            <button type="button" id="layers-panel-opacity-toggle" class="layers-panel-opacity-toggle" aria-label="Opacity" data-tooltip="Opacity">
-              <span class="material-symbols-outlined layers-panel-opacity-icon">opacity</span>
-              <span id="layers-panel-opacity-readout" class="layers-panel-opacity-readout">100%</span>
-            </button>
-          </div>
-          <div id="layers-panel-list" class="layers-panel-list"></div>
-        </div>
-      </div>
+      <!-- Pro-only (split-pixi-pro-repo): Photoshop-style Layers panel.
+           Present in pixi-pro's own index.html (own copy of this
+           markup) but not here - see js/workspace.js's getLayerStack/
+           renderCanvas/commit/registerAfterCommit/registerAfterUndoRedo/
+           registerMergeShortcut/onWorkspaceReset. Bottom-most section -
+           see #right-sidebar above for why. -->
     </aside>
 
-    <!-- Opacity popover for the Layers toolbar above - position via fixed
-         + JS (getBoundingClientRect), clamped to the viewport, same
-         pattern #color-picker-popover uses (see openColorPicker in
-         js/workspace.js). Lives outside .right-sidebar so its own
-         overflow-y:auto can't clip it. -->
-    <div id="layers-panel-opacity-popover" class="opacity-popover hidden">
-      <input type="range" id="layers-panel-opacity-slider" class="layers-panel-opacity-slider" min="0" max="100" value="100" aria-label="Layer opacity" />
-      <input type="number" id="layers-panel-opacity-number" class="layers-panel-opacity-number" min="0" max="100" value="100" aria-label="Layer opacity percent" />
-    </div>
+    <!-- Pro-only (split-pixi-pro-repo): opacity popover for the Layers
+         toolbar. Present in pixi-pro's own index.html but not here. -->
     </div>
   </main>
 

@@ -2,7 +2,6 @@ import { UndoStack } from './undo.js';
 import { saveProject, renameProject, createCustomBrush, listCustomBrushes, deleteCustomBrush } from './persistence.js';
 import { initExport } from './export.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
-import { decodeImageFile, downsampleToImageData, fitImageToCanvas } from './image-import.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
 import { bresenhamLine, strokeFreehandThick } from './engine.js';
 import { confirmDialog } from './confirm-dialog.js';
@@ -108,65 +107,9 @@ function isSquareConstrained() {
   return shiftHeld || state.squareConstraint;
 }
 
-/**
- * Pure state transition for Layers panel marking (multi-select) -
- * merge-layers's marked set is distinct from the single active layer.
- * `layers` is the current stack in bottom-to-top order (as from
- * LayerStack.getLayers()), each needing only `id`/`isBackground`/
- * `isReferenceImage`. `marked` is the current marked-id Set;
- * `lastClickedId` is the id most recently clicked (of any kind), used as
- * the Shift+click range anchor. A locked layer (Background or reference
- * image - see LayerStack's private `#isLocked`) can never be marked,
- * whichever click type targets it. Exported as a pure function so this
- * logic is unit-testable (see test/workspace.test.js) without a DOM
- * harness - the row click handler in buildLayerRow calls this and applies
- * the result.
- *
- * - Cmd/Ctrl+click: toggles `clickedId` in the marked set, other marks
- *   untouched. A no-op on the marked set itself if `clickedId` is a locked
- *   layer (it can never be marked), but the anchor still updates.
- * - Shift+click (with a prior `lastClickedId`): marks every unlocked
- *   layer between `lastClickedId` and `clickedId` (inclusive), replacing
- *   any prior marks. With no prior `lastClickedId`, falls back to plain
- *   click behavior.
- * - Plain click (no modifier): clears all marks, same as it would for any
- *   other row - including a locked layer, which only can't itself become
- *   marked, same as the Background layer already can become the active
- *   layer today (a reference image layer cannot - see
- *   LayerStack.setActiveLayer). The active-layer change itself is handled
- *   by the caller.
- */
-export function computeLayerMarkState({ marked, lastClickedId, clickedId, layers, metaOrCtrl, shift }) {
-  const isLocked = (l) => !!l?.isBackground || !!l?.isReferenceImage;
-  const clickedLayer = layers.find((l) => l.id === clickedId);
-  const clickedIsLocked = isLocked(clickedLayer);
-
-  if (metaOrCtrl) {
-    if (clickedIsLocked) return { marked, lastClickedId: clickedId };
-    const next = new Set(marked);
-    if (next.has(clickedId)) next.delete(clickedId);
-    else next.add(clickedId);
-    return { marked: next, lastClickedId: clickedId };
-  }
-
-  if (shift && lastClickedId != null) {
-    const lastIndex = layers.findIndex((l) => l.id === lastClickedId);
-    const clickedIndex = layers.findIndex((l) => l.id === clickedId);
-    if (lastIndex !== -1 && clickedIndex !== -1) {
-      const lo = Math.min(lastIndex, clickedIndex);
-      const hi = Math.max(lastIndex, clickedIndex);
-      const next = new Set();
-      for (let i = lo; i <= hi; i++) {
-        if (!isLocked(layers[i])) next.add(layers[i].id);
-      }
-      return { marked: next, lastClickedId: clickedId };
-    }
-  }
-
-  // Plain click, or Shift with no valid anchor: clears all marks and
-  // updates the anchor to this row, whether or not it's a locked layer.
-  return { marked: new Set(), lastClickedId: clickedId };
-}
+// computeLayerMarkState (Layers panel multi-select marking, for
+// merge-layers) moved to pixi-pro (split-pixi-pro-repo) - see that
+// repo's test suite for its coverage.
 
 // Module-level state, not per-call: the Workspace screen is a singleton in
 // this app (one workspace <canvas>), reused across every project the user
@@ -179,21 +122,9 @@ let domBound = false;
 // released mid-drag - the Rectangle and Selection tools check this on
 // every move.
 let shiftHeld = false;
-// Layers panel marking (multi-select), for merge-layers - transient UI
-// state, not persisted and not part of the undo snapshot (see design.md's
-// "Marking state lives in js/workspace.js, not LayerStack" decision).
-// markedLayerIds holds layer ids (not indices), so marks survive an
-// unrelated renderLayersPanel() re-run between a mark and a merge (e.g.
-// after a visibility toggle shifts nothing, but a reorder would shift
-// indices). lastMarkClickedLayerId is the Shift+click range anchor -
-// updated by every click (plain, Cmd/Ctrl, or Shift alike). Both reset on
-// layer add/delete and undo/redo (see clearLayerMarks below).
-let markedLayerIds = new Set();
-let lastMarkClickedLayerId = null;
-function clearLayerMarks() {
-  markedLayerIds = new Set();
-  lastMarkClickedLayerId = null;
-}
+// Layers panel marking (markedLayerIds/lastMarkClickedLayerId/
+// clearLayerMarks) moved to pixi-pro's js/pro/layers-ui.js
+// (split-pixi-pro-repo) alongside the rest of the Layers panel.
 let squareConstraintPanel = null;
 let squareConstraintToggle = null;
 let exportControls = null;
@@ -202,15 +133,6 @@ let paletteRow = null;
 let brushesPanel = null;
 let brushesPanelGrid = null;
 let deleteBrushButton = null;
-let layersPanel = null;
-let layersPanelToggle = null;
-let layersPanelHeader = null;
-let layersPanelBlendSelect = null;
-let layersPanelOpacitySlider = null;
-let layersPanelOpacityReadout = null;
-let layersPanelOpacityToggle = null;
-let layersPanelOpacityNumber = null;
-let layersPanelOpacityPopover = null;
 let rightSidebar = null;
 let rightSidebarToggle = null;
 let foregroundSwatchEl = null;
@@ -224,6 +146,16 @@ let pencilOptionsPanel = null;
 // scoped to one project (see the "Custom brushes persist across
 // projects" requirement).
 let allBrushes = [...BRUSHES];
+
+/** Pro extension point (split-pixi-pro-repo): read access to the current project's LayerStack, so pixi-pro's Layers panel can call its (already-public) add/delete/reorder/etc. methods directly. */
+export function getLayerStack() {
+  return state.layerStack;
+}
+
+/** Pro extension point: re-renders the canvas (e.g. after a Layers panel operation), same as calling commit() but without an undo snapshot/autosave. */
+export function renderCanvas() {
+  state.canvasView.render();
+}
 
 function updateUndoRedoButtons() {
   state.undoButton.disabled = !state.undoStack.canUndo();
@@ -242,10 +174,35 @@ async function autoSave() {
   await saveProject(state.projectId, state.layerStack, thumbnail);
 }
 
-function commit() {
+/**
+ * Pro extension point (split-pixi-pro-repo): called at the end of commit
+ * (below) - e.g. so pixi-pro's Layers panel can refresh a layer's
+ * thumbnail, which only updates on a full re-render, unlike the live
+ * canvas. No-op when no Pro module is present. A single chokepoint here
+ * rather than a call at every commit() call site - every commit means
+ * content changed, so a stale thumbnail is always possible.
+ */
+let afterCommitHook = null;
+export function registerAfterCommit(fn) {
+  afterCommitHook = fn;
+}
+
+export function commit() {
   state.undoStack.push(state.layerStack.snapshot());
   updateUndoRedoButtons();
   autoSave();
+  if (afterCommitHook) afterCommitHook();
+}
+
+/**
+ * Pro extension point: called at the end of performUndo/performRedo
+ * (below) - e.g. so pixi-pro's Layers panel can clear its merge marks
+ * (restored indices may no longer match what was marked) and refresh
+ * itself. No-op when no Pro module is present.
+ */
+let afterUndoRedoHook = null;
+export function registerAfterUndoRedo(fn) {
+  afterUndoRedoHook = fn;
 }
 
 /** Shared by the Undo button and the Cmd/Ctrl+Z keyboard shortcut. */
@@ -253,42 +210,22 @@ function performUndo() {
   const snapshot = state.undoStack.undo();
   if (snapshot) {
     state.layerStack.restore(snapshot);
-    clearLayerMarks(); // restored indices may no longer match what was marked
     state.canvasView.render();
-    renderLayersPanel();
+    if (afterUndoRedoHook) afterUndoRedoHook();
     autoSave();
   }
   updateUndoRedoButtons();
 }
 
 /**
- * Cmd/Ctrl+E: merges the marked set (2+ layers) if one exists, otherwise
- * merges the active layer down into the layer directly below it - see
- * specs/layers/spec.md's "Merge marked layers"/"Merge active layer down"
- * requirements (merge-layers). Marks are always cleared afterward,
- * win or no-op, so a merge attempt never leaves stale marks referring to
- * layers that no longer exist in their marked positions. Only a
- * successful merge re-renders/commits - the no-op paths (bottom-most
- * active layer, single-layer stack, Background layer involved) leave the
- * stack and undo history untouched.
+ * Pro extension point: registers the Cmd/Ctrl+E merge-layers shortcut's
+ * handler (merge-layers is entirely Pro-only - see
+ * js/pro/layers-ui.js's mergeMarkedOrActiveDown in pixi-pro). A no-op
+ * keypress when no Pro module is present.
  */
-function mergeMarkedOrActiveDown() {
-  const layers = state.layerStack.getLayers();
-  const markedIndices = layers
-    .map((layer, i) => (markedLayerIds.has(layer.id) ? i : -1))
-    .filter((i) => i !== -1);
-
-  const merged =
-    markedIndices.length >= 2
-      ? state.layerStack.mergeLayers(markedIndices)
-      : state.layerStack.mergeDown(state.layerStack.getActiveIndex());
-
-  clearLayerMarks();
-  if (!merged) return;
-
-  state.canvasView.render();
-  commit();
-  renderLayersPanel();
+let mergeShortcutHook = null;
+export function registerMergeShortcut(fn) {
+  mergeShortcutHook = fn;
 }
 
 /** Shared by the Redo button and the Cmd/Ctrl+Shift+Z (or Ctrl+Y) shortcut. */
@@ -296,9 +233,8 @@ function performRedo() {
   const snapshot = state.undoStack.redo();
   if (snapshot) {
     state.layerStack.restore(snapshot);
-    clearLayerMarks(); // restored indices may no longer match what was marked
     state.canvasView.render();
-    renderLayersPanel();
+    if (afterUndoRedoHook) afterUndoRedoHook();
     autoSave();
   }
   updateUndoRedoButtons();
@@ -445,328 +381,20 @@ function clearSelection() {
   updateSelectionControls();
 }
 
-/**
- * Renders `layer`'s actual pixel content into a small canvas - a real
- * thumbnail preview, Photoshop-style, not a generic placeholder. Full
- * layer resolution is drawn (browsers downscale via CSS sizing on the
- * <canvas> element itself, same object-fit:contain-over-a-flat-
- * background approach the Gallery's project thumbnails already use), so
- * this stays correct after any resize without regenerating anything.
- */
-function buildLayerThumbnailCanvas(layer) {
-  const canvas = document.createElement('canvas');
-  canvas.className = 'layer-thumbnail';
-  canvas.width = layer.engine.width;
-  canvas.height = layer.engine.height;
-  const ctx = canvas.getContext('2d');
-  ctx.putImageData(new ImageData(new Uint8ClampedArray(layer.engine.data), layer.engine.width, layer.engine.height), 0, 0);
-  return canvas;
-}
+// buildLayerThumbnailCanvas/syncLayersPanelToolbar (Layers panel
+// rendering) moved to pixi-pro's js/pro/layers-ui.js
+// (split-pixi-pro-repo).
 
-/**
- * Syncs the panel-level Blend mode/Opacity toolbar (see index.html) to
- * the currently active layer - Photoshop-style, these controls edit
- * whichever layer is selected rather than living inline in every row.
- * Called after every render (a fresh active layer may now be selected)
- * and once right after wiring in bindDomOnce.
- */
-function syncLayersPanelToolbar() {
-  const layer = state.layerStack.getActiveLayer();
-  if (!layer) return;
-  layersPanelBlendSelect.value = layer.blendMode;
-  const opacityPercent = Math.round(layer.opacity * 100);
-  layersPanelOpacitySlider.value = String(opacityPercent);
-  layersPanelOpacityNumber.value = String(opacityPercent);
-  layersPanelOpacityReadout.textContent = `${opacityPercent}%`;
-}
-
-/**
- * Syncs the whole right-sidebar's (Color Library + Brushes + Layers)
- * collapsed/expanded DOM state to state.rightSidebarVisible - AUD-11.
- * Collapsing animates the sidebar's width to 0 (see
- * .right-sidebar-collapsed in style.css, which also handles
- * prefers-reduced-motion) rather than snapping via display:none, so the
- * canvas area beside it (a flex sibling) reflows smoothly too. `inert`
- * is set while collapsed so its now width:0 content can't be tabbed
- * into or interacted with, mirroring how .hidden elements are already
- * unreachable.
- */
 function setRightSidebarVisible(visible) {
   rightSidebar.classList.toggle('right-sidebar-collapsed', !visible);
   rightSidebar.inert = !visible;
   rightSidebarToggle.classList.toggle('active', visible);
 }
 
-/**
- * Syncs the Layers panel's collapsed/expanded DOM state to
- * state.layersPanelVisible - collapsing hides everything but the header
- * (see .layers-panel.collapsed in style.css), letting the Color Library
- * panel above grow into the freed space. Called by both the panel
- * header click and the pre-existing bottom-bar toggle
- * (#layers-panel-toggle), which share this one flag.
- */
-function syncLayersCollapse() {
-  const collapsed = !state.layersPanelVisible;
-  layersPanel.classList.toggle('collapsed', collapsed);
-  layersPanelHeader.setAttribute('aria-expanded', String(!collapsed));
-  layersPanelToggle.classList.toggle('active', !collapsed);
-}
+// syncLayersCollapse/renderLayersPanel/buildLayerRow (the Layers
+// panel itself) moved to pixi-pro's js/pro/layers-ui.js
+// (split-pixi-pro-repo) - see that history for prior art.
 
-function renderLayersPanel() {
-  const layers = state.layerStack.getLayers();
-  const activeIndex = state.layerStack.getActiveIndex();
-  state.layersPanelList.innerHTML = '';
-
-  // Topmost layer (end of the bottom-to-top array) listed first.
-  for (let i = layers.length - 1; i >= 0; i--) {
-    const layer = layers[i];
-    const isMarked = markedLayerIds.has(layer.id);
-    state.layersPanelList.appendChild(buildLayerRow(layer, i, i === activeIndex, isMarked, layers));
-  }
-
-  state.addLayerButton.disabled = layers.length >= 8;
-  // reference-image-layer: at most one reference image layer per canvas
-  // (also refused past the 8-layer cap, same as addLayerButton above) -
-  // LayerStack.addReferenceImageLayer enforces this too, this is just the
-  // matching disabled UI state.
-  state.addReferenceImageButton.disabled = layers.length >= 8 || layers.some((l) => l.isReferenceImage);
-  syncLayersPanelToolbar();
-}
-
-/**
- * A single compact row - thumbnail, visibility, name, and small
- * reorder/delete icons - Photoshop's own Layers panel row, adapted to
- * this app's tap-to-reorder (Photoshop uses drag-and-drop, which this
- * app doesn't implement) and per-row delete icon (Photoshop's trash
- * target lives once at the panel's bottom, but a per-row icon is a
- * closer fit for a touch-first app anyway). Blend mode/Opacity are NOT
- * here - see the panel-level toolbar/syncLayersPanelToolbar.
- */
-function buildLayerRow(layer, index, isActive, isMarked, layers) {
-  const layerCount = layers.length;
-  const row = document.createElement('div');
-  row.className = 'layer-row' + (isActive ? ' active' : '') + (isMarked ? ' marked' : '');
-  row.addEventListener('click', (e) => {
-    if (e.target.closest('button, input')) return;
-    // Cmd/Ctrl+click toggles this layer's mark; Shift+click marks the
-    // contiguous range from the last-clicked row; a plain click keeps
-    // today's behavior (set active layer) and clears marks - see
-    // computeLayerMarkState's doc comment for the full rule set. Marking
-    // is independent of which layer is active except that a plain click
-    // still drives both.
-    const { marked, lastClickedId } = computeLayerMarkState({
-      marked: markedLayerIds,
-      lastClickedId: lastMarkClickedLayerId,
-      clickedId: layer.id,
-      layers,
-      metaOrCtrl: e.metaKey || e.ctrlKey,
-      shift: e.shiftKey,
-    });
-    markedLayerIds = marked;
-    lastMarkClickedLayerId = lastClickedId;
-    if (!(e.metaKey || e.ctrlKey || e.shiftKey)) {
-      state.layerStack.setActiveLayer(index);
-    }
-    renderLayersPanel();
-  });
-
-  const visibilityButton = document.createElement('button');
-  visibilityButton.type = 'button';
-  visibilityButton.className = 'layer-visibility-toggle icon-button';
-  visibilityButton.innerHTML = `<span class="material-symbols-outlined">${layer.visible ? 'visibility' : 'visibility_off'}</span>`;
-  visibilityButton.dataset.tooltip = layer.visible ? 'Hide layer' : 'Show layer';
-  visibilityButton.setAttribute('aria-label', layer.visible ? 'Hide layer' : 'Show layer');
-  visibilityButton.addEventListener('click', () => {
-    state.layerStack.setVisibility(index, !layer.visible);
-    state.canvasView.render();
-    commit();
-    renderLayersPanel();
-  });
-
-  const thumbnail = buildLayerThumbnailCanvas(layer);
-
-  const nameInput = document.createElement('input');
-  nameInput.type = 'text';
-  nameInput.className = 'layer-name-input';
-  nameInput.value = layer.name;
-  nameInput.addEventListener('change', () => {
-    state.layerStack.renameLayer(index, nameInput.value.trim() || layer.name);
-    commit();
-    renderLayersPanel();
-  });
-
-  // Background layer (2g-background-layer) is locked in stacking
-  // position; reference image layer (reference-image-layer) is locked
-  // against becoming the active/drawing layer, being merged, and being
-  // marked for merge, but - unlike Background - is freely reorderable,
-  // so the user can move it below their drawing layers instead of it
-  // permanently sitting on top blocking the view (see the
-  // reference-image-layer follow-up's design.md). The lock icon reflects
-  // both kinds of restriction; only the reorder buttons below care about
-  // which kind.
-  let lockIcon = null;
-  if (layer.isBackground || layer.isReferenceImage) {
-    lockIcon = document.createElement('span');
-    lockIcon.className = 'material-symbols-outlined layer-lock-icon';
-    lockIcon.textContent = 'lock';
-    lockIcon.title = layer.isReferenceImage
-      ? 'Reference image layer - non-drawable, excluded from export, but can be reordered'
-      : 'Background layer - locked in position';
-  }
-
-  // A swap moves both layers involved (see LayerStack.moveLayerUp/
-  // moveLayerDown's matching comment), so a button is disabled not just
-  // when its own layer is position-locked (Background only - reference
-  // image layers ARE reorderable), but also when the neighbor it would
-  // swap into is - either way the move is refused.
-  const isPositionLocked = (l) => l?.isBackground;
-  const upButton = document.createElement('button');
-  upButton.type = 'button';
-  upButton.className = 'layer-reorder-button';
-  upButton.innerHTML = '<span class="material-symbols-outlined">arrow_upward</span>';
-  upButton.dataset.tooltip = 'Move layer up';
-  upButton.setAttribute('aria-label', 'Move layer up');
-  upButton.disabled = index === layerCount - 1 || isPositionLocked(layer) || isPositionLocked(layers[index + 1]);
-  upButton.addEventListener('click', () => {
-    state.layerStack.moveLayerUp(index);
-    state.canvasView.render();
-    commit();
-    renderLayersPanel();
-  });
-
-  const downButton = document.createElement('button');
-  downButton.type = 'button';
-  downButton.className = 'layer-reorder-button';
-  downButton.innerHTML = '<span class="material-symbols-outlined">arrow_downward</span>';
-  downButton.dataset.tooltip = 'Move layer down';
-  downButton.setAttribute('aria-label', 'Move layer down');
-  downButton.disabled = index === 0 || isPositionLocked(layer) || isPositionLocked(layers[index - 1]);
-  downButton.addEventListener('click', () => {
-    state.layerStack.moveLayerDown(index);
-    state.canvasView.render();
-    commit();
-    renderLayersPanel();
-  });
-
-  const deleteButton = document.createElement('button');
-  deleteButton.type = 'button';
-  deleteButton.className = 'layer-delete-button icon-button no-buzz';
-  deleteButton.innerHTML = '<span class="material-symbols-outlined">delete</span>';
-  deleteButton.dataset.tooltip = 'Delete layer';
-  deleteButton.setAttribute('aria-label', 'Delete layer');
-  deleteButton.disabled = layerCount <= 1;
-  deleteButton.addEventListener('click', async () => {
-    const proceed = await confirmDialog({
-      title: 'Delete layer?',
-      message: `Delete "${layer.name}"? This can't be undone.`,
-    });
-    if (!proceed) return;
-    state.layerStack.deleteLayer(index);
-    clearLayerMarks(); // remaining indices shifted; stale marks would misalign
-    if (layer.isReferenceImage) {
-      // Forget the stored source - a future upload adds a new reference
-      // layer from scratch and should default back to smoothed, not
-      // silently reuse a deleted layer's source/setting.
-      referenceImageSourceImage = null;
-      referenceImageSmoothing = true;
-    }
-    state.canvasView.render();
-    commit();
-    renderLayersPanel();
-  });
-
-  // Reference image layer only (reference-image-original-resolution):
-  // toggles between 'pixelated' (fit/downscaled to this canvas's fixed
-  // pixel grid - today's original behavior) and 'original' (rendered
-  // on-screen at the source image's own native resolution - see
-  // js/layers.js's LayerStack.getRenderPlan()/js/canvas-view.js). The
-  // icon shows the CURRENT mode (same convention the smoothing toggle
-  // below already uses for its own two states). Switching TO 'pixelated'
-  // always works (the engine buffer already holds a valid pixelated fit
-  // regardless of mode - see Layer's referenceMode doc comment);
-  // switching TO 'original' needs the layer's originalSourceBlob, so the
-  // button is disabled when that's unavailable (e.g. a reference layer
-  // added before this feature existed, or one that somehow never got a
-  // source recorded) - there's nothing to render at native resolution
-  // without it.
-  let modeToggleButton = null;
-  if (layer.isReferenceImage) {
-    const canGoOriginal = layer.referenceMode === 'original' || !!layer.originalSourceBlob;
-    modeToggleButton = document.createElement('button');
-    modeToggleButton.type = 'button';
-    modeToggleButton.className = 'layer-reference-mode-toggle icon-button no-buzz';
-    modeToggleButton.innerHTML = `<span class="material-symbols-outlined">${layer.referenceMode === 'original' ? 'image' : 'grid_on'}</span>`;
-    modeToggleButton.disabled = !canGoOriginal;
-    // A disabled control's tooltip must say WHY it's inert, not repeat
-    // enabled-state action text - see the smoothing toggle's identical
-    // rule below.
-    modeToggleButton.dataset.tooltip = modeToggleButton.disabled
-      ? 'Upload a new reference image to enable Original resolution mode'
-      : layer.referenceMode === 'original'
-        ? 'Original resolution (un-pixelated) - click to switch to Pixelated (fit to canvas grid)'
-        : 'Pixelated (fit to canvas grid) - click to switch to Original resolution';
-    modeToggleButton.setAttribute('aria-label', 'Toggle reference image resolution mode');
-    modeToggleButton.addEventListener('click', () => {
-      state.layerStack.setReferenceMode(layer.referenceMode === 'original' ? 'pixelated' : 'original');
-      state.canvasView.render();
-      commit();
-      renderLayersPanel();
-    });
-  }
-
-  // Reference image layer, Pixelated mode only: toggles whether the last
-  // upload's downscale (js/image-import.js's fitImageToCanvas) was
-  // smoothed (blended average, can look flat/"vectorized" on a canvas
-  // this small) or nearest-neighbor (blockier, no blending) - see
-  // referenceImageSmoothing's own doc comment. Hidden entirely (not just
-  // disabled) in Original mode - reference-image-original-resolution's
-  // design.md: exposing a setting with no observable effect while
-  // Original mode is active would be confusing, not just redundant.
-  // Disabled if the source image isn't held in memory (e.g. after a page
-  // reload) since there's nothing to re-fit from without re-uploading.
-  let smoothingToggleButton = null;
-  if (layer.isReferenceImage && layer.referenceMode === 'pixelated') {
-    smoothingToggleButton = document.createElement('button');
-    smoothingToggleButton.type = 'button';
-    smoothingToggleButton.className = 'layer-reference-smoothing-toggle icon-button no-buzz';
-    smoothingToggleButton.innerHTML = `<span class="material-symbols-outlined">${referenceImageSmoothing ? 'blur_on' : 'blur_off'}</span>`;
-    smoothingToggleButton.disabled = !referenceImageSourceImage;
-    // A disabled control's tooltip must say WHY it's inert (no source
-    // image held in memory - see referenceImageSourceImage's doc
-    // comment) rather than repeating the enabled-state action text,
-    // which reads as "clicking should do something" when it can't.
-    smoothingToggleButton.dataset.tooltip = smoothingToggleButton.disabled
-      ? 'Re-upload the reference image to change smoothing (not available after a page reload)'
-      : referenceImageSmoothing
-        ? 'Smoothed downscale (may look flat/"vectorized") - click for a blockier, unsmoothed one'
-        : 'Blocky, unsmoothed downscale - click for a smoothed one';
-    smoothingToggleButton.setAttribute('aria-label', 'Toggle reference image smoothing');
-    smoothingToggleButton.addEventListener('click', () => {
-      referenceImageSmoothing = !referenceImageSmoothing;
-      const imageData = fitImageToCanvas(
-        referenceImageSourceImage,
-        state.layerStack.width,
-        state.layerStack.height,
-        referenceImageSmoothing
-      );
-      state.layerStack.updateReferenceImageData(imageData.data);
-      state.canvasView.render();
-      commit();
-      renderLayersPanel();
-    });
-  }
-
-  const actions = document.createElement('div');
-  actions.className = 'layer-row-actions';
-  actions.append(upButton, downButton, deleteButton);
-
-  row.append(visibilityButton, thumbnail, nameInput);
-  if (lockIcon) row.append(lockIcon);
-  if (modeToggleButton) row.append(modeToggleButton);
-  if (smoothingToggleButton) row.append(smoothingToggleButton);
-  row.append(actions);
-  return row;
-}
 
 /**
  * Draws a black-on-white preview of `brush`'s pattern (not its name) into a
@@ -845,18 +473,9 @@ export function getBrushEditorSize() {
   return { width: brushEditorWidth, height: brushEditorHeight };
 }
 
-// The decoded source image behind the reference image layer's last
-// upload (js/image-import.js's decodeImageFile result), and whether that
-// upload's downscale was smoothed - "keep the source around so a later
-// setting change can re-derive from it" (same pattern pixi-pro's Brush
-// editor Import uses, see setBrushEditorGrid), for the smoothing toggle
-// in the reference layer's row (buildLayerRow). Reset in initWorkspace (new/switched
-// project - a stale source from a different project's reference layer
-// would be meaningless) and whenever the reference layer itself is
-// deleted (see the delete button's handler in buildLayerRow) - a later
-// upload always starts a fresh source and defaults back to smoothed.
-let referenceImageSourceImage = null;
-let referenceImageSmoothing = true;
+// referenceImageSourceImage/referenceImageSmoothing (the reference image
+// layer's own state) moved to pixi-pro's js/pro/layers-ui.js
+// (split-pixi-pro-repo) alongside the rest of the Layers panel.
 
 /**
  * Pro extension point (split-pixi-pro-repo): overwrites brushEditorGridState
@@ -1131,10 +750,10 @@ function bindKonamiCode() {
  *
  * Delegated on document (mouseover/mouseout, not a per-element
  * querySelectorAll+addEventListener pass) so it also covers elements
- * that don't exist yet at call time - the Layers panel's per-row
- * buttons (js/workspace.js's buildLayerRow) are torn down and rebuilt
- * on every renderLayersPanel() call, so a one-time binding would miss
- * them entirely after the first render. mouseenter/mouseleave don't
+ * that don't exist yet at call time - e.g. pixi-pro's Layers panel
+ * (split-pixi-pro-repo) tears down and rebuilds its per-row buttons on
+ * every render, so a one-time binding would miss them entirely after
+ * the first render. mouseenter/mouseleave don't
  * bubble, hence mouseover/mouseout + relatedTarget's closest() check
  * below to still fire only on true enter/leave of a [data-tooltip]
  * element, not every pointer move across its children.
@@ -1408,33 +1027,8 @@ function closeColorPicker() {
   document.getElementById('color-picker-popover').classList.add('hidden');
 }
 
-/**
- * Positions and shows #layers-panel-opacity-popover anchored below the
- * Layers toolbar row (#layers-panel-opacity-toggle) - same
- * clamp-to-viewport approach as openColorPicker above, adapted to open
- * below rather than to the side since the toggle sits inside the right
- * sidebar's narrow column.
- */
-function openLayersOpacityPopover() {
-  layersPanelOpacityPopover.classList.remove('hidden'); // unhide before measuring (see openColorPicker)
-  const rect = layersPanelOpacityToggle.getBoundingClientRect();
-  const popRect = layersPanelOpacityPopover.getBoundingClientRect();
-  const margin = 8;
-
-  let left = rect.right - popRect.width;
-  left = Math.max(margin, Math.min(left, window.innerWidth - popRect.width - margin));
-
-  let top = rect.bottom + 6;
-  top = Math.max(margin, Math.min(top, window.innerHeight - popRect.height - margin));
-
-  layersPanelOpacityPopover.style.left = `${left}px`;
-  layersPanelOpacityPopover.style.top = `${top}px`;
-  layersPanelOpacityNumber.focus();
-}
-
-function closeLayersOpacityPopover() {
-  layersPanelOpacityPopover.classList.add('hidden');
-}
+// openLayersOpacityPopover/closeLayersOpacityPopover moved to pixi-pro's
+// js/pro/layers-ui.js (split-pixi-pro-repo).
 
 /**
  * Wires a panel header (e.g. #layers-panel-header,
@@ -1444,9 +1038,11 @@ function closeLayersOpacityPopover() {
  * inside the header (e.g. Color Library's add/delete-palette buttons,
  * Layers' "+ Layer" button) so those keep working normally instead of
  * also toggling collapse. `onToggle` owns updating the underlying state
- * and syncing the DOM (see syncLayersCollapse, or pixi-pro's Color
- * Library module's own syncColorLibraryCollapse). Pro extension point
- * (split-pixi-pro-repo): exported for reuse there.
+ * and syncing the DOM (see pixi-pro's Layers/Color Library modules' own
+ * syncLayersCollapse/syncColorLibraryCollapse). Pro extension point
+ * (split-pixi-pro-repo): exported for reuse there - both panels this
+ * doc comment describes are Pro-only, this file has no caller of its
+ * own anymore.
  */
 export function bindPanelHeaderCollapse(headerEl, onToggle) {
   headerEl.addEventListener('click', (e) => {
@@ -1692,90 +1288,9 @@ function bindDomOnce() {
   // to pixi-pro's js/pro/color-library-ui.js (split-pixi-pro-repo) -
   // see that history for prior art.
 
-  // Layers panel: collapse-to-header via its own header click, plus the
-  // pre-existing bottom-bar toggle (#layers-panel-toggle) - both drive
-  // and reflect the same state.layersPanelVisible flag (see
-  // syncLayersCollapse), so either control collapses/expands the panel
-  // identically. Independent of the Brushes panel's tool-scoped
-  // visibility (toggling one never touches the other).
-  layersPanel = document.getElementById('layers-panel');
-  layersPanelHeader = document.getElementById('layers-panel-header');
-  layersPanelToggle = document.getElementById('layers-panel-toggle');
-  syncLayersCollapse();
-  layersPanelToggle.addEventListener('click', () => {
-    state.layersPanelVisible = !state.layersPanelVisible;
-    syncLayersCollapse();
-  });
-  bindPanelHeaderCollapse(layersPanelHeader, () => {
-    state.layersPanelVisible = !state.layersPanelVisible;
-    syncLayersCollapse();
-  });
-
-  // Layers panel toolbar (Blend mode + Opacity) - edits whichever layer
-  // is active, Photoshop-style, rather than living inline in every row
-  // (see buildLayerRow/syncLayersPanelToolbar). One line: Blend mode
-  // sized to its own text, Opacity as a button that opens a small
-  // popover (slider + number field) instead of an always-visible
-  // slider - see openLayersOpacityPopover/closeLayersOpacityPopover.
-  layersPanelBlendSelect = document.getElementById('layers-panel-blend-select');
-  for (const mode of BLEND_MODES) {
-    const option = document.createElement('option');
-    option.value = mode;
-    option.textContent = mode[0].toUpperCase() + mode.slice(1);
-    layersPanelBlendSelect.appendChild(option);
-  }
-  layersPanelBlendSelect.addEventListener('change', () => {
-    state.layerStack.setBlendMode(state.layerStack.getActiveIndex(), layersPanelBlendSelect.value);
-    state.canvasView.render();
-    commit();
-  });
-
-  layersPanelOpacityToggle = document.getElementById('layers-panel-opacity-toggle');
-  layersPanelOpacityReadout = document.getElementById('layers-panel-opacity-readout');
-  layersPanelOpacitySlider = document.getElementById('layers-panel-opacity-slider');
-  layersPanelOpacityNumber = document.getElementById('layers-panel-opacity-number');
-  layersPanelOpacityPopover = document.getElementById('layers-panel-opacity-popover');
-
-  function applyLayerOpacity(value, { commitChange } = {}) {
-    const clamped = Math.max(0, Math.min(100, value));
-    // Live-update the canvas while dragging/typing, but don't rebuild
-    // the panel (that would fight an in-progress edit) or commit every
-    // tick - only on the final value (slider "change", number "change").
-    state.layerStack.setOpacity(state.layerStack.getActiveIndex(), clamped / 100);
-    layersPanelOpacityReadout.textContent = `${clamped}%`;
-    layersPanelOpacitySlider.value = String(clamped);
-    layersPanelOpacityNumber.value = String(clamped);
-    state.canvasView.render();
-    if (commitChange) commit();
-  }
-
-  layersPanelOpacitySlider.addEventListener('input', () => {
-    applyLayerOpacity(Number(layersPanelOpacitySlider.value));
-  });
-  layersPanelOpacitySlider.addEventListener('change', () => {
-    applyLayerOpacity(Number(layersPanelOpacitySlider.value), { commitChange: true });
-  });
-  layersPanelOpacityNumber.addEventListener('change', () => {
-    applyLayerOpacity(Number(layersPanelOpacityNumber.value) || 0, { commitChange: true });
-  });
-
-  layersPanelOpacityToggle.addEventListener('click', () => {
-    if (layersPanelOpacityPopover.classList.contains('hidden')) {
-      openLayersOpacityPopover();
-    } else {
-      closeLayersOpacityPopover();
-    }
-  });
-  // Close on outside click/Escape, same pattern as #color-picker-popover.
-  document.addEventListener('pointerdown', (e) => {
-    if (layersPanelOpacityPopover.classList.contains('hidden')) return;
-    if (layersPanelOpacityPopover.contains(e.target)) return;
-    if (e.target === layersPanelOpacityToggle || layersPanelOpacityToggle.contains(e.target)) return;
-    closeLayersOpacityPopover();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !layersPanelOpacityPopover.classList.contains('hidden')) closeLayersOpacityPopover();
-  });
+  // Pro-only (split-pixi-pro-repo): Layers panel (collapse-to-header,
+  // toolbar, opacity popover) wiring moved to pixi-pro's
+  // js/pro/layers-ui.js.
 
   // Whole right-sidebar visibility toggle (Color Library + Brushes +
   // Layers together), independent of each panel's own collapsed state
@@ -1840,12 +1355,11 @@ function bindDomOnce() {
       return;
     }
 
-    // Cmd/Ctrl+E: merge layers (merge-layers) - Photoshop's own shortcut
-    // for this. Merges the marked set if 2+ layers are marked, otherwise
-    // merges the active layer down into the one below it.
+    // Cmd/Ctrl+E: merge layers - Pro-only (registerMergeShortcut above),
+    // a no-op keypress in Standard.
     if (key === 'e') {
       e.preventDefault();
-      mergeMarkedOrActiveDown();
+      if (mergeShortcutHook) mergeShortcutHook();
     }
   });
 
@@ -1901,55 +1415,11 @@ function bindDomOnce() {
   // Every action auto-saves, so there's nothing to lose by leaving — no
   // confirmation prompt here (unlike Phase 1/2a's "New" control).
   backToGalleryButton.addEventListener('click', () => {
-    clearLayerMarks(); // marks are per-project UI state (merge-layers), not carried across projects
     state.onRequestGallery?.();
   });
 
-  state.addLayerButton.addEventListener('click', () => {
-    const added = state.layerStack.addLayer();
-    if (!added) return;
-    clearLayerMarks(); // remaining indices shifted; stale marks would misalign
-    state.canvasView.render();
-    commit();
-    renderLayersPanel();
-  });
-
-  // reference-image-layer: decode via the shared image-import.js helper
-  // (like Brush Import/Color Library Import), but skip their
-  // downsample/pixelate/quantize step entirely - fitImageToCanvas keeps
-  // full fidelity (no palette reduction, no forced pixelation), only
-  // scaling down (never up, never stretched) when the source is larger
-  // than the canvas. addReferenceImageButton is disabled by
-  // renderLayersPanel once a reference layer already exists, so this
-  // handler doesn't need its own guard beyond what addReferenceImageLayer
-  // already refuses.
-  state.addReferenceImageButton.addEventListener('click', () => state.addReferenceImageInput.click());
-  state.addReferenceImageInput.addEventListener('change', async () => {
-    const file = state.addReferenceImageInput.files?.[0];
-    // Reset now, not after decoding - see the matching comment on
-    // brush-editor-import-input's handler (js/workspace.js) for why.
-    state.addReferenceImageInput.value = '';
-    if (!file) return;
-    const image = await decodeImageFile(file);
-    if (!image) return; // unsupported/corrupt file - fail silently, no crash
-    referenceImageSmoothing = true; // every new upload starts smoothed, in case Pixelated mode is chosen later
-    const imageData = fitImageToCanvas(image, state.layerStack.width, state.layerStack.height, referenceImageSmoothing);
-    // reference-image-original-resolution: a fresh upload defaults to
-    // 'original' mode (see design.md's "Default mode" decision) - `file`
-    // (the raw upload, a Blob) is kept on the Layer itself as
-    // originalSourceBlob, both for on-screen Original-mode rendering
-    // (js/canvas-view.js) and so it survives a reload via
-    // toProjectRecord/fromProjectRecord.
-    const added = state.layerStack.addReferenceImageLayer(imageData.data, 'Reference', {
-      referenceMode: 'original',
-      originalSourceBlob: file,
-    });
-    if (!added) return; // already has one, or at the 8-layer cap
-    referenceImageSourceImage = image; // kept for the Pixelated-mode smoothing toggle to re-fit from, see its own doc comment
-    state.canvasView.render();
-    commit();
-    renderLayersPanel();
-  });
+  // Pro-only (split-pixi-pro-repo): "Add layer" and "Add reference image"
+  // wiring moved to pixi-pro's js/pro/layers-ui.js.
 
   state.selectionClearButton.addEventListener('click', clearSelection);
 
@@ -1963,8 +1433,7 @@ function bindDomOnce() {
       }
     }
     state.canvasView.render();
-    commit();
-    renderLayersPanel(); // same stale-thumbnail issue as drawing commits
+    commit(); // registerAfterCommit's hook (if any) handles a stale Layers thumbnail
   });
 
 }
@@ -2118,19 +1587,15 @@ function redrawMovePreview() {
 }
 
 /**
- * Wires the Workspace tab bar, palette, brushes row, Layers panel, Canvas
- * Settings panel, and selection controls to `layerStack` and `canvasView`,
- * and owns the undo/redo stack and auto-save for the current project. Safe
- * to call repeatedly (once per project opened or created in a session) —
- * DOM listeners bind only once; subsequent calls just reset the drawing
- * state for the new project.
+ * Wires the Workspace tab bar, palette, brushes row, and selection
+ * controls to `layerStack` and `canvasView`, and owns the undo/redo
+ * stack and auto-save for the current project (Layers panel and Canvas
+ * Settings are Pro-only, split-pixi-pro-repo - wired separately there).
+ * Safe to call repeatedly (once per project opened or created in a
+ * session) — DOM listeners bind only once; subsequent calls just reset
+ * the drawing state for the new project.
  */
 export function initWorkspace({ projectId, projectName, layerStack, canvasView, onRequestGallery }) {
-  // A stale reference-image source from a previously open project would
-  // be meaningless (and could get re-fitted onto a differently-sized
-  // canvas) - see referenceImageSourceImage's own doc comment.
-  referenceImageSourceImage = null;
-  referenceImageSmoothing = true;
   state = {
     projectId,
     projectName,
@@ -2148,12 +1613,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     brushPath: [],
     pencilSize: 1,
     squareConstraint: false,
-    // Despite the name, this now means "expanded" rather than "shown" -
-    // collapsing the Layers panel (via its header or #layers-panel-toggle)
-    // no longer removes it, just shrinks it to its header row (see
-    // syncLayersCollapse). Kept as one boolean/name rather than renamed,
-    // since every call site already reads naturally either way.
-    layersPanelVisible: true,
     rightSidebarVisible: true,
     selection: null,
     dragStart: null,
@@ -2167,10 +1626,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     undoButton: document.getElementById('undo-button'),
     redoButton: document.getElementById('redo-button'),
     exportButton: document.getElementById('export-button'),
-    addLayerButton: document.getElementById('add-layer-button'),
-    addReferenceImageButton: document.getElementById('add-reference-image-button'),
-    addReferenceImageInput: document.getElementById('add-reference-image-input'),
-    layersPanelList: document.getElementById('layers-panel-list'),
     selectionControlsEl: document.getElementById('selection-controls'),
     selectionClearButton: document.getElementById('selection-clear-button'),
     selectionDeleteButton: document.getElementById('selection-delete-button'),
@@ -2200,8 +1655,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   closeBrushEditor();
   document.getElementById('brush-spacing').value = '1';
   document.getElementById('brush-rotation').value = '0';
-  syncLayersCollapse();
-  closeLayersOpacityPopover();
   setRightSidebarVisible(true);
   // Default tool is Pencil, so the panel starts visible; the slider/readout
   // reset to match state.pencilSize's default (1).
@@ -2229,7 +1682,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   // whatever state the project was in when opened.
   state.undoStack.push(layerStack.snapshot());
   updateUndoRedoButtons();
-  renderLayersPanel();
 
   // Sync immediately: on the very first project opened in a session,
   // CanvasView's constructor + resetView() already ran (see app.js)
@@ -2277,11 +1729,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
         activeEngine.floodFill(point.x, point.y, state.foregroundColor);
         clipToSelection(activeEngine, backup, state.selection);
         state.canvasView.render();
-        commit();
-        // Bucket fill changes the active layer's pixel content - the
-        // Layers panel's per-row thumbnail (buildLayerThumbnailCanvas)
-        // only updates on a full re-render, unlike the live canvas.
-        renderLayersPanel();
+        commit(); // registerAfterCommit's hook (if any) handles a stale Layers thumbnail
         return;
       }
 
@@ -2460,13 +1908,12 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
       state.moveContentEmpty = false;
       state.dragStart = null;
       state.dragCurrent = null;
-      commit();
       // Every drawing tool (pencil, eraser, brush, line, rectangle,
-      // selection move) funnels through here - the Layers panel's
-      // per-row thumbnail only updates on a full re-render, unlike the
-      // live canvas, so without this it goes stale until some other
-      // action (add layer, hide/show layer) happens to trigger one.
-      renderLayersPanel();
+      // selection move) funnels through here - registerAfterCommit's
+      // hook (if any) handles a stale Layers thumbnail, since without it
+      // the thumbnail would go stale until some other action triggers a
+      // re-render.
+      commit();
     },
 
     onDrawCancel() {

@@ -10,33 +10,71 @@ it as-is (see Running it locally) or fork the repo.
 
 ![Pixi's Workspace screen: a pixel art scene open with the Layers panel and Color Library visible in the right sidebar](docs/screen.png)
 
-**Live demo:** https://asukiasov.github.io/pixi/ — no install, try it now.
+**Live demo (Standard, free):** https://asukiasov.github.io/pixi/ — no
+install, try it now.
+
+**Live demo (Pro, paid):** https://pixi-pro.asukiasov.workers.dev/ — full
+Standard + Pro toolset, unrestricted, no watermark. See
+[Standard vs. Pro](#standard-vs-pro) below for what Pro adds.
 
 For the full feature set, current phase, and what's built vs. planned, see
 [`openspec/roadmap.md`](openspec/roadmap.md). For exactly what each shipped
 feature does, [`openspec/specs/`](openspec/specs/) is the source of truth —
 this README stays high-level on purpose rather than duplicating that.
 
+## Key Capabilities
+
+- Draw with Pencil, Eraser, Bucket fill, Line, and Rectangle, on fixed
+  16/32/64/128px canvases or a custom size up to 256px
+- Undo/redo, 20 steps deep
+- Predefined and custom brush stamps, click or drag to place
+- Export finished art to PNG, at native or scaled resolution, with a
+  transparent-background toggle
+- Projects save to IndexedDB automatically — usable fully offline, no
+  account or sign-in required
+- Pro adds Layers, named/persisted color palettes, symmetry drawing, and
+  more — see [Standard vs. Pro](#standard-vs-pro)
+
 ## Features
 
-Everything below is shipped and usable today (Phase 2, complete). See
-[`openspec/specs/`](openspec/specs/) for the full behavior of each.
+Everything below is shipped and usable today in Standard (this repo). See
+[`openspec/specs/`](openspec/specs/) for the full behavior of each. For
+Pro-only capabilities (Layers, Color Library, Canvas settings, and more),
+see [Standard vs. Pro](#standard-vs-pro) below.
 
 | Area | What it does |
 |---|---|
 | [Canvas creation](openspec/specs/canvas-creation/spec.md) | Fixed size presets (16/32/64/128px) or custom up to 256px, transparent or white background |
-| [Drawing engine](openspec/specs/pixel-drawing-engine/spec.md) | Pencil, eraser, bucket fill, pixel-perfect lines, undo/redo |
-| [Layers](openspec/specs/layers/spec.md) | Add, reorder, opacity, delete, blend modes, live per-layer thumbnails |
-| [Brushes](openspec/specs/brushes/spec.md) | Predefined and custom pixel-pattern stamps, click or drag to place, import a brush shape from an image |
+| [Drawing engine](openspec/specs/pixel-drawing-engine/spec.md) | Pencil, eraser, bucket fill, undo/redo |
+| [Brushes](openspec/specs/brushes/spec.md) | Predefined and custom pixel-pattern stamps, click or drag to place |
 | [Shape tools](openspec/specs/shape-tools/spec.md) | Line, rectangle, and a rectangular selection tool (move/copy/delete a region) |
-| [Symmetry](openspec/specs/symmetry-drawing/spec.md) | Mirrors Pencil/Eraser/Brush strokes across configurable axes |
-| [Color Library](openspec/specs/color-library/spec.md) | Named, persisted color palettes; custom RGB/hex picker; eyedropper; import a palette from an image |
 | [Canvas navigation](openspec/specs/canvas-navigation/spec.md) | Zoom in/out, Fit/Fill Screen presets, pan (Hand tool) |
 | [Local persistence](openspec/specs/local-persistence/spec.md) | Projects save to IndexedDB automatically — usable fully offline, no account required |
 | [Gallery](openspec/specs/gallery/spec.md) | Home screen listing saved projects with thumbnails |
-| [Canvas settings](openspec/specs/canvas-settings/spec.md) | Resize, crop, or rotate an existing project |
 | [Export](openspec/specs/export/spec.md) | PNG export at native or scaled resolution, with a transparent-background toggle |
 | [URL routing](openspec/specs/url-routing/spec.md) | Hash-based routes per screen — reload or Back/Forward preserves the open project |
+
+## Standard vs. Pro
+
+Standard (this repo) is free and open-source. Pro adds the tools below, as
+a separate private repo built on top of Standard.
+
+| Feature | Standard | Pro |
+|---|---|---|
+| Pencil, Eraser, Bucket, Shape tools, Brush (manual creation) | ✅ | ✅ |
+| Export (PNG/WebP/JPG, scaled), 20-step undo/redo | ✅ | ✅ |
+| Pixel-perfect drawing toggle | ❌ | ✅ |
+| Symmetry / mirror drawing mode | ❌ | ✅ |
+| Layers panel | ❌ | ✅ |
+| Color Library (named palettes, import from image, ramp generator) | ❌ | ✅ |
+| Brush import from image | ❌ | ✅ |
+| Rectangle fill/outline toggle | ❌ | ✅ |
+| Pencil/Eraser opacity slider | ❌ | ✅ |
+| Canvas Settings (rename/resize/rotate) | ❌ | ✅ |
+
+Pro access is $5, one-time, via PayPal: https://paypal.me/asukiasov — pay
+and you'll be added as a collaborator on the private `pixi-pro` repo, or
+handed a release archive.
 
 ## Stack
 
@@ -53,12 +91,16 @@ WebGL, no WebGPU.
   (`dexie`, `fake-indexeddb`) for running the test suite under Node — the
   shipped app itself has no npm dependencies.
 
-## Running it locally
+## Quick Start
 
-No build/dev server required — serve the repo root as static files and
-open it:
+Fastest path: open the Standard live demo at
+https://asukiasov.github.io/pixi/ — no install. To run it locally
+instead, no build/dev server is required — serve the repo root as static
+files and open it:
 
 ```bash
+git clone https://github.com/asukiasov/pixi.git
+cd pixi
 python3 -m http.server 8000
 # then open http://localhost:8000
 ```
@@ -66,6 +108,27 @@ python3 -m http.server 8000
 Any static file server works equally well (`npx serve`, VS Code's Live
 Server, etc.) — the app just needs to be served over HTTP rather than
 opened as a `file://` URL, since ES module imports require it.
+
+## Usage Examples
+
+- **New pixel art sprite:** Gallery → New Canvas, pick a size preset
+  (16/32/64/128px) or a custom size up to 256px, then draw with Pencil,
+  Bucket fill, and the Shape tools. See
+  [Canvas creation](openspec/specs/canvas-creation/spec.md).
+- **Reusable stamps:** build a custom brush from a repeated pixel pattern
+  and place it with click or drag, instead of redrawing it by hand each
+  time. See [Brushes](openspec/specs/brushes/spec.md).
+- **Copy/move part of a sprite:** use the rectangular selection tool to
+  move, copy, or delete a region without affecting the rest of the
+  canvas. See [Shape tools](openspec/specs/shape-tools/spec.md).
+- **Multi-layer illustration (Pro):** add Layers, draw each part
+  (background, outline, shading) on its own layer, adjust per-layer
+  opacity and blend mode, then Export a single flattened PNG. Layers,
+  Color Library, and Canvas settings (resize/crop/rotate) are Pro-only —
+  see [Standard vs. Pro](#standard-vs-pro).
+
+For the full control-by-control reference, see
+[`docs/ui-reference.md`](docs/ui-reference.md).
 
 ## Testing
 
@@ -97,6 +160,14 @@ scripts/     One-off maintenance scripts (version stamping)
 For a map of every screen and pixel art tool in the UI (what each control
 does, where it lives in the DOM), see
 [`docs/ui-reference.md`](docs/ui-reference.md).
+
+## Support the Project
+
+Pixi is solo-built and Standard stays free and open-source. The one way
+to support ongoing development directly is buying Pro — see
+[Standard vs. Pro](#standard-vs-pro) for what it adds and how access
+works ($5, one-time, via PayPal). Bug reports and pull requests against
+Standard are also welcome, opened as GitHub issues/PRs on this repo.
 
 ## License
 

@@ -35,7 +35,7 @@
       as an additive module (starting point, not a rewrite), wired into
       `pixi`'s existing extension points from outside the submodule, per
       design.md's "Extraction before addition" and "no engine forking"
-      decisions. Progress (5/8):
+      decisions. Progress (6/8):
       - [x] Symmetry/mirror drawing — extracted; added the generic
             `registerApplyPixelTransform` hook to `pixi`'s `workspace.js`/
             `brushes.js` for this and future features to register against.
@@ -54,10 +54,15 @@
             `pixi`'s `workspace.js`. `js/image-import.js` itself stays in
             `pixi` for now (still used by Color Library import and the
             reference image layer, both not yet extracted).
+      - [x] Canvas Settings (rename/resize/rotate) — extracted entirely
+            (no Standard-only remainder); added
+            `resizeCanvas`/`rotateCanvas`/`renameCurrentProject`/
+            `getCanvasSize`/`onWorkspaceReset` to `pixi`'s `workspace.js`.
+            `LayerStack.resize`/`rotate90` stay as class methods (private
+            field reassignment, no way to extract to a free function).
       - [ ] Layers panel and everything tied to it
       - [ ] Color Library (saved/named palettes, add-to-palette, import
             from image, ramp generator)
-      - [ ] Canvas Settings (rename/resize/rotate)
 - [ ] 2.3 Verify `pixi-pro`, built and run, has the full Standard + Pro
       toolset working end to end (manual smoke test against the tier
       matrix in `docs/superpowers/specs/2026-08-17-tier-matrix-worksheet.md`).

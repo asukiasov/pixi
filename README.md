@@ -72,9 +72,11 @@ a separate private repo built on top of Standard.
 | Pencil/Eraser opacity slider | ❌ | ✅ |
 | Canvas Settings (rename/resize/rotate) | ❌ | ✅ |
 
-Pro access is $5, one-time, via PayPal: https://paypal.me/asukiasov — pay
-and you'll be added as a collaborator on the private `pixi-pro` repo, or
-handed a release archive.
+Pro access is $5, one-time, via PayPal: https://paypal.me/asukiasov — pay,
+then email asukiasov@gmail.com with your GitHub username (PayPal doesn't
+pass it along) and you'll be added as a collaborator on the private
+`pixi-pro` repo, or handed a release archive if you'd rather not have
+ongoing GitHub access.
 
 ## Stack
 

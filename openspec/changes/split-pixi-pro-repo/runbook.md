@@ -8,14 +8,11 @@ entitlements for this flow.
 
 1. Buyer pays $5, one-time, via https://paypal.me/asukiasov (this is the
    link published in `pixi`'s README).
-2. **Buyer's GitHub username isn't collected by PayPal itself.** Until
-   there's a proper checkout flow, the buyer needs to send it separately —
-   e.g. in the PayPal payment note, or by email/DM. Confirm which channel
-   you're actually using and add it to the README's Pro-access paragraph
-   next to the PayPal link, since right now a buyer paying has no stated
-   way to tell you who they are on GitHub.
+2. Buyer emails asukiasov@gmail.com with their GitHub username — PayPal
+   doesn't collect it, so this is the stated channel (published in the
+   README right next to the PayPal link).
 3. Operator checks for the payment (PayPal notification email, or the
-   PayPal dashboard) and the buyer's GitHub username.
+   PayPal dashboard) and the buyer's GitHub username (from their email).
 4. Add the buyer as a collaborator on the private `pixi-pro` repo:
    `github.com/asukiasov/pixi-pro` → Settings → Collaborators and teams →
    Add people → enter their GitHub username → **Read** access is enough

@@ -11,7 +11,14 @@
 
 import Dexie from 'dexie';
 
-const db = new Dexie('pixi');
+// Exported (split-pixi-pro-repo): Color Library's palette CRUD moved to
+// pixi-pro (js/pro/color-library-persistence.js), since Color Library
+// itself is Pro-only - but the colorPalettes table's schema declaration
+// below stays here, since Dexie's versioned-schema model has a single
+// declaration point per database, not one that can cleanly split across
+// files. Exporting `db` lets pixi-pro build its own table operations on
+// the same shared local database instead of duplicating one.
+export const db = new Dexie('pixi');
 db.version(1).stores({
   projects: 'id, updatedAt',
 });
@@ -119,49 +126,12 @@ export async function deleteCustomBrush(id) {
   await db.customBrushes.delete(id);
 }
 
-/**
- * Creates a named palette (optionally seeded with colors) and writes it
- * immediately. `userId` is always null today, same reserved-for-Phase-3
- * pattern as createCustomBrush. `isDefault` marks the one auto-created,
- * built-in "Material" palette (see workspace.js's loadColorPalettes) -
- * the UI refuses to delete it regardless of how many other palettes
- * exist, so there's always at least one populated palette to fall back
- * to. Every user-created palette leaves this false.
- */
-export async function createColorPalette(name, colors = [], isDefault = false) {
-  const now = Date.now();
-  const record = {
-    id: generateId(),
-    name,
-    colors,
-    isDefault,
-    userId: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-  await db.colorPalettes.put(record);
-  return record;
-}
-
-/** Every palette, for the Color Library panel's dropdown + swatch grid. */
-export async function listColorPalettes() {
-  return db.colorPalettes.toArray();
-}
-
-export async function renameColorPalette(id, name) {
-  await db.colorPalettes.update(id, { name, updatedAt: Date.now() });
-}
-
-/** Appends `hex` to the palette's color list (no de-duplication - the same color can be added twice if the user wants). */
-export async function addColorToPalette(id, hex) {
-  const record = await db.colorPalettes.get(id);
-  if (!record) return;
-  await db.colorPalettes.update(id, { colors: [...record.colors, hex], updatedAt: Date.now() });
-}
-
-export async function deleteColorPalette(id) {
-  await db.colorPalettes.delete(id);
-}
+// createColorPalette/listColorPalettes/renameColorPalette/
+// addColorToPalette/deleteColorPalette (Color Library's palette CRUD)
+// moved to pixi-pro's js/pro/color-library-persistence.js
+// (split-pixi-pro-repo), built on the `db` exported above - the
+// colorPalettes table schema itself stays declared here (see that
+// export's comment).
 
 /** Test-only: empties the projects, customBrushes, and colorPalettes tables between test cases. */
 export async function _clearAllForTests() {

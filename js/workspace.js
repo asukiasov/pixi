@@ -1,43 +1,17 @@
 import { UndoStack } from './undo.js';
-import {
-  saveProject,
-  renameProject,
-  createCustomBrush,
-  listCustomBrushes,
-  deleteCustomBrush,
-  createColorPalette,
-  listColorPalettes,
-  addColorToPalette,
-  deleteColorPalette,
-} from './persistence.js';
+import { saveProject, renameProject, createCustomBrush, listCustomBrushes, deleteCustomBrush } from './persistence.js';
 import { initExport } from './export.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
 import { decodeImageFile, downsampleToImageData, fitImageToCanvas } from './image-import.js';
-import { extractPalette } from './color-extraction.js';
-import { generateColorRamp } from './color-ramp.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
-import { DEFAULT_MATERIAL_COLORS, PREDEFINED_PALETTES } from './default-color-library.js';
 import { bresenhamLine, strokeFreehandThick } from './engine.js';
 import { confirmDialog } from './confirm-dialog.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
 
-// Fixed internal sample grid for Color Library image import
-// (2n-color-library-image-import) - purely a color-reduction step before
-// median-cut clustering, never shown to the user (see design.md's
-// "downsample before clustering" decision). 64x64 = 4096 sample pixels,
-// plenty to represent an image's color distribution regardless of the
-// source image's actual resolution.
-const COLOR_IMPORT_SAMPLE_SIZE = 64;
-const COLOR_IMPORT_MIN_COUNT = 2;
-const COLOR_IMPORT_MAX_COUNT = 32;
-const COLOR_IMPORT_DEFAULT_COUNT = 8;
-
-// Color ramp generator (7-add-palette-color-ramp-generator) - step-count
-// bounds and default, per spec.
-const RAMP_MIN_STEPS = 3;
-const RAMP_MAX_STEPS = 9;
-const RAMP_DEFAULT_STEPS = 5;
+// Color Library image-import sample size and ramp-generator step bounds
+// moved to pixi-pro's js/pro/color-library-ui.js (split-pixi-pro-repo)
+// alongside their only callers.
 
 const RAINBOW_HUE_STEP = 20; // degrees per brush placed, in Rainbow mode
 
@@ -50,14 +24,17 @@ const PALETTE = [
 
 const BLEND_MODES = ['normal', 'multiply', 'screen', 'overlay'];
 
-function hexToRgba(hex) {
+/** Pro extension point (split-pixi-pro-repo): exported for pixi-pro's Color Library module. */
+export function hexToRgba(hex) {
   const n = Number.parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255, 255];
 }
 
 /** Inverse of hexToRgba - drops alpha (palette swatches and the native
- * <input type="color"> are always fully opaque 6-digit hex). */
-function rgbaToHex(rgba) {
+ * <input type="color"> are always fully opaque 6-digit hex). Pro
+ * extension point (split-pixi-pro-repo): exported for pixi-pro's Color
+ * Library module. */
+export function rgbaToHex(rgba) {
   return (
     '#' +
     [rgba[0], rgba[1], rgba[2]]
@@ -129,20 +106,6 @@ function squareDragCurrent(start, current) {
  */
 function isSquareConstrained() {
   return shiftHeld || state.squareConstraint;
-}
-
-/**
- * Whether the Color Library sequence toggle (#library-sequence-toggle,
- * shared by Pencil and Brush - see #library-sequence-options in
- * index.html) should be visible for the given tool. Not Eraser: nothing
- * to cycle through when Eraser doesn't paint a color at all. Exported as
- * a pure predicate so the show/hide rule is unit-testable (see
- * test/workspace.test.js) without needing a DOM harness for the rest of
- * bindDomOnce - the actual wiring calls this from the tool-switch handler
- * and initWorkspace's default-state reset.
- */
-export function librarySequenceToggleVisibleForTool(tool) {
-  return tool === 'pencil' || tool === 'brush';
 }
 
 /**
@@ -248,8 +211,6 @@ let layersPanelOpacityReadout = null;
 let layersPanelOpacityToggle = null;
 let layersPanelOpacityNumber = null;
 let layersPanelOpacityPopover = null;
-let colorLibraryPanel = null;
-let colorLibraryHeader = null;
 let rightSidebar = null;
 let rightSidebarToggle = null;
 let foregroundSwatchEl = null;
@@ -257,18 +218,6 @@ let backgroundSwatchEl = null;
 
 let zoomReadout = null;
 let pencilOptionsPanel = null;
-let librarySequencePanel = null;
-let librarySequenceToggle = null;
-
-// Named, persisted palettes of user-added colors (superseded the old
-// flat, unpersisted customSwatches list - see 2f-color-library-panel).
-// Module-level, not per-project — like allBrushes, a session/global
-// resource, loaded once from IndexedDB and refreshed after every mutation.
-let colorPalettes = [];
-let activePaletteId = null;
-let colorLibraryGrid = null;
-let colorLibrarySelect = null;
-let deletePaletteButton = null;
 
 // All available brushes: the built-ins plus whatever's been loaded from
 // IndexedDB. Module-level, not per-project — brushes are global, not
@@ -360,35 +309,48 @@ function colorForCurrentTool() {
 }
 
 /**
- * Resolves the color for the `index`-th pixel/placement of a cycling
- * stroke - Rainbow (hue-stepped) or Color Library sequence (steps through
- * the active palette's colors, wrapping), whichever is active, falling
- * back to the plain foreground color. Shared by Pencil/Eraser's
- * `pencilOrEraserApplyPixel` and the Brush tool's `redrawBrushPath` so the
- * two cycling modes behave identically everywhere they're offered, not
- * two parallel implementations that could drift.
+ * Pro extension point (split-pixi-pro-repo): `pixi-pro` registers a color-
+ * sequence provider here (e.g. Color Library sequence, which used to
+ * live directly in this file, checking state.colorLibrarySequence
+ * against module-scoped colorPalettes/activePaletteId - see that repo's
+ * js/pro/color-library-ui.js). `fn(index)` returns an rgba for the
+ * `index`-th placement, or a falsy value to fall through to the plain
+ * foreground color. No-op passthrough when no Pro module is present.
  */
-function colorForSequenceIndex(index) {
-  if (state.brushRainbow) return rainbowColor(index * RAINBOW_HUE_STEP);
-  if (state.colorLibrarySequence) {
-    const active = colorPalettes.find((p) => p.id === activePaletteId);
-    const colors = active?.colors ?? [];
-    if (colors.length > 0) return hexToRgba(colors[index % colors.length]);
-  }
-  return state.foregroundColor;
+let colorSequenceProvider = null;
+export function registerColorSequenceProvider(fn) {
+  colorSequenceProvider = fn;
 }
 
 /**
- * Turns Color Library sequence on/off and reflects the result on its
- * toggle button (#library-sequence-toggle, shared by Pencil and Brush -
- * see #library-sequence-options in index.html). Mutually exclusive with
- * Rainbow: enabling this clears `state.brushRainbow`, the same way
- * selecting Rainbow clears this.
+ * Pro extension point: called whenever Rainbow is selected, so a
+ * registered Color Library sequence toggle (mutually exclusive with
+ * Rainbow) can turn itself off. No-op when no Pro module is present.
  */
-function setColorLibrarySequence(enabled) {
-  state.colorLibrarySequence = enabled;
-  if (enabled) state.brushRainbow = false;
-  librarySequenceToggle.classList.toggle('active', enabled);
+let disableColorLibrarySequenceHook = null;
+export function registerDisableColorLibrarySequence(fn) {
+  disableColorLibrarySequenceHook = fn;
+}
+
+/** Pro extension point: lets a registered Color Library sequence toggle turn Rainbow back off, the same mutual-exclusivity relationship in reverse. */
+export function disableRainbow() {
+  state.brushRainbow = false;
+}
+
+/**
+ * Resolves the color for the `index`-th pixel/placement of a cycling
+ * stroke - Rainbow (hue-stepped), a registered Pro color-sequence
+ * provider (e.g. Color Library sequence), or the plain foreground color,
+ * whichever applies. Shared by Pencil/Eraser's `pencilOrEraserApplyPixel`
+ * and the Brush tool's `redrawBrushPath` so every cycling mode behaves
+ * identically everywhere it's offered, not parallel implementations that
+ * could drift.
+ */
+function colorForSequenceIndex(index) {
+  if (state.brushRainbow) return rainbowColor(index * RAINBOW_HUE_STEP);
+  const provided = colorSequenceProvider ? colorSequenceProvider(index) : null;
+  if (provided) return provided;
+  return state.foregroundColor;
 }
 
 /**
@@ -436,15 +398,15 @@ function pencilOrEraserApplyPixel(engine) {
     }
     return (x, y) => erasePixel(engine, x, y);
   }
-  // Rainbow and Color Library sequence both cycle per unique pixel placed,
-  // same as Brush - the index strokeFreehandThick now passes is the
-  // pixel's order among unique placements (not raw path position), so
-  // Spacing-style skips don't exist here but dedup-skipped pixels still
-  // don't throw off the cycle.
-  if (state.brushRainbow || state.colorLibrarySequence) {
-    return (x, y, index) => paintPixel(engine, x, y, colorForSequenceIndex(index));
-  }
-  return (x, y) => paintPixel(engine, x, y, state.foregroundColor);
+  // Rainbow and any registered Pro color-sequence provider (e.g. Color
+  // Library sequence) both cycle per unique pixel placed, same as Brush -
+  // the index strokeFreehandThick now passes is the pixel's order among
+  // unique placements (not raw path position), so Spacing-style skips
+  // don't exist here but dedup-skipped pixels still don't throw off the
+  // cycle. colorForSequenceIndex itself falls back to the plain
+  // foreground color when neither applies, so this can call it
+  // unconditionally rather than special-casing that fallback here too.
+  return (x, y, index) => paintPixel(engine, x, y, colorForSequenceIndex(index));
 }
 
 /**
@@ -852,104 +814,10 @@ async function loadCustomBrushes() {
   renderBrushesPanel();
 }
 
-/**
- * Fetches every palette from IndexedDB. Auto-creates one "Material"
- * palette, seeded with the full Material Design color system (see
- * js/default-color-library.js), whenever none of the existing palettes
- * is flagged `isDefault` - covers both first-ever load (no palettes at
- * all yet) and recovery for anyone who deleted the default palette
- * before deletion protection existed (a plain `length === 0` check
- * would miss that case if any other palette still exists). The panel
- * should never end up with no populated, undeletable palette to fall
- * back to.
- *
- * First-ever load only (judged before Material's own recovery-create
- * above, on the true starting `palettes.length === 0`) also seeds every
- * PREDEFINED_PALETTES entry as an ordinary, deletable palette - unlike
- * Material, these never come back if deleted; they're starter content,
- * not a required fallback.
- */
-async function loadColorPalettes() {
-  let palettes = await listColorPalettes();
-  const isFirstEverLoad = palettes.length === 0;
-  if (!palettes.some((p) => p.isDefault)) {
-    const defaultPalette = await createColorPalette('Material', [...DEFAULT_MATERIAL_COLORS], true);
-    palettes = [...palettes, defaultPalette];
-  }
-  if (isFirstEverLoad) {
-    for (const [name, colors] of Object.entries(PREDEFINED_PALETTES)) {
-      const created = await createColorPalette(name, [...colors]);
-      palettes = [...palettes, created];
-    }
-  }
-  colorPalettes = palettes;
-  // Keep the previously active palette selected if it still exists
-  // (e.g. after adding a color to it); otherwise fall back to the first.
-  if (!colorPalettes.some((p) => p.id === activePaletteId)) {
-    activePaletteId = colorPalettes[0].id;
-  }
-  renderColorLibraryPanel();
-}
-
-/**
- * Syncs the Color Library panel's collapsed/expanded DOM state to
- * state.colorLibraryCollapsed - collapsing hides everything but the
- * header (see .color-library-panel.collapsed in style.css), letting the
- * Layers panel below grow into the freed space.
- */
-function syncColorLibraryCollapse() {
-  const collapsed = state.colorLibraryCollapsed;
-  colorLibraryPanel.classList.toggle('collapsed', collapsed);
-  colorLibraryHeader.setAttribute('aria-expanded', String(!collapsed));
-}
-
-/**
- * Rebuilds the palette-name dropdown (shown only once more than one
- * palette exists, sorted alphabetically) and the active palette's
- * swatch grid.
- */
-function renderColorLibraryPanel() {
-  const sorted = [...colorPalettes].sort((a, b) => a.name.localeCompare(b.name));
-
-  colorLibrarySelect.innerHTML = '';
-  sorted.forEach((palette) => {
-    const option = document.createElement('option');
-    option.value = palette.id;
-    option.textContent = palette.name;
-    if (palette.id === activePaletteId) option.selected = true;
-    colorLibrarySelect.appendChild(option);
-  });
-  colorLibrarySelect.classList.toggle('hidden', sorted.length <= 1);
-
-  const active = colorPalettes.find((p) => p.id === activePaletteId);
-  colorLibraryGrid.innerHTML = '';
-  if (active && active.colors.length > 0) {
-    active.colors.forEach((hex) => {
-      const swatch = document.createElement('button');
-      swatch.type = 'button';
-      swatch.className = 'color-library-swatch';
-      swatch.style.background = hex;
-      swatch.dataset.hex = hex.toLowerCase();
-      swatch.title = hex;
-      swatch.addEventListener('click', () => setForegroundColor(hexToRgba(hex)));
-      colorLibraryGrid.appendChild(swatch);
-    });
-  } else if (active) {
-    const empty = document.createElement('p');
-    empty.className = 'color-library-empty';
-    empty.textContent = 'No colors yet - add one from the color picker.';
-    colorLibraryGrid.appendChild(empty);
-  }
-
-  // Can't delete the only remaining palette (same "can't delete the only
-  // layer" pattern the Layers panel already uses), and can't delete the
-  // built-in default palette even when other palettes exist - there
-  // should always be at least one populated, undeletable palette to fall
-  // back to.
-  deletePaletteButton.disabled = colorPalettes.length <= 1 || Boolean(active?.isDefault);
-
-  syncActiveSwatch();
-}
+// loadColorPalettes/syncColorLibraryCollapse/renderColorLibraryPanel
+// (Color Library panel rendering) moved to pixi-pro's
+// js/pro/color-library-ui.js (split-pixi-pro-repo) - see that history
+// for prior art.
 
 function makeEmptyBrushEditorGrid(width, height) {
   return Array.from({ length: height }, () => Array(width).fill(false));
@@ -1141,26 +1009,11 @@ function bindBrushEditorOnce() {
 
 const CONFETTI_COLORS = ['#ff453a', '#ff9f0a', '#ffd60a', '#30d158', '#64d2ff', '#0a84ff', '#bf5af2'];
 
-/**
- * Named "magic palette" easter eggs: naming a new Color Library palette
- * one of these three words (case-insensitive, matched against the
- * trimmed "New palette" input) seeds it with a themed color set instead
- * of starting empty, plus a little flourish - a confetti burst in the
- * seeded palette's own colors for rainbow/gameboy, or matrixRain's own
- * effect for matrix (see newPaletteSave's listener) - alongside the
- * Konami code (bindKonamiCode) and the Gallery's paw parade (see
- * gallery.js) as this app's other hidden delighters. Kept small and
- * genuinely gimmicky on purpose - everything else themed lives in
- * PREDEFINED_PALETTES instead, as ordinary always-visible palettes
- * rather than a typed-name trick.
- */
-const MAGIC_PALETTES = {
-  rainbow: ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#4b0082', '#8b00ff'],
-  gameboy: ['#0f380f', '#306230', '#8bac0f', '#9bbc0f'],
-  // Its own effect (matrixRain) instead of confetti - a green-on-black
-  // palette calls for something more thematic.
-  matrix: ['#003b00', '#008f11', '#00ff41', '#00ff41', '#0d1a0d'],
-};
+// MAGIC_PALETTES (Color Library's "magic palette" easter egg names/colors)
+// moved to pixi-pro's js/pro/color-library-ui.js (split-pixi-pro-repo) -
+// it still uses matrixRain/confettiBurst below (both exported), the same
+// shared decorative helpers Standard's own Konami code
+// (bindKonamiCode) and Export celebration (celebrateExport) use.
 
 const MATRIX_RAIN_CHARS = '01ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ'.split('');
 const MATRIX_RAIN_COLUMNS = 14;
@@ -1185,7 +1038,7 @@ const prefersReducedMotion =
  * burst every other magic palette uses. Self-removing, no state. Skipped
  * entirely under prefers-reduced-motion, since it's purely decorative.
  */
-function matrixRain() {
+export function matrixRain() {
   if (prefersReducedMotion) return;
   const container = document.createElement('div');
   container.className = 'matrix-rain';
@@ -1209,7 +1062,7 @@ function matrixRain() {
 }
 
 /** Shared confetti burst, from a given screen point, with a configurable piece count/spread. */
-function confettiBurst(originX, originY, count, maxDistance) {
+export function confettiBurst(originX, originY, count, maxDistance) {
   const container = document.createElement('div');
   container.className = 'confetti-burst';
   document.body.appendChild(container);
@@ -1379,8 +1232,8 @@ function bindTooltips() {
 
 /**
  * Rebuilds the palette row's swatches from the fixed PALETTE presets
- * plus the Rainbow swatch last. User-added colors now live in the Color
- * Library panel (see renderColorLibraryPanel), not here.
+ * plus the Rainbow swatch last. User-added colors now live in the
+ * Pro-only Color Library panel (split-pixi-pro-repo), not here.
  */
 function renderPaletteRow() {
   paletteRow.innerHTML = '';
@@ -1405,7 +1258,7 @@ function renderPaletteRow() {
   rainbowSwatch.title = 'Rainbow (Brush tool only)';
   rainbowSwatch.addEventListener('click', () => {
     state.brushRainbow = true;
-    setColorLibrarySequence(false);
+    if (disableColorLibrarySequenceHook) disableColorLibrarySequenceHook();
     syncActiveSwatch();
   });
   paletteRow.appendChild(rainbowSwatch);
@@ -1413,19 +1266,36 @@ function renderPaletteRow() {
   syncActiveSwatch();
 }
 
-/** Toggles .active on whichever palette swatch (or Rainbow) matches current state. */
-function syncActiveSwatch() {
+/**
+ * Pro extension point (split-pixi-pro-repo): called at the end of
+ * syncActiveSwatch (below) with the same `(fgHex, isRainbow)` Standard's
+ * own palette row uses, so pixi-pro's Color Library grid can highlight
+ * its own active swatch too - this used to be a direct colorLibraryGrid
+ * reference inline in syncActiveSwatch. No-op when no Pro module is
+ * present.
+ */
+let activeSwatchSyncHook = null;
+export function registerActiveSwatchSync(fn) {
+  activeSwatchSyncHook = fn;
+}
+
+/**
+ * Toggles .active on whichever palette swatch (or Rainbow) matches
+ * current state. Pro extension point: exported so pixi-pro's Color
+ * Library module can re-trigger this (and so its registerActiveSwatchSync
+ * hook) after rebuilding its own swatch grid - e.g. after loading
+ * palettes or switching the active one - without needing to go through
+ * setForegroundColor (which has side effects, like clearing Rainbow,
+ * that aren't appropriate for "just re-render the highlight").
+ */
+export function syncActiveSwatch() {
   const fgHex = rgbaToHex(state.foregroundColor);
   paletteRow.querySelectorAll('.palette-swatch:not(.rainbow-swatch)').forEach((s) => {
     s.classList.toggle('active', !state.brushRainbow && s.dataset.hex === fgHex);
   });
   const rainbowEl = paletteRow.querySelector('.rainbow-swatch');
   if (rainbowEl) rainbowEl.classList.toggle('active', state.brushRainbow);
-  if (colorLibraryGrid) {
-    colorLibraryGrid.querySelectorAll('.color-library-swatch').forEach((s) => {
-      s.classList.toggle('active', !state.brushRainbow && s.dataset.hex === fgHex);
-    });
-  }
+  if (activeSwatchSyncHook) activeSwatchSyncHook(fgHex, state.brushRainbow);
 }
 
 /** Keeps the native color input, hex field, and RGB fields all showing the same color. */
@@ -1448,9 +1318,11 @@ function updateFgBgSwatches() {
  * picker, Eyedropper) - the single path every color-pick action goes
  * through, so the picker fields, palette active-state, and FG/BG swatch
  * all stay in sync by construction. Deselects Rainbow, the same way
- * picking a regular color always has.
+ * picking a regular color always has. Pro extension point
+ * (split-pixi-pro-repo): exported for pixi-pro's Color Library module
+ * (its swatch clicks route through this too).
  */
-function setForegroundColor(rgba) {
+export function setForegroundColor(rgba) {
   state.foregroundColor = rgba;
   state.brushRainbow = false;
   updateColorPickerInputs(rgba);
@@ -1470,16 +1342,15 @@ function setBackgroundColor(rgba) {
 let colorPickerTarget = 'foreground';
 
 /**
- * Adds `rgba` to the active Color Library palette and refreshes the
- * panel - the one path every "add to palette" control routes through,
- * whether that's the color-picker popover's own button (non-iOS only,
- * see openColorPicker) or the always-available button in the Color
- * Library panel's header (every platform, and the only "add to palette"
- * path on iOS, where the popover doesn't exist).
+ * Pro extension point (split-pixi-pro-repo): whichever color the
+ * color-picker-popover is currently editing - used by pixi-pro's Color
+ * Library module for its "Add to palette"/"Generate ramp" buttons
+ * embedded in that (otherwise Standard) popover. addCurrentColorToActivePalette
+ * (the function that used to route both those buttons here) moved to
+ * pixi-pro's js/pro/color-library-ui.js.
  */
-async function addCurrentColorToActivePalette(rgba) {
-  await addColorToPalette(activePaletteId, rgbaToHex(rgba));
-  await loadColorPalettes();
+export function getColorPickerCurrentColor() {
+  return colorPickerTarget === 'background' ? state.backgroundColor : state.foregroundColor;
 }
 
 /** Routes a picked color (from the native input, hex field, or RGB fields) to whichever swatch opened the popover. */
@@ -1573,9 +1444,11 @@ function closeLayersOpacityPopover() {
  * inside the header (e.g. Color Library's add/delete-palette buttons,
  * Layers' "+ Layer" button) so those keep working normally instead of
  * also toggling collapse. `onToggle` owns updating the underlying state
- * and syncing the DOM (see syncLayersCollapse/syncColorLibraryCollapse).
+ * and syncing the DOM (see syncLayersCollapse, or pixi-pro's Color
+ * Library module's own syncColorLibraryCollapse). Pro extension point
+ * (split-pixi-pro-repo): exported for reuse there.
  */
-function bindPanelHeaderCollapse(headerEl, onToggle) {
+export function bindPanelHeaderCollapse(headerEl, onToggle) {
   headerEl.addEventListener('click', (e) => {
     if (e.target.closest('button, select, input')) return;
     onToggle();
@@ -1610,33 +1483,9 @@ export function bindSliderWheel(slider) {
   }, { passive: false });
 }
 
-/**
- * Positions `panel` as a popover below `anchorEl`, clamped to the
- * viewport - flips above if it would overflow the bottom, clamped
- * horizontally too. Same unhide-to-measure-then-clamp pattern as
- * js/export.js's own positionPanel (and pixi-pro's canvas-settings-ui.js's,
- * for the Pro-only Canvas Settings popover - duplicated rather than
- * shared, matching this codebase's existing per-popover convention).
- * Used for the Color Library import-palette popover
- * (2o-image-import-refinements).
- */
-function positionPanelBelow(panel, anchorEl) {
-  const rect = anchorEl.getBoundingClientRect();
-  const panelRect = panel.getBoundingClientRect();
-  const margin = 8;
-
-  let top = rect.bottom + 8;
-  if (top + panelRect.height > window.innerHeight - margin) {
-    top = rect.top - panelRect.height - 8;
-  }
-  top = Math.max(margin, Math.min(top, window.innerHeight - panelRect.height - margin));
-
-  let left = rect.left;
-  left = Math.max(margin, Math.min(left, window.innerWidth - panelRect.width - margin));
-
-  panel.style.left = `${left}px`;
-  panel.style.top = `${top}px`;
-}
+// positionPanelBelow (popover positioning for the Color Library import/
+// ramp preview popovers) moved to pixi-pro's js/pro/color-library-ui.js
+// (split-pixi-pro-repo) alongside its only two callers.
 
 function bindDomOnce() {
   toolButtons = document.querySelectorAll('.tool-button[data-tool]');
@@ -1666,14 +1515,6 @@ function bindDomOnce() {
       squareConstraintPanel.classList.toggle(
         'hidden',
         state.currentTool !== 'rectangle' && state.currentTool !== 'selection'
-      );
-      // Color Library sequence toggle: Pencil and Brush, not Eraser
-      // (nothing to cycle through when Eraser doesn't paint a color at
-      // all) - one shared control, same tool-scoped-visibility pattern as
-      // squareConstraintPanel above.
-      librarySequencePanel.classList.toggle(
-        'hidden',
-        !librarySequenceToggleVisibleForTool(state.currentTool)
       );
     });
   });
@@ -1708,18 +1549,6 @@ function bindDomOnce() {
     squareConstraintToggle.classList.toggle('active', state.squareConstraint);
   });
 
-  // Color Library sequence toggle - one shared control for Pencil and
-  // Brush (see #library-sequence-options above and setColorLibrarySequence),
-  // same tool-scoped-visibility pattern as squareConstraintPanel/-Toggle.
-  // Mutually exclusive with Rainbow (both are per-pixel color-cycling modes
-  // for the same applyPixel slot).
-  librarySequencePanel = document.getElementById('library-sequence-options');
-  librarySequenceToggle = document.getElementById('library-sequence-toggle');
-  librarySequenceToggle.addEventListener('click', () => {
-    setColorLibrarySequence(!state.colorLibrarySequence);
-    syncActiveSwatch();
-  });
-
   renderPaletteRow();
 
   // Custom color picker: native <input type="color"> + hex + RGB fields,
@@ -1732,7 +1561,6 @@ function bindDomOnce() {
   const colorPickerR = document.getElementById('color-picker-r');
   const colorPickerG = document.getElementById('color-picker-g');
   const colorPickerB = document.getElementById('color-picker-b');
-  const colorPickerAdd = document.getElementById('color-picker-add');
   const colorPickerPopover = document.getElementById('color-picker-popover');
 
   colorPickerNative.addEventListener('input', () => {
@@ -1771,24 +1599,21 @@ function bindDomOnce() {
   colorPickerG.addEventListener('change', applyRgbFields);
   colorPickerB.addEventListener('change', applyRgbFields);
 
-  colorPickerAdd.addEventListener('click', async () => {
-    const current = colorPickerTarget === 'background' ? state.backgroundColor : state.foregroundColor;
-    await addCurrentColorToActivePalette(current);
-  });
-
   document.getElementById('color-picker-close').addEventListener('click', closeColorPicker);
 
   // Close on outside click/Escape, not just the explicit close button -
-  // standard popover behavior. Clicks inside #ramp-preview-row don't
-  // count as "outside" here even though it's a sibling, not a descendant,
-  // of #color-picker-popover - it's opened from this popover's own
-  // "Generate ramp" button, so closing the color picker out from under an
+  // standard popover behavior. Clicks inside #ramp-preview-row (Pro-only,
+  // split-pixi-pro-repo - absent in pixi, hence the `?.`) don't count as
+  // "outside" here even though it's a sibling, not a descendant, of
+  // #color-picker-popover - it's opened from this popover's own
+  // "Generate ramp" button (present only when pixi-pro's Color Library
+  // module registers it), so closing the color picker out from under an
   // in-progress ramp preview would be surprising.
   document.addEventListener('pointerdown', (e) => {
     if (colorPickerPopover.classList.contains('hidden')) return;
     if (colorPickerPopover.contains(e.target)) return;
     if (e.target.closest('#foreground-swatch, #background-swatch')) return;
-    if (document.getElementById('ramp-preview-row').contains(e.target)) return;
+    if (document.getElementById('ramp-preview-row')?.contains(e.target)) return;
     closeColorPicker();
   });
   document.addEventListener('keydown', (e) => {
@@ -1862,284 +1687,10 @@ function bindDomOnce() {
   addBrushButton.addEventListener('click', () => openBrushEditor());
   bindBrushEditorOnce();
 
-  // Color Library panel: named, persisted palettes (see design.md's
-  // "one Dexie record per palette" decision).
-  colorLibraryPanel = document.getElementById('color-library-panel');
-  colorLibraryHeader = document.getElementById('color-library-header');
-  colorLibraryGrid = document.getElementById('color-library-grid');
-  colorLibrarySelect = document.getElementById('color-library-select');
-  deletePaletteButton = document.getElementById('delete-palette-button');
-  const addCurrentColorButton = document.getElementById('add-current-color-button');
-  const addPaletteButton = document.getElementById('add-palette-button');
-  const newPaletteRow = document.getElementById('new-palette-row');
-  const newPaletteName = document.getElementById('new-palette-name');
-  const newPaletteSave = document.getElementById('new-palette-save');
-  const newPaletteCancel = document.getElementById('new-palette-cancel');
-
-  // Import palette from image (2n-color-library-image-import): file
-  // picker -> decode -> downsample once (cached) -> extractPalette on
-  // demand, re-run live as the color-count control changes. The preview
-  // itself is a popover (2o-image-import-refinements), not an in-flow
-  // row - same clamped-to-viewport anchor pattern as Canvas Settings/
-  // Export, so the color-count control never shifts as the swatch grid
-  // above it gains/loses rows.
-  const importPaletteButton = document.getElementById('import-palette-button');
-  const importInput = document.getElementById('color-library-import-input');
-  const importPreviewRow = document.getElementById('import-preview-row');
-  const importPreviewClose = document.getElementById('import-preview-close');
-  const importPreviewGrid = document.getElementById('import-preview-grid');
-  const importPreviewCount = document.getElementById('import-preview-count');
-  const importPreviewName = document.getElementById('import-preview-name');
-  const importPreviewSave = document.getElementById('import-preview-save');
-  const importPreviewCancel = document.getElementById('import-preview-cancel');
-  // Cached downsampled ImageData from the current import, so re-extracting
-  // on a color-count change never re-decodes/re-downsamples the source
-  // image (see design.md's live-preview decision). null when no import
-  // preview is open.
-  let importSampleImageData = null;
-  let importPreviewColors = [];
-
-  function renderImportPreview() {
-    importPreviewGrid.innerHTML = '';
-    for (const hex of importPreviewColors) {
-      const swatch = document.createElement('div');
-      swatch.className = 'color-library-swatch';
-      swatch.style.background = hex;
-      importPreviewGrid.appendChild(swatch);
-    }
-  }
-
-  function reExtractImportPreview() {
-    if (!importSampleImageData) return;
-    const count = Math.min(
-      COLOR_IMPORT_MAX_COUNT,
-      Math.max(COLOR_IMPORT_MIN_COUNT, Math.round(Number(importPreviewCount.value)) || COLOR_IMPORT_DEFAULT_COUNT)
-    );
-    importPreviewCount.value = String(count);
-    importPreviewColors = extractPalette(importSampleImageData, count);
-    renderImportPreview();
-  }
-
-  function closeImportPreview() {
-    importPreviewRow.classList.add('hidden');
-    importSampleImageData = null;
-    importPreviewColors = [];
-    importInput.value = ''; // allow re-picking the same file
-  }
-
-  importPaletteButton.addEventListener('click', () => {
-    importInput.click();
-  });
-
-  importInput.addEventListener('change', async () => {
-    const file = importInput.files?.[0];
-    if (!file) return;
-    const image = await decodeImageFile(file);
-    if (!image) {
-      importInput.value = ''; // unsupported/corrupt file - no-op, let the user retry
-      return;
-    }
-    importSampleImageData = downsampleToImageData(image, COLOR_IMPORT_SAMPLE_SIZE, COLOR_IMPORT_SAMPLE_SIZE);
-    importPreviewCount.value = String(COLOR_IMPORT_DEFAULT_COUNT);
-    importPreviewName.value = '';
-    newPaletteRow.classList.add('hidden'); // mutually exclusive with the plain "+ New Palette" row
-    // Unhide before measuring - .hidden is display:none, which has no box
-    // to read a size from (see this file's positionPanelBelow above).
-    importPreviewRow.classList.remove('hidden');
-    positionPanelBelow(importPreviewRow, importPaletteButton);
-    reExtractImportPreview();
-  });
-
-  importPreviewCount.addEventListener('change', reExtractImportPreview);
-  importPreviewCount.addEventListener('input', reExtractImportPreview);
-
-  importPreviewClose.addEventListener('click', closeImportPreview);
-
-  // Close on outside click/Escape too, not just the explicit close button
-  // - standard popover behavior, same as Canvas Settings/Export.
-  document.addEventListener('pointerdown', (e) => {
-    if (importPreviewRow.classList.contains('hidden')) return;
-    if (importPreviewRow.contains(e.target)) return;
-    if (e.target === importPaletteButton || importPaletteButton.contains(e.target)) return;
-    closeImportPreview();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !importPreviewRow.classList.contains('hidden')) closeImportPreview();
-  });
-
-  importPreviewCancel.addEventListener('click', () => {
-    closeImportPreview();
-  });
-
-  importPreviewSave.addEventListener('click', async () => {
-    const name = importPreviewName.value.trim();
-    if (!name) return; // nothing entered - no-op, stay open
-    const created = await createColorPalette(name, [...importPreviewColors]);
-    activePaletteId = created.id;
-    closeImportPreview();
-    await loadColorPalettes();
-  });
-
-  // Generate ramp (7-add-palette-color-ramp-generator): a source color
-  // (whichever swatch the color-picker popover is editing, or the current
-  // Foreground color from the Color Library header) + step count ->
-  // generateColorRamp -> live preview -> Confirm adds every generated
-  // color to the active palette via addColorToPalette, same "extract,
-  // preview, then save" shape as the import-palette flow above.
-  const rampPreviewRow = document.getElementById('ramp-preview-row');
-  const rampPreviewClose = document.getElementById('ramp-preview-close');
-  const rampPreviewGrid = document.getElementById('ramp-preview-grid');
-  const rampPreviewSteps = document.getElementById('ramp-preview-steps');
-  const rampPreviewConfirm = document.getElementById('ramp-preview-confirm');
-  const rampPreviewCancel = document.getElementById('ramp-preview-cancel');
-  const colorPickerGenerateRamp = document.getElementById('color-picker-generate-ramp');
-  const libraryGenerateRampButton = document.getElementById('library-generate-ramp-button');
-  // Source color (hex) and preview colors for the ramp currently open;
-  // null/empty when no ramp preview is open.
-  let rampSourceHex = null;
-  let rampPreviewColors = [];
-  let rampAnchorEl = null;
-
-  function renderRampPreview() {
-    rampPreviewGrid.innerHTML = '';
-    for (const hex of rampPreviewColors) {
-      const swatch = document.createElement('div');
-      swatch.className = 'color-library-swatch';
-      swatch.style.background = hex;
-      rampPreviewGrid.appendChild(swatch);
-    }
-  }
-
-  function regenerateRampPreview() {
-    if (!rampSourceHex) return;
-    const steps = Math.min(
-      RAMP_MAX_STEPS,
-      Math.max(RAMP_MIN_STEPS, Math.round(Number(rampPreviewSteps.value)) || RAMP_DEFAULT_STEPS)
-    );
-    rampPreviewSteps.value = String(steps);
-    rampPreviewColors = generateColorRamp(rampSourceHex, steps);
-    renderRampPreview();
-  }
-
-  function closeRampPreview() {
-    rampPreviewRow.classList.add('hidden');
-    rampSourceHex = null;
-    rampPreviewColors = [];
-    rampAnchorEl = null;
-  }
-
-  function openRampPreview(rgba, anchorEl) {
-    closeImportPreview(); // mutually exclusive with the other Color Library popovers
-    rampSourceHex = rgbaToHex(rgba);
-    rampAnchorEl = anchorEl;
-    rampPreviewSteps.value = String(RAMP_DEFAULT_STEPS);
-    // Unhide before measuring - .hidden is display:none, which has no box
-    // to read a size from (see positionPanelBelow's callers).
-    rampPreviewRow.classList.remove('hidden');
-    positionPanelBelow(rampPreviewRow, anchorEl);
-    regenerateRampPreview();
-  }
-
-  colorPickerGenerateRamp.addEventListener('click', () => {
-    const current = colorPickerTarget === 'background' ? state.backgroundColor : state.foregroundColor;
-    openRampPreview(current, colorPickerGenerateRamp);
-  });
-
-  libraryGenerateRampButton.addEventListener('click', () => {
-    openRampPreview(state.foregroundColor, libraryGenerateRampButton);
-  });
-
-  rampPreviewSteps.addEventListener('change', regenerateRampPreview);
-  rampPreviewSteps.addEventListener('input', regenerateRampPreview);
-
-  rampPreviewClose.addEventListener('click', closeRampPreview);
-  rampPreviewCancel.addEventListener('click', closeRampPreview);
-
-  rampPreviewConfirm.addEventListener('click', async () => {
-    for (const hex of rampPreviewColors) {
-      await addColorToPalette(activePaletteId, hex);
-    }
-    closeRampPreview();
-    await loadColorPalettes();
-  });
-
-  // Close on outside click/Escape too, not just the explicit close button
-  // - standard popover behavior, same as the import-preview popover above.
-  document.addEventListener('pointerdown', (e) => {
-    if (rampPreviewRow.classList.contains('hidden')) return;
-    if (rampPreviewRow.contains(e.target)) return;
-    if (rampAnchorEl && (e.target === rampAnchorEl || rampAnchorEl.contains(e.target))) return;
-    closeRampPreview();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !rampPreviewRow.classList.contains('hidden')) closeRampPreview();
-  });
-
-  // Collapse-to-header (Photoshop-accordion style) for Color Library and
-  // Layers - see syncColorLibraryCollapse/syncLayersCollapse below and
-  // bindPanelHeaderCollapse's doc comment for the click/keyboard handling
-  // shared between them.
-  syncColorLibraryCollapse();
-  bindPanelHeaderCollapse(colorLibraryHeader, () => {
-    state.colorLibraryCollapsed = !state.colorLibraryCollapsed;
-    syncColorLibraryCollapse();
-  });
-
-  loadColorPalettes(); // async; renders the panel once palettes arrive
-
-  colorLibrarySelect.addEventListener('change', () => {
-    activePaletteId = colorLibrarySelect.value;
-    renderColorLibraryPanel();
-  });
-
-  addCurrentColorButton.addEventListener('click', () => {
-    addCurrentColorToActivePalette(state.foregroundColor);
-  });
-
-  addPaletteButton.addEventListener('click', () => {
-    closeImportPreview(); // mutually exclusive with the import preview row
-    newPaletteName.value = '';
-    newPaletteRow.classList.remove('hidden');
-    newPaletteName.focus();
-  });
-
-  newPaletteCancel.addEventListener('click', () => {
-    newPaletteRow.classList.add('hidden');
-  });
-
-  newPaletteSave.addEventListener('click', async () => {
-    const name = newPaletteName.value.trim();
-    if (!name) return; // nothing entered - no-op, stay open
-    // Magic palette easter eggs - see MAGIC_PALETTES.
-    const magicName = name.toLowerCase();
-    const magicColors = MAGIC_PALETTES[magicName];
-    const created = await createColorPalette(name, magicColors ? [...magicColors] : []);
-    activePaletteId = created.id;
-    newPaletteRow.classList.add('hidden');
-    await loadColorPalettes();
-    if (magicColors) {
-      if (magicName === 'matrix') {
-        matrixRain();
-      } else {
-        const gridRect = colorLibraryGrid.getBoundingClientRect();
-        confettiBurst(gridRect.left + gridRect.width / 2, gridRect.top, 24, 160);
-      }
-    }
-  });
-
-  deletePaletteButton.addEventListener('click', async () => {
-    if (colorPalettes.length <= 1) return; // can't delete the only palette
-    const active = colorPalettes.find((p) => p.id === activePaletteId);
-    if (active?.isDefault) return; // can't delete the built-in default palette
-    const proceed = await confirmDialog({
-      title: 'Delete palette?',
-      message: `Delete "${active?.name ?? 'this palette'}" and all its colors? This can't be undone.`,
-    });
-    if (!proceed) return;
-    await deleteColorPalette(activePaletteId);
-    activePaletteId = null; // loadColorPalettes falls back to the first remaining
-    await loadColorPalettes();
-  });
+  // Color Library panel (add-current-color/add-palette/import/ramp-
+  // generator/delete, and the import-preview/ramp-preview popovers) moved
+  // to pixi-pro's js/pro/color-library-ui.js (split-pixi-pro-repo) -
+  // see that history for prior art.
 
   // Layers panel: collapse-to-header via its own header click, plus the
   // pre-existing bottom-bar toggle (#layers-panel-toggle) - both drive
@@ -2596,7 +2147,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     brushRotationStep: 0,
     brushPath: [],
     pencilSize: 1,
-    colorLibrarySequence: false,
     squareConstraint: false,
     // Despite the name, this now means "expanded" rather than "shown" -
     // collapsing the Layers panel (via its header or #layers-panel-toggle)
@@ -2604,7 +2154,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     // syncLayersCollapse). Kept as one boolean/name rather than renamed,
     // since every call site already reads naturally either way.
     layersPanelVisible: true,
-    colorLibraryCollapsed: false,
     rightSidebarVisible: true,
     selection: null,
     dragStart: null,
@@ -2639,8 +2188,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   // even though it no longer applied (e.g. the state was reset but a
   // stale-highlighted swatch/tool suggested otherwise).
   toolButtons.forEach((b) => b.classList.toggle('active', b.dataset.tool === state.currentTool));
-  // Color palettes (colorPalettes) are global and NOT reset here - only
-  // which color is currently selected resets, back to the first preset
+  // Which color is currently selected resets, back to the first preset
   // (matching state.foregroundColor's default above).
   colorPickerTarget = 'foreground';
   closeColorPicker();
@@ -2653,7 +2201,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   document.getElementById('brush-spacing').value = '1';
   document.getElementById('brush-rotation').value = '0';
   syncLayersCollapse();
-  syncColorLibraryCollapse();
   closeLayersOpacityPopover();
   setRightSidebarVisible(true);
   // Default tool is Pencil, so the panel starts visible; the slider/readout
@@ -2661,8 +2208,6 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   pencilOptionsPanel.classList.remove('hidden');
   document.getElementById('pencil-size-slider').value = '1';
   document.getElementById('pencil-size-readout').textContent = '1px';
-  librarySequenceToggle.classList.remove('active');
-  librarySequencePanel.classList.remove('hidden'); // Pencil is the default tool
   // Neither Rectangle nor Selection is the default tool, so this starts
   // hidden too.
   squareConstraintPanel.classList.add('hidden');

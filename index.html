@@ -32,7 +32,7 @@
        keep it sorted alphabetically — the Google Fonts API 400s the whole
        request (breaking every icon on the page, not just an unsorted one)
        if icon_names isn't in alphabetical order. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check_box,check_box_outline_blank,close,colorize,crop_free,dark_mode,delete,dock_to_right,download,edit,expand_more,format_color_fill,gradient,home,horizontal_rule,image,image_arrow_up,ink_eraser,layers,light_mode,lock,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,settings,swap_horiz,undo,visibility,visibility_off" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check_box,check_box_outline_blank,close,colorize,crop_free,dark_mode,delete,dock_to_right,download,edit,expand_more,format_color_fill,home,horizontal_rule,image_arrow_up,ink_eraser,layers,light_mode,lock,opacity,rectangle,redo,remove,restart_alt,swap_horiz,undo,visibility,visibility_off" />
 </head>
 <body>
   <main id="screen-gallery" class="screen">
@@ -191,17 +191,11 @@
           <input type="number" id="color-picker-g" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Green" />
           <input type="number" id="color-picker-b" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Blue" />
         </div>
-        <button type="button" id="color-picker-add" class="tool-button">
-          <span class="material-symbols-outlined">add</span> Add to palette
-        </button>
-        <!-- Palette-aware color ramp generator (7-add-palette-color-ramp-
-             generator) - generates a dark-to-light shading ramp from
-             whichever swatch this popover is editing. Opens
-             #ramp-preview-row, same preview-then-confirm shape as
-             #import-preview-row. -->
-        <button type="button" id="color-picker-generate-ramp" class="tool-button">
-          <span class="material-symbols-outlined">gradient</span> Generate ramp
-        </button>
+        <!-- Pro-only (split-pixi-pro-repo): "Add to palette" and
+             "Generate ramp" buttons, embedded in this otherwise-Standard
+             popover. Present in pixi-pro's own index.html (own copy of
+             this markup) but not here - see js/workspace.js's
+             getColorPickerCurrentColor. -->
       </div>
 
       <!-- Shown only while Pencil or Eraser is active (js/workspace.js),
@@ -214,20 +208,11 @@
         <button type="button" id="square-constraint-toggle" class="tool-button square-constraint-button" aria-label="1:1 proportion" data-tooltip="1:1 proportion (like holding Shift)">1:1</button>
       </div>
 
-      <!-- Color Library sequence toggle - shown for Pencil and Brush, not
-           Eraser (nothing to cycle through when Eraser doesn't paint a
-           color at all). One shared control under the main tools rather
-           than a per-tool duplicate - same "dedicated panel, shown/hidden
-           by the tool-switch handler" pattern as #square-constraint-options
-           above (see js/workspace.js). Cycles through the active Color
-           Library palette per unique pixel/stamp placed, the same way
-           Rainbow cycles hues, instead of using a single foreground color
-           - see setColorLibrarySequence in js/workspace.js. -->
-      <div id="library-sequence-options" class="rectangle-options hidden">
-        <button type="button" id="library-sequence-toggle" class="tool-button icon-button" aria-label="Color Library sequence" data-tooltip="Color Library sequence">
-          <span class="material-symbols-outlined">palette</span>
-        </button>
-      </div>
+      <!-- Pro-only (split-pixi-pro-repo): Color Library sequence toggle,
+           shown for Pencil and Brush. Present in pixi-pro's own
+           index.html (own copy of this markup) but not here - see
+           js/workspace.js's registerColorSequenceProvider/
+           registerDisableColorLibrarySequence/disableRainbow. -->
     </aside>
 
     <div class="workspace-main">
@@ -322,111 +307,13 @@
          whole sidebar has its own show/hide (#right-sidebar-toggle
          above), independent of one another. -->
     <aside id="right-sidebar" class="right-sidebar">
-      <!-- Named, persisted palettes of user-added colors - global and
-           cross-session, unlike the fixed preset palette-row. -->
-      <div id="color-library-panel" class="color-library-panel">
-        <div id="color-library-header" class="color-library-header panel-header" role="button" tabindex="0" aria-expanded="true">
-          <div class="panel-header-top">
-            <h2>Color Library</h2>
-            <span class="material-symbols-outlined panel-collapse-chevron">expand_more</span>
-          </div>
-          <div class="panel-header-actions color-library-header-actions">
-            <!-- Adds the current Foreground color to the active palette
-                 - always available regardless of platform, unlike the
-                 color-picker popover's own "Add to palette" (that
-                 popover doesn't exist on iOS - see openColorPicker in
-                 js/workspace.js - so this is the only path there). -->
-            <button type="button" id="add-current-color-button" class="tool-button icon-button" aria-label="Add current color to palette" data-tooltip="Add current color">
-              <span class="material-symbols-outlined">playlist_add</span>
-            </button>
-            <button type="button" id="add-palette-button" class="tool-button icon-button" aria-label="Add palette" data-tooltip="New palette">
-              <span class="material-symbols-outlined">add</span>
-            </button>
-            <!-- Import a palette from an image (2n-color-library-image-import,
-                 popover per 2o-image-import-refinements) - opens the hidden
-                 file input below; the real UI is #import-preview-row, a
-                 popover anchored to this button once a file is picked. -->
-            <button type="button" id="import-palette-button" class="tool-button icon-button" aria-label="Import palette from image" data-tooltip="Import from image">
-              <span class="material-symbols-outlined">image</span>
-            </button>
-            <input type="file" id="color-library-import-input" accept="image/*" class="hidden" />
-            <!-- Generates a shading ramp from the current Foreground color
-                 (7-add-palette-color-ramp-generator) - opens
-                 #ramp-preview-row, the same popover the color-picker
-                 popover's own "Generate ramp" button opens. -->
-            <button type="button" id="library-generate-ramp-button" class="tool-button icon-button" aria-label="Generate ramp from current color" data-tooltip="Generate ramp">
-              <span class="material-symbols-outlined">gradient</span>
-            </button>
-            <button type="button" id="delete-palette-button" class="tool-button icon-button no-buzz" aria-label="Delete palette" data-tooltip="Delete palette">
-              <span class="material-symbols-outlined">delete</span>
-            </button>
-          </div>
-        </div>
-        <div id="color-library-body" class="color-library-body">
-          <select id="color-library-select" class="color-library-select hidden"></select>
-          <div id="new-palette-row" class="new-palette-row hidden">
-            <input type="text" id="new-palette-name" placeholder="Palette name" />
-            <button type="button" id="new-palette-save" class="tool-button">Save</button>
-            <button type="button" id="new-palette-cancel" class="tool-button">Cancel</button>
-          </div>
-          <div id="color-library-grid" class="color-library-grid"></div>
-        </div>
-      </div>
-
-      <!-- Import-palette popover (2o-image-import-refinements) - out of
-           #color-library-panel's normal flow (position:fixed + JS, same
-           clamped-to-viewport pattern as #export-panel), anchored to
-           #import-palette-button. Live
-           swatch preview + adjustable color count + name + Save/Cancel -
-           a fixed-position surface so the color-count control never
-           shifts as the swatch grid above it gains/loses rows (unlike
-           the in-flow row this replaced). -->
-      <div id="import-preview-row" class="canvas-settings-panel import-preview-panel hidden">
-        <div class="canvas-settings-row canvas-settings-header-row">
-          <h2>Import Palette</h2>
-          <button type="button" id="import-preview-close" class="icon-button" aria-label="Close" data-tooltip="Close">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-        <div id="import-preview-grid" class="import-preview-grid"></div>
-        <div class="canvas-settings-row">
-          <label for="import-preview-count">Colors</label>
-          <input type="number" id="import-preview-count" min="2" max="32" value="8" />
-        </div>
-        <div class="canvas-settings-row">
-          <input type="text" id="import-preview-name" placeholder="Palette name" />
-        </div>
-        <div class="canvas-settings-row">
-          <button type="button" id="import-preview-save" class="tool-button">Save</button>
-          <button type="button" id="import-preview-cancel" class="tool-button">Cancel</button>
-        </div>
-      </div>
-
-      <!-- Generate-ramp preview popover (7-add-palette-color-ramp-
-           generator) - opened by either #color-picker-generate-ramp (the
-           color-picker popover's own button, source = whichever swatch
-           is being edited) or #library-generate-ramp-button (the Color
-           Library header's button, source = current Foreground color).
-           Same "extract, preview, then save/cancel" shape and fixed-
-           position/clamped-to-viewport anchoring as #import-preview-row,
-           reusing addColorToPalette/loadColorPalettes on Confirm. -->
-      <div id="ramp-preview-row" class="canvas-settings-panel import-preview-panel hidden">
-        <div class="canvas-settings-row canvas-settings-header-row">
-          <h2>Generate Ramp</h2>
-          <button type="button" id="ramp-preview-close" class="icon-button" aria-label="Close" data-tooltip="Close">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-        <div id="ramp-preview-grid" class="import-preview-grid"></div>
-        <div class="canvas-settings-row">
-          <label for="ramp-preview-steps">Steps</label>
-          <input type="number" id="ramp-preview-steps" min="3" max="9" value="5" />
-        </div>
-        <div class="canvas-settings-row">
-          <button type="button" id="ramp-preview-confirm" class="tool-button">Confirm</button>
-          <button type="button" id="ramp-preview-cancel" class="tool-button">Cancel</button>
-        </div>
-      </div>
+      <!-- Pro-only (split-pixi-pro-repo): Color Library panel, plus its
+           import-palette and generate-ramp popovers. Present in
+           pixi-pro's own index.html (own copy of this markup) but not
+           here - see js/workspace.js's registerColorSequenceProvider/
+           bindPanelHeaderCollapse/matrixRain/confettiBurst/
+           setForegroundColor/hexToRgba/rgbaToHex/getColorPickerCurrentColor/
+           registerActiveSwatchSync/onWorkspaceReset. -->
 
       <div id="brushes-panel" class="brushes-panel">
         <div class="brushes-panel-header">

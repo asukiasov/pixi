@@ -13,7 +13,7 @@ import {
   deleteCustomBrush,
   _clearAllForTests,
 } from '../js/persistence.js';
-import { LayerStack } from '../js/layers.js';
+import { LayerStack } from '../lib/pixel-engine/layers.js';
 
 beforeEach(async () => {
   await _clearAllForTests();

@@ -1,9 +1,9 @@
-import { UndoStack } from './undo.js';
+import { UndoStack } from '../lib/pixel-engine/undo.js';
 import { saveProject, renameProject, createCustomBrush, listCustomBrushes, deleteCustomBrush } from './persistence.js';
 import { initExport } from './export.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
-import { bresenhamLine, strokeFreehandThick } from './engine.js';
+import { bresenhamLine, strokeFreehandThick } from '../lib/pixel-engine/engine.js';
 import { confirmDialog } from './confirm-dialog.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width

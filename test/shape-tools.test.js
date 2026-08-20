@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { PixelEngine } from '../js/engine.js';
+import { PixelEngine } from '../lib/pixel-engine/engine.js';
 import { drawRectangle, clipToSelection, registerRectangleDrawOverride } from '../js/shape-tools.js';
 
 describe('drawRectangle', () => {

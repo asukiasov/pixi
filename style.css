@@ -743,11 +743,12 @@ body {
   pointer-events: none;
 }
 
-/* Popover, not a docked bottom panel - position:fixed + JS
-   (js/canvas-settings.js's positionPanel), same clamped-to-viewport
-   pattern as .color-picker-popover. Its DOM location (inside
-   workspace-main) no longer matters for layout since it's taken out of
-   flow here. */
+/* Popover, not a docked bottom panel - position:fixed + JS (each user's
+   own positionPanel - js/export.js's for the Export popover this class
+   is shared with; pixi-pro's canvas-settings-ui.js for the Pro-only
+   Canvas Settings popover this class was originally built for), same
+   clamped-to-viewport pattern as .color-picker-popover. Its DOM location
+   no longer matters for layout since it's taken out of flow here. */
 .canvas-settings-panel {
   position: fixed;
   display: flex;
@@ -802,20 +803,9 @@ body {
   border-radius: 0.4rem;
 }
 
-.canvas-settings-name-label {
-  flex: 1;
-}
-
-.canvas-settings-name-label input[type="text"] {
-  flex: 1;
-  min-width: 0;
-  padding: 0.4rem 0.5rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  color: inherit;
-  border-radius: 0.4rem;
-  font-size: 0.9rem;
-}
+/* .canvas-settings-name-label (Canvas Settings' Name field styling)
+   moved to pixi-pro's style-pro.css (split-pixi-pro-repo) - its only
+   user was the now Pro-only Canvas Settings panel. */
 
 /* Export popover - reuses .canvas-settings-panel's base popover styling
    (position/size/background/border), just its own content rows below. */

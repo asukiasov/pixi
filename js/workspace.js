@@ -10,7 +10,6 @@ import {
   addColorToPalette,
   deleteColorPalette,
 } from './persistence.js';
-import { initCanvasSettings } from './canvas-settings.js';
 import { initExport } from './export.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
 import { decodeImageFile, downsampleToImageData, fitImageToCanvas } from './image-import.js';
@@ -234,7 +233,6 @@ function clearLayerMarks() {
 }
 let squareConstraintPanel = null;
 let squareConstraintToggle = null;
-let canvasSettingsControls = null;
 let exportControls = null;
 let toolButtons = null;
 let paletteRow = null;
@@ -1616,9 +1614,10 @@ export function bindSliderWheel(slider) {
  * Positions `panel` as a popover below `anchorEl`, clamped to the
  * viewport - flips above if it would overflow the bottom, clamped
  * horizontally too. Same unhide-to-measure-then-clamp pattern as
- * js/canvas-settings.js's/js/export.js's own positionPanel (duplicated
- * rather than shared, matching this codebase's existing per-popover
- * convention). Used for the Color Library import-palette popover
+ * js/export.js's own positionPanel (and pixi-pro's canvas-settings-ui.js's,
+ * for the Pro-only Canvas Settings popover - duplicated rather than
+ * shared, matching this codebase's existing per-popover convention).
+ * Used for the Color Library import-palette popover
  * (2o-image-import-refinements).
  */
 function positionPanelBelow(panel, anchorEl) {
@@ -1945,7 +1944,7 @@ function bindDomOnce() {
     importPreviewName.value = '';
     newPaletteRow.classList.add('hidden'); // mutually exclusive with the plain "+ New Palette" row
     // Unhide before measuring - .hidden is display:none, which has no box
-    // to read a size from (see js/canvas-settings.js's positionPanel).
+    // to read a size from (see this file's positionPanelBelow above).
     importPreviewRow.classList.remove('hidden');
     positionPanelBelow(importPreviewRow, importPaletteButton);
     reExtractImportPreview();
@@ -2417,33 +2416,59 @@ function bindDomOnce() {
     renderLayersPanel(); // same stale-thumbnail issue as drawing commits
   });
 
-  canvasSettingsControls = initCanvasSettings({
-    onResize(width, height) {
-      state.layerStack.resize(width, height);
-      state.canvasView.resetView();
-      state.canvasView.render();
-      canvasSettingsControls.setCurrentSize(state.layerStack.width, state.layerStack.height);
-      // A resize invalidates any prior selection's coordinates.
-      state.selection = null;
-      state.canvasView.setSelectionRect(null);
-      updateSelectionControls();
-      commit();
-    },
-    onRotate(direction) {
-      state.layerStack.rotate90(direction);
-      state.canvasView.resetView();
-      state.canvasView.render();
-      canvasSettingsControls.setCurrentSize(state.layerStack.width, state.layerStack.height);
-      state.selection = null;
-      state.canvasView.setSelectionRect(null);
-      updateSelectionControls();
-      commit();
-    },
-    onRename(name) {
-      state.projectName = name;
-      renameProject(state.projectId, name);
-    },
-  });
+}
+
+/**
+ * Pro extension points (split-pixi-pro-repo): Canvas Settings (rename/
+ * resize/rotate) moved to `pixi-pro` wholesale - `js/canvas-settings.js`'s
+ * UI, and its onResize/onRotate/onRename callback bodies, used to live
+ * directly in this file. These four exports are what `pixi-pro`'s own
+ * canvas-settings-ui.js calls instead: the resize/rotate/rename logic
+ * itself (which needs `state`, `commit()`, `updateSelectionControls()` -
+ * all workspace-internal) stays here unchanged, only its UI trigger moved.
+ */
+export function resizeCanvas(width, height) {
+  state.layerStack.resize(width, height);
+  state.canvasView.resetView();
+  state.canvasView.render();
+  // A resize invalidates any prior selection's coordinates.
+  state.selection = null;
+  state.canvasView.setSelectionRect(null);
+  updateSelectionControls();
+  commit();
+}
+
+export function rotateCanvas(direction) {
+  state.layerStack.rotate90(direction);
+  state.canvasView.resetView();
+  state.canvasView.render();
+  state.selection = null;
+  state.canvasView.setSelectionRect(null);
+  updateSelectionControls();
+  commit();
+}
+
+export function renameCurrentProject(name) {
+  state.projectName = name;
+  renameProject(state.projectId, name);
+}
+
+/** Pro extension point: the current canvas's size, e.g. to refresh a UI after rotateCanvas swaps width/height. */
+export function getCanvasSize() {
+  return { width: state.layerStack.width, height: state.layerStack.height };
+}
+
+/**
+ * Pro extension point: subscribes `fn({ width, height, name })` to run
+ * whenever a project opens/switches (workspace.js's per-project reset) -
+ * e.g. so a Pro Canvas Settings panel can refresh its displayed name/size
+ * and close itself, the same way it used to via
+ * canvasSettingsControls.setCurrentSize/setCurrentName/close directly in
+ * this file's per-project reset.
+ */
+const workspaceResetListeners = [];
+export function onWorkspaceReset(fn) {
+  workspaceResetListeners.push(fn);
 }
 
 /**
@@ -2647,9 +2672,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   canvasView.setPanMode(false);
   canvasView.setMoveMode(false);
 
-  canvasSettingsControls.setCurrentSize(layerStack.width, layerStack.height);
-  canvasSettingsControls.setCurrentName(projectName);
-  canvasSettingsControls.close();
+  for (const fn of workspaceResetListeners) fn({ width: layerStack.width, height: layerStack.height, name: projectName });
   exportControls.close();
 
   // Selections don't persist with the project (see shape-tools spec) — a

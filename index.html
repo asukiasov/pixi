@@ -89,9 +89,6 @@
       <button type="button" id="layers-panel-toggle" class="tool-button icon-button active magnetic-hover" aria-label="Layers" data-tooltip="Layers">
         <span class="material-symbols-outlined">layers</span>
       </button>
-      <button type="button" id="canvas-settings-toggle" class="tool-button icon-button magnetic-hover" aria-label="Canvas Settings" data-tooltip="Canvas Settings">
-        <span class="material-symbols-outlined">settings</span>
-      </button>
       <button type="button" id="export-button" class="tool-button icon-button magnetic-hover" aria-label="Export PNG" data-tooltip="Export PNG">
         <span class="material-symbols-outlined">download</span>
       </button>
@@ -252,39 +249,14 @@
         </div>
       </div>
 
-      <!-- Popover anchored to the top bar's gear icon (#canvas-settings-toggle),
-           not a docked bottom panel - positioned via fixed + JS
-           (js/canvas-settings.js), same clamped-to-viewport pattern
-           #color-picker-popover uses. -->
-      <div id="canvas-settings-panel" class="canvas-settings-panel hidden">
-        <div class="canvas-settings-row canvas-settings-header-row">
-          <h2>Canvas Settings</h2>
-          <button type="button" id="canvas-settings-close" class="icon-button" aria-label="Close">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-        <div class="canvas-settings-row">
-          <label class="canvas-settings-name-label">Name
-            <input type="text" id="canvas-settings-name" placeholder="Untitled" />
-          </label>
-        </div>
-        <div class="canvas-settings-row">
-          <label>W <input type="number" id="canvas-settings-width" min="1" max="256" /></label>
-          <label>H <input type="number" id="canvas-settings-height" min="1" max="256" /></label>
-          <button type="button" id="canvas-settings-apply" class="tool-button">Resize</button>
-        </div>
-        <div class="canvas-settings-row">
-          <button type="button" id="canvas-settings-rotate-ccw" class="tool-button" data-tooltip="Rotate left">
-            <span class="material-symbols-outlined">rotate_left</span> Rotate
-          </button>
-          <button type="button" id="canvas-settings-rotate-cw" class="tool-button" data-tooltip="Rotate right">
-            <span class="material-symbols-outlined">rotate_right</span> Rotate
-          </button>
-        </div>
-      </div>
+      <!-- Pro-only (split-pixi-pro-repo): Canvas Settings popover.
+           Present in pixi-pro's own index.html (own copy of this markup)
+           but not here - see js/workspace.js's resizeCanvas/rotateCanvas/
+           renameCurrentProject/onWorkspaceReset. -->
 
       <!-- Popover anchored to the top bar's download icon (#export-button),
-           same clamped-to-viewport pattern as #canvas-settings-panel
+           same clamped-to-viewport pattern as the Pro-only Canvas Settings
+           popover
            (js/export.js). Scale, format, and the transparent-background
            toggle are transient UI state - reset to their defaults every
            time the popover opens, not persisted with the project. -->
@@ -403,8 +375,8 @@
 
       <!-- Import-palette popover (2o-image-import-refinements) - out of
            #color-library-panel's normal flow (position:fixed + JS, same
-           clamped-to-viewport pattern as #canvas-settings-panel/
-           #export-panel), anchored to #import-palette-button. Live
+           clamped-to-viewport pattern as #export-panel), anchored to
+           #import-palette-button. Live
            swatch preview + adjustable color count + name + Save/Cancel -
            a fixed-position surface so the color-count control never
            shifts as the swatch grid above it gains/loses rows (unlike

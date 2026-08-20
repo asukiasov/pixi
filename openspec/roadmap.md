@@ -193,8 +193,6 @@ Mentioned in early planning but not assigned a phase — pull one in when it
 becomes the next priority:
 - **Settings** screen (stylus calibration, gesture remapping, account)
 - **Import** screen (.aseprite, reference images, palette files)
-- Animation timeline / onion skinning — explicitly out of scope for now, see
-  CLAUDE.md non-goals; would need its own roadmap discussion if ever revisited
 - ~~**Reference image layer (trace-over)**~~ — upload an image onto its
   own layer as a visual guide (not downsampled/pixelated - kept at
   original fidelity, only scaled down to fit the fixed canvas size when
@@ -207,6 +205,32 @@ becomes the next priority:
   `openspec/changes/reference-image-layer/` (tier-gating itself deferred
   - see that change's proposal.md - since no Standard/Pro gating
   mechanism exists in code yet).
+- ~~**Merge layers (multi-select + Cmd/Ctrl+E)**~~ — mark 2+ layers in the
+  Layers panel (multi-select; the panel previously only tracked one
+  active layer) and merge them into one with `Cmd/Ctrl+E`, Photoshop-style
+  (Cmd/Ctrl+click toggles a mark, Shift+click marks a range). Same
+  shortcut also covers the single-layer case with nothing else marked:
+  merges the active layer down into the layer below it. Distinct from the
+  existing export-time flatten-to-white (`js/layers.js`'s
+  `needsWhiteFlatten`, JPG/scaled export only) — this is a real
+  `LayerStack` mutation that reduces the layer count, not an export-only
+  composite. Raised 2026-08-18; proposed and implemented via
+  `openspec/changes/merge-layers/` (tier-gating itself deferred, same
+  reasoning as reference-image-layer above).
+- Animation timeline / onion skinning — explicitly out of scope for now, see
+  CLAUDE.md non-goals; would need its own roadmap discussion if ever revisited
+- **Standard/Pro tier split** — splitting Pixi into two downloadable,
+  self-hosted versions: free/open-source Standard (this repo, as-is) and
+  paid/closed-source Pro (new private `pixi-pro` repo, submodules `pixi`).
+  Manual PayPal → GitHub-collaborator access, no automated licensing. Note:
+  this supersedes Phase 4's original Stripe/entitlements sketch for this
+  specific tier split — revisit Phase 4's description if it's still wanted
+  for a different monetization path. Raised 2026-08-18; proposed and
+  implemented via `openspec/changes/split-pixi-pro-repo/` — the design doc
+  and feature-by-feature worksheet that informed it
+  (`docs/superpowers/specs/2026-08-18-pixi-tiers-design.md` and
+  `docs/superpowers/specs/2026-08-17-tier-matrix-worksheet.md`) are legacy
+  input now, superseded by that change's spec once it's archived.
 - **UI polish pass — refine the design window by window, panel by
   panel.** Raised directly on 2026-08-17, after 2m/2n shipped and real
   usage surfaced rough edges. An open-ended initiative, not one change -

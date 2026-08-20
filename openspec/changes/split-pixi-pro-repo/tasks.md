@@ -147,10 +147,10 @@
 
 ## 5. Docs cleanup
 
-- [ ] 5.1 Update `openspec/roadmap.md`'s "Standard/Pro tier split" entry
+- [x] 5.1 Update `openspec/roadmap.md`'s "Standard/Pro tier split" entry
       under "Not yet scheduled" to point at this change instead of
       "not yet proposed."
-- [ ] 5.2 Note in `docs/superpowers/specs/2026-08-18-pixi-tiers-design.md`
+- [x] 5.2 Note in `docs/superpowers/specs/2026-08-18-pixi-tiers-design.md`
       and `docs/superpowers/specs/2026-08-17-tier-matrix-worksheet.md`
       that they're superseded by `openspec/specs/pixi-pro-distribution/`
       once this change is archived.

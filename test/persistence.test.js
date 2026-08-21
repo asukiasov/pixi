@@ -86,6 +86,34 @@ describe('saveProject', () => {
     assert.equal(loaded.thumbnail.size, newThumbnail.size);
     assert.equal(loaded.thumbnail.type, newThumbnail.type);
   });
+
+  // Regression test (found by code review): saveProject/renameProject do a
+  // load-modify-save round trip through the adapter interface, unlike the
+  // old direct db.projects.update(id, {...}) call, which was a single
+  // atomic IndexedDB transaction. Two concurrent, unawaited writers to the
+  // same project (exactly how js/workspace.js calls these - see commit()
+  // and renameCurrentProject(), both fire-and-forget) could previously
+  // race: whichever writer's save() landed second would overwrite the
+  // other's field with its own stale pre-write snapshot. Writes to the
+  // same id must be serialized so each writer always reads the other's
+  // completed result first.
+  test('a concurrent saveProject and renameProject on the same id do not clobber each other', async () => {
+    const stack = new LayerStack(2, 2, 'transparent');
+    const created = await createProject(stack, 'Original');
+    stack.getActiveLayer().engine.setPixel(0, 0, [1, 2, 3, 255]);
+
+    // Fired together, unawaited relative to each other - exactly the
+    // shape of workspace.js's fire-and-forget autoSave()/rename calls.
+    await Promise.all([
+      saveProject(created.id, stack),
+      renameProject(created.id, 'Renamed'),
+    ]);
+
+    const loaded = await loadProject(created.id);
+    assert.equal(loaded.name, 'Renamed');
+    const restored = LayerStack.fromProjectRecord(loaded);
+    assert.deepEqual(restored.getActiveLayer().engine.getPixel(0, 0), [1, 2, 3, 255]);
+  });
 });
 
 describe('renameProject', () => {

@@ -56,6 +56,31 @@ function generateId() {
 
 let activeAdapter = createDexieProjectAdapter(db);
 
+// Per-id write queue. saveProject/renameProject do a load-modify-save
+// round trip through the adapter interface (unlike the old direct
+// db.projects.update(id, {...}), which was one atomic IndexedDB
+// transaction) - so two concurrent, unawaited writers to the same project
+// (exactly how workspace.js calls these: commit()'s autosave and
+// renameCurrentProject() are both fire-and-forget) could otherwise race,
+// with whichever save() lands second silently overwriting the other's
+// field from a stale pre-write snapshot. Chaining each write behind the
+// previous one for the same id guarantees every writer's load() sees the
+// prior writer's completed result, restoring the same effective atomicity
+// the old single-transaction update() had - regardless of which adapter
+// is active, so this holds for a host-supplied adapter too.
+const writeQueues = new Map();
+
+function enqueueWrite(id, task) {
+  const previous = writeQueues.get(id) ?? Promise.resolve();
+  const settled = previous.then(task, task);
+  // Track the queue by its settled state, not its resolved value, so a
+  // rejected write doesn't permanently wedge later writes to the same id -
+  // but don't let that suppression turn into a silently swallowed
+  // rejection for the caller: `settled` (returned below) still carries it.
+  writeQueues.set(id, settled.catch(() => {}));
+  return settled;
+}
+
 /**
  * Substitutes the storage adapter used by every project CRUD function
  * below (create/save/load/list/delete/renameProject). Used by the
@@ -104,23 +129,27 @@ export async function createProject(layerStack, name = 'Untitled', thumbnail = n
  * partial record from `updates` alone.
  */
 export async function saveProject(id, layerStack, thumbnail = null) {
-  const existing = await activeAdapter.load(id);
-  if (!existing) return;
-  const merged = {
-    ...existing,
-    ...layerStack.toProjectRecord(),
-    id,
-    updatedAt: Date.now(),
-  };
-  if (thumbnail) merged.thumbnail = thumbnail;
-  await activeAdapter.save(merged);
+  return enqueueWrite(id, async () => {
+    const existing = await activeAdapter.load(id);
+    if (!existing) return;
+    const merged = {
+      ...existing,
+      ...layerStack.toProjectRecord(),
+      id,
+      updatedAt: Date.now(),
+    };
+    if (thumbnail) merged.thumbnail = thumbnail;
+    await activeAdapter.save(merged);
+  });
 }
 
 /** Renames an existing project. No-op if `id` doesn't exist. */
 export async function renameProject(id, name) {
-  const existing = await activeAdapter.load(id);
-  if (!existing) return;
-  await activeAdapter.save({ ...existing, name, updatedAt: Date.now() });
+  return enqueueWrite(id, async () => {
+    const existing = await activeAdapter.load(id);
+    if (!existing) return;
+    await activeAdapter.save({ ...existing, name, updatedAt: Date.now() });
+  });
 }
 
 /** Returns the raw stored record (or undefined), ready for LayerStack.fromProjectRecord(). */
@@ -135,7 +164,7 @@ export async function listProjects() {
 }
 
 export async function deleteProject(id) {
-  await activeAdapter.delete(id);
+  return enqueueWrite(id, () => activeAdapter.delete(id));
 }
 
 /**

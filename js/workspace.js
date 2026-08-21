@@ -208,8 +208,20 @@ function updateUndoRedoButtons() {
  * block on a write completing. Not queued/serialized: rapid successive
  * commits could in principle finish out of order and leave a slightly stale
  * save; acceptable at this interaction rate, not solved in this slice.
+ *
+ * Also the `instance.on('change', ...)` choke point (embeddable-integration
+ * -api task 3.5): every call site here (commit(), performUndo(),
+ * performRedo()) is already "a committed drawing action changed the
+ * image", the exact granularity the "Change notifications" spec
+ * requirement asks for - so `state.onChange()` fires here instead of
+ * duplicating that "what counts as a commit" decision at each call site.
+ * Called synchronously, before the `await`s below, so a host's change
+ * handler runs immediately rather than waiting on an IndexedDB write it
+ * has no reason to depend on (matches autoSave()'s own fire-and-forget
+ * framing above).
  */
 async function autoSave() {
+  state.onChange();
   const thumbnail = await state.layerStack.toPNGBlob();
   await saveProject(state.projectId, state.layerStack, thumbnail);
 }
@@ -1676,8 +1688,14 @@ function redrawMovePreview() {
  * behavior, unchanged). A mounted instance passes its own host
  * container's cloned Workspace markup instead; see this file's
  * module-level `root` comment for the single-active-instance scope note.
+ *
+ * `onChange` (embeddable-integration-api, task 3.5): called from
+ * autoSave() on every committed drawing action - see that function's doc
+ * comment. Defaults to a no-op so the standalone app (js/app.js, which
+ * doesn't pass one) is unaffected; a mounted instance passes its own
+ * emitter's dispatch function (lib/pixi.js).
  */
-export function initWorkspace({ projectId, projectName, layerStack, canvasView, onRequestGallery, root: hostRoot = document }) {
+export function initWorkspace({ projectId, projectName, layerStack, canvasView, onRequestGallery, onChange = () => {}, root: hostRoot = document }) {
   root = hostRoot;
   state = {
     projectId,
@@ -1685,6 +1703,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     layerStack,
     canvasView,
     onRequestGallery,
+    onChange,
     undoStack: new UndoStack(),
     currentTool: 'pencil',
     foregroundColor: hexToRgba(PALETTE[0]),

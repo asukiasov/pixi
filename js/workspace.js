@@ -1143,6 +1143,41 @@ export function bindSliderWheel(slider) {
 // ramp preview popovers) moved to pixi-pro's js/pro/color-library-ui.js
 // (split-pixi-pro-repo) alongside its only two callers.
 
+/**
+ * Applies every tool-scoped UI toggle that follows from `state.currentTool`
+ * alone (Brushes/pencil-options/square-constraint panel visibility, pan/
+ * move cursor mode) - shared by the tool-button click handler (a user
+ * switching tools) and `initWorkspace()` (a fresh project's starting
+ * tool, task 3.7's `initialTool`), which previously each carried their own
+ * copy. Kept in sync as one function after a code-review finding on task
+ * 3.7: `initWorkspace()`'s copy had hardcoded a Pencil-is-always-the-
+ * starting-tool assumption that silently drifted out of sync with this
+ * logic once `initialTool` could be something else - a duplicated copy is
+ * exactly the shape that bug already came from, so consolidating it here
+ * removes the chance of it recurring for a future tool-scoped panel.
+ */
+function applyToolScopedUI() {
+  brushesPanel.classList.toggle('hidden', state.currentTool !== 'brush');
+  // Leaving the Brush tool mid-edit closes the editor rather than
+  // leaving it open behind a now-hidden panel.
+  if (state.currentTool !== 'brush') closeBrushEditor();
+  // Hand tool: single-pointer drag pans the canvas instead of drawing
+  // (see CanvasView#setPanMode). Every other tool leaves pan mode off.
+  state.canvasView.setPanMode(state.currentTool === 'hand');
+  // Move tool: swaps in the CSS `move` cursor while active (see
+  // CanvasView#setMoveMode) - purely cosmetic, drag handling itself
+  // lives in onDrawStart/onDrawMove/onDrawEnd below.
+  state.canvasView.setMoveMode(state.currentTool === 'move');
+  // Size/Opacity sliders: shared by Pencil and Eraser, hidden for
+  // every other tool - same tool-scoped-visibility pattern as Brushes.
+  pencilOptionsPanel.classList.toggle('hidden', state.currentTool !== 'pencil' && state.currentTool !== 'eraser');
+  // 1:1 proportion toggle: Rectangle and Selection.
+  squareConstraintPanel.classList.toggle(
+    'hidden',
+    state.currentTool !== 'rectangle' && state.currentTool !== 'selection'
+  );
+}
+
 function bindDomOnce() {
   toolButtons = root.querySelectorAll('.tool-button[data-tool]');
   paletteRow = root.querySelector('#palette-row');
@@ -1153,25 +1188,7 @@ function bindDomOnce() {
     button.addEventListener('click', () => {
       state.currentTool = button.dataset.tool;
       toolButtons.forEach((b) => b.classList.toggle('active', b === button));
-      brushesPanel.classList.toggle('hidden', state.currentTool !== 'brush');
-      // Leaving the Brush tool mid-edit closes the editor rather than
-      // leaving it open behind a now-hidden panel.
-      if (state.currentTool !== 'brush') closeBrushEditor();
-      // Hand tool: single-pointer drag pans the canvas instead of drawing
-      // (see CanvasView#setPanMode). Every other tool leaves pan mode off.
-      state.canvasView.setPanMode(state.currentTool === 'hand');
-      // Move tool: swaps in the CSS `move` cursor while active (see
-      // CanvasView#setMoveMode) - purely cosmetic, drag handling itself
-      // lives in onDrawStart/onDrawMove/onDrawEnd below.
-      state.canvasView.setMoveMode(state.currentTool === 'move');
-      // Size/Opacity sliders: shared by Pencil and Eraser, hidden for
-      // every other tool - same tool-scoped-visibility pattern as Brushes.
-      pencilOptionsPanel.classList.toggle('hidden', state.currentTool !== 'pencil' && state.currentTool !== 'eraser');
-      // 1:1 proportion toggle: Rectangle and Selection.
-      squareConstraintPanel.classList.toggle(
-        'hidden',
-        state.currentTool !== 'rectangle' && state.currentTool !== 'selection'
-      );
+      applyToolScopedUI();
     });
   });
 
@@ -1795,31 +1812,21 @@ export function initWorkspace({
   updateFgBgSwatches();
   syncActiveSwatch();
   renderBrushesPanel();
-  brushesPanel.classList.toggle('hidden', state.currentTool !== 'brush');
-  closeBrushEditor();
   root.querySelector('#brush-spacing').value = '1';
   root.querySelector('#brush-rotation').value = '0';
   setRightSidebarVisible(true);
-  // Pencil is the default tool (or, task 3.7, whatever resolveInitialTool()
-  // fell back to when a restricted options.ui.tools excludes Pencil) - the
-  // panel's visibility follows state.currentTool the same way the tool
-  // buttons' own click handler does, rather than assuming Pencil; the
-  // slider/readout still reset to match state.pencilSize's default (1)
-  // regardless of which tool starts active.
-  pencilOptionsPanel.classList.toggle('hidden', state.currentTool !== 'pencil' && state.currentTool !== 'eraser');
+  // Every tool-scoped panel/mode toggle (Brushes, pencil-options,
+  // square-constraint, pan/move mode) follows state.currentTool alone -
+  // shared with the tool-button click handler via applyToolScopedUI()
+  // (task 3.7 code review: this used to be its own hardcoded-Pencil copy,
+  // which drifted out of sync once initialTool could start on a tool
+  // other than Pencil).
+  applyToolScopedUI();
+  // Pencil/Eraser's Size slider/readout still reset to match
+  // state.pencilSize's default (1) regardless of which tool starts active.
   root.querySelector('#pencil-size-slider').value = '1';
   root.querySelector('#pencil-size-readout').textContent = '1px';
-  // Same reasoning as pencilOptionsPanel above - Rectangle/Selection isn't
-  // always excluded from a restricted initial tool.
-  squareConstraintPanel.classList.toggle(
-    'hidden',
-    state.currentTool !== 'rectangle' && state.currentTool !== 'selection'
-  );
   squareConstraintToggle.classList.remove('active');
-  // Same reasoning again - a restricted tools list could start on Hand or
-  // Move instead of Pencil.
-  canvasView.setPanMode(state.currentTool === 'hand');
-  canvasView.setMoveMode(state.currentTool === 'move');
 
   for (const fn of workspaceResetListeners) fn({ width: layerStack.width, height: layerStack.height, name: projectName });
   exportControls.close();

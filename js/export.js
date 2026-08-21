@@ -49,15 +49,15 @@ function sanitizeFilename(name) {
  * (1x, PNG, off) every time the popover opens - they're transient UI
  * state, not saved with the project.
  */
-export function initExport({ onExport, getProjectName }) {
-  const toggleButton = document.getElementById('export-button');
-  const panel = document.getElementById('export-panel');
-  const closeButton = document.getElementById('export-close');
+export function initExport({ onExport, getProjectName, root = document }) {
+  const toggleButton = root.querySelector('#export-button');
+  const panel = root.querySelector('#export-panel');
+  const closeButton = root.querySelector('#export-close');
   const scaleOptions = [...panel.querySelectorAll('.export-scale-option')];
   const formatOptions = [...panel.querySelectorAll('.export-format-option')];
-  const transparentCheckbox = document.getElementById('export-transparent-background');
-  const transparentLabel = document.getElementById('export-transparent-label');
-  const downloadButton = document.getElementById('export-download');
+  const transparentCheckbox = root.querySelector('#export-transparent-background');
+  const transparentLabel = root.querySelector('#export-transparent-label');
+  const downloadButton = root.querySelector('#export-download');
 
   function currentFormat() {
     const activeFormatButton = formatOptions.find((btn) => btn.classList.contains('active'));

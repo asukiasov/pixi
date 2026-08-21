@@ -24,7 +24,7 @@
 
 ## 3. Build the mount API (Phase 3)
 
-- [ ] 3.1 Give `js/workspace.js` (and `js/new-canvas.js` if in scope for the mounted flow) a constructor-style entry point that accepts a host container element and options, instead of assuming fixed `index.html` element IDs
+- [x] 3.1 Give `js/workspace.js` (and `js/new-canvas.js` if in scope for the mounted flow) a constructor-style entry point that accepts a host container element and options, instead of assuming fixed `index.html` element IDs (`js/new-canvas.js` determined out of scope: the mount API's `loadImage`/`getImage` replace the New Canvas flow for embedded use, so it's never part of a mounted instance. `initWorkspace`/`initExport` now take a `root` option, defaulting to `document` — real container-scoped `root.querySelector('#id')` lookups throughout, not a same-page-ID shortcut; scoped to one active instance at a time, not concurrent multi-instance, per an explicit scope discussion with the user since the approved spec doesn't require multi-instance either. All 76 `document.getElementById`/`querySelectorAll` call sites converted. Verified: `npm test` 202/202, full Playwright smoke test of the standalone app with `root` defaulting to `document` — New Canvas, Workspace load, Brush tool, right-panel toggle, draw, Undo, Export panel — no behavior change)
 - [ ] 3.2 Create `lib/pixi.js` exposing `Pixi.mount(hostElement, options)`, returning an instance with `destroy()`
 - [ ] 3.3 Implement `instance.loadImage(pngBlobOrImageData)` on top of `lib/pixel-engine/`'s `LayerStack`
 - [ ] 3.4 Implement `instance.getImage({ format })` (PNG/Blob/Base64/ImageData) on top of `lib/pixel-engine/`'s `LayerStack`; refactor `js/export.js`'s panel to call the same underlying encode function rather than duplicating it

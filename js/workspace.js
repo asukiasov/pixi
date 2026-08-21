@@ -141,6 +141,18 @@ let backgroundSwatchEl = null;
 let zoomReadout = null;
 let pencilOptionsPanel = null;
 
+// Embeddable-editor-api (Phase 3): the DOM root every workspace element
+// lookup below resolves against, instead of the bare `document` this file
+// used to assume. Defaults to `document` so the standalone app (its
+// markup lives directly in index.html's <body>) is unaffected; a mounted
+// instance passes its own host container's cloned Workspace markup here
+// (see lib/pixi.js). Module-level, not per-instance - per design.md's
+// scoping decision, this supports one active Workspace instance at a
+// time (standalone app, or a single mounted instance), not multiple
+// simultaneous instances; mounting a second instance while one is active
+// is unsupported for now.
+let root = document;
+
 // All available brushes: the built-ins plus whatever's been loaded from
 // IndexedDB. Module-level, not per-project — brushes are global, not
 // scoped to one project (see the "Custom brushes persist across
@@ -492,7 +504,7 @@ export function getBrushEditorSize() {
  */
 export function setBrushEditorGrid(grid) {
   brushEditorGridState = grid;
-  const gridEl = document.getElementById('brush-editor-grid');
+  const gridEl = root.querySelector('#brush-editor-grid');
   gridEl.querySelectorAll('.brush-editor-cell').forEach((cell) => {
     const x = Number(cell.dataset.x);
     const y = Number(cell.dataset.y);
@@ -502,7 +514,7 @@ export function setBrushEditorGrid(grid) {
 
 /** (Re)builds the editor grid's cells to match brushEditorWidth x brushEditorHeight, clearing any painted pixels. */
 function rebuildBrushEditorGrid() {
-  const grid = document.getElementById('brush-editor-grid');
+  const grid = root.querySelector('#brush-editor-grid');
   brushEditorGridState = makeEmptyBrushEditorGrid(brushEditorWidth, brushEditorHeight);
   grid.innerHTML = '';
   const cellPx = brushEditorCellSizePx(brushEditorWidth, brushEditorHeight);
@@ -531,8 +543,8 @@ function clampBrushEditorDimension(value, max) {
 }
 
 function openBrushEditor() {
-  const widthInput = document.getElementById('brush-editor-width');
-  const heightInput = document.getElementById('brush-editor-height');
+  const widthInput = root.querySelector('#brush-editor-width');
+  const heightInput = root.querySelector('#brush-editor-height');
   const maxWidth = state.layerStack.width;
   const maxHeight = state.layerStack.height;
   widthInput.max = String(maxWidth);
@@ -541,13 +553,13 @@ function openBrushEditor() {
   brushEditorHeight = clampBrushEditorDimension(BRUSH_EDITOR_SIZE, maxHeight);
   widthInput.value = String(brushEditorWidth);
   heightInput.value = String(brushEditorHeight);
-  document.getElementById('brush-editor-name').value = '';
+  root.querySelector('#brush-editor-name').value = '';
   rebuildBrushEditorGrid();
-  document.getElementById('brush-editor-panel').classList.remove('hidden');
+  root.querySelector('#brush-editor-panel').classList.remove('hidden');
 }
 
 function closeBrushEditor() {
-  document.getElementById('brush-editor-panel').classList.add('hidden');
+  root.querySelector('#brush-editor-panel').classList.add('hidden');
 }
 
 /**
@@ -558,13 +570,13 @@ function closeBrushEditor() {
  * pointerenter would never fire on sibling cells during a touch drag.
  */
 function bindBrushEditorOnce() {
-  const grid = document.getElementById('brush-editor-grid');
-  const nameInput = document.getElementById('brush-editor-name');
-  const widthInput = document.getElementById('brush-editor-width');
-  const heightInput = document.getElementById('brush-editor-height');
-  const clearButton = document.getElementById('brush-editor-clear');
-  const cancelButton = document.getElementById('brush-editor-cancel');
-  const saveButton = document.getElementById('brush-editor-save');
+  const grid = root.querySelector('#brush-editor-grid');
+  const nameInput = root.querySelector('#brush-editor-name');
+  const widthInput = root.querySelector('#brush-editor-width');
+  const heightInput = root.querySelector('#brush-editor-height');
+  const clearButton = root.querySelector('#brush-editor-clear');
+  const cancelButton = root.querySelector('#brush-editor-cancel');
+  const saveButton = root.querySelector('#brush-editor-save');
 
   // Changing size re-grids from scratch - a brand-new brush each time.
   // (Pro's "Import from image", if present, adds its own listener here
@@ -731,7 +743,7 @@ let konamiProgress = 0;
 /** You know what this is if you know what this is. */
 function bindKonamiCode() {
   document.addEventListener('keydown', (e) => {
-    if (document.getElementById('screen-workspace').classList.contains('hidden')) return;
+    if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
     const key = e.key.toLowerCase();
     if (key === KONAMI_SEQUENCE[konamiProgress]) {
       konamiProgress++;
@@ -928,11 +940,11 @@ export function syncActiveSwatch() {
 /** Keeps the native color input, hex field, and RGB fields all showing the same color. */
 function updateColorPickerInputs(rgba) {
   const hex = rgbaToHex(rgba);
-  document.getElementById('color-picker-native').value = hex;
-  document.getElementById('color-picker-hex').value = hex;
-  document.getElementById('color-picker-r').value = String(rgba[0]);
-  document.getElementById('color-picker-g').value = String(rgba[1]);
-  document.getElementById('color-picker-b').value = String(rgba[2]);
+  root.querySelector('#color-picker-native').value = hex;
+  root.querySelector('#color-picker-hex').value = hex;
+  root.querySelector('#color-picker-r').value = String(rgba[0]);
+  root.querySelector('#color-picker-g').value = String(rgba[1]);
+  root.querySelector('#color-picker-b').value = String(rgba[2]);
 }
 
 function updateFgBgSwatches() {
@@ -1004,10 +1016,10 @@ function openColorPicker(target, anchorEl) {
   // real tap lands on, which reliably opens iOS's native picker with no
   // synthetic-click trickery involved - one extra tap versus the ideal
   // "skip straight to native," but actually works.
-  document.getElementById('color-picker-popover-title').textContent =
+  root.querySelector('#color-picker-popover-title').textContent =
     target === 'background' ? 'Background Color' : 'Foreground Color';
   updateColorPickerInputs(current);
-  const popover = document.getElementById('color-picker-popover');
+  const popover = root.querySelector('#color-picker-popover');
   // Unhide before measuring - .hidden is display:none, which has no box
   // to read a size from.
   popover.classList.remove('hidden');
@@ -1032,7 +1044,7 @@ function openColorPicker(target, anchorEl) {
 }
 
 function closeColorPicker() {
-  document.getElementById('color-picker-popover').classList.add('hidden');
+  root.querySelector('#color-picker-popover').classList.add('hidden');
 }
 
 // openLayersOpacityPopover/closeLayersOpacityPopover moved to pixi-pro's
@@ -1092,10 +1104,10 @@ export function bindSliderWheel(slider) {
 // (split-pixi-pro-repo) alongside its only two callers.
 
 function bindDomOnce() {
-  toolButtons = document.querySelectorAll('.tool-button[data-tool]');
-  paletteRow = document.getElementById('palette-row');
-  brushesPanel = document.getElementById('brushes-panel');
-  const backToGalleryButton = document.getElementById('back-to-gallery-button');
+  toolButtons = root.querySelectorAll('.tool-button[data-tool]');
+  paletteRow = root.querySelector('#palette-row');
+  brushesPanel = root.querySelector('#brushes-panel');
+  const backToGalleryButton = root.querySelector('#back-to-gallery-button');
 
   toolButtons.forEach((button) => {
     button.addEventListener('click', () => {
@@ -1128,9 +1140,9 @@ function bindDomOnce() {
 
   // Pencil/Eraser Size - shared slider with live readout (Opacity is
   // Pro-only, see js/pro/pencil-opacity-ui.js in pixi-pro).
-  pencilOptionsPanel = document.getElementById('pencil-options');
-  const pencilSizeSlider = document.getElementById('pencil-size-slider');
-  const pencilSizeReadout = document.getElementById('pencil-size-readout');
+  pencilOptionsPanel = root.querySelector('#pencil-options');
+  const pencilSizeSlider = root.querySelector('#pencil-size-slider');
+  const pencilSizeReadout = root.querySelector('#pencil-size-readout');
 
   pencilSizeSlider.addEventListener('input', () => {
     const value = Number(pencilSizeSlider.value);
@@ -1146,8 +1158,8 @@ function bindDomOnce() {
   // 1:1 proportion toggle - Rectangle and Selection, a persistent
   // touchscreen-friendly equivalent of holding Shift (see
   // isSquareConstrained).
-  squareConstraintPanel = document.getElementById('square-constraint-options');
-  squareConstraintToggle = document.getElementById('square-constraint-toggle');
+  squareConstraintPanel = root.querySelector('#square-constraint-options');
+  squareConstraintToggle = root.querySelector('#square-constraint-toggle');
   squareConstraintToggle.addEventListener('click', () => {
     state.squareConstraint = !state.squareConstraint;
     squareConstraintToggle.classList.toggle('active', state.squareConstraint);
@@ -1159,13 +1171,13 @@ function bindDomOnce() {
   // in a popover opened by clicking the Foreground or Background swatch
   // (colorPickerTarget tracks which one), all cross-synced through
   // applyPickedColor/updateColorPickerInputs.
-  const colorPickerNative = document.getElementById('color-picker-native');
-  const colorPickerHex = document.getElementById('color-picker-hex');
-  const colorPickerCopied = document.getElementById('color-picker-copied');
-  const colorPickerR = document.getElementById('color-picker-r');
-  const colorPickerG = document.getElementById('color-picker-g');
-  const colorPickerB = document.getElementById('color-picker-b');
-  const colorPickerPopover = document.getElementById('color-picker-popover');
+  const colorPickerNative = root.querySelector('#color-picker-native');
+  const colorPickerHex = root.querySelector('#color-picker-hex');
+  const colorPickerCopied = root.querySelector('#color-picker-copied');
+  const colorPickerR = root.querySelector('#color-picker-r');
+  const colorPickerG = root.querySelector('#color-picker-g');
+  const colorPickerB = root.querySelector('#color-picker-b');
+  const colorPickerPopover = root.querySelector('#color-picker-popover');
 
   colorPickerNative.addEventListener('input', () => {
     applyPickedColor(hexToRgba(colorPickerNative.value));
@@ -1203,7 +1215,7 @@ function bindDomOnce() {
   colorPickerG.addEventListener('change', applyRgbFields);
   colorPickerB.addEventListener('change', applyRgbFields);
 
-  document.getElementById('color-picker-close').addEventListener('click', closeColorPicker);
+  root.querySelector('#color-picker-close').addEventListener('click', closeColorPicker);
 
   // Close on outside click/Escape, not just the explicit close button -
   // standard popover behavior. Clicks inside #ramp-preview-row (Pro-only,
@@ -1217,7 +1229,7 @@ function bindDomOnce() {
     if (colorPickerPopover.classList.contains('hidden')) return;
     if (colorPickerPopover.contains(e.target)) return;
     if (e.target.closest('#foreground-swatch, #background-swatch')) return;
-    if (document.getElementById('ramp-preview-row')?.contains(e.target)) return;
+    if (root.querySelector('#ramp-preview-row')?.contains(e.target)) return;
     closeColorPicker();
   });
   document.addEventListener('keydown', (e) => {
@@ -1226,13 +1238,13 @@ function bindDomOnce() {
 
   // Foreground/Background: click either swatch to open the popover
   // targeting it; swap and reset-to-black/white.
-  foregroundSwatchEl = document.getElementById('foreground-swatch');
-  backgroundSwatchEl = document.getElementById('background-swatch');
+  foregroundSwatchEl = root.querySelector('#foreground-swatch');
+  backgroundSwatchEl = root.querySelector('#background-swatch');
 
   foregroundSwatchEl.addEventListener('click', () => openColorPicker('foreground', foregroundSwatchEl));
   backgroundSwatchEl.addEventListener('click', () => openColorPicker('background', backgroundSwatchEl));
 
-  document.getElementById('fg-bg-swap').addEventListener('click', () => {
+  root.querySelector('#fg-bg-swap').addEventListener('click', () => {
     const swapped = state.backgroundColor;
     state.backgroundColor = state.foregroundColor;
     state.foregroundColor = swapped;
@@ -1241,7 +1253,7 @@ function bindDomOnce() {
     syncActiveSwatch();
   });
 
-  document.getElementById('fg-bg-reset').addEventListener('click', () => {
+  root.querySelector('#fg-bg-reset').addEventListener('click', () => {
     state.foregroundColor = hexToRgba('#000000');
     state.backgroundColor = hexToRgba('#ffffff');
     updateColorPickerInputs(colorPickerTarget === 'background' ? state.backgroundColor : state.foregroundColor);
@@ -1249,11 +1261,11 @@ function bindDomOnce() {
     syncActiveSwatch();
   });
 
-  brushesPanelGrid = document.getElementById('brushes-panel-grid');
-  deleteBrushButton = document.getElementById('delete-brush-button');
-  const addBrushButton = document.getElementById('add-brush-button');
-  const brushSpacingInput = document.getElementById('brush-spacing');
-  const brushRotationInput = document.getElementById('brush-rotation');
+  brushesPanelGrid = root.querySelector('#brushes-panel-grid');
+  deleteBrushButton = root.querySelector('#delete-brush-button');
+  const addBrushButton = root.querySelector('#add-brush-button');
+  const brushSpacingInput = root.querySelector('#brush-spacing');
+  const brushRotationInput = root.querySelector('#brush-rotation');
 
   renderBrushesPanel();
   loadCustomBrushes(); // async; re-renders the panel once custom brushes arrive
@@ -1303,8 +1315,8 @@ function bindDomOnce() {
   // Whole right-sidebar visibility toggle (Color Library + Brushes +
   // Layers together), independent of each panel's own collapsed state
   // above - VSCode "toggle sidebar" style.
-  rightSidebar = document.getElementById('right-sidebar');
-  rightSidebarToggle = document.getElementById('right-sidebar-toggle');
+  rightSidebar = root.querySelector('#right-sidebar');
+  rightSidebarToggle = root.querySelector('#right-sidebar-toggle');
   rightSidebarToggle.addEventListener('click', () => {
     state.rightSidebarVisible = !state.rightSidebarVisible;
     setRightSidebarVisible(state.rightSidebarVisible);
@@ -1312,12 +1324,12 @@ function bindDomOnce() {
 
   // Zoom: +/- buttons and the three presets all just call the CanvasView
   // API directly - it owns all the actual zoom/pan math (see design.md).
-  zoomReadout = document.getElementById('zoom-readout');
-  document.getElementById('zoom-out-button').addEventListener('click', () => state.canvasView.zoomStep(-1));
-  document.getElementById('zoom-in-button').addEventListener('click', () => state.canvasView.zoomStep(1));
-  document.getElementById('zoom-preset-100').addEventListener('click', () => state.canvasView.setZoomPreset('100'));
-  document.getElementById('zoom-preset-fit').addEventListener('click', () => state.canvasView.setZoomPreset('fit'));
-  document.getElementById('zoom-preset-fill').addEventListener('click', () => state.canvasView.setZoomPreset('fill'));
+  zoomReadout = root.querySelector('#zoom-readout');
+  root.querySelector('#zoom-out-button').addEventListener('click', () => state.canvasView.zoomStep(-1));
+  root.querySelector('#zoom-in-button').addEventListener('click', () => state.canvasView.zoomStep(1));
+  root.querySelector('#zoom-preset-100').addEventListener('click', () => state.canvasView.setZoomPreset('100'));
+  root.querySelector('#zoom-preset-fit').addEventListener('click', () => state.canvasView.setZoomPreset('fit'));
+  root.querySelector('#zoom-preset-fill').addEventListener('click', () => state.canvasView.setZoomPreset('fill'));
 
   state.undoButton.addEventListener('click', performUndo);
   state.redoButton.addEventListener('click', performRedo);
@@ -1329,7 +1341,7 @@ function bindDomOnce() {
   // Canvas screens.
   document.addEventListener('keydown', (e) => {
     if (!(e.metaKey || e.ctrlKey)) return;
-    if (document.getElementById('screen-workspace').classList.contains('hidden')) return;
+    if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
     const key = e.key.toLowerCase();
 
     if (key === 'z' || key === 'y') {
@@ -1375,7 +1387,7 @@ function bindDomOnce() {
   // current — unlike the shortcuts above, this one takes no modifier key.
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (document.getElementById('screen-workspace').classList.contains('hidden')) return;
+    if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
     clearSelection();
   });
 
@@ -1394,7 +1406,7 @@ function bindDomOnce() {
   // brush name, hex input, etc.) or they'd hijack every keystroke.
   document.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (document.getElementById('screen-workspace').classList.contains('hidden')) return;
+    if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
     const active = document.activeElement;
     if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable)) {
       return;
@@ -1407,6 +1419,7 @@ function bindDomOnce() {
   });
 
   exportControls = initExport({
+    root,
     getProjectName: () => state.projectName,
     async onExport({ scale, format, skipBackground, filename }) {
       const blob = await state.layerStack.toPNGBlob({ scale, format, skipBackground });
@@ -1602,8 +1615,15 @@ function redrawMovePreview() {
  * Safe to call repeatedly (once per project opened or created in a
  * session) — DOM listeners bind only once; subsequent calls just reset
  * the drawing state for the new project.
+ *
+ * `root` (embeddable-editor-api, Phase 3): the DOM root to resolve every
+ * `#id` lookup against - defaults to `document` (the standalone app's
+ * behavior, unchanged). A mounted instance passes its own host
+ * container's cloned Workspace markup instead; see this file's
+ * module-level `root` comment for the single-active-instance scope note.
  */
-export function initWorkspace({ projectId, projectName, layerStack, canvasView, onRequestGallery }) {
+export function initWorkspace({ projectId, projectName, layerStack, canvasView, onRequestGallery, root: hostRoot = document }) {
+  root = hostRoot;
   state = {
     projectId,
     projectName,
@@ -1631,12 +1651,12 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     moveRegion: null,
     moveContent: null,
     moveContentEmpty: false,
-    undoButton: document.getElementById('undo-button'),
-    redoButton: document.getElementById('redo-button'),
-    exportButton: document.getElementById('export-button'),
-    selectionControlsEl: document.getElementById('selection-controls'),
-    selectionClearButton: document.getElementById('selection-clear-button'),
-    selectionDeleteButton: document.getElementById('selection-delete-button'),
+    undoButton: root.querySelector('#undo-button'),
+    redoButton: root.querySelector('#redo-button'),
+    exportButton: root.querySelector('#export-button'),
+    selectionControlsEl: root.querySelector('#selection-controls'),
+    selectionClearButton: root.querySelector('#selection-clear-button'),
+    selectionDeleteButton: root.querySelector('#selection-delete-button'),
   };
 
   if (!domBound) {
@@ -1661,14 +1681,14 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   renderBrushesPanel();
   brushesPanel.classList.toggle('hidden', state.currentTool !== 'brush');
   closeBrushEditor();
-  document.getElementById('brush-spacing').value = '1';
-  document.getElementById('brush-rotation').value = '0';
+  root.querySelector('#brush-spacing').value = '1';
+  root.querySelector('#brush-rotation').value = '0';
   setRightSidebarVisible(true);
   // Default tool is Pencil, so the panel starts visible; the slider/readout
   // reset to match state.pencilSize's default (1).
   pencilOptionsPanel.classList.remove('hidden');
-  document.getElementById('pencil-size-slider').value = '1';
-  document.getElementById('pencil-size-readout').textContent = '1px';
+  root.querySelector('#pencil-size-slider').value = '1';
+  root.querySelector('#pencil-size-readout').textContent = '1px';
   // Neither Rectangle nor Selection is the default tool, so this starts
   // hidden too.
   squareConstraintPanel.classList.add('hidden');

@@ -122,6 +122,30 @@ function isSquareConstrained() {
 // the new project/layer stack, as before.
 let state = null;
 let domBoundRoot = null;
+
+// Embeddable-editor-api (Phase 3): whether bindDomOnce()'s `document`-level
+// listeners (as opposed to its root-scoped element listeners, which
+// legitimately need rebinding whenever `root` changes) have ever been
+// registered. Found via lib/pixi.js's repeated mount()/destroy() Playwright
+// smoke test: these listeners all read the shared module-level `root`/
+// `state` (reassigned on every initWorkspace() call) rather than closing
+// over a specific call's local root/state, so a single copy of each
+// already tracks whichever instance is current - registering another copy
+// per distinct `root` (bindDomOnce's normal per-root gate) only leaves
+// stale duplicates permanently attached to `document`, since nothing ever
+// unmounts a document listener when its owning root is destroyed. Two
+// duplicates of the same idempotent handler firing on one real keypress
+// isn't itself the corruption (both read the same live state and agree);
+// the actual damage seen was a `document.querySelector`-vs-`root.
+// querySelector('#screen-workspace')` crash (fixed separately) combined
+// with this duplication multiplying every commit-triggering shortcut's
+// effect. Gated separately from `domBoundRoot` so it stays true forever
+// once bound, regardless of how many distinct roots come and go.
+let globalListenersBound = false;
+// Tracked so bindDomOnce() can swap these two out per-root (see their
+// call site) rather than bind-once-ever like globalListenersBound's group.
+let colorPickerOutsideClickHandler = null;
+let colorPickerEscapeHandler = null;
 // Tracked independently of any single event, since Shift can be pressed/
 // released mid-drag - the Rectangle and Selection tools check this on
 // every move.
@@ -1139,8 +1163,13 @@ function bindDomOnce() {
     });
   });
 
-  bindTooltips();
-  bindKonamiCode();
+  // bindTooltips()/bindKonamiCode() and every document.addEventListener
+  // call below (guarded the same way) are global, not root-scoped - see
+  // globalListenersBound's doc comment.
+  if (!globalListenersBound) {
+    bindTooltips();
+    bindKonamiCode();
+  }
 
   // Pencil/Eraser Size - shared slider with live readout (Opacity is
   // Pro-only, see js/pro/pencil-opacity-ui.js in pixi-pro).
@@ -1229,16 +1258,28 @@ function bindDomOnce() {
   // "Generate ramp" button (present only when pixi-pro's Color Library
   // module registers it), so closing the color picker out from under an
   // in-progress ramp preview would be surprising.
-  document.addEventListener('pointerdown', (e) => {
+  // Unlike the document-level listeners guarded by globalListenersBound
+  // above/below, these two close over `colorPickerPopover` - a local,
+  // freshly looked-up from `root` on every bindDomOnce() call, not a
+  // shared module var - so binding only once-ever would leave them
+  // permanently wired to the *first* root's popover. Old copies are
+  // removed before adding new ones instead, tracked module-level (see
+  // colorPickerOutsideClickHandler/colorPickerEscapeHandler).
+  if (colorPickerOutsideClickHandler) document.removeEventListener('pointerdown', colorPickerOutsideClickHandler);
+  colorPickerOutsideClickHandler = (e) => {
     if (colorPickerPopover.classList.contains('hidden')) return;
     if (colorPickerPopover.contains(e.target)) return;
     if (e.target.closest('#foreground-swatch, #background-swatch')) return;
     if (root.querySelector('#ramp-preview-row')?.contains(e.target)) return;
     closeColorPicker();
-  });
-  document.addEventListener('keydown', (e) => {
+  };
+  document.addEventListener('pointerdown', colorPickerOutsideClickHandler);
+
+  if (colorPickerEscapeHandler) document.removeEventListener('keydown', colorPickerEscapeHandler);
+  colorPickerEscapeHandler = (e) => {
     if (e.key === 'Escape' && !colorPickerPopover.classList.contains('hidden')) closeColorPicker();
-  });
+  };
+  document.addEventListener('keydown', colorPickerEscapeHandler);
 
   // Foreground/Background: click either swatch to open the popover
   // targeting it; swap and reset-to-black/white.
@@ -1343,84 +1384,93 @@ function bindDomOnce() {
   // "=" key "+" lives on) to zoom in/out. Only while the Workspace screen
   // is actually visible, so none of this fires from the Gallery or New
   // Canvas screens.
-  document.addEventListener('keydown', (e) => {
-    if (!(e.metaKey || e.ctrlKey)) return;
-    if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
-    const key = e.key.toLowerCase();
+  // Every document.addEventListener below reads only module-level `root`/
+  // `state`/`toolButtons`/`mergeShortcutHook`/`shiftHeld` (all reassigned
+  // fresh on the calls above/in initWorkspace), never a value local to
+  // this specific bindDomOnce() call - so one persistent copy of each
+  // always acts on whichever root/state is current, and binding only
+  // once-ever (globalListenersBound) is correct here, unlike the
+  // colorPickerPopover pair above. See globalListenersBound's doc comment.
+  if (!globalListenersBound) {
+    document.addEventListener('keydown', (e) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
+      const key = e.key.toLowerCase();
 
-    if (key === 'z' || key === 'y') {
-      e.preventDefault();
-      if (key === 'y' || (key === 'z' && e.shiftKey)) {
-        performRedo();
-      } else {
-        performUndo();
+      if (key === 'z' || key === 'y') {
+        e.preventDefault();
+        if (key === 'y' || (key === 'z' && e.shiftKey)) {
+          performRedo();
+        } else {
+          performUndo();
+        }
+        return;
       }
-      return;
-    }
 
-    if (key === '=' || key === '+') {
-      e.preventDefault();
-      state.canvasView.zoomStep(1);
-      return;
-    }
-    if (key === '-' || key === '_') {
-      e.preventDefault();
-      state.canvasView.zoomStep(-1);
-      return;
-    }
+      if (key === '=' || key === '+') {
+        e.preventDefault();
+        state.canvasView.zoomStep(1);
+        return;
+      }
+      if (key === '-' || key === '_') {
+        e.preventDefault();
+        state.canvasView.zoomStep(-1);
+        return;
+      }
 
-    // Cmd/Ctrl+D: deselect, same as Escape below - the common shortcut
-    // for this in Photoshop and similar tools. preventDefault matters
-    // here specifically: Ctrl/Cmd+D is the browser's "bookmark this
-    // page" shortcut otherwise.
-    if (key === 'd') {
-      e.preventDefault();
+      // Cmd/Ctrl+D: deselect, same as Escape below - the common shortcut
+      // for this in Photoshop and similar tools. preventDefault matters
+      // here specifically: Ctrl/Cmd+D is the browser's "bookmark this
+      // page" shortcut otherwise.
+      if (key === 'd') {
+        e.preventDefault();
+        clearSelection();
+        return;
+      }
+
+      // Cmd/Ctrl+E: merge layers - Pro-only (registerMergeShortcut above),
+      // a no-op keypress in Standard.
+      if (key === 'e') {
+        e.preventDefault();
+        if (mergeShortcutHook) mergeShortcutHook();
+      }
+    });
+
+    // Escape clears the active selection, regardless of which tool is
+    // current — unlike the shortcuts above, this one takes no modifier key.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
       clearSelection();
-      return;
-    }
+    });
 
-    // Cmd/Ctrl+E: merge layers - Pro-only (registerMergeShortcut above),
-    // a no-op keypress in Standard.
-    if (key === 'e') {
+    // Shift constrains the Rectangle tool to a square while held - tracked
+    // independently since it can toggle mid-drag, read from onDrawMove.
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Shift') shiftHeld = true;
+    });
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'Shift') shiftHeld = false;
+    });
+
+    // Bare-letter tool shortcuts (P/E/G/B/L/R/M/H — see each button's
+    // data-shortcut), Figma/Photoshop-style: no modifier key, so they must
+    // NOT fire while the user is typing into a text field (layer name,
+    // brush name, hex input, etc.) or they'd hijack every keystroke.
+    document.addEventListener('keydown', (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable)) {
+        return;
+      }
+      const key = e.key.toLowerCase();
+      const button = [...toolButtons].find((b) => b.dataset.shortcut?.toLowerCase() === key);
+      if (!button) return;
       e.preventDefault();
-      if (mergeShortcutHook) mergeShortcutHook();
-    }
-  });
-
-  // Escape clears the active selection, regardless of which tool is
-  // current — unlike the shortcuts above, this one takes no modifier key.
-  document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
-    if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
-    clearSelection();
-  });
-
-  // Shift constrains the Rectangle tool to a square while held - tracked
-  // independently since it can toggle mid-drag, read from onDrawMove.
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Shift') shiftHeld = true;
-  });
-  document.addEventListener('keyup', (e) => {
-    if (e.key === 'Shift') shiftHeld = false;
-  });
-
-  // Bare-letter tool shortcuts (P/E/G/B/L/R/M/H — see each button's
-  // data-shortcut), Figma/Photoshop-style: no modifier key, so they must
-  // NOT fire while the user is typing into a text field (layer name,
-  // brush name, hex input, etc.) or they'd hijack every keystroke.
-  document.addEventListener('keydown', (e) => {
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
-    const active = document.activeElement;
-    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable)) {
-      return;
-    }
-    const key = e.key.toLowerCase();
-    const button = [...toolButtons].find((b) => b.dataset.shortcut?.toLowerCase() === key);
-    if (!button) return;
-    e.preventDefault();
-    button.click();
-  });
+      button.click();
+    });
+  }
 
   exportControls = initExport({
     root,
@@ -1461,6 +1511,7 @@ function bindDomOnce() {
     commit(); // registerAfterCommit's hook (if any) handles a stale Layers thumbnail
   });
 
+  globalListenersBound = true;
 }
 
 /**

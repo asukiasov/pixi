@@ -1,6 +1,17 @@
 const SCALES = [1, 2, 4, 8];
 const FORMATS = ['png', 'webp', 'jpg'];
 
+// Embeddable-editor-api (Phase 3): initExport() is called fresh on every
+// initWorkspace() call (js/workspace.js's bindDomOnce(), once per distinct
+// `root` - see that file's globalListenersBound comment for the general
+// pattern). Unlike the listeners covered by that guard, this file's two
+// document-level listeners close over `panel`/`toggleButton` - locals of
+// *this specific call* - so binding once-ever would leave them wired to
+// the first call's (possibly since-destroyed) panel forever. Tracked here
+// so each call removes its predecessor's pair before adding its own.
+let outsideClickHandler = null;
+let escapeHandler = null;
+
 /**
  * Positions `panel` as a popover below `anchorEl`, clamped to the
  * viewport - flips above if it would overflow the bottom, clamped
@@ -104,15 +115,20 @@ export function initExport({ onExport, getProjectName, root = document }) {
   // Close on outside click/Escape too, not just the explicit close button
   // or re-clicking the toggle - standard popover behavior, same as
   // Canvas Settings and the color-picker popover.
-  document.addEventListener('pointerdown', (e) => {
+  if (outsideClickHandler) document.removeEventListener('pointerdown', outsideClickHandler);
+  outsideClickHandler = (e) => {
     if (panel.classList.contains('hidden')) return;
     if (panel.contains(e.target)) return;
     if (e.target === toggleButton || toggleButton.contains(e.target)) return;
     close();
-  });
-  document.addEventListener('keydown', (e) => {
+  };
+  document.addEventListener('pointerdown', outsideClickHandler);
+
+  if (escapeHandler) document.removeEventListener('keydown', escapeHandler);
+  escapeHandler = (e) => {
     if (e.key === 'Escape' && !panel.classList.contains('hidden')) close();
-  });
+  };
+  document.addEventListener('keydown', escapeHandler);
 
   scaleOptions.forEach((btn) => {
     btn.addEventListener('click', () => {

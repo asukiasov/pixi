@@ -253,6 +253,33 @@ describe('storage adapter substitution', () => {
     assert.equal((await listProjects()).length, 0);
   });
 
+  // Regression test (found by code review while starting Phase 3):
+  // enqueueWrite's queued task used to read the module-level
+  // activeAdapter binding at execution time, not at the time the write
+  // was requested - so a mid-flight _setStorageAdapter swap (the
+  // documented mechanism for a host to supply its own backend) could
+  // redirect an already-queued write to the wrong adapter.
+  test('a write enqueued before an adapter swap still lands on the adapter that was active when it was requested', async () => {
+    const stack = new LayerStack(2, 2, 'transparent');
+    const created = await createProject(stack, 'Original'); // via the default (Dexie) adapter
+
+    stack.getActiveLayer().engine.setPixel(0, 0, [1, 2, 3, 255]);
+    // saveProject's task is enqueued but hasn't run yet (enqueueWrite only
+    // chains a microtask) - swap adapters before it gets a chance to.
+    const savePromise = saveProject(created.id, stack);
+    _setStorageAdapter(createInMemoryAdapter());
+    await savePromise;
+
+    _resetStorageAdapter();
+    const loaded = await loadProject(created.id);
+    const restored = LayerStack.fromProjectRecord(loaded);
+    assert.deepEqual(
+      restored.getActiveLayer().engine.getPixel(0, 0),
+      [1, 2, 3, 255],
+      'the write should have landed on the Dexie adapter active when saveProject was called, not the adapter swapped in afterward'
+    );
+  });
+
   // Regression test (CFIX-1, found by the code-standards red-team):
   // _clearAllForTests() used to call db.projects.clear() directly,
   // bypassing whichever adapter was active. With a non-Dexie adapter

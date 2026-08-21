@@ -113,11 +113,15 @@ function isSquareConstrained() {
 
 // Module-level state, not per-call: the Workspace screen is a singleton in
 // this app (one workspace <canvas>), reused across every project the user
-// opens or creates in a session. DOM listeners are bound exactly once, the
-// first time initWorkspace runs; later calls just rebind state to the new
-// project/layer stack.
+// opens or creates in a session. DOM listeners are bound once per `root`
+// (not just once ever - found by code review while building the mount
+// API, task 3.1: with a fixed one-shot flag, mounting with a different
+// root after the standalone app - or a mount/destroy/re-mount cycle -
+// left every one-shot-bound element wired to the FIRST root's now-
+// detached DOM); repeat calls with the *same* root just rebind state to
+// the new project/layer stack, as before.
 let state = null;
-let domBound = false;
+let domBoundRoot = null;
 // Tracked independently of any single event, since Shift can be pressed/
 // released mid-drag - the Rectangle and Selection tools check this on
 // every move.
@@ -1659,9 +1663,9 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     selectionDeleteButton: root.querySelector('#selection-delete-button'),
   };
 
-  if (!domBound) {
+  if (domBoundRoot !== root) {
     bindDomOnce();
-    domBound = true;
+    domBoundRoot = root;
   }
 
   // The DOM (tool buttons, palette/brush swatches) is bound once and

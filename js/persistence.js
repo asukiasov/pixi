@@ -67,7 +67,13 @@ let activeAdapter = createDexieProjectAdapter(db);
 // previous one for the same id guarantees every writer's load() sees the
 // prior writer's completed result, restoring the same effective atomicity
 // the old single-transaction update() had - regardless of which adapter
-// is active, so this holds for a host-supplied adapter too.
+// is active, so this holds for a host-supplied adapter too. Doesn't cover
+// the `thumbnail` argument's *ordering*, though: it's captured by the
+// caller (via LayerStack.toPNGBlob()) before saveProject is even called,
+// so two rapid commits can still enqueue their thumbnails out of
+// chronological order if the later commit's toPNGBlob() happens to
+// resolve first - pre-existing nondeterminism (see workspace.js's own
+// autoSave() comment), not something this queue fixes.
 const writeQueues = new Map();
 
 function enqueueWrite(id, task) {
@@ -129,8 +135,15 @@ export async function createProject(layerStack, name = 'Untitled', thumbnail = n
  * partial record from `updates` alone.
  */
 export async function saveProject(id, layerStack, thumbnail = null) {
+  // Captured now, not read inside the queued task (found by code review):
+  // the task may sit queued behind an earlier write for the same id and
+  // not actually run until later - if _setStorageAdapter() is called in
+  // between, a task that read the module-level `activeAdapter` at
+  // execution time would silently write to whichever adapter is active
+  // *then*, not the one active when this call was made.
+  const adapter = activeAdapter;
   return enqueueWrite(id, async () => {
-    const existing = await activeAdapter.load(id);
+    const existing = await adapter.load(id);
     if (!existing) return;
     const merged = {
       ...existing,
@@ -139,16 +152,17 @@ export async function saveProject(id, layerStack, thumbnail = null) {
       updatedAt: Date.now(),
     };
     if (thumbnail) merged.thumbnail = thumbnail;
-    await activeAdapter.save(merged);
+    await adapter.save(merged);
   });
 }
 
 /** Renames an existing project. No-op if `id` doesn't exist. */
 export async function renameProject(id, name) {
+  const adapter = activeAdapter; // see saveProject's comment on why this is captured here
   return enqueueWrite(id, async () => {
-    const existing = await activeAdapter.load(id);
+    const existing = await adapter.load(id);
     if (!existing) return;
-    await activeAdapter.save({ ...existing, name, updatedAt: Date.now() });
+    await adapter.save({ ...existing, name, updatedAt: Date.now() });
   });
 }
 
@@ -164,7 +178,8 @@ export async function listProjects() {
 }
 
 export async function deleteProject(id) {
-  return enqueueWrite(id, () => activeAdapter.delete(id));
+  const adapter = activeAdapter; // see saveProject's comment on why this is captured here
+  return enqueueWrite(id, () => adapter.delete(id));
 }
 
 /**

@@ -4,18 +4,39 @@ Structural rules this repo follows — which module may depend on which,
 how extension points are exposed, and what constraints the "no build
 step" stack imposes. Complements [`code-standards.md`](code-standards.md)
 (naming/style/testing conventions); this doc covers module boundaries and
-dependency direction instead. Written 2026-08-21, alongside the
-`embeddable-integration-api` OpenSpec change — several of these rules were
-first established as that change's `design.md` decisions and are captured
-here so they outlive that change once it's archived.
+dependency direction instead. Written 2026-08-21, red-teamed and revised
+2026-08-21 — several claims in the original version turned out to
+misdescribe the code they cited as evidence; this revision corrects those
+rather than preserving them for diplomacy. Several of these rules were
+first established as the `embeddable-integration-api` OpenSpec change's
+`design.md` decisions and are captured here so they outlive that change
+once it's archived.
+
+A note on scope: this document is allowed to state forward-looking,
+prescriptive guidance ("when you add X, do Y") in addition to describing
+what's already true — unlike `code-standards.md`, which only describes
+established practice. The distinction that matters is *honesty about
+which is which*: a forward-looking rule must say so, and must not cite
+examples that don't actually demonstrate it.
 
 ## The three top-level code areas
 
 | Area | What lives here | May import from |
 |---|---|---|
-| `lib/` | Standalone, reusable modules — not Pixi-app-specific | Other `lib/` files only |
+| `lib/` | Standalone, reusable modules — not Pixi-app-specific | Other `lib/` files, plus third-party packages for `lib/`'s own test files (see note below) |
 | `js/` | The Pixi app itself: UI, tools, routing, persistence wiring | `lib/` and other `js/` files |
 | `test/` | Tests for `js/` modules | `js/` and `lib/` |
+
+**Correction**: the original version of this table said `lib/` may import
+"other `lib/` files only," full stop — but `lib/`'s own co-located test
+files (`lib/storage-adapter.test.js`, `lib/pixel-engine/*.test.js`) import
+third-party packages (`dexie`, `fake-indexeddb`) as test-only dependencies,
+the same way `test/persistence.test.js` does. That's not a violation of
+the `lib/` → `js/` boundary rule below (those are still not `js/`
+imports), but the table as originally stated would make a reader think
+`lib/storage-adapter.test.js` breaks the rule. It doesn't — the boundary
+this doc cares about is `lib/` never importing app-specific `js/` code,
+not "zero third-party imports in test files."
 
 `lib/`'s own tests (`lib/**/*.test.js`) are co-located next to their
 source rather than living in `test/` — see `code-standards.md`'s
@@ -31,100 +52,126 @@ instance) takes it as a parameter instead of importing it directly — see
 
 **Why**: `lib/` exists specifically to be copied out of the repo and used
 standalone (see each `lib/` folder's own README). An import from `js/`
-would silently break that promise — the folder would no longer be
-self-contained, and a developer who copied only `lib/pixel-engine/` (for
-example) would hit a missing-file error with no clear explanation.
+would silently break that promise.
 
-**How it's enforced**: by convention and code review, not tooling — there
-is no lint rule or CI check preventing a `lib/ → js/` import today. When
-adding to `lib/`, grep the new file for any `from '../js` or `from './js`
-import before committing.
+**How it's enforced**: by convention and code review, not tooling —
+verified there is genuinely no lint rule or CI check preventing a
+`lib/ → js/` import today (`package.json` has no `lint` script, no
+`eslint-plugin-import` or equivalent boundary tooling anywhere in the
+repo). Nothing currently stops a future PR from adding such an import
+except human review. When adding to `lib/`, grep the new file for any
+`from '../js` or `from './js` import before committing.
 
-## Rule: `lib/` modules are DOM-optional except at named, narrow points
+**Status**: verified holding with zero exceptions as of this revision.
 
-Every `lib/` class/function is plain data manipulation and runs anywhere
-JS runs, **except** a small number of methods that explicitly need
-`document.createElement('canvas')` for PNG encoding or compositing (e.g.
-`PixelEngine.toPNGBlob()`, `LayerStack.toPNGBlob()`/`composite()`). Those
-methods say so in their own doc comment. Everything else in `lib/` — pixel
-buffer manipulation, layer stack management, undo/redo, storage adapters —
-has zero browser API dependency and is directly unit-testable under
-Node's `node:test` runner with no DOM shim.
+## Rule: `lib/` modules are DOM-optional except at named, narrow points — the list of those points was incomplete
 
-**Why**: this is what makes `lib/` genuinely portable and fast to test —
-a developer (or this repo's own CI) doesn't need a browser or a DOM
-polyfill to exercise the vast majority of `lib/`'s surface.
+**Correction**: the original version of this rule named
+`PixelEngine.toPNGBlob()` and `LayerStack.toPNGBlob()`/`composite()` as
+the *only* DOM-touching methods in `lib/`. A full grep of `lib/**/*.js`
+(non-test) for `document.`/`window.`/`navigator.`/`localStorage`/
+`matchMedia` found the DOM dependency actually enters through a private
+helper, `#compositeSubset` (`lib/pixel-engine/layers.js:456,465`), which
+is called by more than the two named public methods:
 
-**When adding to `lib/`**: default to DOM-free. If a new method genuinely
-needs a browser API, name the constraint explicitly in its doc comment
-(see `PixelEngine.toPNGBlob()`'s doc comment for the pattern), rather than
-letting the dependency be a surprise at import time.
+- `LayerStack.composite()` — named in the original version, correct
+- `LayerStack.toPNGBlob()` — named in the original version, correct
+- `LayerStack.mergeLayers(indices)` — **not named**, calls
+  `#compositeSubset` directly, has no "requires a DOM" note in its own
+  doc comment
+- `LayerStack.mergeDown(index)` — **not named**, calls `mergeLayers`,
+  same gap
+- `LayerStack.getRenderPlan()` — **not named**, calls `composite()`/
+  `#compositeSubset` transitively, same gap despite a long doc comment
+  that discusses rendering semantics at length without ever flagging the
+  DOM dependency
+
+This is real, not just a documentation nitpick: `lib/pixel-engine/
+layers.test.js:702-709` already explicitly explains why only refusal
+paths of `mergeLayers` are unit-tested ("DOM boundary") — the test suite
+is visibly working around a constraint the architecture doc never told
+anyone about. A contributor trying to unit-test `mergeLayers` under plain
+Node with no DOM shim would hit a `document is not defined`
+`ReferenceError` with no warning in the method's own doc comment.
+
+**The underlying rule still holds** — everything else in `lib/` genuinely
+has zero DOM dependency, and DOM-touching methods should say so in their
+own doc comment. What's wrong is the enumeration, not the principle.
+
+**Action item, not yet done**: add a "Requires a DOM" note to
+`mergeLayers`, `mergeDown`, and `getRenderPlan`'s doc comments, matching
+`toPNGBlob()`'s existing pattern — this is a real code/comment fix, not a
+doc-only correction, and is tracked in `code-standards.md`'s "Known code
+issues" list rather than done silently as part of this revision.
 
 ## Pattern: storage adapters as the persistence boundary
 
 `js/persistence.js` never talks to Dexie directly for project records —
 every read/write goes through a swappable `activeAdapter` object shaped
 `{ load(id), save(record), list(), delete(id) }` (defined in
-`lib/storage-adapter.js`). The default (`createDexieProjectAdapter`) wraps
-the existing Dexie `projects` table; `createInMemoryAdapter` is a test
-double and the template for a host-supplied backend.
+`lib/storage-adapter.js`), **with one known exception**:
+`_clearAllForTests()` (test-only) reaches into `db.projects.clear()`
+directly rather than going through the adapter — see
+`code-standards.md`'s Error Handling section for why this matters (it's a
+real latent bug under a non-Dexie adapter, not just an inconsistency).
 
-**When adding a new kind of persisted data** (following the existing
-`customBrushes`/`colorPalettes` precedent, which stays direct-Dexie and
-is *not* routed through an adapter): decide explicitly whether the new
-data needs to be swappable by an embedding host. If yes, it needs its own
-adapter interface (or an extension of the existing one) before it ships —
-retrofitting an adapter onto direct Dexie calls later is a bigger change
-than designing it in from the start. If no (the data is standalone-app-only,
+**When adding a new kind of persisted data**: decide explicitly whether
+the new data needs to be swappable by an embedding host. If yes, it needs
+its own adapter interface before it ships. If no (standalone-app-only,
 like custom brushes today), direct Dexie access is the established,
-simpler default — don't add adapter indirection for its own sake.
+simpler default.
 
-**Concurrency note**: a storage adapter's `save()` is a full-record
-upsert, not a partial field update. Any caller that does
-load-modify-save (rather than a single `save()` call with a
-complete record) must serialize writes to the same record id — see
-`js/persistence.js`'s `enqueueWrite` — otherwise two concurrent writers
-can silently clobber each other's change. This wasn't a concern with the
-old direct `db.projects.update(id, {partialFields})` call (a single
-atomic IndexedDB transaction); it became one the moment persistence
-routed through a generic adapter interface. Any new adapter-backed,
-read-modify-write call site needs the same per-id serialization.
+**Concurrency note** (forward-looking guidance — stated honestly as such,
+not as an already-multiply-demonstrated pattern): a storage adapter's
+`save()` is a full-record upsert, not a partial field update. Any caller
+that does load-modify-save must serialize writes to the same record id —
+see `js/persistence.js`'s `enqueueWrite`, currently the *only* place this
+applies, since `activeAdapter` (and thus `load`/`save`) is referenced
+nowhere else in the repo (verified by grep across `js/`, `lib/`, `test/`).
+This wasn't a concern with the old direct `db.projects.update(id,
+{partialFields})` call (a single atomic IndexedDB transaction); it became
+one the moment persistence routed through a generic adapter interface.
+Any *new* adapter-backed, read-modify-write call site needs the same
+per-id serialization — this is unenforced by tooling, same as the `lib/`
+boundary rule above.
 
-## Pattern: "Pro extension point" — how the open-source repo stays extensible without containing the paid add-on
+## Pattern: "Pro extension point" — aspirational target, inconsistently achieved today
 
 Pixi (this repo, MIT) and Pixi Pro (a separate private repo, paid) share
 a codebase lineage — Pro was extracted out of what's now Standard (see
 git history: "Extract Layers panel out to pixi-pro" and similar commits,
-tracked under the `split-pixi-pro-repo` branch/theme). The pattern that
-makes this work without Pro's code leaking into the public repo:
+tracked under the `split-pixi-pro-repo` branch/theme). The intended
+pattern:
 
-1. **A hook, not an implementation.** Core logic that Pro needs to extend
-   is exposed as a registration function or exported constant — e.g.
-   `lib/pixel-engine/engine.js`'s `registerPathTransform(fn)` (Pro's
-   pixel-perfect drawing hooks in here at runtime), or `LayerStack`'s
-   exported `BLEND_MODES` array (Pro's Layers panel UI reads it rather
-   than duplicating the list). The hook has a no-op default when no Pro
-   module is present, so Standard works unmodified without Pro installed.
-2. **A comment names what consumes it.** Every such export/hook has an
-   inline comment identifying it as a "Pro extension point
-   (split-pixi-pro-repo)" and naming which file in `pixi-pro` calls it —
-   e.g. `js/workspace.js`'s `getCanvasSize()`/`onWorkspaceReset(fn)`
-   documented as what "pixi-pro's own canvas-settings-ui.js calls
-   instead." This is the only place that relationship is documented (Pro's
-   repo isn't checked out alongside Standard's), so the comment is load-
-   bearing, not decorative.
-3. **Code that moved to Pro leaves a breadcrumb, not a silent deletion.**
-   When a feature is extracted to Pro, the comment left behind says
-   `moved to pixi-pro's js/pro/<file>.js (split-pixi-pro-repo)` at the
-   point it used to live, so a future reader isn't left wondering where
-   the logic went.
+1. **A hook, not an implementation.** Core logic Pro needs to extend is
+   exposed as a registration function or exported constant, with a no-op
+   default when no Pro module is present.
+2. **A comment names what consumes it**, including a `(split-pixi-pro-repo)`
+   tag and the specific pixi-pro file that calls it.
+3. **Code that moved to Pro leaves a breadcrumb**: `moved to pixi-pro's
+   js/pro/<file>.js (split-pixi-pro-repo)`.
 
-**When building a new Pro-only feature**: decide up front whether it
-needs a hook in Standard (if Pro's UI needs to read/call into Standard's
-state) or can live entirely inside Pro's own files with no Standard
-changes at all (simpler, prefer this when possible). If a hook is needed,
-follow the three points above — the hook, the naming comment, and (if
-replacing existing Standard code) the breadcrumb.
+**Correction — this is not consistently achieved.** A full count of "Pro
+extension point" comments across the repo (24 total) found 10 (42%) missing
+the `(split-pixi-pro-repo)` tag entirely, and naming the *specific*
+consuming file is inconsistent even among the tagged ones — several say
+only something generic like "a Pro Canvas Settings panel" rather than a
+filename. This is worth calling out plainly: **the original version of
+this rule cited `js/workspace.js:1476` (`getCanvasSize`) and `:1482`
+(`onWorkspaceReset`) as canonical, fully-compliant examples — in the
+actual source, neither one carries the tag, and neither names a specific
+file.** The rule's own supporting citations didn't hold up.
+
+Part 3 (the breadcrumb pattern) is different — it's followed consistently:
+14/14 `moved to pixi-pro` comments checked carry the full form.
+
+**What this means in practice**: the 3-part hook pattern is the right
+target to aim for on a *new* Pro-facing hook (it's genuinely useful when
+followed — see part 3's consistency for what "actually followed" looks
+like), but don't assume an existing "Pro extension point" comment already
+names its consuming file just because it has the tag; check it. Whether to
+retroactively fix the 10 non-compliant comments is a separate decision,
+tracked in `code-standards.md`'s "Known code issues" list.
 
 ## Constraint: no build step, ever
 
@@ -135,13 +182,15 @@ modules; third-party dependencies (currently just Dexie) resolve via
 `package.json`'s `devDependencies` exist solely so `node --test` can run
 under Node for local/CI test runs — they are never shipped or bundled.
 
-**This applies to every new module added anywhere in the repo,
-including `lib/`.** A `lib/` folder meant to be copied out of the repo by
-a developer doubly can't depend on a build step — there'd be nothing to
-run it. If a new dependency is ever needed at runtime (not just for
-tests), it must be either resolvable via the import map (CDN) or a
-copy-in-repo vendored file — never an npm package the shipped app expects
-to be pre-bundled.
+Verified directly: no `webpack.config.js`, `vite.config.*`,
+`rollup.config.*`, `.babelrc`, or `tsconfig.json` exists anywhere in the
+repo, and `package.json` has no `build`/`dev`/`start` script.
+
+**This applies to every new module added anywhere in the repo, including
+`lib/`.** A `lib/` folder meant to be copied out of the repo by a
+developer doubly can't depend on a build step. If a new dependency is
+ever needed at runtime, it must be either resolvable via the import map
+(CDN) or a copy-in-repo vendored file.
 
 ## Where these rules come from, and what to do if they conflict with a real change
 
@@ -149,9 +198,16 @@ Every rule above is inferred from what the code already does — see
 `code-standards.md`'s citations for the naming/testing/comment
 conventions, and this change's `design.md` for the storage-adapter and
 `lib/` boundary decisions specifically. If new work genuinely needs to
-break one of these rules (e.g. a `lib/` module that must depend on
-something in `js/`), that's a real architectural decision, not a
+break one of these rules, that's a real architectural decision, not a
 refactor — it belongs in a new OpenSpec change's `design.md` with the
 trade-off explained, per this repo's `CLAUDE.md` process rules, and this
 document should be updated to reflect the new rule once that change
 lands.
+
+**On revising this document**: when a rule turns out to be wrong (as
+several were in this revision), say so in the text rather than quietly
+rewording it — a future reader benefits from knowing a claim was checked
+and corrected, not just seeing the corrected version with no trace of the
+error. Don't let this doc's citations go stale relative to the code
+either: if you touch a file this doc cites by line number and the cited
+behavior moves or changes, update the citation in the same change.

@@ -1694,8 +1694,32 @@ function redrawMovePreview() {
  * comment. Defaults to a no-op so the standalone app (js/app.js, which
  * doesn't pass one) is unaffected; a mounted instance passes its own
  * emitter's dispatch function (lib/pixi.js).
+ *
+ * `enabledTools`/`initialTool` (embeddable-integration-api, task 3.7):
+ * restricts which #tools-sidebar buttons are selectable. `enabledTools`
+ * defaults to `null`, meaning "no restriction" - every tool button stays
+ * visible and enabled, matching every pre-3.7 caller's behavior
+ * unchanged; a mounted instance passes lib/pixi.js's already-resolved
+ * `resolveEnabledTools(options)` array instead. `initialTool` (default
+ * `'pencil'`, matching this function's own long-standing hardcoded
+ * default) is the tool `state.currentTool` starts as - lib/pixi.js
+ * resolves it via `resolveInitialTool(enabledTools, 'pencil')` so a
+ * restricted set that excludes Pencil doesn't start on an unselectable
+ * tool; this function itself does no fallback computation; it just
+ * applies whatever it's given, keeping that decision logic in one place
+ * (lib/pixi.js, unit-tested) rather than duplicated here.
  */
-export function initWorkspace({ projectId, projectName, layerStack, canvasView, onRequestGallery, onChange = () => {}, root: hostRoot = document }) {
+export function initWorkspace({
+  projectId,
+  projectName,
+  layerStack,
+  canvasView,
+  onRequestGallery,
+  onChange = () => {},
+  root: hostRoot = document,
+  enabledTools = null,
+  initialTool = 'pencil',
+}) {
   root = hostRoot;
   state = {
     projectId,
@@ -1705,7 +1729,7 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     onRequestGallery,
     onChange,
     undoStack: new UndoStack(),
-    currentTool: 'pencil',
+    currentTool: initialTool,
     foregroundColor: hexToRgba(PALETTE[0]),
     backgroundColor: hexToRgba('#ffffff'),
     currentBrush: allBrushes[0],
@@ -1744,7 +1768,25 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   // different project left the *previous* project's tool/color highlighted
   // even though it no longer applied (e.g. the state was reset but a
   // stale-highlighted swatch/tool suggested otherwise).
-  toolButtons.forEach((b) => b.classList.toggle('active', b.dataset.tool === state.currentTool));
+  //
+  // `enabledTools` (task 3.7): re-applied here, not just once in
+  // bindDomOnce(), the same reasoning shouldShowGalleryChrome's toggle
+  // (lib/pixi.js's startWorkspace()) already relies on - this runs on
+  // every initWorkspace() call, including loadImage()'s re-init, while
+  // bindDomOnce() only runs once per root. A restricted button is both
+  // hidden (so a restricted sidebar visually "offers only the specified
+  // tools", per the spec) and disabled - disabled, not just hidden,
+  // because bindDomOnce()'s bare-letter keyboard shortcuts (P/E/G/B/L/R/M/
+  // H) find a button by data-shortcut and call button.click() directly;
+  // a disabled button's .click() does not dispatch a 'click' event (per
+  // the HTML spec), so disabling is what actually keeps a restricted
+  // tool unreachable via its keyboard shortcut, not merely invisible.
+  toolButtons.forEach((b) => {
+    const allowed = !enabledTools || enabledTools.includes(b.dataset.tool);
+    b.classList.toggle('hidden', !allowed);
+    b.disabled = !allowed;
+    b.classList.toggle('active', b.dataset.tool === state.currentTool);
+  });
   // Which color is currently selected resets, back to the first preset
   // (matching state.foregroundColor's default above).
   colorPickerTarget = 'foreground';
@@ -1758,19 +1800,26 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   root.querySelector('#brush-spacing').value = '1';
   root.querySelector('#brush-rotation').value = '0';
   setRightSidebarVisible(true);
-  // Default tool is Pencil, so the panel starts visible; the slider/readout
-  // reset to match state.pencilSize's default (1).
-  pencilOptionsPanel.classList.remove('hidden');
+  // Pencil is the default tool (or, task 3.7, whatever resolveInitialTool()
+  // fell back to when a restricted options.ui.tools excludes Pencil) - the
+  // panel's visibility follows state.currentTool the same way the tool
+  // buttons' own click handler does, rather than assuming Pencil; the
+  // slider/readout still reset to match state.pencilSize's default (1)
+  // regardless of which tool starts active.
+  pencilOptionsPanel.classList.toggle('hidden', state.currentTool !== 'pencil' && state.currentTool !== 'eraser');
   root.querySelector('#pencil-size-slider').value = '1';
   root.querySelector('#pencil-size-readout').textContent = '1px';
-  // Neither Rectangle nor Selection is the default tool, so this starts
-  // hidden too.
-  squareConstraintPanel.classList.add('hidden');
+  // Same reasoning as pencilOptionsPanel above - Rectangle/Selection isn't
+  // always excluded from a restricted initial tool.
+  squareConstraintPanel.classList.toggle(
+    'hidden',
+    state.currentTool !== 'rectangle' && state.currentTool !== 'selection'
+  );
   squareConstraintToggle.classList.remove('active');
-  // Hand tool is never the default (Pencil is) - every freshly opened
-  // project starts with single-pointer drag drawing, not panning.
-  canvasView.setPanMode(false);
-  canvasView.setMoveMode(false);
+  // Same reasoning again - a restricted tools list could start on Hand or
+  // Move instead of Pencil.
+  canvasView.setPanMode(state.currentTool === 'hand');
+  canvasView.setMoveMode(state.currentTool === 'move');
 
   for (const fn of workspaceResetListeners) fn({ width: layerStack.width, height: layerStack.height, name: projectName });
   exportControls.close();

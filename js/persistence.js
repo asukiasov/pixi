@@ -125,6 +125,45 @@ export async function createProject(layerStack, name = 'Untitled', thumbnail = n
 }
 
 /**
+ * Creates a project record under a caller-supplied `id` instead of one
+ * generated internally (contrast `createProject`, whose `generateId()`
+ * call the caller has no say over). Used by `lib/pixi.js`'s `mount()`
+ * (embeddable-integration-api task 3.9): a mounted instance generates its
+ * own id up front (`crypto.randomUUID()`, same generation
+ * `lib/pixel-engine/layers.js`'s `Layer` already uses) so it can hand that
+ * id to `js/workspace.js`'s `initWorkspace()` synchronously, then fire this
+ * function in the background to actually create the record - without a
+ * real record to write into, every subsequent `saveProject(id, ...)` call
+ * from that instance's autoSave() would silently no-op forever (see that
+ * function's doc comment), regardless of which adapter is active.
+ *
+ * Goes through the same per-id write queue (`enqueueWrite`) as
+ * `saveProject`/`renameProject`/`deleteProject`, so a `saveProject()` call
+ * for the same id enqueued right after this one - the earliest a mounted
+ * instance's first autoSave can happen, since it requires a user draw
+ * action strictly after `mount()` returns - is guaranteed to see this
+ * record already exist by the time it actually runs, regardless of which
+ * call's own Promise settles first (ordering follows *enqueue* order, not
+ * *settlement* order).
+ */
+export async function createProjectWithId(id, layerStack, name = 'Untitled', thumbnail = null) {
+  const adapter = activeAdapter; // see saveProject's comment on why this is captured here
+  return enqueueWrite(id, async () => {
+    const now = Date.now();
+    const record = {
+      id,
+      name,
+      ...layerStack.toProjectRecord(),
+      thumbnail,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await adapter.save(record);
+    return record;
+  });
+}
+
+/**
  * Updates an existing project's layer data (and thumbnail, if provided)
  * and bumps updatedAt. This is the auto-save write path — called from
  * workspace.js's commit(), the same point that already pushes an undo

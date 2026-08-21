@@ -3,6 +3,7 @@ import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createProject,
+  createProjectWithId,
   saveProject,
   loadProject,
   listProjects,
@@ -57,6 +58,58 @@ describe('createProject', () => {
   });
 });
 
+describe('createProjectWithId', () => {
+  // Used by lib/pixi.js's mount() (embeddable-integration-api task 3.9),
+  // which generates its own id (crypto.randomUUID(), same as
+  // lib/pixel-engine/layers.js's Layer id generation) up front rather than
+  // letting createProject() generate one, so it can pass that id into
+  // js/workspace.js's initWorkspace() synchronously while the record write
+  // itself happens in the background.
+  test('creates a record under the given id, not a generated one', async () => {
+    const stack = new LayerStack(4, 4, 'white');
+    const record = await createProjectWithId('caller-chosen-id', stack, 'My Art');
+    assert.equal(record.id, 'caller-chosen-id');
+    assert.equal(record.name, 'My Art');
+    assert.equal(record.width, 4);
+    assert.equal(record.height, 4);
+    assert.ok(record.createdAt);
+    assert.equal(record.createdAt, record.updatedAt);
+
+    const loaded = await loadProject('caller-chosen-id');
+    assert.equal(loaded.id, 'caller-chosen-id');
+  });
+
+  test('defaults name when none given', async () => {
+    const stack = new LayerStack(2, 2, 'transparent');
+    const record = await createProjectWithId('another-id', stack);
+    assert.equal(typeof record.name, 'string');
+    assert.ok(record.name.length > 0);
+  });
+
+  // Regression scenario this exists to prevent: saveProject() no-ops on an
+  // id it can't find (see that function's own tests below) — a mounted
+  // instance's very first autoSave() call, fired the moment a user
+  // completes any drawing action, races this function's own async write.
+  // Both go through the same per-id write queue (enqueueWrite), so
+  // ordering is decided by *call* order, not by which Promise happens to
+  // settle first — proven here by calling createProjectWithId()
+  // unawaited, then immediately awaiting a saveProject() for the same id
+  // enqueued right after it, the same shape lib/pixi.js's mount() and its
+  // first user-triggered autoSave() produce.
+  test('a saveProject() enqueued immediately after still finds the record, even though the create write has not settled yet', async () => {
+    const stack = new LayerStack(2, 2, 'transparent');
+    const createPromise = createProjectWithId('race-id', stack, 'Racing');
+    stack.getActiveLayer().engine.setPixel(0, 0, [5, 6, 7, 255]);
+    await saveProject('race-id', stack);
+    await createPromise;
+
+    const loaded = await loadProject('race-id');
+    assert.equal(loaded.name, 'Racing');
+    const restored = LayerStack.fromProjectRecord(loaded);
+    assert.deepEqual(restored.getActiveLayer().engine.getPixel(0, 0), [5, 6, 7, 255]);
+  });
+});
+
 describe('saveProject', () => {
   test('updates layer data and updatedAt, keeps id/name/createdAt', async () => {
     const stack = new LayerStack(2, 2, 'transparent');
@@ -87,16 +140,15 @@ describe('saveProject', () => {
     assert.equal(loaded.thumbnail.type, newThumbnail.type);
   });
 
-  // Regression test: a mounted instance (lib/pixi.js, embeddable-
-  // integration-api Phase 3) opens with no project record yet
-  // (state.projectId is null until a host explicitly saves), so every
-  // committed drawing action's auto-save calls saveProject(null, ...).
-  // The doc comment above already promises "no-op if id doesn't exist";
-  // a null/undefined id is definitionally nonexistent, but the Dexie
-  // adapter's load() forwards it straight to Table.get(), which throws
-  // ("Invalid argument to Table.get()") instead of resolving to
+  // Regression test: the doc comment above already promises "no-op if id
+  // doesn't exist"; a null/undefined id is definitionally nonexistent, but
+  // the Dexie adapter's load() forwards it straight to Table.get(), which
+  // throws ("Invalid argument to Table.get()") instead of resolving to
   // undefined — so this must be a no-op before it ever reaches the
-  // adapter.
+  // adapter. (Until task 3.9, a mounted instance's own autoSave() calls
+  // hit exactly this path, since lib/pixi.js's mount() always passed
+  // `projectId: null` — see createProjectWithId below for how it now gets
+  // a real id instead.)
   test('is a no-op (does not throw) when id is null', async () => {
     const stack = new LayerStack(2, 2, 'transparent');
     await assert.doesNotReject(saveProject(null, stack));

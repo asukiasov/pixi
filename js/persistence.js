@@ -135,6 +135,14 @@ export async function createProject(layerStack, name = 'Untitled', thumbnail = n
  * partial record from `updates` alone.
  */
 export async function saveProject(id, layerStack, thumbnail = null) {
+  // A null/undefined id (a mounted instance with no project record yet —
+  // see lib/pixi.js — auto-saves against one until a host explicitly
+  // creates/saves one) is definitionally nonexistent, same as this
+  // function's documented no-op case below, but must be caught before the
+  // adapter: the Dexie adapter's load() forwards id straight to
+  // Table.get(), which throws on null/undefined instead of resolving to
+  // undefined the way a merely-unknown id does.
+  if (id == null) return;
   // Captured now, not read inside the queued task (found by code review):
   // the task may sit queued behind an earlier write for the same id and
   // not actually run until later - if _setStorageAdapter() is called in

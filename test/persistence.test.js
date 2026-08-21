@@ -87,6 +87,27 @@ describe('saveProject', () => {
     assert.equal(loaded.thumbnail.type, newThumbnail.type);
   });
 
+  // Regression test: a mounted instance (lib/pixi.js, embeddable-
+  // integration-api Phase 3) opens with no project record yet
+  // (state.projectId is null until a host explicitly saves), so every
+  // committed drawing action's auto-save calls saveProject(null, ...).
+  // The doc comment above already promises "no-op if id doesn't exist";
+  // a null/undefined id is definitionally nonexistent, but the Dexie
+  // adapter's load() forwards it straight to Table.get(), which throws
+  // ("Invalid argument to Table.get()") instead of resolving to
+  // undefined — so this must be a no-op before it ever reaches the
+  // adapter.
+  test('is a no-op (does not throw) when id is null', async () => {
+    const stack = new LayerStack(2, 2, 'transparent');
+    await assert.doesNotReject(saveProject(null, stack));
+  });
+
+  test('is a no-op (does not throw) for an id that was never created', async () => {
+    const stack = new LayerStack(2, 2, 'transparent');
+    await assert.doesNotReject(saveProject('nonexistent-id', stack));
+    assert.equal(await loadProject('nonexistent-id'), undefined);
+  });
+
   // Regression test (found by code review): saveProject/renameProject do a
   // load-modify-save round trip through the adapter interface, unlike the
   // old direct db.projects.update(id, {...}) call, which was a single

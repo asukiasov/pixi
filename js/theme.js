@@ -90,6 +90,22 @@ function writeStoredPreference(preference) {
 }
 
 /**
+ * CFIX-3 (code-standards red-team): window.matchMedia() itself can throw,
+ * not just be missing, in some restrictive/sandboxed environments - unlike
+ * js/theme-boot.js's already-guarded call, this one wasn't wrapped. Falls
+ * back to a static "no match, no live updates" stand-in so callers can
+ * keep treating the result uniformly (read `.matches`, call
+ * `.addEventListener` with no import-time check).
+ */
+function safeMatchMedia(query) {
+  try {
+    return window.matchMedia(query);
+  } catch {
+    return { matches: false, addEventListener() {} };
+  }
+}
+
+/**
  * Wires the theme toggle button: applies the persisted/system-resolved
  * theme immediately, keeps it live if `preference === 'system'` and the
  * OS scheme changes, and cycles+persists the preference on click.
@@ -100,7 +116,7 @@ function writeStoredPreference(preference) {
  */
 export function initThemeToggle(button) {
   let preference = readStoredPreference();
-  const media = window.matchMedia('(prefers-color-scheme: dark)');
+  const media = safeMatchMedia('(prefers-color-scheme: dark)');
 
   function apply() {
     const resolved = resolveTheme(preference, media.matches);

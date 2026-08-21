@@ -252,4 +252,33 @@ describe('storage adapter substitution', () => {
     assert.equal(await loadProject(created.id), undefined);
     assert.equal((await listProjects()).length, 0);
   });
+
+  // Regression test (CFIX-1, found by the code-standards red-team):
+  // _clearAllForTests() used to call db.projects.clear() directly,
+  // bypassing whichever adapter was active. With a non-Dexie adapter
+  // active, that would silently clear the wrong store, leaving a
+  // Dexie-backed project untouched when the caller expected everything
+  // cleared - or, as tested here, wiping a Dexie project that a
+  // *different* adapter's caller had no way to know still existed.
+  test('_clearAllForTests only clears the active adapter\'s projects, not a Dexie project stored while a different adapter was active', async () => {
+    // A project created while the default (Dexie) adapter is active.
+    const dexieStack = new LayerStack(2, 2, 'transparent');
+    const dexieProject = await createProject(dexieStack, 'Dexie project');
+
+    // Switch to an in-memory adapter and create a second project there.
+    _setStorageAdapter(createInMemoryAdapter());
+    const memoryStack = new LayerStack(2, 2, 'transparent');
+    const memoryProject = await createProject(memoryStack, 'In-memory project');
+
+    // Clearing while the in-memory adapter is active must only clear the
+    // in-memory store.
+    await _clearAllForTests();
+    assert.equal(await loadProject(memoryProject.id), undefined);
+
+    // The Dexie project, unrelated to the currently-active adapter, must
+    // still be there.
+    _resetStorageAdapter();
+    const stillThere = await loadProject(dexieProject.id);
+    assert.ok(stillThere, 'Dexie project should not have been cleared by a call made while a different adapter was active');
+  });
 });

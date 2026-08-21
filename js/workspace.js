@@ -646,10 +646,18 @@ const MATRIX_RAIN_COLUMNS = 14;
 // which only touches `window` inside functions its tests can stub
 // `globalThis.window` for before calling - not an option for a reference
 // that runs before any test code gets to execute.)
-const prefersReducedMotion =
-  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    : false;
+// CFIX-4 (code-standards red-team): existence-checked but not
+// try/caught - matchMedia() itself can throw in some restrictive/
+// sandboxed environments even when it exists, same risk this file's own
+// comment already called out for `window` being undefined.
+let prefersReducedMotion = false;
+try {
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+} catch {
+  // matchMedia present but throwing - default to false (motion allowed).
+}
 
 /**
  * The "matrix" magic palette's own effect (see MAGIC_PALETTES) - a brief

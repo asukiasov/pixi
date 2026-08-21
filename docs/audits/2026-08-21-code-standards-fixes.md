@@ -15,38 +15,51 @@ decided not worth it) · `deferred` (real, but out of scope for now).
 
 | ID | Title | File | Severity | Status |
 |---|---|---|---|---|
-| CFIX-1 | `_clearAllForTests()` bypasses the active storage adapter, clears `db.projects` directly | `js/persistence.js:209-211` | Med | open |
-| CFIX-2 | Unguarded, module-eval-time `matchMedia()` call — throws at import time if `matchMedia` is missing | `js/gallery.js:36` | Med | open |
-| CFIX-3 | Unguarded `matchMedia()` call inside `initThemeToggle()` | `js/theme.js:103` | Low | open |
-| CFIX-4 | `matchMedia` existence is checked, but the call itself isn't try/caught | `js/workspace.js:650-651` | Low | open |
-| CFIX-5 | `referenceMode`'s `'pixelated'`/`'original'` values are re-listed as inline string literals at 6+ sites, including a validation check, instead of a named constant | `lib/pixel-engine/layers.js:57,145,165,312,376,611` | Low | open |
-| CFIX-6 | `mergeLayers`/`mergeDown`/`getRenderPlan` touch the DOM transitively (via `#compositeSubset`) with no "requires a DOM" note in their own doc comments, unlike every other DOM-touching method in `lib/` | `lib/pixel-engine/layers.js` (methods around `:526,561,601`) | Low | open |
-| CFIX-7 | 10 of 24 "Pro extension point" comments lack the `(split-pixi-pro-repo)` tag and/or name a specific consuming pixi-pro file | `js/workspace.js:155,198,221,262,271,903,940,1042,1476,1482` | Low | open |
+| CFIX-1 | `_clearAllForTests()` bypasses the active storage adapter, clears `db.projects` directly | `js/persistence.js:209-211` | Med | fixed |
+| CFIX-2 | Unguarded, module-eval-time `matchMedia()` call — throws at import time if `matchMedia` is missing | `js/gallery.js:36` | Med | fixed |
+| CFIX-3 | Unguarded `matchMedia()` call inside `initThemeToggle()` | `js/theme.js:103` | Low | fixed |
+| CFIX-4 | `matchMedia` existence is checked, but the call itself isn't try/caught (also module-eval-time, same as CFIX-2 — corrected from this file's original note) | `js/workspace.js:650-651` | Med | fixed |
+| CFIX-5 | `referenceMode`'s `'pixelated'`/`'original'` values are re-listed as inline string literals at 6+ sites, including a validation check, instead of a named constant | `lib/pixel-engine/layers.js:57,145,165,312,376,611` | Low | deferred |
+| CFIX-6 | `mergeLayers`/`mergeDown`/`getRenderPlan` touch the DOM transitively (via `#compositeSubset`) with no "requires a DOM" note in their own doc comments, unlike every other DOM-touching method in `lib/` | `lib/pixel-engine/layers.js` (methods around `:526,561,611`) | Low | fixed |
+| CFIX-7 | 10 of 24 "Pro extension point" comments lack the `(split-pixi-pro-repo)` tag and/or name a specific consuming pixi-pro file | `js/workspace.js:155,198,221,262,271,903,940,1042,1476,1482` | Low | deferred |
 
 ## Notes per finding
 
-- **CFIX-1**: real latent bug, not just style — with a host-supplied
-  non-Dexie adapter active (once the embeddable mount API exists),
-  calling this test helper would clear the app's own local IndexedDB
-  instead of the host's adapter-backed store, leaving stale data behind
-  silently. Fix: route through `activeAdapter` like every other function
-  in this file, or make explicit that this helper only ever targets the
-  Dexie-backed default and document/guard that.
-- **CFIX-2**: highest-severity item in this list after CFIX-1 — this runs
-  at module-import time, before any try/catch a caller might add could
-  help. `js/theme-boot.js:13-27` already shows the established pattern
-  (try/catch + safe fallback) this file should follow instead.
-- **CFIX-3, CFIX-4**: same underlying gap as CFIX-2, lower severity since
-  neither is at module-eval time.
-- **CFIX-5**: not a bug — `referenceMode` is validated correctly today —
-  but a maintainability gap; a future third mode would require finding
-  and updating 6 scattered literal comparisons instead of one array.
-- **CFIX-6**: not a bug in current behavior, but a real trap for whoever
-  next tries to unit-test `mergeLayers` under plain Node — the test suite
-  already documents working around it (`lib/pixel-engine/
-  layers.test.js:702-709`) without the source explaining why.
-- **CFIX-7**: lowest urgency — these comments are the *only* record of
-  which pixi-pro file depends on a given Standard hook (Pro's repo isn't
-  checked out alongside Standard's), so a future rename/removal of one of
-  these 10 hooks has no reliable way to know what to check in `pixi-pro`
-  before doing so.
+- **CFIX-1**: **fixed**. `_clearAllForTests()` now lists+deletes through
+  `activeAdapter` for the `projects` table (customBrushes/colorPalettes
+  stay direct Dexie, deliberately out of adapter scope). Regression test
+  added: creates a project under the default adapter, switches to an
+  in-memory adapter, creates a second project, clears, and verifies only
+  the in-memory project was cleared while the Dexie one survives. Was red
+  before the fix (in-memory project wasn't cleared at all), green after.
+  `npm test`: 202/202.
+- **CFIX-2**: **fixed**. `js/gallery.js`'s module-eval-time
+  `prefersReducedMotion` read is now wrapped in try/catch, defaulting to
+  `false` (motion allowed) on failure — same pattern as
+  `js/theme-boot.js`. No existing unit-test coverage for this DOM-wiring
+  file (consistent with `workspace.js`/`app.js`/`new-canvas.js`, none of
+  which have one either); verified via a Playwright smoke test of the
+  running app instead (Gallery load, New Canvas, draw, theme toggle — no
+  new console errors beyond the pre-existing harmless favicon 404).
+- **CFIX-3**: **fixed**. `js/theme.js`'s `initThemeToggle()` now calls a
+  new local `safeMatchMedia()` helper (try/catch, falls back to a static
+  `{ matches: false, addEventListener() {} }` stand-in) instead of the
+  bare `window.matchMedia()` call. TDD'd: added a test simulating a
+  throwing `matchMedia`, confirmed it failed against the old code
+  (`Got unwanted exception`), then fixed and confirmed green.
+- **CFIX-4**: **fixed**, and reclassified from Low to Med — this call is
+  also at module-evaluation time (the surrounding comment in
+  `workspace.js` says so explicitly), the same risk category as CFIX-2,
+  not lower severity as this file originally said. Wrapped in try/catch,
+  same fallback pattern as CFIX-2/3.
+- **CFIX-5**: **deferred**, per plan — not a bug, a refactor of working
+  production code across 6+ call sites with no current defect; better done
+  as deliberate cleanup separate from this fix batch.
+- **CFIX-6**: **fixed**. Added "requires a DOM" notes to `mergeLayers`,
+  `mergeDown`, `getRenderPlan`, and `composite()`'s doc comments, matching
+  `toPNGBlob()`'s existing pattern. Comment-only change, no test needed;
+  `npm test` (202/202) confirms nothing else moved.
+- **CFIX-7**: **deferred**, per plan — can't be fixed accurately without
+  access to the `pixi-pro` repo to confirm which file each hook is
+  actually consumed by; guessing would leave wrong information, worse
+  than the current honest gap.

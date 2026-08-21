@@ -204,9 +204,18 @@ export async function deleteCustomBrush(id) {
 // colorPalettes table schema itself stays declared here (see that
 // export's comment).
 
-/** Test-only: empties the projects, customBrushes, and colorPalettes tables between test cases. */
+/**
+ * Test-only: empties projects (via the active adapter, not a direct Dexie
+ * call — CFIX-1, found by the code-standards red-team: calling
+ * `db.projects.clear()` directly bypassed whichever adapter was active,
+ * so a non-Dexie adapter's records survived a "clear everything" call
+ * while an unrelated Dexie-backed project silently got wiped), plus
+ * customBrushes and colorPalettes (still direct Dexie — out of adapter
+ * scope, same as everywhere else in this file).
+ */
 export async function _clearAllForTests() {
-  await db.projects.clear();
+  const records = await activeAdapter.list();
+  await Promise.all(records.map((record) => activeAdapter.delete(record.id)));
   await db.customBrushes.clear();
   await db.colorPalettes.clear();
 }

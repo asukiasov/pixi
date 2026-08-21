@@ -205,4 +205,37 @@ describe('initThemeToggle', () => {
     button.click(); // dark -> system (OS default here is light, from setUp's osPrefersDark: false)
     assert.equal(metaThemeColor.getAttribute('content'), '#ececf0');
   });
+
+  // Regression test (CFIX-3, found by the code-standards red-team):
+  // window.matchMedia() was called unguarded - some restrictive/sandboxed
+  // environments throw when it's invoked (not just when it's missing).
+  test('a throwing matchMedia() does not crash init - falls back to light, cycling still works', () => {
+    const html = fakeElement();
+    const metaThemeColor = fakeElement();
+    const storage = fakeStorage();
+    const button = fakeButton();
+
+    globalThis.document = {
+      documentElement: html,
+      querySelector: (sel) => (sel === 'meta[name="theme-color"]' ? metaThemeColor : null),
+    };
+    globalThis.window = {
+      matchMedia: () => {
+        throw new Error('matchMedia blocked in this environment');
+      },
+    };
+    globalThis.localStorage = storage;
+    restoreGlobals = () => {
+      delete globalThis.document;
+      delete globalThis.window;
+      delete globalThis.localStorage;
+    };
+
+    assert.doesNotThrow(() => initThemeToggle(button));
+    assert.equal(html.getAttribute('data-theme'), 'light');
+
+    // Clicking still cycles/persists even without a live media query.
+    button.click(); // system -> light
+    assert.equal(storage.getItem('pixi-theme-preference'), 'light');
+  });
 });

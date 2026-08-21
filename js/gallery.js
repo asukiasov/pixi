@@ -33,7 +33,19 @@ const PAW_PARADE_LENGTH = 10; // paw prints in the trail
 
 // Checked once, like js/app.js's platform detection - the OS-level
 // reduced-motion preference isn't expected to change mid-session.
-const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+//
+// CFIX-2 (code-standards red-team): this used to call window.matchMedia()
+// unguarded, at module-evaluation time - some restrictive/sandboxed
+// environments throw when it's invoked, which would have broken this
+// entire module's import, not just the easter egg. Wrapped in try/catch,
+// same pattern as js/theme-boot.js's guarded matchMedia call.
+let prefersReducedMotion = false;
+try {
+  prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+} catch {
+  // matchMedia unavailable/throwing - default to false (motion allowed),
+  // same as environments that simply don't support it.
+}
 
 /**
  * Easter egg: clicking the Gallery's "Pixi" title 7 times within 2

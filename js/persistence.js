@@ -100,7 +100,14 @@ export function _setStorageAdapter(adapter) {
   activeAdapter = adapter;
 }
 
-/** Test-only: restores the default Dexie-backed adapter. */
+/**
+ * Restores the default Dexie-backed adapter. Used by tests to reset
+ * `activeAdapter` between cases, and by `lib/pixi.js`'s `destroy()` - a
+ * real production consumer, same as `_setStorageAdapter` above - so a
+ * mounted instance's `options.storage` adapter can't outlive the instance
+ * and leak into a later `mount()` call or the standalone app sharing the
+ * same page.
+ */
 export function _resetStorageAdapter() {
   activeAdapter = createDexieProjectAdapter(db);
 }

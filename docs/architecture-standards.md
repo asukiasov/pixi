@@ -71,7 +71,7 @@ except human review. When adding to `lib/`, grep the new file for any
 the *only* DOM-touching methods in `lib/`. A full grep of `lib/**/*.js`
 (non-test) for `document.`/`window.`/`navigator.`/`localStorage`/
 `matchMedia` found the DOM dependency actually enters through a private
-helper, `#compositeSubset` (`lib/pixel-engine/layers.js:456,465`), which
+helper, `#compositeSubset` (`lib/pixel-engine/layers.js:494,503`), which
 is called by more than the two named public methods:
 
 - `LayerStack.composite()` — named in the original version, correct
@@ -87,7 +87,7 @@ is called by more than the two named public methods:
   DOM dependency
 
 This is real, not just a documentation nitpick: `lib/pixel-engine/
-layers.test.js:702-709` already explicitly explains why only refusal
+layers.test.js:733-740` already explicitly explains why only refusal
 paths of `mergeLayers` are unit-tested ("DOM boundary") — the test suite
 is visibly working around a constraint the architecture doc never told
 anyone about. A contributor trying to unit-test `mergeLayers` under plain

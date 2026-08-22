@@ -118,6 +118,34 @@ with a custom adapter needs no CDN dependency; embedding with the default
 adapter needs the same `dexie` CDN resolution the standalone app already
 needs (host must keep or replicate the import map entry).
 
+**`lib/pixi.js`'s public API throws on misuse/structural errors, reversing
+`code-standards.md`'s repo-wide "never throw, return false/null/early"
+convention — a deliberate exception, not an oversight.** `mount()`
+(`validateHostElement`, `validateStorageAdapter`), `instance.on()` (a
+non-function handler), and `instance.loadImage()`/`getImage()`/`save()`/
+`cancel()` (called after `destroy()`) all throw instead of silently
+no-op'ing or returning `null`. `LayerStack.loadImage()`
+(`lib/pixel-engine/layers.js`) throws `RangeError` on a mismatched
+`imageData.data.length` for the same reason, even though every sibling
+method on that same class returns `false`/`null`. The rest of the
+codebase's return-based convention exists so a refused *editor* operation
+(an invalid tool click, a malformed record read from storage) degrades
+silently rather than crashing a user's drawing session — but `lib/pixi.js`
+and `LayerStack.loadImage()` are the boundary a *host application*
+programs against, not the editor's own internal call graph. A host that
+passes a non-Element `hostElement`, calls `mount()` with a broken
+`options.storage`, or feeds `loadImage()` a wrongly-shaped `ImageData`
+has a bug in its own integration code, not a recoverable in-editor
+refusal — a thrown error surfaces that immediately, at the call site,
+with a message naming exactly what's wrong; a silent `null`/`false`
+return would instead surface as a confusing downstream failure (or no
+failure at all) far from the actual mistake, which is worse for a host
+developer debugging their integration than for an end user clicking the
+wrong tool. This distinction is intentional and is not meant to spread:
+new `lib/pixi.js` methods and `LayerStack.loadImage()`-style structural
+validators should keep throwing for the same reason; everything else in
+`lib/`/`js/` keeps returning `false`/`null`/early per `code-standards.md`.
+
 **License: Standard's MIT `LICENSE` already permits this integration
 model as written (use/copy/modify/distribute) — no license change needed
 for Standard.** Verified by reading `LICENSE` directly (MIT, standard

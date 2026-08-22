@@ -123,7 +123,7 @@
 
 ## 5. Remove the superseded change
 
-- [ ] 5.1 Delete `openspec/changes/extract-pixel-engine-library/` (its scope is fully covered by section 1 above)
+- [x] 5.1 Delete `openspec/changes/extract-pixel-engine-library/` (its scope is fully covered by section 1 above) (no-op: the directory does not exist anywhere in the working tree or in `git log --all -- openspec/changes/extract-pixel-engine-library` — checked both via `find`/`git log --all` before concluding this rather than assuming. It was already gone by the time this change's own history starts (`f1b0c96`, "Extract pixel engine into lib/pixel-engine/"), likely removed in whatever earlier housekeeping produced that starting state, predating this worktree/branch entirely. Nothing to delete, nothing to commit for this task beyond this checkbox)
 
 ## 6. Pixi Pro follow-on (tracked, not implemented here)
 

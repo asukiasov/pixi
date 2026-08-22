@@ -176,8 +176,14 @@ does, where it lives in the DOM), see
 Pixi is solo-built and Standard stays free and open-source. The one way
 to support ongoing development directly is buying Pro — see
 [Standard vs. Pro](#standard-vs-pro) for what it adds and how access
-works ($5, one-time, via PayPal). Bug reports and pull requests against
-Standard are also welcome, opened as GitHub issues/PRs on this repo.
+works ($5, one-time, via PayPal).
+
+## Contributing
+
+Bug reports and pull requests against Standard are welcome. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for the process (OpenSpec proposals
+for feature/behavior changes, direct PRs for bug fixes) and
+[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 
 ## License
 

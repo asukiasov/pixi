@@ -277,3 +277,117 @@ time of writing) and verified against this review:
 
 Verified: `npm test` → 261/261 passing, including the new regression test.
 I-1 through I-6 and M-1 through M-4 are unchanged/still open.
+
+## Addendum (post-review): I-1 through I-6 and M-1 through M-4 fixed
+
+Fixed in a separate worktree off the same pre-fix commit (`9313910`), not
+the one carrying the C-1/C-2 fixes above — this addendum's baseline is
+therefore 262/262 (260/260 pre-existing plus the 2 new tests below), not
+the 261/261 the C-1/C-2 addendum reports; the two worktrees' fixes are
+independent and both apply cleanly against the same base.
+
+- **I-1**: `lib/pixi.js`'s mount()-time `createProjectWithId(...).catch()`
+  handler now guards on `destroyed`, matching `onChange`'s existing guard
+  right below it (`if (!destroyed) events.emit('error', err)`). Not unit-
+  testable without a real DOM (same as the rest of `mount()`, per
+  `lib/pixi.test.js`'s header comment) — a one-line change verified by
+  inspection and `node --check`.
+- **I-2**: recorded, not removed — this is a deliberate design decision.
+  Added a new Decision to
+  `openspec/changes/embeddable-integration-api/design.md` explaining why
+  `lib/pixi.js`'s public API and `LayerStack.loadImage()` throw instead of
+  following the repo's return-based convention (host-facing API boundary,
+  not the editor's internal call graph — a thrown error surfaces a host's
+  own integration bug immediately, at the call site, instead of as a
+  confusing downstream silent failure). Added a matching **Correction**
+  note to `docs/code-standards.md`'s Error Handling section naming both as
+  a named, deliberate exception, in the same style as that doc's other
+  "Correction"/exception callouts.
+- **I-3**: `createEventEmitter()`'s handler-catch no longer calls
+  `console.error` — it re-emits through the same emitter's own `'error'`
+  event instead (the mechanism `mount()`'s `createProjectWithId().catch()`
+  already uses), guarded against `event === 'error'` so a broken `'error'`
+  handler can't recurse forever. TDD'd: two new tests in `lib/pixi.test.js`
+  ("a throwing handler re-emits through the 'error' event instead of
+  logging to console", "a throwing 'error' handler does not recurse or
+  throw back out of emit()") written first (confirmed red against the old
+  `console.error` implementation), then made to pass. Repo-wide grep
+  confirms zero `console.*` calls remain in `js/`, `lib/`, or `test/`
+  (only this fix's own explanatory comments mention `console.error` by
+  name).
+- **I-4**: `js/persistence.js`'s `_resetStorageAdapter()` doc comment no
+  longer says "Test-only" — it now names `lib/pixi.js`'s `destroy()` as a
+  real production consumer, mirroring `_setStorageAdapter`'s doc comment
+  one function above it.
+- **I-5**: `Pixi.mount()`'s doc comment gained a closing paragraph stating
+  it requires a real DOM (`hostElement.innerHTML`,
+  `hostElement.ownerDocument.createElement`, `requestAnimationFrame`,
+  `CanvasView`), matching the "Requires a real DOM" phrasing this file's
+  smaller helpers (`blobToBase64`, `decodeToImageData`) already use.
+- **I-6**: verified per this addendum's own instruction, not found already
+  fixed — this worktree's base commit predates the C-2 fix that corrected
+  these citations in the other worktree, so `architecture-standards.md`
+  here still had the stale `layers.js:456,465`/`layers.test.js:702-709`
+  citations. `lib/pixel-engine/layers.js`/`layers.test.js` themselves are
+  untouched by this pass (confirmed identical to the other worktree's
+  copy), so the correct target line numbers are the same ones C-2's fix
+  used: `layers.js:494,503` and `layers.test.js:733-740`, both re-verified
+  against this worktree's actual file content before writing.
+- **M-1**: the orphaned `createEventEmitter` JSDoc block (previously
+  attached to `shouldShowGalleryChrome`) now sits directly above
+  `createEventEmitter` itself; its "caught and logged" line was also
+  updated to describe the actual post-I-3 re-emit-through-`'error'`
+  behavior instead of the removed `console.error` call.
+- **M-2**: `getImage()`'s doc comment no longer re-lists `'png'`/`'base64'`/
+  `'imagedata'` as inline literals — it references `GET_IMAGE_FORMATS` by
+  name and describes the three formats positionally instead.
+- **M-3**: `lib/pixi.test.js` now imports `after` from `node:test` and
+  restores (`delete globalThis.document`) in a new `after()` block,
+  matching `test/theme.test.js`'s precedent.
+- **M-4**: spot-checked and refreshed stale citations into
+  `js/persistence.js`/`js/export.js`/`js/workspace.js` across
+  `code-standards.md` caused by Phase 3's edits (`writeQueues` at `:77`,
+  `_setStorageAdapter`/`_resetStorageAdapter`/`_clearAllForTests` at
+  `:99`/`:111`/`:285`, `createProject`/`saveProject`/`loadProject`/
+  `listProjects`/`deleteProject`'s `activeAdapter` routing, the per-id
+  write-queue wrapping, the bare-verb/DOM-role/clamp-helper examples in
+  `js/theme.js`/`js/workspace.js`/`js/export.js`). Along the way, found two
+  citations whose *described content*, not just line number, had gone
+  stale from unrelated earlier fixes (`_clearAllForTests()`'s CFIX-1 fix
+  and `js/theme.js`'s CFIX-3 fix, both predating this phase) — corrected
+  those with **Correction**/strikethrough notes in the same style as the
+  doc's existing corrections, rather than leaving a citation pointing at
+  now-accurate line numbers but a now-false claim.
+
+Verified: `npm test` → 262/262 passing (260/260 baseline + 2 new
+`createEventEmitter` tests for I-3), `node --check` clean on every edited
+`.js` file. C-1/C-2 remain untouched, per instruction — this worktree does
+not carry their fixes; it is based on the pre-fix commit `9313910` and is
+expected to be reconciled with the C-1/C-2 worktree's branch separately.
+
+## Addendum: C-1/C-2 and I-1–I-6/M-1–M-4 reconciled
+
+The two addenda above came from independent worktrees/branches sharing the
+same pre-fix base (`9313910`) and were merged (`git merge --no-ff`) rather
+than rebased, so both sets of fixes are now present together on
+`worktree-embeddable-integration-api`. Two files were touched by both
+sides:
+
+- `docs/architecture-standards.md`: both branches independently made the
+  *exact same* I-6 line-citation correction (`layers.js:456,465` →
+  `:494,503`; `layers.test.js:702-709` → `:733-740`) as part of otherwise
+  different edits (C-2's exception note vs. this addendum's dedicated I-6
+  pass) — git's merge resolved this automatically with no conflict, since
+  both sides converged on identical text.
+- `js/persistence.js`: no overlap in practice — C-1 added `_activeAdapter()`
+  and `saveProject()`'s new `adapter` parameter; this addendum's I-4 only
+  reworded `_resetStorageAdapter()`'s doc comment. Auto-merged cleanly.
+- This audit file itself was the only real conflict (add/add: both branches
+  created it fresh, then appended their own addendum) — resolved manually
+  by keeping the original review body once and both addenda in sequence,
+  which is what you're reading now.
+
+Verified post-merge: `npm test` → 263/263 (260 baseline + C-1's 1 regression
+test + I-3's 2 new `createEventEmitter` tests). All of C-1, C-2, I-1 through
+I-6, and M-1 through M-4 are now fixed on this branch. Ready to proceed to
+Phase 4.

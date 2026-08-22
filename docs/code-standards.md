@@ -54,16 +54,16 @@ suppress.
 - `js/router.js:18,44,66,85` — `parseRouteHash`, `formatRoute`, `navigate`, `onRouteChange` (verbNoun)
 - `js/brushes.js:62,83,122,137` — `pixelsFromGrid`, `rotatedBrushPixels`, `placeBrush`, `rainbowColor` (verbNoun)
 - `js/confirm-dialog.js:50,58,61,64,67` — `onConfirm`, `onCancel`, `onOverlayClick`, `onKeydown` (bare `on*` event-handler names, not verbNoun)
-- `js/theme.js:105`, `js/workspace.js:768,816` — `apply`, `show`, `hide` (bare verbs, no noun)
+- `js/theme.js:121`, `js/workspace.js:828,876` — `apply`, `show`, `hide` (bare verbs, no noun)
 
 ### A leading-underscore prefix marks a test-only/internal export not meant to be called from app code
 
 Not in the original derivation — a real, repeated, functionally
 meaningful convention that was missed.
 
-- `js/persistence.js:93` — `_setStorageAdapter`
-- `js/persistence.js:98` — `_resetStorageAdapter`
-- `js/persistence.js:208` — `_clearAllForTests`
+- `js/persistence.js:99` — `_setStorageAdapter`
+- `js/persistence.js:111` — `_resetStorageAdapter`
+- `js/persistence.js:285` — `_clearAllForTests`
 
 ### DOM element variables are usually named after their UI role (`Button`, `Input`, `Panel`, `Slider`, `Toggle`, `Checkbox`), not a generic `El` suffix
 
@@ -74,13 +74,13 @@ concentrated in `canvas-view.js`), against 60+ role-suffixed DOM variables
 across the rest of the codebase.
 
 - `js/gallery.js:11-13` — `grid`, `emptyState`, `newButton`
-- `js/export.js:53-60` — `toggleButton`, `panel`, `closeButton`, `transparentCheckbox`, `downloadButton`
+- `js/export.js:64-71` — `toggleButton`, `panel`, `closeButton`, `transparentCheckbox`, `downloadButton`
 - `js/new-canvas.js:20-24` — `presetButtons`, `customWidthInput`, `customHeightInput`, `backgroundRadios`, `createButton`
 - `js/workspace.js` — 40+ more: `widthInput`, `nameInput`, `undoButton`, `exportButton`, `pencilSizeSlider`, `brushesPanel`, `deleteBrushButton`, etc.
 
 `El` itself still appears, narrowly, inside `CanvasView`'s own private
 fields (`js/canvas-view.js:11-31,55-56,82`) and as a generic parameter name
-in one-off DOM-utility functions (`js/export.js:12`'s `anchorEl`) — worth
+in one-off DOM-utility functions (`js/export.js:23`'s `anchorEl`) — worth
 knowing, not worth following as the general rule.
 
 ### `kebab-case.js` filenames, describing the module's purpose rather than mirroring the exported class/function name
@@ -99,7 +99,7 @@ argument is actually optional, and the majority of citable examples are
 - `js/confirm-dialog.js:41` — `confirmDialog({ title = '...', ... } = {})` — callable with zero args, so it needs the fallback
 - `js/router.js:66` — `navigate(route, { replace = false } = {})` — the options half is optional
 - `js/gallery.js:10` — `initGallery({ onOpenProject, onNewCanvas })` — required, no fallback; calling with no argument throws `TypeError`
-- `js/new-canvas.js:19`, `js/workspace.js:1598`, `js/app.js:101` — same required-argument pattern, no fallback
+- `js/new-canvas.js:19`, `js/workspace.js:1729`, `js/app.js:101` — same required-argument pattern, no fallback
 
 This is a real functional distinction, not just two styles: omitting the
 fallback on a required-argument function is correct (a caller must supply
@@ -164,6 +164,24 @@ they're the same underlying pattern, cited twice in the original doc.)
 Verified repo-wide: zero `throw` statements exist in any non-test `js/*.js`
 or `lib/**/*.js` file.
 
+**Correction (`embeddable-integration-api`, Phase 3)**: this no longer
+holds without exception. `lib/pixi.js`'s public API — `mount()`
+(`validateHostElement`, `validateStorageAdapter`), `instance.on()`, and
+`instance.loadImage()`/`getImage()`/`save()`/`cancel()` (called after
+`destroy()`) — throws on misuse/structural errors, and
+`LayerStack.loadImage()` (`lib/pixel-engine/layers.js:411`) throws
+`RangeError` on a mismatched `imageData.data.length`, unlike every sibling
+method on the same class. This is a deliberate, named exception, not an
+oversight: `lib/pixi.js` and `LayerStack.loadImage()` are the boundary a
+*host application* programs against, where a thrown error surfacing
+immediately at the call site (naming exactly what's wrong) serves a host
+developer debugging their own integration code better than a silent
+`null`/`false` return would — see
+`openspec/changes/embeddable-integration-api/design.md`'s Decisions
+section for the full reasoning. Everything else in `js/`/`lib/`, including
+every other method on `LayerStack` itself, still follows the
+return-based convention above without exception.
+
 ### Failures reaching browser APIs the code doesn't control are *usually* wrapped in try/catch with a safe fallback — but this is not universal
 
 **Correction**: the original derivation stated this as an absolute rule.
@@ -176,7 +194,7 @@ time) in an environment lacking `matchMedia`.
 - `js/theme.js:75-89` — `readStoredPreference`/`writeStoredPreference` both catch and fall back safely (follows the rule)
 - `js/theme.js:103` — unguarded `window.matchMedia(...)` inside `initThemeToggle()` (does not follow the rule)
 - `js/gallery.js:36` — unguarded, module-eval-time `window.matchMedia(...)` (does not follow the rule; flagged as a real fix candidate, not just a doc note — see the follow-up list)
-- `js/workspace.js:650-651` — checks `matchMedia` *exists* before calling it, but doesn't try/catch the call itself
+- `js/workspace.js:707-708` — checks `matchMedia` *exists* before calling it, but doesn't try/catch the call itself
 
 ### No `console.*` logging exists anywhere in `js/` or `lib/` — verified even stronger than originally stated (holds in `test/` too)
 
@@ -185,15 +203,19 @@ handled purely through return-value conventions and comments, never logged.
 
 ### Mutating persistence functions silently no-op when the target id is missing, mirroring Dexie's own `.update()` semantics — with one known exception
 
-- `js/persistence.js:134,150` — `saveProject`/`renameProject`: `if (!existing) return;`
+- `js/persistence.js:201,218` — `saveProject`/`renameProject`: `if (!existing) return;`
 - `lib/storage-adapter.js:12,36-38,61-63` — `delete(id)` documented and implemented as a no-op if `id` is missing, in both adapter implementations
 
-**Known exception**: `js/persistence.js:209-211`'s test-only
-`_clearAllForTests()` calls `db.projects.clear()` directly, bypassing the
-active adapter entirely for the `projects` table — the exact table the
-Data Access section's "exclusively through `activeAdapter`" rule claims is
-adapter-only. Flagged as a real fix candidate (see follow-up list): with a
-non-Dexie adapter active, this clears the wrong store.
+**Correction**: the original derivation flagged `_clearAllForTests()`
+(`js/persistence.js:285-290`) as a known exception — calling
+`db.projects.clear()` directly, bypassing `activeAdapter` for the
+`projects` table. That's since been fixed (see the function's own doc
+comment, "CFIX-1"): it now empties projects via `activeAdapter.list()`/
+`activeAdapter.delete()`, the same as every other project CRUD function.
+`customBrushes`/`colorPalettes` still go straight to Dexie inside the same
+function, but that carve-out is deliberate (out of adapter scope by
+design, not a bug) rather than the accidental one this originally
+described.
 
 ## Layering & Dependency Direction
 
@@ -209,11 +231,11 @@ non-Dexie adapter active, this clears the wrong store.
 
 ## Data Access / Persistence
 
-### Project-record reads/writes in `js/persistence.js` go through a swappable `activeAdapter` object, with one known test-only exception; brush/palette tables still go straight to Dexie by design
+### Project-record reads/writes in `js/persistence.js` go through a swappable `activeAdapter` object; brush/palette tables still go straight to Dexie by design
 
-- `js/persistence.js:117,133-134,142,157,162,167` — `createProject`/`saveProject`/`loadProject`/`listProjects`/`deleteProject` all route through `activeAdapter`
-- `js/persistence.js:187,193,197` — `db.customBrushes.put/toArray/delete` bypass the adapter, deliberately (out of scope per this file's header comment, not a bug)
-- `js/persistence.js:209-211` — `_clearAllForTests()` bypasses the adapter for the `projects` table too, but this is *not* deliberate the way the customBrushes carve-out is — see the Error Handling section's note
+- `js/persistence.js:130,198,225,230,235` — `createProject`/`saveProject`/`loadProject`/`listProjects`/`deleteProject` all route through `activeAdapter`
+- `js/persistence.js:256,262,266` — `db.customBrushes.put/toArray/delete` bypass the adapter, deliberately (out of scope per this file's header comment, not a bug)
+- `js/persistence.js:285-290` — `_clearAllForTests()` now also routes `projects` through `activeAdapter` (`list()`/`delete()`), not a direct `db.projects.clear()` call — see the Error Handling section's Correction note; `customBrushes`/`colorPalettes` in the same function still bypass, deliberately, same as above
 
 ### Storage adapter implementations are thin one-line pass-throughs to the underlying store, with no extra logic or error translation
 
@@ -221,7 +243,7 @@ non-Dexie adapter active, this clears the wrong store.
 
 ### Writes to the same project id are serialized through a per-id promise queue (`enqueueWrite`)
 
-- `js/persistence.js:73-82,132,148,167` — `saveProject`/`renameProject`/`deleteProject` all wrapped; `createProject` (`:117`) correctly isn't, since a brand-new id has nothing in flight to race against
+- `js/persistence.js:77-86,199,216,236` — `saveProject`/`renameProject`/`deleteProject` all wrapped; `createProject` (`:120`) correctly isn't, since a brand-new id has nothing in flight to race against
 
 ### `LayerStack` converts to/from plain storage records via a dedicated method pair (`toProjectRecord`/`fromProjectRecord`)
 
@@ -357,7 +379,7 @@ consistently — 14/14 instances checked carry the full breadcrumb.
 
 ### Value clamping to a numeric range uses the repeated `Math.max(min, Math.min(max, value))` idiom (or a locally-scoped `clamp` helper) rather than a shared utility
 
-- `js/canvas-view.js:459`, `js/new-canvas.js:8`, `js/workspace.js:462,529-530,1075,1191,1254,1264`, `js/export.js:21,24` — 15+ sites, three separate local `clamp`/`clampSize` helpers, no shared module-level utility
+- `js/canvas-view.js:459`, `js/new-canvas.js:8`, `js/workspace.js:40,514,582,1077,1080,1135,1273,1348,1358`, `js/export.js:32,35` — 15+ sites, three separate local `clamp`/`clampSize` helpers, no shared module-level utility
 
 Genuine duplication, not just style — 15+ near-identical clamp expressions
 would collapse into one shared helper, but nothing has forced the issue yet.
@@ -369,14 +391,17 @@ latent bugs in the code itself, found while verifying the rules above.
 Listed here for visibility; whether/how to fix them is a separate decision
 from what this doc describes.
 
-1. `js/persistence.js:209-211` — `_clearAllForTests()` bypasses the active
-   storage adapter, clearing `db.projects` directly. With a non-Dexie
-   adapter active, this clears the wrong store.
+1. ~~`js/persistence.js:209-211` — `_clearAllForTests()` bypasses the
+   active storage adapter, clearing `db.projects` directly.~~ **Fixed**
+   (CFIX-1, see `js/persistence.js:276-283`'s doc comment) — now routes
+   `projects` through `activeAdapter` like every other CRUD function.
 2. `js/gallery.js:36` — unguarded, module-eval-time `matchMedia()` call
    with no feature detection; would throw at import time in an environment
    lacking `matchMedia`.
-3. `js/theme.js:103`, `js/workspace.js:650-651` — unguarded `matchMedia()`
-   calls, lower severity than #2 (not at module-eval time).
+3. ~~`js/theme.js:103`~~ — **Fixed** (CFIX-3, see `js/theme.js:92-98`'s
+   doc comment) — now wrapped in `safeMatchMedia()`'s try/catch.
+   `js/workspace.js:707-708` — still an unguarded `matchMedia()` call,
+   lower severity than #2 (not at module-eval time).
 4. `lib/pixel-engine/layers.js`'s `referenceMode` — inline-relisted string
    literals instead of a named constant, including in a validation check.
 5. `lib/pixel-engine/layers.js`'s `mergeLayers`/`mergeDown`/`getRenderPlan`

@@ -291,6 +291,31 @@ becomes the next priority:
   swappable icon font/sprite instead of the hardcoded Material Symbols
   subset, an `options.theme` mount() option — needs its own design pass
   before scoping. Raised 2026-08-22.
+- **Plugin/powerup system, with Pixi Pro as its first plugin.** Today's
+  "Pro extension points" (`registerColorSequenceProvider` and ~20 similar
+  exports in `js/workspace.js`/`lib/pixel-engine/`) are ad-hoc, shaped one
+  at a time around exactly what `pixi-pro` needed — not a stable,
+  discoverable API a third party could register against. And `pixi-pro`
+  itself is distributed as a git submodule with additive files importing
+  straight from `pixi`'s internals
+  (`openspec/changes/archive/2026-08-21-split-pixi-pro-repo/design.md`),
+  closer to a trusted fork than a loaded plugin. Making Pro "the first
+  plugin" for real means two separate pieces of work: (1) formalize the
+  extension points into an actual registration/lifecycle API (no bundler,
+  so plugins would load via dynamic `import()`, not a bundled manifest —
+  native but new infrastructure), and (2) migrate `pixi-pro` onto that API
+  instead of direct internal imports, which also changes Pro's
+  access-control story (today the gate is "you don't have the private
+  repo"; a loadable plugin module needs its own gate). Builds naturally on
+  top of the `style.css`-scoping/theming items above — a plugin API wants
+  scoped styling and stable hook contracts for the same reasons an
+  embedder does. Needs its own brainstorming/design pass before scoping;
+  not queued as ready work. Raised 2026-08-22.
+- **UI polish pass — refine the design window by window, panel by
+  panel.** Raised directly on 2026-08-17, after 2m/2n shipped and real
+  usage surfaced rough edges. An open-ended initiative, not one change -
+  work through it screen by screen, panel by panel, pulling in one
+  design/bug item at a time rather than batching.
 
   Resolved so far:
   - ~~`2n`'s Import icon rendered broken (overlapping "I"/"MAG" text)~~ -

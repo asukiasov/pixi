@@ -231,6 +231,16 @@ becomes the next priority:
   (`docs/superpowers/specs/2026-08-18-pixi-tiers-design.md` and
   `docs/superpowers/specs/2026-08-17-tier-matrix-worksheet.md`) are legacy
   input now, superseded by that change's spec once it's archived.
+- **Brush picker UI redesign** — the current Brushes panel (docked right
+  sidebar, `#brushes-panel`: grid of predefined + custom brushes, spacing/
+  rotation inputs, an editor for drawing new custom patterns) was raised
+  as a possible removal candidate on 2026-08-21 while scoping an unrelated
+  right-sidebar simplification, then explicitly kept — the Brush tool
+  depends on it entirely (no other way to pick a pattern) and there's no
+  replacement UI designed yet. Noted here as a real future want (a less
+  heavyweight brush-picking interface), not a plan to remove the current
+  one before a replacement exists. Needs its own brainstorming/design pass
+  before an `/opsx:propose` — not scoped beyond this note yet.
 - **UI polish pass — refine the design window by window, panel by
   panel.** Raised directly on 2026-08-17, after 2m/2n shipped and real
   usage surfaced rough edges. An open-ended initiative, not one change -

@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Browser-based pixel art drawing tool. No build step - this package.json exists only to declare test-only dependencies (see docs/supabase-database.md and openspec/changes/*/design.md for why the app itself has none).",
   "scripts": {
-    "test": "node --test test/**/*.test.js"
+    "test": "node --test test/**/*.test.js lib/*.test.js lib/**/*.test.js"
   },
   "devDependencies": {
     "dexie": "^4.4.4",

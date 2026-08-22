@@ -1,9 +1,9 @@
-import { UndoStack } from './undo.js';
-import { saveProject, renameProject, createCustomBrush, listCustomBrushes, deleteCustomBrush } from './persistence.js';
+import { UndoStack } from '../lib/pixel-engine/undo.js';
+import { saveProject, renameProject, createCustomBrush, listCustomBrushes, deleteCustomBrush, _activeAdapter } from './persistence.js';
 import { initExport } from './export.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
-import { bresenhamLine, strokeFreehandThick } from './engine.js';
+import { bresenhamLine, strokeFreehandThick } from '../lib/pixel-engine/engine.js';
 import { confirmDialog } from './confirm-dialog.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
@@ -113,11 +113,39 @@ function isSquareConstrained() {
 
 // Module-level state, not per-call: the Workspace screen is a singleton in
 // this app (one workspace <canvas>), reused across every project the user
-// opens or creates in a session. DOM listeners are bound exactly once, the
-// first time initWorkspace runs; later calls just rebind state to the new
-// project/layer stack.
+// opens or creates in a session. DOM listeners are bound once per `root`
+// (not just once ever - found by code review while building the mount
+// API, task 3.1: with a fixed one-shot flag, mounting with a different
+// root after the standalone app - or a mount/destroy/re-mount cycle -
+// left every one-shot-bound element wired to the FIRST root's now-
+// detached DOM); repeat calls with the *same* root just rebind state to
+// the new project/layer stack, as before.
 let state = null;
-let domBound = false;
+let domBoundRoot = null;
+
+// Embeddable-editor-api (Phase 3): whether bindDomOnce()'s `document`-level
+// listeners (as opposed to its root-scoped element listeners, which
+// legitimately need rebinding whenever `root` changes) have ever been
+// registered. Found via lib/pixi.js's repeated mount()/destroy() Playwright
+// smoke test: these listeners all read the shared module-level `root`/
+// `state` (reassigned on every initWorkspace() call) rather than closing
+// over a specific call's local root/state, so a single copy of each
+// already tracks whichever instance is current - registering another copy
+// per distinct `root` (bindDomOnce's normal per-root gate) only leaves
+// stale duplicates permanently attached to `document`, since nothing ever
+// unmounts a document listener when its owning root is destroyed. Two
+// duplicates of the same idempotent handler firing on one real keypress
+// isn't itself the corruption (both read the same live state and agree);
+// the actual damage seen was a `document.querySelector`-vs-`root.
+// querySelector('#screen-workspace')` crash (fixed separately) combined
+// with this duplication multiplying every commit-triggering shortcut's
+// effect. Gated separately from `domBoundRoot` so it stays true forever
+// once bound, regardless of how many distinct roots come and go.
+let globalListenersBound = false;
+// Tracked so bindDomOnce() can swap these two out per-root (see their
+// call site) rather than bind-once-ever like globalListenersBound's group.
+let colorPickerOutsideClickHandler = null;
+let colorPickerEscapeHandler = null;
 // Tracked independently of any single event, since Shift can be pressed/
 // released mid-drag - the Rectangle and Selection tools check this on
 // every move.
@@ -140,6 +168,18 @@ let backgroundSwatchEl = null;
 
 let zoomReadout = null;
 let pencilOptionsPanel = null;
+
+// Embeddable-editor-api (Phase 3): the DOM root every workspace element
+// lookup below resolves against, instead of the bare `document` this file
+// used to assume. Defaults to `document` so the standalone app (its
+// markup lives directly in index.html's <body>) is unaffected; a mounted
+// instance passes its own host container's cloned Workspace markup here
+// (see lib/pixi.js). Module-level, not per-instance - per design.md's
+// scoping decision, this supports one active Workspace instance at a
+// time (standalone app, or a single mounted instance), not multiple
+// simultaneous instances; mounting a second instance while one is active
+// is unsupported for now.
+let root = document;
 
 // All available brushes: the built-ins plus whatever's been loaded from
 // IndexedDB. Module-level, not per-project — brushes are global, not
@@ -168,10 +208,37 @@ function updateUndoRedoButtons() {
  * block on a write completing. Not queued/serialized: rapid successive
  * commits could in principle finish out of order and leave a slightly stale
  * save; acceptable at this interaction rate, not solved in this slice.
+ *
+ * Also the `instance.on('change', ...)` choke point (embeddable-integration
+ * -api task 3.5): every call site here (commit(), performUndo(),
+ * performRedo()) is already "a committed drawing action changed the
+ * image", the exact granularity the "Change notifications" spec
+ * requirement asks for - so `state.onChange()` fires here instead of
+ * duplicating that "what counts as a commit" decision at each call site.
+ * Called synchronously, before the `await`s below, so a host's change
+ * handler runs immediately rather than waiting on an IndexedDB write it
+ * has no reason to depend on (matches autoSave()'s own fire-and-forget
+ * framing above).
+ *
+ * The active adapter is captured via `_activeAdapter()` here, before the
+ * `toPNGBlob()` await, and threaded into `saveProject()` explicitly -
+ * found by code review (C-1): `saveProject()` used to read the module-
+ * level `activeAdapter` itself at the point it's *called*, which is after
+ * this function's `toPNGBlob()` await resolves. A host calling
+ * `instance.destroy()` (lib/pixi.js) while that encode was still in
+ * flight would swap the adapter back to the default Dexie one via
+ * `_resetStorageAdapter()` first, so by the time `saveProject()` ran it
+ * would silently write the user's last edit to IndexedDB instead of the
+ * host's own `options.storage` adapter. Capturing here instead pins the
+ * adapter to the one active when autosave actually began, the same
+ * capture-before-the-async-gap shape persistence.js's own CRUD functions
+ * already use before `enqueueWrite()`.
  */
 async function autoSave() {
+  state.onChange();
+  const adapter = _activeAdapter();
   const thumbnail = await state.layerStack.toPNGBlob();
-  await saveProject(state.projectId, state.layerStack, thumbnail);
+  await saveProject(state.projectId, state.layerStack, thumbnail, adapter);
 }
 
 /**
@@ -492,7 +559,7 @@ export function getBrushEditorSize() {
  */
 export function setBrushEditorGrid(grid) {
   brushEditorGridState = grid;
-  const gridEl = document.getElementById('brush-editor-grid');
+  const gridEl = root.querySelector('#brush-editor-grid');
   gridEl.querySelectorAll('.brush-editor-cell').forEach((cell) => {
     const x = Number(cell.dataset.x);
     const y = Number(cell.dataset.y);
@@ -502,7 +569,7 @@ export function setBrushEditorGrid(grid) {
 
 /** (Re)builds the editor grid's cells to match brushEditorWidth x brushEditorHeight, clearing any painted pixels. */
 function rebuildBrushEditorGrid() {
-  const grid = document.getElementById('brush-editor-grid');
+  const grid = root.querySelector('#brush-editor-grid');
   brushEditorGridState = makeEmptyBrushEditorGrid(brushEditorWidth, brushEditorHeight);
   grid.innerHTML = '';
   const cellPx = brushEditorCellSizePx(brushEditorWidth, brushEditorHeight);
@@ -531,8 +598,8 @@ function clampBrushEditorDimension(value, max) {
 }
 
 function openBrushEditor() {
-  const widthInput = document.getElementById('brush-editor-width');
-  const heightInput = document.getElementById('brush-editor-height');
+  const widthInput = root.querySelector('#brush-editor-width');
+  const heightInput = root.querySelector('#brush-editor-height');
   const maxWidth = state.layerStack.width;
   const maxHeight = state.layerStack.height;
   widthInput.max = String(maxWidth);
@@ -541,13 +608,13 @@ function openBrushEditor() {
   brushEditorHeight = clampBrushEditorDimension(BRUSH_EDITOR_SIZE, maxHeight);
   widthInput.value = String(brushEditorWidth);
   heightInput.value = String(brushEditorHeight);
-  document.getElementById('brush-editor-name').value = '';
+  root.querySelector('#brush-editor-name').value = '';
   rebuildBrushEditorGrid();
-  document.getElementById('brush-editor-panel').classList.remove('hidden');
+  root.querySelector('#brush-editor-panel').classList.remove('hidden');
 }
 
 function closeBrushEditor() {
-  document.getElementById('brush-editor-panel').classList.add('hidden');
+  root.querySelector('#brush-editor-panel').classList.add('hidden');
 }
 
 /**
@@ -558,13 +625,13 @@ function closeBrushEditor() {
  * pointerenter would never fire on sibling cells during a touch drag.
  */
 function bindBrushEditorOnce() {
-  const grid = document.getElementById('brush-editor-grid');
-  const nameInput = document.getElementById('brush-editor-name');
-  const widthInput = document.getElementById('brush-editor-width');
-  const heightInput = document.getElementById('brush-editor-height');
-  const clearButton = document.getElementById('brush-editor-clear');
-  const cancelButton = document.getElementById('brush-editor-cancel');
-  const saveButton = document.getElementById('brush-editor-save');
+  const grid = root.querySelector('#brush-editor-grid');
+  const nameInput = root.querySelector('#brush-editor-name');
+  const widthInput = root.querySelector('#brush-editor-width');
+  const heightInput = root.querySelector('#brush-editor-height');
+  const clearButton = root.querySelector('#brush-editor-clear');
+  const cancelButton = root.querySelector('#brush-editor-cancel');
+  const saveButton = root.querySelector('#brush-editor-save');
 
   // Changing size re-grids from scratch - a brand-new brush each time.
   // (Pro's "Import from image", if present, adds its own listener here
@@ -646,10 +713,18 @@ const MATRIX_RAIN_COLUMNS = 14;
 // which only touches `window` inside functions its tests can stub
 // `globalThis.window` for before calling - not an option for a reference
 // that runs before any test code gets to execute.)
-const prefersReducedMotion =
-  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    : false;
+// CFIX-4 (code-standards red-team): existence-checked but not
+// try/caught - matchMedia() itself can throw in some restrictive/
+// sandboxed environments even when it exists, same risk this file's own
+// comment already called out for `window` being undefined.
+let prefersReducedMotion = false;
+try {
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+} catch {
+  // matchMedia present but throwing - default to false (motion allowed).
+}
 
 /**
  * The "matrix" magic palette's own effect (see MAGIC_PALETTES) - a brief
@@ -723,7 +798,7 @@ let konamiProgress = 0;
 /** You know what this is if you know what this is. */
 function bindKonamiCode() {
   document.addEventListener('keydown', (e) => {
-    if (document.getElementById('screen-workspace').classList.contains('hidden')) return;
+    if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
     const key = e.key.toLowerCase();
     if (key === KONAMI_SEQUENCE[konamiProgress]) {
       konamiProgress++;
@@ -920,11 +995,11 @@ export function syncActiveSwatch() {
 /** Keeps the native color input, hex field, and RGB fields all showing the same color. */
 function updateColorPickerInputs(rgba) {
   const hex = rgbaToHex(rgba);
-  document.getElementById('color-picker-native').value = hex;
-  document.getElementById('color-picker-hex').value = hex;
-  document.getElementById('color-picker-r').value = String(rgba[0]);
-  document.getElementById('color-picker-g').value = String(rgba[1]);
-  document.getElementById('color-picker-b').value = String(rgba[2]);
+  root.querySelector('#color-picker-native').value = hex;
+  root.querySelector('#color-picker-hex').value = hex;
+  root.querySelector('#color-picker-r').value = String(rgba[0]);
+  root.querySelector('#color-picker-g').value = String(rgba[1]);
+  root.querySelector('#color-picker-b').value = String(rgba[2]);
 }
 
 function updateFgBgSwatches() {
@@ -996,10 +1071,10 @@ function openColorPicker(target, anchorEl) {
   // real tap lands on, which reliably opens iOS's native picker with no
   // synthetic-click trickery involved - one extra tap versus the ideal
   // "skip straight to native," but actually works.
-  document.getElementById('color-picker-popover-title').textContent =
+  root.querySelector('#color-picker-popover-title').textContent =
     target === 'background' ? 'Background Color' : 'Foreground Color';
   updateColorPickerInputs(current);
-  const popover = document.getElementById('color-picker-popover');
+  const popover = root.querySelector('#color-picker-popover');
   // Unhide before measuring - .hidden is display:none, which has no box
   // to read a size from.
   popover.classList.remove('hidden');
@@ -1024,7 +1099,7 @@ function openColorPicker(target, anchorEl) {
 }
 
 function closeColorPicker() {
-  document.getElementById('color-picker-popover').classList.add('hidden');
+  root.querySelector('#color-picker-popover').classList.add('hidden');
 }
 
 // openLayersOpacityPopover/closeLayersOpacityPopover moved to pixi-pro's
@@ -1083,46 +1158,68 @@ export function bindSliderWheel(slider) {
 // ramp preview popovers) moved to pixi-pro's js/pro/color-library-ui.js
 // (split-pixi-pro-repo) alongside its only two callers.
 
+/**
+ * Applies every tool-scoped UI toggle that follows from `state.currentTool`
+ * alone (Brushes/pencil-options/square-constraint panel visibility, pan/
+ * move cursor mode) - shared by the tool-button click handler (a user
+ * switching tools) and `initWorkspace()` (a fresh project's starting
+ * tool, task 3.7's `initialTool`), which previously each carried their own
+ * copy. Kept in sync as one function after a code-review finding on task
+ * 3.7: `initWorkspace()`'s copy had hardcoded a Pencil-is-always-the-
+ * starting-tool assumption that silently drifted out of sync with this
+ * logic once `initialTool` could be something else - a duplicated copy is
+ * exactly the shape that bug already came from, so consolidating it here
+ * removes the chance of it recurring for a future tool-scoped panel.
+ */
+function applyToolScopedUI() {
+  brushesPanel.classList.toggle('hidden', state.currentTool !== 'brush');
+  // Leaving the Brush tool mid-edit closes the editor rather than
+  // leaving it open behind a now-hidden panel.
+  if (state.currentTool !== 'brush') closeBrushEditor();
+  // Hand tool: single-pointer drag pans the canvas instead of drawing
+  // (see CanvasView#setPanMode). Every other tool leaves pan mode off.
+  state.canvasView.setPanMode(state.currentTool === 'hand');
+  // Move tool: swaps in the CSS `move` cursor while active (see
+  // CanvasView#setMoveMode) - purely cosmetic, drag handling itself
+  // lives in onDrawStart/onDrawMove/onDrawEnd below.
+  state.canvasView.setMoveMode(state.currentTool === 'move');
+  // Size/Opacity sliders: shared by Pencil and Eraser, hidden for
+  // every other tool - same tool-scoped-visibility pattern as Brushes.
+  pencilOptionsPanel.classList.toggle('hidden', state.currentTool !== 'pencil' && state.currentTool !== 'eraser');
+  // 1:1 proportion toggle: Rectangle and Selection.
+  squareConstraintPanel.classList.toggle(
+    'hidden',
+    state.currentTool !== 'rectangle' && state.currentTool !== 'selection'
+  );
+}
+
 function bindDomOnce() {
-  toolButtons = document.querySelectorAll('.tool-button[data-tool]');
-  paletteRow = document.getElementById('palette-row');
-  brushesPanel = document.getElementById('brushes-panel');
-  const backToGalleryButton = document.getElementById('back-to-gallery-button');
+  toolButtons = root.querySelectorAll('.tool-button[data-tool]');
+  paletteRow = root.querySelector('#palette-row');
+  brushesPanel = root.querySelector('#brushes-panel');
+  const backToGalleryButton = root.querySelector('#back-to-gallery-button');
 
   toolButtons.forEach((button) => {
     button.addEventListener('click', () => {
       state.currentTool = button.dataset.tool;
       toolButtons.forEach((b) => b.classList.toggle('active', b === button));
-      brushesPanel.classList.toggle('hidden', state.currentTool !== 'brush');
-      // Leaving the Brush tool mid-edit closes the editor rather than
-      // leaving it open behind a now-hidden panel.
-      if (state.currentTool !== 'brush') closeBrushEditor();
-      // Hand tool: single-pointer drag pans the canvas instead of drawing
-      // (see CanvasView#setPanMode). Every other tool leaves pan mode off.
-      state.canvasView.setPanMode(state.currentTool === 'hand');
-      // Move tool: swaps in the CSS `move` cursor while active (see
-      // CanvasView#setMoveMode) - purely cosmetic, drag handling itself
-      // lives in onDrawStart/onDrawMove/onDrawEnd below.
-      state.canvasView.setMoveMode(state.currentTool === 'move');
-      // Size/Opacity sliders: shared by Pencil and Eraser, hidden for
-      // every other tool - same tool-scoped-visibility pattern as Brushes.
-      pencilOptionsPanel.classList.toggle('hidden', state.currentTool !== 'pencil' && state.currentTool !== 'eraser');
-      // 1:1 proportion toggle: Rectangle and Selection.
-      squareConstraintPanel.classList.toggle(
-        'hidden',
-        state.currentTool !== 'rectangle' && state.currentTool !== 'selection'
-      );
+      applyToolScopedUI();
     });
   });
 
-  bindTooltips();
-  bindKonamiCode();
+  // bindTooltips()/bindKonamiCode() and every document.addEventListener
+  // call below (guarded the same way) are global, not root-scoped - see
+  // globalListenersBound's doc comment.
+  if (!globalListenersBound) {
+    bindTooltips();
+    bindKonamiCode();
+  }
 
   // Pencil/Eraser Size - shared slider with live readout (Opacity is
   // Pro-only, see js/pro/pencil-opacity-ui.js in pixi-pro).
-  pencilOptionsPanel = document.getElementById('pencil-options');
-  const pencilSizeSlider = document.getElementById('pencil-size-slider');
-  const pencilSizeReadout = document.getElementById('pencil-size-readout');
+  pencilOptionsPanel = root.querySelector('#pencil-options');
+  const pencilSizeSlider = root.querySelector('#pencil-size-slider');
+  const pencilSizeReadout = root.querySelector('#pencil-size-readout');
 
   pencilSizeSlider.addEventListener('input', () => {
     const value = Number(pencilSizeSlider.value);
@@ -1138,8 +1235,8 @@ function bindDomOnce() {
   // 1:1 proportion toggle - Rectangle and Selection, a persistent
   // touchscreen-friendly equivalent of holding Shift (see
   // isSquareConstrained).
-  squareConstraintPanel = document.getElementById('square-constraint-options');
-  squareConstraintToggle = document.getElementById('square-constraint-toggle');
+  squareConstraintPanel = root.querySelector('#square-constraint-options');
+  squareConstraintToggle = root.querySelector('#square-constraint-toggle');
   squareConstraintToggle.addEventListener('click', () => {
     state.squareConstraint = !state.squareConstraint;
     squareConstraintToggle.classList.toggle('active', state.squareConstraint);
@@ -1151,13 +1248,13 @@ function bindDomOnce() {
   // in a popover opened by clicking the Foreground or Background swatch
   // (colorPickerTarget tracks which one), all cross-synced through
   // applyPickedColor/updateColorPickerInputs.
-  const colorPickerNative = document.getElementById('color-picker-native');
-  const colorPickerHex = document.getElementById('color-picker-hex');
-  const colorPickerCopied = document.getElementById('color-picker-copied');
-  const colorPickerR = document.getElementById('color-picker-r');
-  const colorPickerG = document.getElementById('color-picker-g');
-  const colorPickerB = document.getElementById('color-picker-b');
-  const colorPickerPopover = document.getElementById('color-picker-popover');
+  const colorPickerNative = root.querySelector('#color-picker-native');
+  const colorPickerHex = root.querySelector('#color-picker-hex');
+  const colorPickerCopied = root.querySelector('#color-picker-copied');
+  const colorPickerR = root.querySelector('#color-picker-r');
+  const colorPickerG = root.querySelector('#color-picker-g');
+  const colorPickerB = root.querySelector('#color-picker-b');
+  const colorPickerPopover = root.querySelector('#color-picker-popover');
 
   colorPickerNative.addEventListener('input', () => {
     applyPickedColor(hexToRgba(colorPickerNative.value));
@@ -1195,7 +1292,7 @@ function bindDomOnce() {
   colorPickerG.addEventListener('change', applyRgbFields);
   colorPickerB.addEventListener('change', applyRgbFields);
 
-  document.getElementById('color-picker-close').addEventListener('click', closeColorPicker);
+  root.querySelector('#color-picker-close').addEventListener('click', closeColorPicker);
 
   // Close on outside click/Escape, not just the explicit close button -
   // standard popover behavior. Clicks inside #ramp-preview-row (Pro-only,
@@ -1205,26 +1302,38 @@ function bindDomOnce() {
   // "Generate ramp" button (present only when pixi-pro's Color Library
   // module registers it), so closing the color picker out from under an
   // in-progress ramp preview would be surprising.
-  document.addEventListener('pointerdown', (e) => {
+  // Unlike the document-level listeners guarded by globalListenersBound
+  // above/below, these two close over `colorPickerPopover` - a local,
+  // freshly looked-up from `root` on every bindDomOnce() call, not a
+  // shared module var - so binding only once-ever would leave them
+  // permanently wired to the *first* root's popover. Old copies are
+  // removed before adding new ones instead, tracked module-level (see
+  // colorPickerOutsideClickHandler/colorPickerEscapeHandler).
+  if (colorPickerOutsideClickHandler) document.removeEventListener('pointerdown', colorPickerOutsideClickHandler);
+  colorPickerOutsideClickHandler = (e) => {
     if (colorPickerPopover.classList.contains('hidden')) return;
     if (colorPickerPopover.contains(e.target)) return;
     if (e.target.closest('#foreground-swatch, #background-swatch')) return;
-    if (document.getElementById('ramp-preview-row')?.contains(e.target)) return;
+    if (root.querySelector('#ramp-preview-row')?.contains(e.target)) return;
     closeColorPicker();
-  });
-  document.addEventListener('keydown', (e) => {
+  };
+  document.addEventListener('pointerdown', colorPickerOutsideClickHandler);
+
+  if (colorPickerEscapeHandler) document.removeEventListener('keydown', colorPickerEscapeHandler);
+  colorPickerEscapeHandler = (e) => {
     if (e.key === 'Escape' && !colorPickerPopover.classList.contains('hidden')) closeColorPicker();
-  });
+  };
+  document.addEventListener('keydown', colorPickerEscapeHandler);
 
   // Foreground/Background: click either swatch to open the popover
   // targeting it; swap and reset-to-black/white.
-  foregroundSwatchEl = document.getElementById('foreground-swatch');
-  backgroundSwatchEl = document.getElementById('background-swatch');
+  foregroundSwatchEl = root.querySelector('#foreground-swatch');
+  backgroundSwatchEl = root.querySelector('#background-swatch');
 
   foregroundSwatchEl.addEventListener('click', () => openColorPicker('foreground', foregroundSwatchEl));
   backgroundSwatchEl.addEventListener('click', () => openColorPicker('background', backgroundSwatchEl));
 
-  document.getElementById('fg-bg-swap').addEventListener('click', () => {
+  root.querySelector('#fg-bg-swap').addEventListener('click', () => {
     const swapped = state.backgroundColor;
     state.backgroundColor = state.foregroundColor;
     state.foregroundColor = swapped;
@@ -1233,7 +1342,7 @@ function bindDomOnce() {
     syncActiveSwatch();
   });
 
-  document.getElementById('fg-bg-reset').addEventListener('click', () => {
+  root.querySelector('#fg-bg-reset').addEventListener('click', () => {
     state.foregroundColor = hexToRgba('#000000');
     state.backgroundColor = hexToRgba('#ffffff');
     updateColorPickerInputs(colorPickerTarget === 'background' ? state.backgroundColor : state.foregroundColor);
@@ -1241,11 +1350,11 @@ function bindDomOnce() {
     syncActiveSwatch();
   });
 
-  brushesPanelGrid = document.getElementById('brushes-panel-grid');
-  deleteBrushButton = document.getElementById('delete-brush-button');
-  const addBrushButton = document.getElementById('add-brush-button');
-  const brushSpacingInput = document.getElementById('brush-spacing');
-  const brushRotationInput = document.getElementById('brush-rotation');
+  brushesPanelGrid = root.querySelector('#brushes-panel-grid');
+  deleteBrushButton = root.querySelector('#delete-brush-button');
+  const addBrushButton = root.querySelector('#add-brush-button');
+  const brushSpacingInput = root.querySelector('#brush-spacing');
+  const brushRotationInput = root.querySelector('#brush-rotation');
 
   renderBrushesPanel();
   loadCustomBrushes(); // async; re-renders the panel once custom brushes arrive
@@ -1295,8 +1404,8 @@ function bindDomOnce() {
   // Whole right-sidebar visibility toggle (Color Library + Brushes +
   // Layers together), independent of each panel's own collapsed state
   // above - VSCode "toggle sidebar" style.
-  rightSidebar = document.getElementById('right-sidebar');
-  rightSidebarToggle = document.getElementById('right-sidebar-toggle');
+  rightSidebar = root.querySelector('#right-sidebar');
+  rightSidebarToggle = root.querySelector('#right-sidebar-toggle');
   rightSidebarToggle.addEventListener('click', () => {
     state.rightSidebarVisible = !state.rightSidebarVisible;
     setRightSidebarVisible(state.rightSidebarVisible);
@@ -1304,12 +1413,12 @@ function bindDomOnce() {
 
   // Zoom: +/- buttons and the three presets all just call the CanvasView
   // API directly - it owns all the actual zoom/pan math (see design.md).
-  zoomReadout = document.getElementById('zoom-readout');
-  document.getElementById('zoom-out-button').addEventListener('click', () => state.canvasView.zoomStep(-1));
-  document.getElementById('zoom-in-button').addEventListener('click', () => state.canvasView.zoomStep(1));
-  document.getElementById('zoom-preset-100').addEventListener('click', () => state.canvasView.setZoomPreset('100'));
-  document.getElementById('zoom-preset-fit').addEventListener('click', () => state.canvasView.setZoomPreset('fit'));
-  document.getElementById('zoom-preset-fill').addEventListener('click', () => state.canvasView.setZoomPreset('fill'));
+  zoomReadout = root.querySelector('#zoom-readout');
+  root.querySelector('#zoom-out-button').addEventListener('click', () => state.canvasView.zoomStep(-1));
+  root.querySelector('#zoom-in-button').addEventListener('click', () => state.canvasView.zoomStep(1));
+  root.querySelector('#zoom-preset-100').addEventListener('click', () => state.canvasView.setZoomPreset('100'));
+  root.querySelector('#zoom-preset-fit').addEventListener('click', () => state.canvasView.setZoomPreset('fit'));
+  root.querySelector('#zoom-preset-fill').addEventListener('click', () => state.canvasView.setZoomPreset('fill'));
 
   state.undoButton.addEventListener('click', performUndo);
   state.redoButton.addEventListener('click', performRedo);
@@ -1319,86 +1428,96 @@ function bindDomOnce() {
   // "=" key "+" lives on) to zoom in/out. Only while the Workspace screen
   // is actually visible, so none of this fires from the Gallery or New
   // Canvas screens.
-  document.addEventListener('keydown', (e) => {
-    if (!(e.metaKey || e.ctrlKey)) return;
-    if (document.getElementById('screen-workspace').classList.contains('hidden')) return;
-    const key = e.key.toLowerCase();
+  // Every document.addEventListener below reads only module-level `root`/
+  // `state`/`toolButtons`/`mergeShortcutHook`/`shiftHeld` (all reassigned
+  // fresh on the calls above/in initWorkspace), never a value local to
+  // this specific bindDomOnce() call - so one persistent copy of each
+  // always acts on whichever root/state is current, and binding only
+  // once-ever (globalListenersBound) is correct here, unlike the
+  // colorPickerPopover pair above. See globalListenersBound's doc comment.
+  if (!globalListenersBound) {
+    document.addEventListener('keydown', (e) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
+      const key = e.key.toLowerCase();
 
-    if (key === 'z' || key === 'y') {
-      e.preventDefault();
-      if (key === 'y' || (key === 'z' && e.shiftKey)) {
-        performRedo();
-      } else {
-        performUndo();
+      if (key === 'z' || key === 'y') {
+        e.preventDefault();
+        if (key === 'y' || (key === 'z' && e.shiftKey)) {
+          performRedo();
+        } else {
+          performUndo();
+        }
+        return;
       }
-      return;
-    }
 
-    if (key === '=' || key === '+') {
-      e.preventDefault();
-      state.canvasView.zoomStep(1);
-      return;
-    }
-    if (key === '-' || key === '_') {
-      e.preventDefault();
-      state.canvasView.zoomStep(-1);
-      return;
-    }
+      if (key === '=' || key === '+') {
+        e.preventDefault();
+        state.canvasView.zoomStep(1);
+        return;
+      }
+      if (key === '-' || key === '_') {
+        e.preventDefault();
+        state.canvasView.zoomStep(-1);
+        return;
+      }
 
-    // Cmd/Ctrl+D: deselect, same as Escape below - the common shortcut
-    // for this in Photoshop and similar tools. preventDefault matters
-    // here specifically: Ctrl/Cmd+D is the browser's "bookmark this
-    // page" shortcut otherwise.
-    if (key === 'd') {
-      e.preventDefault();
+      // Cmd/Ctrl+D: deselect, same as Escape below - the common shortcut
+      // for this in Photoshop and similar tools. preventDefault matters
+      // here specifically: Ctrl/Cmd+D is the browser's "bookmark this
+      // page" shortcut otherwise.
+      if (key === 'd') {
+        e.preventDefault();
+        clearSelection();
+        return;
+      }
+
+      // Cmd/Ctrl+E: merge layers - Pro-only (registerMergeShortcut above),
+      // a no-op keypress in Standard.
+      if (key === 'e') {
+        e.preventDefault();
+        if (mergeShortcutHook) mergeShortcutHook();
+      }
+    });
+
+    // Escape clears the active selection, regardless of which tool is
+    // current — unlike the shortcuts above, this one takes no modifier key.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
       clearSelection();
-      return;
-    }
+    });
 
-    // Cmd/Ctrl+E: merge layers - Pro-only (registerMergeShortcut above),
-    // a no-op keypress in Standard.
-    if (key === 'e') {
+    // Shift constrains the Rectangle tool to a square while held - tracked
+    // independently since it can toggle mid-drag, read from onDrawMove.
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Shift') shiftHeld = true;
+    });
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'Shift') shiftHeld = false;
+    });
+
+    // Bare-letter tool shortcuts (P/E/G/B/L/R/M/H — see each button's
+    // data-shortcut), Figma/Photoshop-style: no modifier key, so they must
+    // NOT fire while the user is typing into a text field (layer name,
+    // brush name, hex input, etc.) or they'd hijack every keystroke.
+    document.addEventListener('keydown', (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable)) {
+        return;
+      }
+      const key = e.key.toLowerCase();
+      const button = [...toolButtons].find((b) => b.dataset.shortcut?.toLowerCase() === key);
+      if (!button) return;
       e.preventDefault();
-      if (mergeShortcutHook) mergeShortcutHook();
-    }
-  });
-
-  // Escape clears the active selection, regardless of which tool is
-  // current — unlike the shortcuts above, this one takes no modifier key.
-  document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
-    if (document.getElementById('screen-workspace').classList.contains('hidden')) return;
-    clearSelection();
-  });
-
-  // Shift constrains the Rectangle tool to a square while held - tracked
-  // independently since it can toggle mid-drag, read from onDrawMove.
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Shift') shiftHeld = true;
-  });
-  document.addEventListener('keyup', (e) => {
-    if (e.key === 'Shift') shiftHeld = false;
-  });
-
-  // Bare-letter tool shortcuts (P/E/G/B/L/R/M/H — see each button's
-  // data-shortcut), Figma/Photoshop-style: no modifier key, so they must
-  // NOT fire while the user is typing into a text field (layer name,
-  // brush name, hex input, etc.) or they'd hijack every keystroke.
-  document.addEventListener('keydown', (e) => {
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (document.getElementById('screen-workspace').classList.contains('hidden')) return;
-    const active = document.activeElement;
-    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable)) {
-      return;
-    }
-    const key = e.key.toLowerCase();
-    const button = [...toolButtons].find((b) => b.dataset.shortcut?.toLowerCase() === key);
-    if (!button) return;
-    e.preventDefault();
-    button.click();
-  });
+      button.click();
+    });
+  }
 
   exportControls = initExport({
+    root,
     getProjectName: () => state.projectName,
     async onExport({ scale, format, skipBackground, filename }) {
       const blob = await state.layerStack.toPNGBlob({ scale, format, skipBackground });
@@ -1436,6 +1555,7 @@ function bindDomOnce() {
     commit(); // registerAfterCommit's hook (if any) handles a stale Layers thumbnail
   });
 
+  globalListenersBound = true;
 }
 
 /**
@@ -1594,16 +1714,54 @@ function redrawMovePreview() {
  * Safe to call repeatedly (once per project opened or created in a
  * session) — DOM listeners bind only once; subsequent calls just reset
  * the drawing state for the new project.
+ *
+ * `root` (embeddable-editor-api, Phase 3): the DOM root to resolve every
+ * `#id` lookup against - defaults to `document` (the standalone app's
+ * behavior, unchanged). A mounted instance passes its own host
+ * container's cloned Workspace markup instead; see this file's
+ * module-level `root` comment for the single-active-instance scope note.
+ *
+ * `onChange` (embeddable-integration-api, task 3.5): called from
+ * autoSave() on every committed drawing action - see that function's doc
+ * comment. Defaults to a no-op so the standalone app (js/app.js, which
+ * doesn't pass one) is unaffected; a mounted instance passes its own
+ * emitter's dispatch function (lib/pixi.js).
+ *
+ * `enabledTools`/`initialTool` (embeddable-integration-api, task 3.7):
+ * restricts which #tools-sidebar buttons are selectable. `enabledTools`
+ * defaults to `null`, meaning "no restriction" - every tool button stays
+ * visible and enabled, matching every pre-3.7 caller's behavior
+ * unchanged; a mounted instance passes lib/pixi.js's already-resolved
+ * `resolveEnabledTools(options)` array instead. `initialTool` (default
+ * `'pencil'`, matching this function's own long-standing hardcoded
+ * default) is the tool `state.currentTool` starts as - lib/pixi.js
+ * resolves it via `resolveInitialTool(enabledTools, 'pencil')` so a
+ * restricted set that excludes Pencil doesn't start on an unselectable
+ * tool; this function itself does no fallback computation; it just
+ * applies whatever it's given, keeping that decision logic in one place
+ * (lib/pixi.js, unit-tested) rather than duplicated here.
  */
-export function initWorkspace({ projectId, projectName, layerStack, canvasView, onRequestGallery }) {
+export function initWorkspace({
+  projectId,
+  projectName,
+  layerStack,
+  canvasView,
+  onRequestGallery,
+  onChange = () => {},
+  root: hostRoot = document,
+  enabledTools = null,
+  initialTool = 'pencil',
+}) {
+  root = hostRoot;
   state = {
     projectId,
     projectName,
     layerStack,
     canvasView,
     onRequestGallery,
+    onChange,
     undoStack: new UndoStack(),
-    currentTool: 'pencil',
+    currentTool: initialTool,
     foregroundColor: hexToRgba(PALETTE[0]),
     backgroundColor: hexToRgba('#ffffff'),
     currentBrush: allBrushes[0],
@@ -1623,17 +1781,17 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
     moveRegion: null,
     moveContent: null,
     moveContentEmpty: false,
-    undoButton: document.getElementById('undo-button'),
-    redoButton: document.getElementById('redo-button'),
-    exportButton: document.getElementById('export-button'),
-    selectionControlsEl: document.getElementById('selection-controls'),
-    selectionClearButton: document.getElementById('selection-clear-button'),
-    selectionDeleteButton: document.getElementById('selection-delete-button'),
+    undoButton: root.querySelector('#undo-button'),
+    redoButton: root.querySelector('#redo-button'),
+    exportButton: root.querySelector('#export-button'),
+    selectionControlsEl: root.querySelector('#selection-controls'),
+    selectionClearButton: root.querySelector('#selection-clear-button'),
+    selectionDeleteButton: root.querySelector('#selection-delete-button'),
   };
 
-  if (!domBound) {
+  if (domBoundRoot !== root) {
     bindDomOnce();
-    domBound = true;
+    domBoundRoot = root;
   }
 
   // The DOM (tool buttons, palette/brush swatches) is bound once and
@@ -1642,7 +1800,25 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   // different project left the *previous* project's tool/color highlighted
   // even though it no longer applied (e.g. the state was reset but a
   // stale-highlighted swatch/tool suggested otherwise).
-  toolButtons.forEach((b) => b.classList.toggle('active', b.dataset.tool === state.currentTool));
+  //
+  // `enabledTools` (task 3.7): re-applied here, not just once in
+  // bindDomOnce(), the same reasoning shouldShowGalleryChrome's toggle
+  // (lib/pixi.js's startWorkspace()) already relies on - this runs on
+  // every initWorkspace() call, including loadImage()'s re-init, while
+  // bindDomOnce() only runs once per root. A restricted button is both
+  // hidden (so a restricted sidebar visually "offers only the specified
+  // tools", per the spec) and disabled - disabled, not just hidden,
+  // because bindDomOnce()'s bare-letter keyboard shortcuts (P/E/G/B/L/R/M/
+  // H) find a button by data-shortcut and call button.click() directly;
+  // a disabled button's .click() does not dispatch a 'click' event (per
+  // the HTML spec), so disabling is what actually keeps a restricted
+  // tool unreachable via its keyboard shortcut, not merely invisible.
+  toolButtons.forEach((b) => {
+    const allowed = !enabledTools || enabledTools.includes(b.dataset.tool);
+    b.classList.toggle('hidden', !allowed);
+    b.disabled = !allowed;
+    b.classList.toggle('active', b.dataset.tool === state.currentTool);
+  });
   // Which color is currently selected resets, back to the first preset
   // (matching state.foregroundColor's default above).
   colorPickerTarget = 'foreground';
@@ -1651,24 +1827,21 @@ export function initWorkspace({ projectId, projectName, layerStack, canvasView, 
   updateFgBgSwatches();
   syncActiveSwatch();
   renderBrushesPanel();
-  brushesPanel.classList.toggle('hidden', state.currentTool !== 'brush');
-  closeBrushEditor();
-  document.getElementById('brush-spacing').value = '1';
-  document.getElementById('brush-rotation').value = '0';
+  root.querySelector('#brush-spacing').value = '1';
+  root.querySelector('#brush-rotation').value = '0';
   setRightSidebarVisible(true);
-  // Default tool is Pencil, so the panel starts visible; the slider/readout
-  // reset to match state.pencilSize's default (1).
-  pencilOptionsPanel.classList.remove('hidden');
-  document.getElementById('pencil-size-slider').value = '1';
-  document.getElementById('pencil-size-readout').textContent = '1px';
-  // Neither Rectangle nor Selection is the default tool, so this starts
-  // hidden too.
-  squareConstraintPanel.classList.add('hidden');
+  // Every tool-scoped panel/mode toggle (Brushes, pencil-options,
+  // square-constraint, pan/move mode) follows state.currentTool alone -
+  // shared with the tool-button click handler via applyToolScopedUI()
+  // (task 3.7 code review: this used to be its own hardcoded-Pencil copy,
+  // which drifted out of sync once initialTool could start on a tool
+  // other than Pencil).
+  applyToolScopedUI();
+  // Pencil/Eraser's Size slider/readout still reset to match
+  // state.pencilSize's default (1) regardless of which tool starts active.
+  root.querySelector('#pencil-size-slider').value = '1';
+  root.querySelector('#pencil-size-readout').textContent = '1px';
   squareConstraintToggle.classList.remove('active');
-  // Hand tool is never the default (Pencil is) - every freshly opened
-  // project starts with single-pointer drag drawing, not panning.
-  canvasView.setPanMode(false);
-  canvasView.setMoveMode(false);
 
   for (const fn of workspaceResetListeners) fn({ width: layerStack.width, height: layerStack.height, name: projectName });
   exportControls.close();

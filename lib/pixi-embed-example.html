@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pixi embed example</title>
+  <!-- Not part of the shipped app (task 3.10) - never linked from
+       index.html or any build/serve path the standalone app uses. Exists
+       purely as a real host page exercising lib/pixi.js's mount API
+       surface end to end, and as the fixture task 3.11's Playwright smoke
+       test drives directly. Open it by serving the repo root (see
+       README.md's "python3 -m http.server 8000") and navigating to
+       /lib/pixi-embed-example.html - the ES module imports below need
+       http(s), not file://. -->
+  <!-- Matches this page's own light background (#f4f4f5, set below) - the
+       same reason index.html sets one for its dark background. -->
+  <meta name="theme-color" content="#f4f4f5" />
+  <link rel="stylesheet" href="../style.css" />
+  <!-- Same reason index.html has this: js/persistence.js (which lib/pixi.js
+       calls into) imports the bare specifier "dexie", and this example
+       intentionally uses the default Dexie-backed adapter rather than a
+       custom options.storage (see the design note below) - so this host
+       page needs the same resolution index.html provides. -->
+  <script type="importmap">
+    { "imports": { "dexie": "https://esm.sh/dexie@4" } }
+  </script>
+  <!-- Material Symbols, for the mounted canvas's own tool/undo/redo icons
+       (style.css). Not needed for anything on this page outside the
+       mounted instance - see index.html's own copy of this link for why
+       icon_names must stay alphabetical. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check_box,check_box_outline_blank,close,colorize,crop_free,dark_mode,delete,dock_to_right,download,edit,expand_more,format_color_fill,home,horizontal_rule,ink_eraser,light_mode,lock,rectangle,redo,remove,restart_alt,swap_horiz,undo,visibility,visibility_off" />
+  <!-- No js/theme-boot.js here (unlike index.html) - style.css's :root
+       default (dark) already covers an un-set data-theme, and this page
+       is about the mount API, not the theming machinery a real host would
+       bring on its own terms. -->
+  <style>
+    /* This page's own chrome - deliberately styled distinctly from Pixi's
+       own dark UI (a light host page around a dark-mounted canvas) so
+       screenshots/inspection make obvious which DOM belongs to the host
+       page and which belongs to the mounted instance. */
+    :root {
+      color-scheme: light;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f4f5;
+      color: #18181b;
+    }
+    h1 {
+      font-size: 18px;
+      margin: 0 0 4px;
+    }
+    p.lede {
+      margin: 0 0 20px;
+      color: #52525b;
+      max-width: 60em;
+    }
+    .layout {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .host-panel {
+      flex: 1 1 480px;
+      min-width: 320px;
+    }
+    #pixi-host {
+      width: 100%;
+      height: 480px;
+      border: 1px solid #d4d4d8;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #1c1c1e; /* matches style.css's dark :root default, so
+        there's no flash of host-page-light behind the mounted canvas
+        while mount() is still building its DOM */
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0;
+    }
+    button {
+      font: inherit;
+      padding: 6px 12px;
+      border: 1px solid #d4d4d8;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    button:hover:not(:disabled) {
+      background: #f4f4f5;
+      border-color: #a1a1aa;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+    #status-line {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12.5px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: #e4e4e7;
+      color: #27272a;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    #status-line[data-kind="error"] {
+      background: #fee2e2;
+      color: #7f1d1d;
+    }
+    .side-panel {
+      flex: 0 0 220px;
+    }
+    .side-panel h2 {
+      font-size: 13px;
+      margin: 0 0 8px;
+    }
+    #captured-preview {
+      display: block;
+      width: 100%;
+      max-width: 220px;
+      image-rendering: pixelated;
+      border: 1px solid #d4d4d8;
+      border-radius: 6px;
+      background:
+        linear-gradient(45deg, #e4e4e7 25%, transparent 25%),
+        linear-gradient(-45deg, #e4e4e7 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #e4e4e7 75%),
+        linear-gradient(-45deg, transparent 75%, #e4e4e7 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    }
+    #captured-caption {
+      margin-top: 6px;
+      color: #52525b;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pixi Embed Example</h1>
+  <p class="lede">
+    A real host page exercising <code>lib/pixi.js</code>'s mount API:
+    <code>mount()</code> into the panel below, <code>loadImage()</code> a
+    sample PNG, draw on it, then use this page's own buttons (not any
+    control inside the mounted canvas) to <code>getImage()</code> and
+    <code>destroy()</code>. The status line reflects the <code>'change'</code>
+    and <code>'error'</code> events fired via <code>instance.on()</code>.
+  </p>
+
+  <div class="layout">
+    <div class="host-panel">
+      <div id="pixi-host"></div>
+      <div class="controls">
+        <button id="load-sample-btn">Load Sample Image</button>
+        <button id="get-image-btn">Get Image</button>
+        <button id="destroy-btn">Destroy</button>
+      </div>
+      <div id="status-line" aria-live="polite">Mounting…</div>
+    </div>
+    <div class="side-panel">
+      <h2>Last <code>getImage()</code> Result</h2>
+      <img id="captured-preview" alt="(nothing captured yet)" width="220" height="220" />
+      <div id="captured-caption" aria-live="polite">Click “Get Image” after drawing a stroke.</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { Pixi } from './pixi.js';
+
+    // A tiny (8x8, checkerboard) PNG embedded as a base64 data URL - kept
+    // inline rather than a separate .png file so this example stays a
+    // single self-contained page a host can copy wholesale. Read back via
+    // fetch() + .blob() rather than hand-decoding the base64 here, since
+    // that's the exact PNG-Blob shape instance.loadImage() documents
+    // accepting (see lib/pixi.js's decodeToImageData doc comment) - this
+    // exercises the same code path a host loading a real uploaded/fetched
+    // PNG would.
+    const SAMPLE_PNG_DATA_URL =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAGUlEQVR4nGN4EVv6HwRw0Qz4JEE0w7AwAQCsKtahUPUibAAAAABJRU5ErkJggg==';
+
+    const statusEl = document.getElementById('status-line');
+    const loadSampleBtn = document.getElementById('load-sample-btn');
+    const getImageBtn = document.getElementById('get-image-btn');
+    const destroyBtn = document.getElementById('destroy-btn');
+    const capturedPreview = document.getElementById('captured-preview');
+    const capturedCaption = document.getElementById('captured-caption');
+
+    function setStatus(message, kind = 'info') {
+      statusEl.textContent = message;
+      if (kind === 'error') {
+        statusEl.setAttribute('data-kind', 'error');
+      } else {
+        statusEl.removeAttribute('data-kind');
+      }
+    }
+
+    // A real host element already in this page's own DOM (not one created
+    // by script) - mount() clears and takes over its contents.
+    const hostElement = document.getElementById('pixi-host');
+
+    // Design note (task 3.10, per design.md's Risks section locking the
+    // UI-options surface to "only what's specified"): this example
+    // intentionally covers only the flow 3.10's own task wording names -
+    // mount() -> loadImage() -> edit -> getImage() -> destroy(), plus the
+    // 'change'/'error' events this prompt explicitly asked to see wired to
+    // something visible, since a host integrating this API needs those to
+    // know when to react and when something went wrong. It deliberately
+    // does NOT demonstrate options.ui.onSave/onCancel (task 3.8) or a
+    // custom options.storage adapter (task 3.9): both are already
+    // documented in full via their own doc comments in lib/pixi.js (see
+    // mount()'s doc comment and save()/cancel()'s own), and adding them
+    // here would be exactly the kind of ad-hoc surface-growth design.md's
+    // Risks section warns against - applied to "what one example
+    // demonstrates", not just to lib/pixi.js's own code. A second,
+    // separate example would be the right place for those, if ever
+    // needed - not more options bolted onto this one's already-complete
+    // minimal flow.
+    const instance = Pixi.mount(hostElement, { width: 32, height: 32, name: 'Embed example' });
+
+    instance.on('change', () => {
+      setStatus(`change: canvas edited + autosaved at ${new Date().toLocaleTimeString()}`);
+    });
+    instance.on('error', (err) => {
+      setStatus(`error: ${err?.message ?? err}`, 'error');
+    });
+
+    setStatus('Mounted. Draw on the canvas, or click “Load Sample Image” first.');
+
+    loadSampleBtn.addEventListener('click', async () => {
+      try {
+        const response = await fetch(SAMPLE_PNG_DATA_URL);
+        const blob = await response.blob();
+        await instance.loadImage(blob);
+        setStatus('loadImage(): sample 8x8 checkerboard PNG loaded.');
+      } catch (err) {
+        setStatus(`loadImage() failed: ${err?.message ?? err} - reload this page and try again.`, 'error');
+      }
+    });
+
+    // Tracks the previous preview's object URL so repeated "Get Image"
+    // clicks don't leak one blob: URL per click for the rest of the page's
+    // lifetime (found by this task's own code review) - revoked right
+    // before being replaced, not after, so there's never a window where
+    // two live object URLs exist for the same <img>.
+    let capturedPreviewUrl = null;
+
+    getImageBtn.addEventListener('click', async () => {
+      try {
+        const blob = await instance.getImage();
+        if (capturedPreviewUrl) URL.revokeObjectURL(capturedPreviewUrl);
+        capturedPreviewUrl = URL.createObjectURL(blob);
+        capturedPreview.src = capturedPreviewUrl;
+        // Alt text tracked in step with src (found by this task's own
+        // web-design-guidelines pass) - without this, a screen reader
+        // keeps announcing "(nothing captured yet)" even after a real PNG
+        // is showing.
+        capturedPreview.alt = `Captured PNG, ${blob.size} bytes`;
+        capturedCaption.textContent = `getImage(): ${blob.size} byte PNG, captured ${new Date().toLocaleTimeString()}`;
+        setStatus(`getImage(): captured a ${blob.size} byte PNG.`);
+      } catch (err) {
+        setStatus(`getImage() failed: ${err?.message ?? err} - reload this page and try again.`, 'error');
+      }
+    });
+
+    destroyBtn.addEventListener('click', () => {
+      instance.destroy();
+      loadSampleBtn.disabled = true;
+      getImageBtn.disabled = true;
+      destroyBtn.disabled = true;
+      setStatus('destroy(): instance torn down, host element emptied. Reload this page to mount again.');
+    });
+  </script>
+</body>
+</html>

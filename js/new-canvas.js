@@ -1,4 +1,4 @@
-import { LayerStack } from './layers.js';
+import { LayerStack } from '../lib/pixel-engine/layers.js';
 import { createProject } from './persistence.js';
 
 const PRESETS = [16, 32, 64, 128];

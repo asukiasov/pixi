@@ -3,7 +3,7 @@ import { initWorkspace } from './workspace.js';
 import { CanvasView } from './canvas-view.js';
 import { initGallery } from './gallery.js';
 import { loadProject } from './persistence.js';
-import { LayerStack } from './layers.js';
+import { LayerStack } from '../lib/pixel-engine/layers.js';
 import { parseRoute, navigate, onRouteChange } from './router.js';
 import { VERSION } from './version.js';
 import { initMagneticHover } from './magnetic-hover.js';

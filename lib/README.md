@@ -8,6 +8,13 @@ you need to use it is on this page. Last verified against commit
 [`706e975`](https://github.com/asukiasov/pixi/commit/706e97521be7784d6cfd73e29b76d14da4b5ff0c)
 (31 commits after tag `v0.3.0`, not yet re-tagged).
 
+**Stability**: there's no semver commitment on this API yet — no
+`CHANGELOG`, no published version number distinct from the repo's own git
+tags. Treat the "last verified against commit" line above as the actual
+contract: if you need certainty a future commit won't change `mount()`'s
+behavior out from under you, pin your copy of the repo to that commit (or
+the nearest tag at/before it) rather than tracking `main`.
+
 **License**: MIT, matching the repo root [`LICENSE`](../LICENSE). See
 [License and distribution](#license-and-distribution) below for exactly what
 that permits, and how it differs from Pixi Pro.
@@ -20,6 +27,15 @@ working copy is what the worked example below does: clone or copy the whole
 Pixi repo and serve it as static files (`python3 -m http.server 8000`, no
 build step — see the repo root [`README.md`](../README.md#quick-start)) and
 import `lib/pixi.js` from a page anywhere under that served root.
+
+**No bundler support today.** This is a deliberate project-wide stance (see
+the repo root `CLAUDE.md`'s non-goals), not a gap waiting to be filled:
+`lib/pixi.js` and everything it imports are plain ES modules loaded via
+relative paths and an import map, not an npm package. If your host app is
+built with webpack/Vite/etc., the practical path is serving Pixi's file
+tree as static assets alongside your build output and importing
+`lib/pixi.js` by URL, the same way `pixi-embed-example.html` does — not
+`npm install`-ing it into your bundle.
 
 ## Worked example
 
@@ -48,16 +64,44 @@ const instance = Pixi.mount(document.getElementById('pixi-host'), {
 });
 ```
 
-Only one instance (mounted or the standalone app) can be active on a page at
-a time — this is inherited from `js/workspace.js`'s own single-active-
-instance design, not a new limitation `mount()` introduces. Re-mounting into
-the same or a different host element after `destroy()` is fully supported.
+The canvas is always a square pixel grid, `width` × `height` in whole
+pixels, with `1`–`256` a hard ceiling on each (matches the `min`/`max` on
+the standalone app's own custom-size inputs) — there's no forced aspect
+ratio, but there's also no path to a canvas larger than 256×256 today. If
+your use case (e.g. avatars) wants a circular/cropped presentation, that's
+a host-side concern layered on top of the exported square PNG — `mount()`
+has no crop/mask option of its own.
+
+**Exactly one instance (mounted or the standalone app) can be active on the
+whole page at a time** — not one per host element. Mounting a second
+instance into a different container while the first is still active isn't
+supported; `destroy()` the first one first. This is inherited from
+`js/workspace.js`'s own single-active-instance design, not a new limitation
+`mount()` introduces. Re-mounting into the same or a different host element
+after `destroy()` is fully supported.
+
+The touch/pen/mouse input itself is unified — `mount()` reuses the same
+`CanvasView` the standalone app uses, which binds Pointer Events (not
+separate mouse/touch handlers), including two-finger pan/pinch for the Hand
+tool. No separate mobile setup is needed.
+
+`hostElement` gets no layout contract beyond "an element to replace the
+contents of" — `mount()` doesn't read or enforce a size on it, and the
+mounted editor doesn't listen for host-element resize events. Give it
+whatever CSS sizing you want; the editor's own internal layout (toolbar,
+canvas, side panels) is what actually determines its rendered footprint,
+not `hostElement`'s box.
 
 Your host page must also load Pixi's stylesheet (`<link rel="stylesheet"
 href=".../style.css">`) — `mount()` does not inject it, since you may want to
 scope or bundle it differently — and the same Material Symbols icon font
 `index.html` uses, for the tool/undo/redo icons to render (see the worked
-example's `<head>` for both).
+example's `<head>` for both). **`style.css` is not scoped or prefixed** — it
+uses ordinary global selectors (`:root`, `*`, `body`, etc.), the same as the
+standalone app's own page. Loading it into a host page with other global
+styles can collide either direction; wrapping `hostElement` in an iframe,
+or scoping `style.css` yourself (a CSS layer, a build-time prefixer) before
+you load it, is on you today — `mount()` doesn't do either for you.
 
 ### `instance.destroy()`
 
@@ -219,6 +263,16 @@ Malformed adapters throw immediately from `mount()` rather than failing
 silently later — unlike `options.ui.*`, a broken storage adapter would
 otherwise mean a host's users lose work without any signal.
 
+**The default adapter autosaves into the host page's own IndexedDB, under
+the host page's own origin** — every committed drawing action persists
+there, same as the standalone app. That's the right default for embedding
+the full standalone experience, but it's very likely the wrong default for
+a narrower embed (e.g. an avatar picker inside someone else's product):
+without passing `options.storage: createInMemoryAdapter()` explicitly,
+you'll be silently writing every user's in-progress drawing into your
+host's IndexedDB, indistinguishable from a real saved project. Decide this
+deliberately rather than inheriting the default.
+
 ```js
 import { createInMemoryAdapter } from './lib/storage-adapter.js';
 
@@ -246,7 +300,24 @@ If you supply your own `options.storage` adapter, `js/persistence.js`'s
 Dexie-backed path is never reached for that instance, and your host page
 does not need this import map or the Dexie CDN at all.
 
-## License and distribution
+## Known limitations
+
+**Accessibility**: the mounted editor is a canvas-based drawing surface with
+no keyboard-only or screen-reader-driven path to any tool, color, or
+drawing action today — every interaction goes through pointer events on the
+canvas. If your host page has an accessibility requirement, treat the
+mounted editor as a mouse/touch/pen-only surface until this changes.
+
+**Pro tools aren't reachable from Standard, but the hook surface they plug
+into ships in Standard's own code.** `js/workspace.js` (which `mount()`
+reuses) exposes a handful of registration hooks —
+`registerColorSequenceProvider` and similar — that exist so Pixi Pro's
+private repo can attach its extra panels (Layers, Color Library, symmetry
+drawing) at runtime. Standard never ships Pro's actual implementations
+behind those hooks, so with only this repo loaded they're inert no-ops, not
+a code path that can invoke a Pro feature. But it's not literally "two
+disconnected codebases with zero shared runtime" either — the hook
+registry itself is part of what you're embedding.
 
 **Confirmed (task 4.3):** the repo root [`LICENSE`](../LICENSE) is the
 standard MIT license, with no additional restriction or field-of-use clause.

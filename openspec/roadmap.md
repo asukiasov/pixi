@@ -241,11 +241,56 @@ becomes the next priority:
   heavyweight brush-picking interface), not a plan to remove the current
   one before a replacement exists. Needs its own brainstorming/design pass
   before an `/opsx:propose` — not scoped beyond this note yet.
-- **UI polish pass — refine the design window by window, panel by
-  panel.** Raised directly on 2026-08-17, after 2m/2n shipped and real
-  usage surfaced rough edges. An open-ended initiative, not one change -
-  work through it screen by screen, panel by panel, pulling in one
-  design/bug item at a time rather than batching.
+- **Scope `style.css` to the mounted editor** — `lib/pixi.js`'s
+  `Pixi.mount()` currently requires loading Pixi's global, unscoped
+  stylesheet (`:root`/`*`/`body` selectors, no `.pixi-`-style prefix, no
+  shadow DOM) into the host page. Fine for the standalone app, real risk
+  for embedding: a host with its own global styles can collide with it
+  either direction, and today the only mitigation is documented workaround
+  (iframe the host element, or prefix `style.css` yourself before loading
+  it — see `lib/README.md`). Worth doing once there's an actual embedding
+  consumer hitting this, rather than speculatively — scoping (CSS layers,
+  a build-time prefix pass, or moving the mounted markup into a shadow
+  root) is real work and the mount API has no confirmed embedder yet to
+  validate the approach against. Raised 2026-08-22 from a junior-dev audit
+  of `lib/README.md`.
+- **Keyboard/screen-reader support for the drawing tools** — the mounted
+  and standalone editors are both pointer-only today: no keyboard path to
+  select a tool, pick a color, or draw, and no screen-reader-facing
+  structure around the canvas. Documented as a known limitation in
+  `lib/README.md` rather than fixed, since it's a genuinely large,
+  open-ended initiative (equivalent in scope to a full a11y pass across
+  every tool and panel, not a one-off fix) with no specific product need
+  driving it yet. Revisit if an actual accessibility requirement shows up
+  (a customer, an embedding host, a legal requirement) rather than
+  speculatively. Raised 2026-08-22 from a junior-dev audit of
+  `lib/README.md`.
+- **Smartphone interface — responsive design architecture.** The current
+  Workspace layout (docked left tool sidebar, docked right Layers/Color
+  Library sidebar, fixed top bar) is built for desktop/tablet-width
+  screens. Touch/pen *input* already works end to end (Pointer Events,
+  two-finger pan/pinch — see `lib/README.md`), but the *layout* doesn't
+  reflow for a phone-sized viewport: nothing collapses sidebars into a
+  bottom sheet or off-canvas drawer, nothing resizes the canvas/toolbar
+  proportions below tablet width. This is a real architecture change, not
+  a CSS tweak — closer in scope to a phase than a single change (touches
+  every panel: tools sidebar, right sidebar, top bar, zoom controls, New
+  Canvas/Gallery screens). Needs its own brainstorming/design pass to
+  settle the actual mobile layout (which panels become sheets/drawers, at
+  what breakpoint, whether Gallery/New Canvas need their own mobile
+  treatment) before an `/opsx:propose`. Raised 2026-08-22.
+- **Custom theming/icons/styling** — a supported way to override colors,
+  the icon set, and general styling without forking `style.css` line by
+  line, for both the standalone app (a user-facing theme option beyond
+  the existing light/dark/system toggle) and `Pixi.mount()` embedders (who
+  today can only load Pixi's stylesheet as-is or override it with brittle,
+  unscoped CSS overrides — see the `style.css` scoping item above, which
+  this would likely build on top of once that lands: a scoped stylesheet
+  is what makes safe, contained overrides possible in the first place).
+  Shape still open — CSS custom properties for a theme token set, a
+  swappable icon font/sprite instead of the hardcoded Material Symbols
+  subset, an `options.theme` mount() option — needs its own design pass
+  before scoping. Raised 2026-08-22.
 
   Resolved so far:
   - ~~`2n`'s Import icon rendered broken (overlapping "I"/"MAG" text)~~ -

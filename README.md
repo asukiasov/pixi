@@ -4,9 +4,13 @@ A browser-based pixel art drawing tool. Fixed small canvas sizes
 (16/32/64/128px, or custom up to 256px), layers, a full drawing toolset,
 local persistence, and export — no animation/frame timeline in this phase.
 
-This is a standalone web app, not a library — there's no npm package, no
-mount API, and no framework component to embed in another codebase. Run
-it as-is (see Running it locally) or fork the repo.
+This is primarily a standalone web app — no npm package, no build step, no
+framework. Run it as-is (see Quick Start below) or fork the repo. Two parts
+of it are also usable as an embeddable library, independent of the app
+shell: [`lib/pixel-engine/`](lib/pixel-engine/README.md) (the pixel data
+model — engine, layers, undo — with no other Pixi files required) and
+[`lib/pixi.js`](lib/README.md) (`Pixi.mount()`, a full drawing editor you
+can mount into another page's container element).
 
 ![Pixi's Workspace screen: a pixel art scene open with the Layers panel and Color Library visible in the right sidebar](docs/screen.png)
 
@@ -153,6 +157,10 @@ index.html   Single-page shell: Gallery / New Canvas / Workspace screens
 style.css    All styles, no preprocessor
 js/          ES modules, one per concern (engine, layers, workspace, ...)
 test/        node --test unit tests, mirrors js/
+lib/         Embeddable library: pixel-engine/ (pixel data model),
+             storage-adapter.js and pixi.js (Pixi.mount()), and a worked
+             example (pixi-embed-example.html) - see lib/README.md and
+             lib/pixel-engine/README.md
 openspec/    Requirements (specs/), in-flight change proposals (changes/),
              and the phase-by-phase roadmap.md - see CLAUDE.md for the process
 docs/        Reference docs that don't belong in openspec/

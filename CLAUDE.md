@@ -56,6 +56,32 @@ different halves of the work and must not be conflated.
   substitute for it. It's also part of `auditing-tool-improvements`'s
   screen-by-screen heuristics pass.
 
+## Subagent dispatch defaults
+
+Model/tier selection logic lives in superpowers' `subagent-driven-development`
+skill (Model Selection section) — this section only maps Pixi's own task
+shapes onto it, so dispatch doesn't default to `general-purpose` by habit.
+
+Don't dispatch a subagent for something completable in 1-2 direct tool calls
+(a single grep, a one-line edit) — dispatch overhead isn't worth it below that.
+
+`haiku` is a false economy outside pure transcription: cheap models routinely
+take 2-3× the turns on multi-step or ambiguous work, costing more overall
+than `sonnet` finishing in fewer turns. Floor at `sonnet` for anything beyond
+a fully-specified, single-file mechanical task.
+
+| Task shape in this repo | Agent | model= |
+|---|---|---|
+| File moves/renames, import-path updates, wiring a fully-specified interface (e.g. OpenSpec "restructure" phases) | `mechanical-implementer` | `haiku` |
+| New public API design, cross-file integration (e.g. `Pixi.mount()`, storage adapter wiring) | `general-purpose` | `sonnet` |
+| One independent bug/test-file fix among several dispatched together | `parallel-fixer` | `sonnet` |
+| Repo-wide search ("where is X used/defined") | `Explore` | `sonnet` |
+| Diff review before merge | `code-review` skill, scaled to diff risk | `sonnet` (bump to `opus` for high-risk diffs) |
+| Architecture/design decisions, final whole-branch review | `general-purpose` or `Plan` | `opus` |
+
+Always pass `model` explicitly on dispatch — an omitted model inherits the
+session's model, usually the most expensive, silently defeating this table.
+
 ## Rule of thumb
 
 1. New feature / behavior change → `/opsx:propose` first, always.

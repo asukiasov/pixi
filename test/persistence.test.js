@@ -15,6 +15,7 @@ import {
   _clearAllForTests,
   _setStorageAdapter,
   _resetStorageAdapter,
+  _activeAdapter,
 } from '../js/persistence.js';
 import { LayerStack } from '../lib/pixel-engine/layers.js';
 import { createInMemoryAdapter } from '../lib/storage-adapter.js';
@@ -380,5 +381,45 @@ describe('storage adapter substitution', () => {
     _resetStorageAdapter();
     const stillThere = await loadProject(dexieProject.id);
     assert.ok(stillThere, 'Dexie project should not have been cleared by a call made while a different adapter was active');
+  });
+
+  // Regression test (C-1, found by code review): a narrower case than the
+  // "write enqueued before an adapter swap" test above. This reproduces
+  // workspace.js's actual autoSave() shape - a caller that does its own
+  // async work (there, LayerStack.toPNGBlob(); here, a stand-in delay)
+  // *before* ever calling saveProject() at all. If the adapter swap (e.g.
+  // lib/pixi.js's destroy() -> _resetStorageAdapter()) lands during that
+  // gap, saveProject() must still land the write on the adapter that was
+  // active when the caller's async work *began*, not whatever's active by
+  // the time saveProject() finally gets called - the entire point of
+  // autoSave() capturing via _activeAdapter() before its own await.
+  test('a write whose caller captures the adapter before its own async gap is not rerouted by a swap during that gap', async () => {
+    const stack = new LayerStack(2, 2, 'transparent');
+    const created = await createProject(stack, 'Original'); // via the default (Dexie) adapter
+
+    stack.getActiveLayer().engine.setPixel(0, 1, [1, 2, 3, 255]);
+
+    // Mirrors workspace.js's autoSave(): capture the active adapter, then
+    // await some caller-side async work (a stand-in for toPNGBlob()),
+    // and only afterward call saveProject() with the captured adapter.
+    const adapter = _activeAdapter();
+    const asyncGap = Promise.resolve().then(() => new Promise((resolve) => setTimeout(resolve, 0)));
+
+    // Simulates destroy() landing mid-gap, before saveProject() is even
+    // called - a narrower/earlier race than an adapter swap racing an
+    // already-queued write.
+    _setStorageAdapter(createInMemoryAdapter());
+
+    await asyncGap;
+    await saveProject(created.id, stack, null, adapter);
+
+    _resetStorageAdapter();
+    const loaded = await loadProject(created.id);
+    const restored = LayerStack.fromProjectRecord(loaded);
+    assert.deepEqual(
+      restored.getActiveLayer().engine.getPixel(0, 1),
+      [1, 2, 3, 255],
+      'the write should have landed on the adapter captured before the async gap, not the adapter swapped in during it'
+    );
   });
 });

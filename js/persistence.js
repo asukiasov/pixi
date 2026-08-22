@@ -106,6 +106,26 @@ export function _resetStorageAdapter() {
 }
 
 /**
+ * Returns whichever adapter is active right now. Exists so a caller that's
+ * about to do its own async work *before* calling saveProject() (e.g.
+ * workspace.js's autoSave(), which awaits LayerStack.toPNGBlob() first) can
+ * pin down "the adapter in effect when this write was requested" up front
+ * and pass it into saveProject()'s `adapter` param - the same
+ * capture-before-the-gap shape as the `const adapter = activeAdapter;`
+ * lines already in this file, just moved to before an async gap that lives
+ * outside this module instead of before `enqueueWrite`.
+ *
+ * Without this, a `destroy()` (or any other `_setStorageAdapter`/
+ * `_resetStorageAdapter` call) landing while that caller's own async step
+ * is still in flight would have saveProject() read the *post-swap*
+ * `activeAdapter` when it's finally invoked - silently rerouting a write
+ * the caller began under one adapter to a different one.
+ */
+export function _activeAdapter() {
+  return activeAdapter;
+}
+
+/**
  * Creates a new project record from a LayerStack and writes it immediately
  * — the record exists before any drawing happens, per the local-persistence
  * spec's "Project created alongside a new canvas" scenario.
@@ -172,8 +192,20 @@ export async function createProjectWithId(id, layerStack, name = 'Untitled', thu
  * rather than creating a new record), since the adapter interface's
  * `save()` is a full-record upsert and would otherwise create a
  * partial record from `updates` alone.
+ *
+ * `adapter` defaults to whatever's active *when this function is called*
+ * (same as every other CRUD function here), which is correct for callers
+ * that invoke saveProject() synchronously after deciding to save. It's an
+ * explicit param, not always read fresh from module state, because a
+ * caller that does its own async work *before* calling saveProject() (e.g.
+ * workspace.js's autoSave(), which awaits LayerStack.toPNGBlob() first)
+ * needs to pin down the adapter *before* that gap via `_activeAdapter()`
+ * and pass it in - otherwise a `destroy()`/`_setStorageAdapter()` call
+ * landing during that caller's own await would have this default
+ * parameter resolve to the *post-swap* adapter instead, silently
+ * rerouting the write (see `_activeAdapter()`'s doc comment).
  */
-export async function saveProject(id, layerStack, thumbnail = null) {
+export async function saveProject(id, layerStack, thumbnail = null, adapter = activeAdapter) {
   // A null/undefined id (a mounted instance with no project record yet —
   // see lib/pixi.js — auto-saves against one until a host explicitly
   // creates/saves one) is definitionally nonexistent, same as this
@@ -182,13 +214,13 @@ export async function saveProject(id, layerStack, thumbnail = null) {
   // Table.get(), which throws on null/undefined instead of resolving to
   // undefined the way a merely-unknown id does.
   if (id == null) return;
-  // Captured now, not read inside the queued task (found by code review):
-  // the task may sit queued behind an earlier write for the same id and
-  // not actually run until later - if _setStorageAdapter() is called in
-  // between, a task that read the module-level `activeAdapter` at
-  // execution time would silently write to whichever adapter is active
-  // *then*, not the one active when this call was made.
-  const adapter = activeAdapter;
+  // `adapter` above is already captured (either by the caller via
+  // `_activeAdapter()`, or by this default parameter) before this queued
+  // task runs - not read inside the task itself. Same reasoning as
+  // createProjectWithId/renameProject/deleteProject: the task may sit
+  // queued behind an earlier write for the same id and not actually run
+  // until later, so reading module-level `activeAdapter` at *execution*
+  // time would silently write to whichever adapter is active *then*.
   return enqueueWrite(id, async () => {
     const existing = await adapter.load(id);
     if (!existing) return;

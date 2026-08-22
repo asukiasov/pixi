@@ -62,7 +62,26 @@ repo). Nothing currently stops a future PR from adding such an import
 except human review. When adding to `lib/`, grep the new file for any
 `from '../js` or `from './js` import before committing.
 
-**Status**: verified holding with zero exceptions as of this revision.
+**Status**: holding with one deliberate, documented exception —
+`lib/pixi.js`. That file imports `CanvasView`, `initWorkspace`, and three
+`persistence.js` exports from `../js/`, sanctioned by the
+`embeddable-integration-api` change's `design.md` (Decisions section,
+"New mount API entry point lives at `lib/pixi.js`"): `lib/pixi.js` is
+the mount API's outermost, optional layer, reusing `js/`'s existing
+rendering/tool/UI code rather than reimplementing it, and that
+dependency direction was judged acceptable specifically because nothing
+in `js/` or `lib/pixel-engine/` imports back from `lib/pixi.js` — the
+one-way direction the rule exists to protect still holds at the
+`js/`/`lib/pixel-engine/` boundary, just not for `lib/pixi.js` itself.
+
+**Consequence**: this means `lib/pixi.js` is *not* standalone-copyable
+the way the rest of `lib/` is — the "why" given above for this rule
+("`lib/` exists specifically to be copied out of the repo and used
+standalone") no longer applies to `lib/pixi.js`; copying it out without
+also bringing the `js/` modules it depends on will not work. The rest of
+`lib/` (`lib/pixel-engine/`, `lib/storage-adapter.js`) is unaffected and
+remains genuinely standalone. Zero exceptions still holds for every
+other `lib/` file as of this revision.
 
 ## Rule: `lib/` modules are DOM-optional except at named, narrow points — the list of those points was incomplete
 
@@ -71,7 +90,7 @@ except human review. When adding to `lib/`, grep the new file for any
 the *only* DOM-touching methods in `lib/`. A full grep of `lib/**/*.js`
 (non-test) for `document.`/`window.`/`navigator.`/`localStorage`/
 `matchMedia` found the DOM dependency actually enters through a private
-helper, `#compositeSubset` (`lib/pixel-engine/layers.js:456,465`), which
+helper, `#compositeSubset` (`lib/pixel-engine/layers.js:494,503`), which
 is called by more than the two named public methods:
 
 - `LayerStack.composite()` — named in the original version, correct
@@ -87,7 +106,7 @@ is called by more than the two named public methods:
   DOM dependency
 
 This is real, not just a documentation nitpick: `lib/pixel-engine/
-layers.test.js:702-709` already explicitly explains why only refusal
+layers.test.js:733-740` already explicitly explains why only refusal
 paths of `mergeLayers` are unit-tested ("DOM boundary") — the test suite
 is visibly working around a constraint the architecture doc never told
 anyone about. A contributor trying to unit-test `mergeLayers` under plain

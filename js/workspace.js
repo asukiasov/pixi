@@ -1,5 +1,5 @@
 import { UndoStack } from '../lib/pixel-engine/undo.js';
-import { saveProject, renameProject, createCustomBrush, listCustomBrushes, deleteCustomBrush } from './persistence.js';
+import { saveProject, renameProject, createCustomBrush, listCustomBrushes, deleteCustomBrush, _activeAdapter } from './persistence.js';
 import { initExport } from './export.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
@@ -219,11 +219,26 @@ function updateUndoRedoButtons() {
  * handler runs immediately rather than waiting on an IndexedDB write it
  * has no reason to depend on (matches autoSave()'s own fire-and-forget
  * framing above).
+ *
+ * The active adapter is captured via `_activeAdapter()` here, before the
+ * `toPNGBlob()` await, and threaded into `saveProject()` explicitly -
+ * found by code review (C-1): `saveProject()` used to read the module-
+ * level `activeAdapter` itself at the point it's *called*, which is after
+ * this function's `toPNGBlob()` await resolves. A host calling
+ * `instance.destroy()` (lib/pixi.js) while that encode was still in
+ * flight would swap the adapter back to the default Dexie one via
+ * `_resetStorageAdapter()` first, so by the time `saveProject()` ran it
+ * would silently write the user's last edit to IndexedDB instead of the
+ * host's own `options.storage` adapter. Capturing here instead pins the
+ * adapter to the one active when autosave actually began, the same
+ * capture-before-the-async-gap shape persistence.js's own CRUD functions
+ * already use before `enqueueWrite()`.
  */
 async function autoSave() {
   state.onChange();
+  const adapter = _activeAdapter();
   const thumbnail = await state.layerStack.toPNGBlob();
-  await saveProject(state.projectId, state.layerStack, thumbnail);
+  await saveProject(state.projectId, state.layerStack, thumbnail, adapter);
 }
 
 /**

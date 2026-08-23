@@ -72,6 +72,7 @@ magnetic cursor attraction, see `topbar-magnetic-hover` spec):
 | `#layers-panel-toggle` | layers | Collapse/expand Layers panel | mirrors Layers panel header's own collapse state |
 | `#canvas-settings-toggle` | settings | Open Canvas Settings popover | anchored popover, see below |
 | `#export-button` | download | Open Export popover | anchored popover, see below |
+| `#record-toggle` | fiber_manual_record | Start/stop timelapse recording | on/off, opens `#timelapse-review-panel` on stop if any frames were captured; see below |
 | *(spacer)* | | | pushes the rest right |
 | `#undo-button` | undo | Undo | disabled when nothing to undo |
 | `#redo-button` | redo | Redo | disabled when nothing to redo |
@@ -184,6 +185,25 @@ Spec: `color-library` (FG/BG model), `canvas-creation`/`layers`
   checkbox, `#export-download` ("Export"). Transient state, resets to
   defaults each time it opens (not persisted with the project). Spec:
   `export`.
+- `#timelapse-review-panel` (drawing-timelapse-recording) — popover
+  anchored to `#record-toggle`, opened when recording is stopped with at
+  least one captured frame (never for an empty recording).
+  `#timelapse-frame-count` (captured-frame count, read-only),
+  `#timelapse-speed-slider`/`#timelapse-speed-readout` (1-30 fps
+  playback speed, default 8), `#timelapse-save` ("Save video" - encodes
+  the buffered frames into a WebM file via `canvas.captureStream()` +
+  `MediaRecorder`, entirely client-side, and downloads it, same
+  download-a-file pattern as `#export-download`). Closing the popover
+  without saving (`#timelapse-review-close`, outside click, or Escape)
+  discards the buffered recording. While recording is active,
+  `#record-toggle` gets both `.active` (shared accent styling with every
+  other topbar toggle) and `.recording` (a small pulsing red dot,
+  `style.css`, respects `prefers-reduced-motion`). One frame is captured
+  per commit (`js/workspace.js`'s `commit()`, via `js/timelapse.js`'s
+  `captureFrame`/`TimelapseRecorder`) - independent of and unbounded by
+  the 20-entry undo stack. Recording buffer and on/off state are
+  session-only: a reload or navigating away from the Workspace discards
+  an in-progress recording. Spec: `drawing-timelapse-recording`.
 - `#palette-row` — the fixed preset palette swatches (Phase 1's
   original 16-swatch row, distinct from Color Library's persisted
   palettes).

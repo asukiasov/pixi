@@ -841,6 +841,62 @@ body {
   color: white;
 }
 
+/* drawing-timelapse-recording: #record-toggle's active state. Shares
+   .tool-button.active's accent-fill styling (set alongside .recording in
+   js/workspace.js) so "recording is on" still reads correctly without the
+   pulse below - color alone (a red dot) would be an insufficient signal,
+   and prefers-reduced-motion users get no animation at all. */
+.tool-button.recording {
+  position: relative;
+}
+
+.tool-button.recording::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: #e5484d;
+  box-shadow: 0 0 0 1px var(--color-bg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tool-button.recording::after {
+    animation: timelapse-record-pulse 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes timelapse-record-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Timelapse review popover - reuses .canvas-settings-panel's base popover
+   styling (position/size/background/border), same as the Export popover
+   above; just its own content rows here. */
+.timelapse-frame-count {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+#timelapse-speed-slider {
+  flex: 1;
+  accent-color: var(--color-accent);
+}
+
+.timelapse-speed-readout {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
 /* Right-side sidebar (Layers + Brushes) — a fixed-width column, sibling of
    workspace-main. Layers is always relevant (own show/hide toggle in the
    bottom bar); Brushes is scoped to the Brush tool (js/workspace.js) —

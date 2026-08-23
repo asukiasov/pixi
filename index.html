@@ -32,7 +32,7 @@
        keep it sorted alphabetically — the Google Fonts API 400s the whole
        request (breaking every icon on the page, not just an unsorted one)
        if icon_names isn't in alphabetical order. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check_box,check_box_outline_blank,close,colorize,crop_free,dark_mode,delete,dock_to_right,download,edit,expand_more,format_color_fill,home,horizontal_rule,ink_eraser,light_mode,lock,rectangle,redo,remove,restart_alt,swap_horiz,undo,visibility,visibility_off" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check_box,check_box_outline_blank,close,colorize,crop_free,dark_mode,delete,dock_to_right,download,edit,expand_more,format_color_fill,grid_view,home,horizontal_rule,ink_eraser,light_mode,lock,rectangle,redo,remove,restart_alt,swap_horiz,undo,visibility,visibility_off" />
 </head>
 <body>
   <main id="screen-gallery" class="screen">
@@ -93,6 +93,15 @@
            registerMergeShortcut/onWorkspaceReset. -->
       <button type="button" id="export-button" class="tool-button icon-button magnetic-hover" aria-label="Export PNG" data-tooltip="Export PNG">
         <span class="material-symbols-outlined">download</span>
+      </button>
+      <!-- (6-add-tile-seamless-preview) 3x3 seamless-tile preview toggle:
+           when active, the canvas area shows the current canvas content
+           repeated in a 3x3 grid (read-only copies around the real,
+           center canvas) so a tileable asset can be checked for seams
+           without exporting. Off by default, session-only state - see
+           js/workspace.js. -->
+      <button type="button" id="tile-preview-toggle" class="tool-button icon-button magnetic-hover" aria-label="Tile preview" data-tooltip="Tile preview">
+        <span class="material-symbols-outlined">grid_view</span>
       </button>
 
       <div class="workspace-topbar-spacer"></div>
@@ -220,7 +229,28 @@
 
     <div class="workspace-main">
       <div id="workspace-canvas-container" class="canvas-container">
-        <canvas id="workspace-canvas"></canvas>
+        <!-- (6-add-tile-seamless-preview) #workspace-canvas (still the
+             one editable, real canvas - unchanged element/id) plus 8
+             plain, read-only <canvas> copies positioned around it (left/
+             top offsets by +-1 canvas-width/height, set in
+             js/canvas-view.js's resetView()). CanvasView#render() blits
+             the same composited ImageData onto the copies whenever the
+             tile-preview toggle is on (hidden, and not repainted, while
+             it's off). CanvasView applies pan/zoom as a single transform
+             on this wrapper (replacing the old per-element transform
+             loop), so all 9 cells move/scale together with no change to
+             #workspace-canvas's own coordinate mapping. -->
+        <div id="workspace-tile-wrapper" class="workspace-tile-wrapper">
+          <canvas id="workspace-canvas"></canvas>
+          <canvas class="tile-preview-copy" aria-hidden="true"></canvas>
+          <canvas class="tile-preview-copy" aria-hidden="true"></canvas>
+          <canvas class="tile-preview-copy" aria-hidden="true"></canvas>
+          <canvas class="tile-preview-copy" aria-hidden="true"></canvas>
+          <canvas class="tile-preview-copy" aria-hidden="true"></canvas>
+          <canvas class="tile-preview-copy" aria-hidden="true"></canvas>
+          <canvas class="tile-preview-copy" aria-hidden="true"></canvas>
+          <canvas class="tile-preview-copy" aria-hidden="true"></canvas>
+        </div>
 
         <!-- Floats over the canvas's top-left corner (not buried in the
              narrow tools sidebar) - shown only while Pencil or Eraser is

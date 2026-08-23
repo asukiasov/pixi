@@ -153,5 +153,7 @@
 
 - [x] 6.1 `openspec validate --change
       reference-image-original-resolution --strict` passes
-- [ ] 6.2 `openspec/roadmap.md` not checked/updated as part of this
-      pass — left for the user/a follow-up, not blocking merge.
+- [x] 6.2 `openspec/roadmap.md` updated: added a note under the
+      `reference-image-layer` "Not yet scheduled" entry describing the
+      Pixelated/Original toggle superseding the smoothing toggle, and
+      pointing at this change.

@@ -204,7 +204,16 @@ becomes the next priority:
   editable content. Raised 2026-08-18; proposed and implemented via
   `openspec/changes/reference-image-layer/` (tier-gating itself deferred
   - see that change's proposal.md - since no Standard/Pro gating
-  mechanism exists in code yet).
+  mechanism exists in code yet). Its post-launch smoothing toggle
+  (smoothed vs. nearest-neighbor when downscaled to the fixed pixel
+  grid) was later superseded by a two-mode Pixelated/Original toggle -
+  Original renders the reference image on-screen at its own native
+  resolution, decoupled from the canvas's fixed pixel grid entirely, per
+  live user feedback that downscale filtering alone wasn't enough.
+  Export/thumbnails still unconditionally exclude the reference layer in
+  both modes. Raised 2026-08-18 (as a deferred follow-up in that
+  change's own design.md), revisited and implemented via
+  `openspec/changes/reference-image-original-resolution/`.
 - ~~**Merge layers (multi-select + Cmd/Ctrl+E)**~~ — mark 2+ layers in the
   Layers panel (multi-select; the panel previously only tracked one
   active layer) and merge them into one with `Cmd/Ctrl+E`, Photoshop-style

@@ -290,3 +290,209 @@ compressed onto one line.
   Escape
 - **THEN** the popover closes and the active layer's opacity remains
   whatever value was last set
+
+### Requirement: Reference image layer
+The user SHALL be able to add a **reference image layer** to the layer
+stack by picking an image file (`image/*`). The uploaded image SHALL be
+decoded and drawn onto the new layer's pixel buffer at its original
+fidelity — no downsampling, pixelation, or color quantization is applied,
+unlike Brush Import (2m) and Color Library Import (2n). A canvas SHALL
+allow at most one reference image layer at a time; it counts toward the
+existing 8-layer maximum.
+
+#### Scenario: Adding a reference image layer
+- **WHEN** the user picks an image file via the "Add reference image"
+  control
+- **THEN** a new reference image layer is added to the top of the stack,
+  showing the picked image's full-fidelity pixel content, and is not made
+  the active (drawing) layer
+
+#### Scenario: Reference image keeps full fidelity
+- **WHEN** a high-resolution or many-colored image is uploaded as a
+  reference layer
+- **THEN** the layer's pixel content matches the source image at its
+  original resolution and colors, with no pixelation or palette reduction
+  applied
+
+#### Scenario: Only one reference image layer per canvas
+- **WHEN** a canvas already has a reference image layer and the user tries
+  to add another
+- **THEN** the "Add reference image" control is disabled (or the user is
+  prompted to replace the existing one — see design.md), and no second
+  reference image layer is added
+
+### Requirement: Reference image layer is non-drawable
+The reference image layer SHALL NOT be selectable as the active
+(drawing-target) layer. Pencil, Eraser, Bucket Fill, and shape tools SHALL
+have no effect on it, even if some other mechanism attempts to target it.
+
+#### Scenario: Reference layer cannot become active
+- **WHEN** the user clicks a reference image layer's row in the Layers
+  panel to select it
+- **THEN** it does not become the active layer; the previously active
+  layer remains active (or the layer directly below it becomes active —
+  see design.md for the exact fallback), and its content is unaffected by
+  subsequent drawing input
+
+#### Scenario: Drawing tools do not affect the reference layer
+- **WHEN** the reference image layer exists in the stack (visible or
+  hidden, above or below the active layer)
+- **THEN** no drawing tool ever modifies its pixel content, regardless of
+  which other layer is active
+
+### Requirement: Reference image layer is reorderable
+Unlike the Background layer, the reference image layer SHALL be freely
+movable up and down in the stack, same as a regular layer, so the user
+can position it below their drawing layers instead of it permanently
+covering the canvas view. It remains subject to the same
+position-locking rule that already applies around the Background layer:
+a move that would relocate the Background layer out of its fixed slot
+SHALL still be refused, whether the layer initiating the move is the
+reference image layer, a regular layer, or the Background layer itself.
+(Revised 2026-08-18, after live testing surfaced the reference layer
+permanently occluding the canvas at its original locked-on-top position
+— see design.md's "Position lock" decision. The original "reorder-locked"
+requirement this replaces is superseded, not additive.)
+
+#### Scenario: Reference layer can be moved like a regular layer
+- **WHEN** the user clicks the reference image layer's move-up or
+  move-down control
+- **THEN** it swaps position with its neighbor in that direction, same as
+  a regular layer would, unless that neighbor is the Background layer
+
+#### Scenario: Background layer's position stays fixed regardless of the mover
+- **WHEN** any move (of the reference image layer, a regular layer, or an
+  attempt to move the Background layer itself) would relocate the
+  Background layer from its slot
+- **THEN** the move is refused and no layer's position changes
+
+#### Scenario: Reordering other layers around the reference layer
+- **WHEN** the user reorders two regular layers while the reference image
+  layer sits elsewhere in the stack
+- **THEN** the reference image layer's own position in the stack does not
+  change (only layers directly involved in a swap move)
+
+### Requirement: Reference image layer visibility and deletion
+The user SHALL be able to toggle the reference image layer's visibility
+(controlling only its on-screen rendering, per the existing Layer
+visibility requirement) and delete it, subject to the existing "cannot
+delete the only remaining layer" rule. Both actions SHALL be undoable,
+consistent with other layer changes.
+
+#### Scenario: Hiding the reference layer
+- **WHEN** the user hides the reference image layer
+- **THEN** it no longer renders on-screen, but its pixel data and locked
+  properties are unchanged, and it remains excluded from export exactly as
+  when visible (see the `export` capability)
+
+#### Scenario: Deleting the reference layer
+- **WHEN** the user deletes the reference image layer and at least one
+  other layer exists
+- **THEN** it is removed from the stack, and the canvas can subsequently
+  accept a new reference image layer upload (starting fresh: no stored
+  source image or smoothing setting carries over to the new upload)
+
+### Requirement: Reference image rendering mode
+The reference image layer SHALL support two rendering modes for its
+on-screen display: **Pixelated** (the image is fit/downscaled onto the
+canvas's fixed pixel grid, smoothed or nearest-neighbor per the sub-choice
+below) and **Original** (the image renders at its own native source
+resolution, not downscaled to the canvas's fixed grid). The mode is a
+per-reference-layer setting. While in Pixelated mode, the user SHALL be
+able to further toggle whether the downscale is smoothed (averaged/
+blended) or unsmoothed (nearest-neighbor, blockier — see
+fitImageToCanvas's `smooth` parameter in design.md); toggling re-fits the
+currently-stored source image at the new setting, replacing the layer's
+pixel content in place. Switching between Pixelated and Original modes,
+and toggling the smoothed/unsmoothed sub-choice, SHALL both be undoable,
+consistent with other layer changes. In Original mode, the reference
+image SHALL still render at the correct visual position in the Layers
+panel's stacking order relative to drawing layers (above or below, per
+the layer's position — see "Reference image layer is reorderable"), and
+SHALL stay aligned with the canvas through pan and zoom.
+
+Original mode is on-screen rendering only. Export and thumbnails SHALL
+continue to unconditionally exclude the reference image layer entirely,
+in either mode, per the `export` capability's existing exclusion
+requirement.
+
+A newly uploaded reference image SHALL default to Original mode.
+(Superseded 2026-08-23 from this requirement's original form as
+"Reference image smoothing toggle" — added 2026-08-18 as a Pixelated-only
+smoothed/unsmoothed choice, defaulting new uploads to smoothed — once live
+user feedback showed that downscale filtering alone couldn't restore
+detail lost to the fixed pixel grid, prompting the Original mode
+decoupling. The Pixelated sub-choice's own smoothed/unsmoothed behavior
+and the "disabled without a held source image" rule are unchanged from
+the original requirement.)
+
+#### Scenario: A new upload defaults to Original mode
+- **WHEN** the user uploads a new reference image (no previous reference
+  layer existed, or a previous one was deleted first)
+- **THEN** the reference layer initially renders at its original,
+  un-downscaled resolution
+
+#### Scenario: Switching to Pixelated mode downscales to the canvas grid
+- **WHEN** the user toggles the reference layer from Original to
+  Pixelated mode
+- **THEN** the layer's on-screen rendering switches to the fit-to-canvas
+  downscaled behavior (smoothed or unsmoothed, per the sub-choice above)
+
+#### Scenario: Switching to Original mode restores native resolution
+- **WHEN** the user toggles the reference layer from Pixelated to
+  Original mode while its source image is still held (in memory, or
+  restorable from a persisted original — see the "Original-resolution
+  source is persisted" requirement)
+- **THEN** the layer's on-screen rendering switches to displaying the
+  source image at its own native resolution, un-downscaled
+
+#### Scenario: Original mode respects the layer's stacking position
+- **WHEN** the reference layer is in Original mode and positioned between
+  two drawing layers (or above/below all of them) in the Layers panel
+- **THEN** its on-screen rendering appears at that same relative position
+  — drawing layers above it in the stack visually cover it where they
+  have opaque content, and it visually covers drawing layers below it,
+  matching what the equivalent Pixelated-mode stacking would show
+
+#### Scenario: Original mode tracks pan and zoom
+- **WHEN** the user pans or zooms the workspace while the reference layer
+  is in Original mode
+- **THEN** the reference image's on-screen position and size update in
+  lockstep with the canvas, remaining visually aligned with it
+
+#### Scenario: Mode toggle is undoable
+- **WHEN** the user toggles the reference layer's mode and then triggers
+  Undo
+- **THEN** the reference layer's mode (and its resulting on-screen
+  rendering) reverts to what it was before the toggle
+
+#### Scenario: Export and thumbnails are unaffected by mode
+- **WHEN** the reference layer is in Original mode
+- **THEN** exported files and thumbnails still exclude the reference
+  layer entirely, exactly as when it is in Pixelated mode
+
+#### Scenario: Toggle is disabled without a held source image
+- **WHEN** no source image is held in memory for the current reference
+  layer (e.g. after a page reload) and Pixelated mode's smoothed/
+  unsmoothed sub-choice is being toggled
+- **THEN** the sub-choice's toggle control is disabled
+
+### Requirement: Original-resolution source is persisted
+When the reference image layer is in Original mode, its full-resolution
+source image SHALL be persisted (alongside the project's existing layer
+data) so that reopening the project restores Original-mode rendering
+without requiring the user to re-upload. A reference layer in Pixelated
+mode SHALL NOT add this additional stored data, preserving today's
+storage footprint for that case.
+
+#### Scenario: Reopening a project restores Original-mode rendering
+- **WHEN** a project is saved with its reference layer in Original mode,
+  then reopened (e.g. after a page reload)
+- **THEN** the reference layer renders at its original resolution again,
+  without the user needing to re-upload the image
+
+#### Scenario: Pixelated-mode reference layers add no extra stored data
+- **WHEN** a project's reference layer is in Pixelated mode (or the
+  project has no reference layer)
+- **THEN** no additional full-resolution source data is stored for it,
+  beyond what the layer already stores today

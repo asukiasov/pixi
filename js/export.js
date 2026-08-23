@@ -41,9 +41,12 @@ function positionPanel(panel, anchorEl) {
 /**
  * Filesystem-unsafe characters replaced with `-`, matching the `export`
  * capability spec's Export filename requirement. A name that sanitizes to
- * nothing (empty/whitespace-only) falls back to "untitled".
+ * nothing (empty/whitespace-only) falls back to "untitled". Exported
+ * (drawing-timelapse-recording): js/workspace.js's timelapse Save action
+ * reuses this exact rule for its own downloaded filename rather than
+ * keeping a second copy that could drift out of sync.
  */
-function sanitizeFilename(name) {
+export function sanitizeFilename(name) {
   const sanitized = (name ?? '').replace(/[/\\:*?"<>|]/g, '-').trim();
   return sanitized || 'untitled';
 }

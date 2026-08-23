@@ -1,6 +1,7 @@
 import { UndoStack } from '../lib/pixel-engine/undo.js';
 import { saveProject, renameProject, createCustomBrush, listCustomBrushes, deleteCustomBrush, _activeAdapter } from './persistence.js';
-import { initExport } from './export.js';
+import { initExport, sanitizeFilename } from './export.js';
+import { TimelapseRecorder, captureFrame, encodeTimelapseVideo, isTimelapseSupported } from './timelapse.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
 import { drawRectangle, clipToSelection } from './shape-tools.js';
 import { bresenhamLine, strokeFreehandThick } from '../lib/pixel-engine/engine.js';
@@ -169,6 +170,16 @@ let backgroundSwatchEl = null;
 let zoomReadout = null;
 let pencilOptionsPanel = null;
 
+// drawing-timelapse-recording: tracked like colorPickerOutsideClickHandler/
+// colorPickerEscapeHandler above - these two close over `timelapsePanel`/
+// `recordToggleButton`, locals freshly looked up from `root` on every
+// bindDomOnce() call, so the previous pair is removed before a new pair is
+// added instead of binding once-ever.
+let timelapseOutsideClickHandler = null;
+let timelapseEscapeHandler = null;
+let recordToggleButton = null;
+let timelapsePanel = null;
+
 // Embeddable-editor-api (Phase 3): the DOM root every workspace element
 // lookup below resolves against, instead of the bare `document` this file
 // used to assume. Defaults to `document` so the standalone app (its
@@ -258,6 +269,19 @@ export function commit() {
   state.undoStack.push(state.layerStack.snapshot());
   updateUndoRedoButtons();
   autoSave();
+  // drawing-timelapse-recording: appends a frame independent of and
+  // unbounded by state.undoStack's 20-entry cap above. Guarded by
+  // isRecording here, not left to addFrame()'s own no-op check - JS
+  // evaluates a call's arguments before the call itself, so
+  // `addFrame(captureFrame(...))` would run captureFrame()'s full
+  // composite()+canvas+toBlob PNG encode on *every* commit for *every*
+  // user regardless of whether recording is active, not just skip the
+  // (cheap) array push the way the no-op check implies. Reads the layer
+  // stack's *current* composited state synchronously at this call (see
+  // captureFrame()'s doc comment), not a stale one.
+  if (state.timelapseRecorder.isRecording) {
+    state.timelapseRecorder.addFrame(captureFrame(state.layerStack));
+  }
   if (afterCommitHook) afterCommitHook();
 }
 
@@ -1411,6 +1435,163 @@ function bindDomOnce() {
     setRightSidebarVisible(state.rightSidebarVisible);
   });
 
+  // drawing-timelapse-recording: Record toggle + review popover. Toggling
+  // starts/stops state.timelapseRecorder; commit() (above) appends frames
+  // while it's active. Stopping with at least one captured frame opens
+  // the review popover (never for an empty recording, per the spec's
+  // "Stopping with no captured frames" scenario) - playback-speed slider
+  // + Save, which encodes via js/timelapse.js's encodeTimelapseVideo() and
+  // downloads the result, the same download-a-file pattern as Export.
+  recordToggleButton = root.querySelector('#record-toggle');
+  timelapsePanel = root.querySelector('#timelapse-review-panel');
+  const timelapseCloseButton = root.querySelector('#timelapse-review-close');
+  const timelapseSpeedSlider = root.querySelector('#timelapse-speed-slider');
+  const timelapseSpeedReadout = root.querySelector('#timelapse-speed-readout');
+  const timelapseFrameCountEl = root.querySelector('#timelapse-frame-count');
+  const timelapseSaveButton = root.querySelector('#timelapse-save');
+
+  if (!isTimelapseSupported()) {
+    // Feature-detected once, not discovered mid-recording: MediaRecorder +
+    // canvas.captureStream() are exactly the APIs design.md's client-side
+    // encoding decision depends on - disable rather than let someone
+    // record a whole session only to find Save can't encode it.
+    recordToggleButton.disabled = true;
+    recordToggleButton.setAttribute('aria-label', 'Record timelapse (not supported in this browser)');
+    recordToggleButton.dataset.tooltip = 'Record timelapse (not supported in this browser)';
+  }
+
+  function positionTimelapsePanel() {
+    const rect = recordToggleButton.getBoundingClientRect();
+    const panelRect = timelapsePanel.getBoundingClientRect();
+    const margin = 8;
+    let top = rect.bottom + 8;
+    if (top + panelRect.height > window.innerHeight - margin) {
+      top = rect.top - panelRect.height - 8;
+    }
+    top = Math.max(margin, Math.min(top, window.innerHeight - panelRect.height - margin));
+    let left = rect.left;
+    left = Math.max(margin, Math.min(left, window.innerWidth - panelRect.width - margin));
+    timelapsePanel.style.left = `${left}px`;
+    timelapsePanel.style.top = `${top}px`;
+  }
+
+  function closeTimelapsePanel() {
+    timelapsePanel.classList.add('hidden');
+  }
+
+  // Closing the review popover without saving (X button, outside click,
+  // Escape) discards the buffered recording - it's transient/session-only
+  // (per the spec), and re-recording is one click away, so there's
+  // nothing worth preserving across a dismissed review.
+  function cancelTimelapseReview() {
+    state.timelapseRecorder.clear();
+    closeTimelapsePanel();
+  }
+
+  function openTimelapseReview() {
+    const count = state.timelapseRecorder.frameCount;
+    timelapseFrameCountEl.textContent = `${count} frame${count === 1 ? '' : 's'} captured`;
+    timelapseSpeedSlider.value = '8';
+    timelapseSpeedReadout.textContent = '8 fps';
+    // Unhide before measuring - .hidden is display:none, which has no box
+    // to read a size from.
+    timelapsePanel.classList.remove('hidden');
+    positionTimelapsePanel();
+  }
+
+  recordToggleButton.addEventListener('click', () => {
+    if (!state.timelapseRecorder.isRecording) {
+      // If the review popover from a *previous* stopped-but-unsaved
+      // recording is still open (user clicked Record again instead of
+      // Save/Close), start() below discards that old buffer - close the
+      // popover along with it, rather than leaving it open showing a
+      // stale frame count/speed for a recording that no longer exists
+      // while a new one silently records underneath it.
+      closeTimelapsePanel();
+      state.timelapseRecorder.start();
+      recordToggleButton.classList.add('active', 'recording');
+      return;
+    }
+    state.timelapseRecorder.stop();
+    recordToggleButton.classList.remove('active', 'recording');
+    if (state.timelapseRecorder.frameCount > 0) {
+      openTimelapseReview();
+    } else {
+      // Nothing captured (toggled on then off before any commit) - per
+      // the spec, the review popover must not open at all.
+      state.timelapseRecorder.clear();
+    }
+  });
+
+  timelapseCloseButton.addEventListener('click', cancelTimelapseReview);
+
+  // Close on outside click/Escape too, not just the explicit close button -
+  // same pattern as the Export popover's pair (js/export.js). These close
+  // over `timelapsePanel`/`recordToggleButton`, locals freshly looked up
+  // from `root` on every bindDomOnce() call, so the previous pair is
+  // removed before this one is added instead of binding once-ever.
+  if (timelapseOutsideClickHandler) document.removeEventListener('pointerdown', timelapseOutsideClickHandler);
+  timelapseOutsideClickHandler = (e) => {
+    if (timelapsePanel.classList.contains('hidden')) return;
+    if (timelapsePanel.contains(e.target)) return;
+    if (e.target === recordToggleButton || recordToggleButton.contains(e.target)) return;
+    cancelTimelapseReview();
+  };
+  document.addEventListener('pointerdown', timelapseOutsideClickHandler);
+
+  if (timelapseEscapeHandler) document.removeEventListener('keydown', timelapseEscapeHandler);
+  timelapseEscapeHandler = (e) => {
+    if (e.key === 'Escape' && !timelapsePanel.classList.contains('hidden')) cancelTimelapseReview();
+  };
+  document.addEventListener('keydown', timelapseEscapeHandler);
+
+  timelapseSpeedSlider.addEventListener('input', () => {
+    timelapseSpeedReadout.textContent = `${timelapseSpeedSlider.value} fps`;
+  });
+  bindSliderWheel(timelapseSpeedSlider);
+
+  timelapseSaveButton.addEventListener('click', async () => {
+    const fps = Number(timelapseSpeedSlider.value) || 8;
+    timelapseSaveButton.disabled = true;
+    const originalLabel = timelapseSaveButton.innerHTML;
+    timelapseSaveButton.innerHTML = 'Encoding…';
+    try {
+      const frames = await state.timelapseRecorder.getFrames();
+      const videoBlob = await encodeTimelapseVideo(frames, {
+        width: state.layerStack.width,
+        height: state.layerStack.height,
+        fps,
+      });
+      const url = URL.createObjectURL(videoBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${sanitizeFilename(state.projectName)}.webm`;
+      a.click();
+      URL.revokeObjectURL(url);
+      celebrateExport(timelapseSaveButton);
+    } catch (err) {
+      // Without this, a failed encode (e.g. MediaRecorder/captureStream
+      // misbehaving despite passing isTimelapseSupported()'s feature
+      // check) would only surface as an unhandled promise rejection - the
+      // finally block below still resets the UI and clears the buffer, so
+      // the user would see nothing at all: no file, no error, and no way
+      // to know a retry is even possible. console.error at minimum leaves
+      // a trace; alert is blunt but matches this app having no toast/
+      // status-message system to surface an inline error into instead.
+      console.error('Timelapse encode failed:', err);
+      alert('Could not save the timelapse video. Please try recording again.');
+    } finally {
+      timelapseSaveButton.disabled = false;
+      timelapseSaveButton.innerHTML = originalLabel;
+      // Cleared on both success and failure: a failed encode leaves stale
+      // frame data no better placed to retry from than a fresh recording
+      // would be, and keeping the popover open over a broken state would
+      // just invite clicking Save again into the same failure.
+      state.timelapseRecorder.clear();
+      closeTimelapsePanel();
+    }
+  });
+
   // Zoom: +/- buttons and the three presets all just call the CanvasView
   // API directly - it owns all the actual zoom/pan math (see design.md).
   zoomReadout = root.querySelector('#zoom-readout');
@@ -1761,6 +1942,12 @@ export function initWorkspace({
     onRequestGallery,
     onChange,
     undoStack: new UndoStack(),
+    // drawing-timelapse-recording: a fresh, empty, inactive recorder every
+    // time initWorkspace() (re)runs - matching this state object's own
+    // per-project-open reset and the spec's "Recording state is
+    // session-only" requirement (a reload/reopen discards any in-progress
+    // recording, same as pixel-perfect mode and every other field here).
+    timelapseRecorder: new TimelapseRecorder(),
     currentTool: initialTool,
     foregroundColor: hexToRgba(PALETTE[0]),
     backgroundColor: hexToRgba('#ffffff'),
@@ -1845,6 +2032,13 @@ export function initWorkspace({
 
   for (const fn of workspaceResetListeners) fn({ width: layerStack.width, height: layerStack.height, name: projectName });
   exportControls.close();
+  // drawing-timelapse-recording: mirrors exportControls.close() above - a
+  // freshly (re)opened project starts with recording off and the review
+  // popover closed, matching the brand-new state.timelapseRecorder just
+  // created for `state` above. `?.` guards the very first initWorkspace()
+  // call, before bindDomOnce() has run and assigned these.
+  recordToggleButton?.classList.remove('active', 'recording');
+  timelapsePanel?.classList.add('hidden');
 
   // Selections don't persist with the project (see shape-tools spec) — a
   // freshly opened project always starts with none.

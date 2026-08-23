@@ -94,6 +94,17 @@
       <button type="button" id="export-button" class="tool-button icon-button magnetic-hover" aria-label="Export PNG" data-tooltip="Export PNG">
         <span class="material-symbols-outlined">download</span>
       </button>
+      <!-- drawing-timelapse-recording: opt-in capture of one composited
+           frame per commit (js/workspace.js's commit(), via
+           js/timelapse.js), independent of the undo stack. .recording
+           (styled in style.css, a small pulsing red dot) marks the active
+           state - shares .active's accent-fill styling with every other
+           topbar toggle in addition, so it still reads as "on" even
+           without the pulse (prefers-reduced-motion, or the dot alone
+           being an insufficient color-only signal). -->
+      <button type="button" id="record-toggle" class="tool-button icon-button magnetic-hover" aria-label="Record timelapse" data-tooltip="Record timelapse">
+        <span class="material-symbols-outlined">fiber_manual_record</span>
+      </button>
 
       <div class="workspace-topbar-spacer"></div>
 
@@ -275,6 +286,36 @@
         <div class="canvas-settings-row">
           <button type="button" id="export-download" class="tool-button export-download-button">
             <span class="material-symbols-outlined">download</span> Export
+          </button>
+        </div>
+      </div>
+
+      <!-- drawing-timelapse-recording: review popover anchored to the top
+           bar's #record-toggle, same clamped-to-viewport pattern as
+           #export-panel. Opens when the Record toggle is turned off with
+           at least one frame captured (js/workspace.js) - never opens for
+           an empty recording, per the spec's "Stopping with no captured
+           frames" scenario. No format selector (design.md: WebM via
+           MediaRecorder is the only option, not a meaningful user-facing
+           choice like Export's PNG/WebP/JPG). -->
+      <div id="timelapse-review-panel" class="canvas-settings-panel timelapse-review-panel hidden">
+        <div class="canvas-settings-row canvas-settings-header-row">
+          <h2>Timelapse</h2>
+          <button type="button" id="timelapse-review-close" class="icon-button" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="canvas-settings-row">
+          <span id="timelapse-frame-count" class="timelapse-frame-count"></span>
+        </div>
+        <div class="canvas-settings-row">
+          <label for="timelapse-speed-slider">Speed</label>
+          <input type="range" id="timelapse-speed-slider" min="1" max="30" value="8" step="1" aria-label="Playback speed (frames per second)" />
+          <span id="timelapse-speed-readout" class="timelapse-speed-readout">8 fps</span>
+        </div>
+        <div class="canvas-settings-row">
+          <button type="button" id="timelapse-save" class="tool-button export-download-button">
+            <span class="material-symbols-outlined">download</span> Save video
           </button>
         </div>
       </div>

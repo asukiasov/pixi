@@ -663,6 +663,48 @@ body {
   isolation: isolate;
 }
 
+/* (6-add-tile-seamless-preview) The 3x3 tile-preview group's own
+   positioned ancestor: #workspace-canvas and its overlay siblings
+   (above-layer canvas, reference-image overlay, selection overlay - all
+   still appended here by js/canvas-view.js, position:absolute;left:0;
+   top:0 against this element exactly as they were against
+   .canvas-container before) plus the 8 copy canvases are all direct
+   children. transform-origin stays the default-matching '0 0' (js/
+   canvas-view.js's constructor) so #applyTransform()'s translate/scale
+   here reproduces the exact on-screen position #workspace-canvas used to
+   compute for itself alone - the copies (positioned via left/top set in
+   resetView(), offset by +-1 canvas CSS width/height) ride along with
+   the same single transform, scaling/panning in lockstep with no zoom-
+   math changes needed anywhere else. */
+.workspace-tile-wrapper {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+/* Read-only surrounding copies (js/canvas-view.js blits the same
+   composited ImageData onto these whenever tile-preview is on); left/
+   top/width/height are set in resetView() (one canvas-CSS-pixel-width/
+   height away from #workspace-canvas in each direction, mirroring
+   #aboveCanvasEl's own same-size-sibling sizing). Hidden (and, per
+   CanvasView#render(), not even repainted) unless
+   .workspace-tile-wrapper.tile-preview-active. No pointer events of
+   their own - out-of-bounds input on a copy is simply ignored, same as
+   anywhere else outside #workspace-canvas. */
+.tile-preview-copy {
+  position: absolute;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  pointer-events: none;
+  visibility: hidden;
+  background-image: repeating-conic-gradient(#cfcfcf 0% 25%, #e8e8e8 0% 50%);
+  background-position: 0 0;
+}
+
+.workspace-tile-wrapper.tile-preview-active .tile-preview-copy {
+  visibility: visible;
+}
+
 #workspace-canvas {
   position: absolute;
   left: 0;

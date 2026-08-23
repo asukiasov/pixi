@@ -73,10 +73,29 @@ magnetic cursor attraction, see `topbar-magnetic-hover` spec):
 | `#canvas-settings-toggle` | settings | Open Canvas Settings popover | anchored popover, see below |
 | `#export-button` | download | Open Export popover | anchored popover, see below |
 | `#record-toggle` | fiber_manual_record | Start/stop timelapse recording | on/off, opens `#timelapse-review-panel` on stop if any frames were captured; see below |
+| `#tile-preview-toggle` | grid_view | 3x3 seamless-tile preview | on/off, no popover - see below |
 | *(spacer)* | | | pushes the rest right |
 | `#undo-button` | undo | Undo | disabled when nothing to undo |
 | `#redo-button` | redo | Redo | disabled when nothing to redo |
 | `#right-sidebar-toggle` | dock_to_right | Hide/show whole right sidebar | slides open/closed (AUD-11, 2026-08-17); respects `prefers-reduced-motion` |
+| `#theme-toggle` | brightness_auto | Light/dark/system theme | cycles preference; icon/label reflect current choice (`js/theme.js`) |
+
+`#tile-preview-toggle` (6-add-tile-seamless-preview, 2026-08-23): when on,
+the canvas area shows the current canvas content repeated in a 3x3 grid -
+the real, editable canvas centered, 8 read-only copies around it
+(`#workspace-tile-wrapper` in `index.html`, one `<canvas>` copy per
+surrounding cell) - so a tileable asset can be checked for seams without
+exporting. The copies mirror `LayerStack.composite()` (the full flattened
+artwork) every time the real canvas repaints; only the center canvas
+accepts pointer input (the copies are `pointer-events: none`, matching
+every other out-of-bounds area). Zoom/pan apply to all 9 cells together as
+one transform, so panning/zooming behaves exactly as it does with the
+preview off. `.active` uses the same shared accent styling as every other
+topbar toggle. Off by default, session-only state, same pattern as
+`#right-sidebar-toggle`'s own per-session default - resets to off on
+reload or reopening a project. Implementation: `js/canvas-view.js`
+(`CanvasView#setTilePreviewEnabled`/`#render()`), wired in
+`js/workspace.js`. Spec: `tile-preview`.
 
 `#symmetry-toggle` (5-add-symmetry-drawing-mode, 2026-08-17): each click
 advances `state.symmetryMode` through `off → horizontal → vertical → both →

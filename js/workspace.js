@@ -164,6 +164,7 @@ let brushesPanelGrid = null;
 let deleteBrushButton = null;
 let rightSidebar = null;
 let rightSidebarToggle = null;
+let tilePreviewToggle = null;
 let foregroundSwatchEl = null;
 let backgroundSwatchEl = null;
 
@@ -1592,6 +1593,17 @@ function bindDomOnce() {
     }
   });
 
+  // (6-add-tile-seamless-preview) 3x3 seamless-tile preview toggle - off
+  // by default, session-only (reset on every project open below, same
+  // pattern as squareConstraintToggle), no popover, same on/off
+  // .active-class convention as every other topbar toggle.
+  tilePreviewToggle = root.querySelector('#tile-preview-toggle');
+  tilePreviewToggle.addEventListener('click', () => {
+    const enabled = !tilePreviewToggle.classList.contains('active');
+    tilePreviewToggle.classList.toggle('active', enabled);
+    state.canvasView.setTilePreviewEnabled(enabled);
+  });
+
   // Zoom: +/- buttons and the three presets all just call the CanvasView
   // API directly - it owns all the actual zoom/pan math (see design.md).
   zoomReadout = root.querySelector('#zoom-readout');
@@ -2029,6 +2041,11 @@ export function initWorkspace({
   root.querySelector('#pencil-size-slider').value = '1';
   root.querySelector('#pencil-size-readout').textContent = '1px';
   squareConstraintToggle.classList.remove('active');
+  // (6-add-tile-seamless-preview) Session-only, like squareConstraint
+  // above - resets to off on every freshly opened/reopened project, not
+  // persisted with it.
+  tilePreviewToggle.classList.remove('active');
+  state.canvasView.setTilePreviewEnabled(false);
 
   for (const fn of workspaceResetListeners) fn({ width: layerStack.width, height: layerStack.height, name: projectName });
   exportControls.close();

@@ -7,6 +7,16 @@ const MIN_SCALE = 0.25;
 const MAX_SCALE = 8;
 const ZOOM_STEP_FACTOR = 1.25; // per +/- button press or keyboard shortcut
 
+// (6-add-tile-seamless-preview) (dx, dy) in canvas-CSS-widths/heights for
+// each of the 8 .tile-preview-copy elements, in their fixed DOM order
+// (index.html) - #resetView() positions copy `i` at
+// (dx*cssWidth, dy*cssHeight) relative to #canvasEl's own (0, 0).
+const TILE_OFFSETS = [
+  [-1, -1], [0, -1], [1, -1],
+  [-1, 0], [1, 0],
+  [-1, 1], [0, 1], [1, 1],
+];
+
 export class CanvasView {
   #canvasEl;
   #containerEl;
@@ -51,11 +61,38 @@ export class CanvasView {
   #referenceObjectUrlBlob = null; // the Blob #referenceObjectUrl was created from, so we only re-create on an actual change
   #referenceObjectUrl = null;
 
+  // (6-add-tile-seamless-preview) #wrapperEl is the 3x3 group's own
+  // element (index.html's #workspace-tile-wrapper, #canvasEl's direct
+  // parent) - #applyTransform() sets pan/zoom on this one element instead
+  // of on #canvasEl and its overlay siblings individually (see that
+  // method), so all 9 cells move/scale together; it replaces
+  // #containerEl as the parent #referenceImgEl/#aboveCanvasEl/
+  // #selectionOverlayEl are appended into, so they keep lining up with
+  // #canvasEl exactly as before (#canvasEl's own position:absolute;
+  // left:0;top:0 is unchanged - only its containing block moved one level
+  // in). #tileCopyEls/#tileCopyCtxs are the 8 surrounding, read-only
+  // copies (index.html's .tile-preview-copy elements); #TILE_OFFSETS
+  // pairs them 1:1, in DOM order, with the (dx, dy) canvas-widths/heights
+  // #resetView() positions each one at.
+  #wrapperEl;
+  #tileCopyEls = [];
+  #tileCopyCtxs = [];
+  #tilePreviewEnabled = false;
+
   constructor(canvasEl, containerEl, layerStack) {
     this.#canvasEl = canvasEl;
     this.#containerEl = containerEl;
     this.#layerStack = layerStack;
     this.#ctx = canvasEl.getContext('2d');
+    this.#wrapperEl = canvasEl.parentElement;
+    this.#tileCopyEls = [...this.#wrapperEl.querySelectorAll('.tile-preview-copy')];
+    this.#tileCopyCtxs = this.#tileCopyEls.map((el) => el.getContext('2d'));
+    // Matches every other transformed element's own former transform-origin
+    // (see #applyTransform()'s doc comment) - translate()/scale() then
+    // reproduce the exact on-screen position #canvasEl used to compute
+    // for itself alone, so #zoomStep()/#zoomAroundPoint()'s pan/zoom math
+    // (unchanged by this feature) still holds.
+    this.#wrapperEl.style.transformOrigin = '0 0';
 
     // Required so Chrome/mobile browsers don't intercept two-finger
     // gestures as native page pinch-zoom/scroll before our own handlers see
@@ -74,15 +111,17 @@ export class CanvasView {
     // (the layers above the reference), so it has to paint underneath it,
     // exactly the opposite of the append order that would put it visually
     // on top regardless of the reference layer's actual stack position.
+    // Appended into #wrapperEl, not #containerEl - see the field comment
+    // above.
     this.#referenceImgEl = document.createElement('img');
     this.#referenceImgEl.className = 'reference-original-overlay hidden';
     this.#referenceImgEl.alt = '';
-    this.#containerEl.appendChild(this.#referenceImgEl);
+    this.#wrapperEl.appendChild(this.#referenceImgEl);
 
     this.#aboveCanvasEl = document.createElement('canvas');
     this.#aboveCanvasEl.className = 'workspace-canvas-above-layer hidden';
     this.#aboveCtx = this.#aboveCanvasEl.getContext('2d');
-    this.#containerEl.appendChild(this.#aboveCanvasEl);
+    this.#wrapperEl.appendChild(this.#aboveCanvasEl);
 
     // A sibling overlay, not a canvas-drawn rectangle, so it never touches
     // pixel data — just a visual marker for the active selection (if any).
@@ -90,7 +129,7 @@ export class CanvasView {
     // topmost sibling, as it always was.
     this.#selectionOverlayEl = document.createElement('div');
     this.#selectionOverlayEl.className = 'selection-overlay hidden';
-    this.#containerEl.appendChild(this.#selectionOverlayEl);
+    this.#wrapperEl.appendChild(this.#selectionOverlayEl);
   }
 
   setHandlers(handlers) {
@@ -125,6 +164,20 @@ export class CanvasView {
    */
   setMoveMode(enabled) {
     this.#canvasEl.classList.toggle('move-mode', enabled);
+  }
+
+  /**
+   * Whether the 3x3 seamless-tile preview is on. #render() skips
+   * repainting the 8 copy canvases entirely while this is off (design.md:
+   * "negligible cost ... only happens while tile-preview is on"); turning
+   * it on here also repaints immediately, so the copies show the current
+   * canvas content right away rather than staying blank/stale until the
+   * next commit.
+   */
+  setTilePreviewEnabled(enabled) {
+    this.#tilePreviewEnabled = enabled;
+    this.#wrapperEl.classList.toggle('tile-preview-active', enabled);
+    if (enabled) this.render();
   }
 
   /** Fits the canvas to the container and centers it at 1x zoom ("Fit Screen"). */
@@ -166,6 +219,27 @@ export class CanvasView {
     // Transparency checkerboard (see style.css): one checker square per
     // artwork pixel, so a 2x2 checker tile spans 2 pixels' worth of CSS px.
     this.#canvasEl.style.backgroundSize = `${fitScale * 2}px ${fitScale * 2}px`;
+
+    // (6-add-tile-seamless-preview) Each copy is positioned +-1 canvas
+    // CSS width/height away from #canvasEl's own (0, 0) (TILE_OFFSETS),
+    // sized/checkerboarded to match it exactly (same as #aboveCanvasEl
+    // above) - since #wrapperEl's transform-origin is '0 0' (constructor)
+    // just like #canvasEl's own used to be, #applyTransform()'s single
+    // translate/scale on #wrapperEl positions/scales every copy the same
+    // way it used to position #canvasEl alone, with no zoom-math changes
+    // needed anywhere else.
+    const cssWidth = width * fitScale;
+    const cssHeight = height * fitScale;
+    this.#tileCopyEls.forEach((el, i) => {
+      const [dx, dy] = TILE_OFFSETS[i];
+      el.width = width;
+      el.height = height;
+      el.style.left = `${dx * cssWidth}px`;
+      el.style.top = `${dy * cssHeight}px`;
+      el.style.width = `${cssWidth}px`;
+      el.style.height = `${cssHeight}px`;
+      el.style.backgroundSize = `${fitScale * 2}px ${fitScale * 2}px`;
+    });
 
     this.#scale = 1;
     this.#panX = (containerRect.width - width * fitScale) / 2;
@@ -304,6 +378,38 @@ export class CanvasView {
         this.#referenceObjectUrlBlob = null;
       }
     }
+
+    // (6-add-tile-seamless-preview) Skipped entirely while off, per
+    // design.md - putImageData on 8 small canvases is cheap, but there's
+    // no reason to pay it on every commit unless the preview is actually
+    // visible. Deliberately the full flattened artwork rather than the
+    // render-plan segments above: the surrounding copies are a read-only
+    // preview of the drawn artwork, not a second surface that needs to
+    // reproduce an 'original'-mode reference layer's separate, non-pixel-
+    // buffer rendering. In the common case (no reference-layer split),
+    // belowSeg.imageData above already *is* that full composite -
+    // getRenderPlan()'s own doc comment: a single-segment plan is
+    // `[{ type: 'raster', imageData: this.composite() }]` - so this reuses
+    // it instead of paying for a second #compositeToCanvas()+getImageData
+    // pass on every commit/pointermove (this branch's reused composite
+    // still includes a visible *'pixelated'*-mode reference layer, same
+    // as #canvasEl itself always has - unaffected by the split-case fix
+    // below, which only ever applies to the *'original'*-mode split
+    // case). The (rarer) split-reference case needs its own fresh
+    // composite() call, since belowSeg/aboveSeg there are partial, not
+    // the full stack - and must pass `excludeReferenceImage: true`, or it
+    // would bake the 'original'-mode reference layer's low-resolution
+    // pixel-buffer content into the copies, which appears nowhere else in
+    // the app (getRenderPlan() always renders that layer as a separate,
+    // native-resolution `<img>` instead - see #referenceImgEl above -
+    // which the copies have no equivalent overlay for).
+    if (this.#tilePreviewEnabled) {
+      const composite =
+        refPos === -1 ? belowSeg.imageData : this.#layerStack.composite({ excludeReferenceImage: true });
+      for (const ctx of this.#tileCopyCtxs) {
+        ctx.putImageData(composite, 0, 0);
+      }
+    }
   }
 
   /**
@@ -325,16 +431,20 @@ export class CanvasView {
   }
 
   #applyTransform() {
-    const transform = `translate(${this.#panX}px, ${this.#panY}px) scale(${this.#scale})`;
-    // Every sibling element at the same origin gets the identical
-    // transform, so they all track pan/zoom in lockstep with no separate
-    // math per element - #aboveCanvasEl/#referenceImgEl
-    // (reference-image-original-resolution) join #selectionOverlayEl in
-    // reusing this same loop.
-    for (const el of [this.#canvasEl, this.#aboveCanvasEl, this.#referenceImgEl, this.#selectionOverlayEl]) {
-      el.style.transformOrigin = '0 0';
-      el.style.transform = transform;
-    }
+    // (6-add-tile-seamless-preview) A single transform on #wrapperEl (the
+    // tile-preview group) replaces the old per-element loop: #canvasEl
+    // and its overlay siblings (#aboveCanvasEl/#referenceImgEl/
+    // #selectionOverlayEl, all direct children of #wrapperEl now, same as
+    // #canvasEl) and the 8 copy canvases all move/scale together as one
+    // rigid subtree. #wrapperEl's transform-origin is '0 0' (constructor)
+    // and its own layout position is left:0;top:0 (style.css), identical
+    // to what #canvasEl's used to be - so this reproduces the exact same
+    // on-screen position/scale math #canvasEl computed for itself alone,
+    // just applied to the whole group. No change to how #canvasEl's own
+    // coordinate mapping (#toGridPoint()) works, since
+    // getBoundingClientRect() already accounts for however many ancestor
+    // transforms are stacked above an element.
+    this.#wrapperEl.style.transform = `translate(${this.#panX}px, ${this.#panY}px) scale(${this.#scale})`;
   }
 
   #emitZoomChange() {

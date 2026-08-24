@@ -1,11 +1,15 @@
 # Pixi tier matrix — worksheet
 
-> **Legacy — superseded.** This worksheet predates the OpenSpec process
-> (see CLAUDE.md's "Process: OpenSpec vs. Superpowers skills") and was the
-> input to `openspec/changes/split-pixi-pro-repo/`, which implements the
-> split it worked out. Once that change is archived, its spec at
-> `openspec/specs/pixi-pro-distribution/` is the source of truth — this
-> file is kept only as historical design context.
+> **Legacy — superseded, and the split it describes has been reversed.**
+> This worksheet predates the OpenSpec process (see CLAUDE.md's "Process:
+> OpenSpec vs. Superpowers skills") and was the input to
+> `openspec/changes/archive/2026-08-21-split-pixi-pro-repo/`, which
+> implemented the split it worked out. That split's own spec,
+> `openspec/specs/pixi-pro-distribution/`, was then retired by
+> `openspec/changes/merge-pixi-pro-into-standard/` (2026-08-24), which
+> reversed the split entirely — all Pro-only features moved back into this
+> single public repo, free. This file is kept only as historical context
+> for a tier model that no longer exists.
 
 Working doc for the Standard / Pro feature split. Standard and Pro are two
 downloadable, self-hosted versions of Pixi — not an embeddable widget for

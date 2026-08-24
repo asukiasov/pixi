@@ -112,10 +112,10 @@ function rotatedBrushPixels(brush, angleDegrees) {
  * fixed step per placement along a drag.
  *
  * `applyPixelTransform` (default `null` - a no-op), if given, is the same
- * `(applyPixel, engine) => wrappedApplyPixel` hook shape Pencil/Eraser wrap
- * their applyPixel with (see js/workspace.js's withProPixelTransform, e.g.
- * for Pro's symmetry/mirror drawing) - kept here rather than at every call
- * site since placeBrush is Brush's one placement seam, mirroring the "wrap
+ * `(applyPixel, engine) => wrappedApplyPixel` shape Pencil/Eraser wrap
+ * their applyPixel with (see js/symmetry-ui.js's applySymmetryTransform,
+ * for symmetry/mirror drawing) - kept here rather than at every call site
+ * since placeBrush is Brush's one placement seam, mirroring the "wrap
  * applyPixel, don't fork the stroke tracer" approach from design.md for
  * Brush's own (non-applyPixel-shaped) placement API.
  */

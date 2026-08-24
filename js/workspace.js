@@ -6,12 +6,23 @@ import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js'
 import { drawRectangle, clipToSelection } from './shape-tools.js';
 import { bresenhamLine, strokeFreehandThick } from '../lib/pixel-engine/engine.js';
 import { confirmDialog } from './confirm-dialog.js';
+import { initSymmetry, applySymmetryTransform } from './symmetry-ui.js';
+import { initPixelPerfect } from './pixel-perfect-ui.js';
+import { initRectangleFill } from './rectangle-fill-ui.js';
+import { initPencilOpacity, getPencilOpacity } from './pencil-opacity-ui.js';
+import { initBrushImport } from './brush-import-ui.js';
+import { initCanvasSettings } from './canvas-settings.js';
+// Layers and Color Library are permanent parts of the app, not optional
+// plugins - these two imports create a deliberate circular dependency
+// with layers-ui.js/color-library-ui.js (both of which import back from
+// this file: getLayerStack/renderCanvas/commit/onWorkspaceReset/etc.).
+// ES modules support this fine as long as neither side calls the other's
+// exports at module-evaluation time, only from inside function bodies
+// invoked later - true of every call site below.
+import { renderLayersPanel, clearLayerMarksAndRefresh, mergeMarkedOrActiveDown } from './layers-ui.js';
+import { getColorSequenceColor, setLibrarySequenceEnabled, syncColorLibraryActiveSwatch } from './color-library-ui.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
-
-// Color Library image-import sample size and ramp-generator step bounds
-// moved to pixi-pro's js/pro/color-library-ui.js (split-pixi-pro-repo)
-// alongside their only callers.
 
 const RAINBOW_HUE_STEP = 20; // degrees per brush placed, in Rainbow mode
 
@@ -22,18 +33,15 @@ const PALETTE = [
   '#2ce8f4', '#1a5fb4', '#5843c0', '#8b2fb0',
 ];
 
-const BLEND_MODES = ['normal', 'multiply', 'screen', 'overlay'];
-
-/** Pro extension point (split-pixi-pro-repo): exported for pixi-pro's Color Library module. */
+/** Exported for js/color-library-ui.js's Color Library module. */
 export function hexToRgba(hex) {
   const n = Number.parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255, 255];
 }
 
 /** Inverse of hexToRgba - drops alpha (palette swatches and the native
- * <input type="color"> are always fully opaque 6-digit hex). Pro
- * extension point (split-pixi-pro-repo): exported for pixi-pro's Color
- * Library module. */
+ * <input type="color"> are always fully opaque 6-digit hex). Exported for
+ * js/color-library-ui.js's Color Library module. */
 export function rgbaToHex(rgba) {
   return (
     '#' +
@@ -109,8 +117,8 @@ function isSquareConstrained() {
 }
 
 // computeLayerMarkState (Layers panel multi-select marking, for
-// merge-layers) moved to pixi-pro (split-pixi-pro-repo) - see that
-// repo's test suite for its coverage.
+// merge-layers) lives in js/layers-ui.js, alongside the rest of the
+// Layers panel - see test/layers-marking.test.js for its coverage.
 
 // Module-level state, not per-call: the Workspace screen is a singleton in
 // this app (one workspace <canvas>), reused across every project the user
@@ -152,8 +160,8 @@ let colorPickerEscapeHandler = null;
 // every move.
 let shiftHeld = false;
 // Layers panel marking (markedLayerIds/lastMarkClickedLayerId/
-// clearLayerMarks) moved to pixi-pro's js/pro/layers-ui.js
-// (split-pixi-pro-repo) alongside the rest of the Layers panel.
+// clearLayerMarks) lives in js/layers-ui.js, alongside the rest of the
+// Layers panel.
 let squareConstraintPanel = null;
 let squareConstraintToggle = null;
 let exportControls = null;
@@ -199,12 +207,12 @@ let root = document;
 // projects" requirement).
 let allBrushes = [...BRUSHES];
 
-/** Pro extension point (split-pixi-pro-repo): read access to the current project's LayerStack, so pixi-pro's Layers panel can call its (already-public) add/delete/reorder/etc. methods directly. */
+/** Read access to the current project's LayerStack, so js/layers-ui.js's Layers panel can call its (already-public) add/delete/reorder/etc. methods directly. */
 export function getLayerStack() {
   return state.layerStack;
 }
 
-/** Pro extension point: re-renders the canvas (e.g. after a Layers panel operation), same as calling commit() but without an undo snapshot/autosave. */
+/** Re-renders the canvas (e.g. after a Layers panel operation), same as calling commit() but without an undo snapshot/autosave. */
 export function renderCanvas() {
   state.canvasView.render();
 }
@@ -253,19 +261,6 @@ async function autoSave() {
   await saveProject(state.projectId, state.layerStack, thumbnail, adapter);
 }
 
-/**
- * Pro extension point (split-pixi-pro-repo): called at the end of commit
- * (below) - e.g. so pixi-pro's Layers panel can refresh a layer's
- * thumbnail, which only updates on a full re-render, unlike the live
- * canvas. No-op when no Pro module is present. A single chokepoint here
- * rather than a call at every commit() call site - every commit means
- * content changed, so a stale thumbnail is always possible.
- */
-let afterCommitHook = null;
-export function registerAfterCommit(fn) {
-  afterCommitHook = fn;
-}
-
 export function commit() {
   state.undoStack.push(state.layerStack.snapshot());
   updateUndoRedoButtons();
@@ -283,18 +278,10 @@ export function commit() {
   if (state.timelapseRecorder.isRecording) {
     state.timelapseRecorder.addFrame(captureFrame(state.layerStack));
   }
-  if (afterCommitHook) afterCommitHook();
-}
-
-/**
- * Pro extension point: called at the end of performUndo/performRedo
- * (below) - e.g. so pixi-pro's Layers panel can clear its merge marks
- * (restored indices may no longer match what was marked) and refresh
- * itself. No-op when no Pro module is present.
- */
-let afterUndoRedoHook = null;
-export function registerAfterUndoRedo(fn) {
-  afterUndoRedoHook = fn;
+  // Every commit means content changed, and a layer's thumbnail only
+  // updates on a full re-render, unlike the live canvas - this is the
+  // single chokepoint that keeps it from going stale.
+  renderLayersPanel();
 }
 
 /** Shared by the Undo button and the Cmd/Ctrl+Z keyboard shortcut. */
@@ -303,21 +290,14 @@ function performUndo() {
   if (snapshot) {
     state.layerStack.restore(snapshot);
     state.canvasView.render();
-    if (afterUndoRedoHook) afterUndoRedoHook();
+    // performUndo/performRedo don't call commit() (they restore a
+    // snapshot via autoSave directly) - restored indices may no longer
+    // match the Layers panel's merge marks, so those are cleared and the
+    // panel refreshed here too.
+    clearLayerMarksAndRefresh();
     autoSave();
   }
   updateUndoRedoButtons();
-}
-
-/**
- * Pro extension point: registers the Cmd/Ctrl+E merge-layers shortcut's
- * handler (merge-layers is entirely Pro-only - see
- * js/pro/layers-ui.js's mergeMarkedOrActiveDown in pixi-pro). A no-op
- * keypress when no Pro module is present.
- */
-let mergeShortcutHook = null;
-export function registerMergeShortcut(fn) {
-  mergeShortcutHook = fn;
 }
 
 /** Shared by the Redo button and the Cmd/Ctrl+Shift+Z (or Ctrl+Y) shortcut. */
@@ -326,7 +306,7 @@ function performRedo() {
   if (snapshot) {
     state.layerStack.restore(snapshot);
     state.canvasView.render();
-    if (afterUndoRedoHook) afterUndoRedoHook();
+    clearLayerMarksAndRefresh();
     autoSave();
   }
   updateUndoRedoButtons();
@@ -336,39 +316,15 @@ function colorForCurrentTool() {
   return state.currentTool === 'eraser' ? [0, 0, 0, 0] : state.foregroundColor;
 }
 
-/**
- * Pro extension point (split-pixi-pro-repo): `pixi-pro` registers a color-
- * sequence provider here (e.g. Color Library sequence, which used to
- * live directly in this file, checking state.colorLibrarySequence
- * against module-scoped colorPalettes/activePaletteId - see that repo's
- * js/pro/color-library-ui.js). `fn(index)` returns an rgba for the
- * `index`-th placement, or a falsy value to fall through to the plain
- * foreground color. No-op passthrough when no Pro module is present.
- */
-let colorSequenceProvider = null;
-export function registerColorSequenceProvider(fn) {
-  colorSequenceProvider = fn;
-}
-
-/**
- * Pro extension point: called whenever Rainbow is selected, so a
- * registered Color Library sequence toggle (mutually exclusive with
- * Rainbow) can turn itself off. No-op when no Pro module is present.
- */
-let disableColorLibrarySequenceHook = null;
-export function registerDisableColorLibrarySequence(fn) {
-  disableColorLibrarySequenceHook = fn;
-}
-
-/** Pro extension point: lets a registered Color Library sequence toggle turn Rainbow back off, the same mutual-exclusivity relationship in reverse. */
+/** Lets js/color-library-ui.js's Color Library sequence toggle turn Rainbow back off, the mutual-exclusivity relationship between the two (see getColorSequenceColor's call site below for the other direction). */
 export function disableRainbow() {
   state.brushRainbow = false;
 }
 
 /**
  * Resolves the color for the `index`-th pixel/placement of a cycling
- * stroke - Rainbow (hue-stepped), a registered Pro color-sequence
- * provider (e.g. Color Library sequence), or the plain foreground color,
+ * stroke - Rainbow (hue-stepped), js/color-library-ui.js's Color Library
+ * sequence (via getColorSequenceColor), or the plain foreground color,
  * whichever applies. Shared by Pencil/Eraser's `pencilOrEraserApplyPixel`
  * and the Brush tool's `redrawBrushPath` so every cycling mode behaves
  * identically everywhere it's offered, not parallel implementations that
@@ -376,32 +332,24 @@ export function disableRainbow() {
  */
 function colorForSequenceIndex(index) {
   if (state.brushRainbow) return rainbowColor(index * RAINBOW_HUE_STEP);
-  const provided = colorSequenceProvider ? colorSequenceProvider(index) : null;
+  const provided = getColorSequenceColor(index);
   if (provided) return provided;
   return state.foregroundColor;
 }
 
 /**
- * Pro extension point (split-pixi-pro-repo): `pixi-pro` registers opacity-
- * aware paint/erase here (e.g. Pencil/Eraser's Opacity setting, which used
- * to live directly in this file as PixelEngine's setPixelBlended/
- * erasePixelBlended - see that repo's js/pro/pencil-opacity.js for the
- * blending math). No-op passthrough (plain overwrite / full erase, i.e.
- * always-100%-opacity) when no Pro module is present.
+ * Pencil/Eraser's Opacity setting (js/pencil-opacity-ui.js): both routed
+ * through PixelEngine's setPixelBlended/erasePixelBlended (lib/pixel-
+ * engine/engine.js), at whichever opacity the Opacity slider is currently
+ * set to (getPencilOpacity - defaults to 1, which setPixelBlended/
+ * erasePixelBlended's own doc comments note is pixel-identical to a plain
+ * overwrite/full erase).
  */
-let blendedPaint = null;
-let blendedErase = null;
-export function registerBlendedPaint(fn) {
-  blendedPaint = fn;
-}
-export function registerBlendedErase(fn) {
-  blendedErase = fn;
-}
 function paintPixel(engine, x, y, rgba) {
-  return blendedPaint ? blendedPaint(engine, x, y, rgba) : engine.setPixel(x, y, rgba);
+  return engine.setPixelBlended(x, y, rgba, getPencilOpacity());
 }
 function erasePixel(engine, x, y) {
-  return blendedErase ? blendedErase(engine, x, y) : engine.setPixel(x, y, [0, 0, 0, 0]);
+  return engine.erasePixelBlended(x, y, getPencilOpacity());
 }
 
 /**
@@ -426,8 +374,8 @@ function pencilOrEraserApplyPixel(engine) {
     }
     return (x, y) => erasePixel(engine, x, y);
   }
-  // Rainbow and any registered Pro color-sequence provider (e.g. Color
-  // Library sequence) both cycle per unique pixel placed, same as Brush -
+  // Rainbow and the Color Library sequence (js/color-library-ui.js) both
+  // cycle per unique pixel placed, same as Brush -
   // the index strokeFreehandThick now passes is the pixel's order among
   // unique placements (not raw path position), so Spacing-style skips
   // don't exist here but dedup-skipped pixels still don't throw off the
@@ -437,25 +385,13 @@ function pencilOrEraserApplyPixel(engine) {
   return (x, y, index) => paintPixel(engine, x, y, colorForSequenceIndex(index));
 }
 
-/**
- * Pro extension point (split-pixi-pro-repo): `pixi-pro` registers a
- * transform here to wrap Pencil/Eraser/Brush's `applyPixel(x, y, index)`
- * callback before pixels are set - e.g. symmetry/mirror drawing, which
- * used to live directly in this file (see design.md's "Extraction before
- * addition" decision for why a hook lives here instead). No-op passthrough
- * when no Pro module is present. `registerApplyPixelTransform`'s `fn` gets
- * `(applyPixel, engine)` and must return a same-shaped `applyPixel`
- * (`index` is a placement-order counter for Rainbow/Color-Library-sequence
- * - see pencilOrEraserApplyPixel - and must be preserved, not incremented,
- * across e.g. mirrored copies of one placement).
- */
-let applyPixelTransform = null;
-export function registerApplyPixelTransform(fn) {
-  applyPixelTransform = fn;
-}
-function withProPixelTransform(applyPixel, engine) {
-  return applyPixelTransform ? applyPixelTransform(applyPixel, engine) : applyPixel;
-}
+// Symmetry/mirror drawing (js/symmetry-ui.js's applySymmetryTransform,
+// imported above) wraps Pencil/Eraser/Brush's `applyPixel(x, y, index)`
+// callback before pixels are set, whenever a symmetry mode is active - see
+// applySymmetryTransform's own doc comment. `index` is a placement-order
+// counter for Rainbow/Color-Library-sequence (see pencilOrEraserApplyPixel)
+// and is preserved, not incremented, across mirrored copies of one
+// placement.
 
 function updateSelectionControls() {
   state.selectionControlsEl.classList.toggle('hidden', !state.selection);
@@ -473,20 +409,15 @@ function clearSelection() {
   updateSelectionControls();
 }
 
-// buildLayerThumbnailCanvas/syncLayersPanelToolbar (Layers panel
-// rendering) moved to pixi-pro's js/pro/layers-ui.js
-// (split-pixi-pro-repo).
+// buildLayerThumbnailCanvas/syncLayersPanelToolbar/syncLayersCollapse/
+// renderLayersPanel/buildLayerRow (the Layers panel itself) live in
+// js/layers-ui.js.
 
 function setRightSidebarVisible(visible) {
   rightSidebar.classList.toggle('right-sidebar-collapsed', !visible);
   rightSidebar.inert = !visible;
   rightSidebarToggle.classList.toggle('active', visible);
 }
-
-// syncLayersCollapse/renderLayersPanel/buildLayerRow (the Layers
-// panel itself) moved to pixi-pro's js/pro/layers-ui.js
-// (split-pixi-pro-repo) - see that history for prior art.
-
 
 /**
  * Draws a black-on-white preview of `brush`'s pattern (not its name) into a
@@ -535,9 +466,7 @@ async function loadCustomBrushes() {
 }
 
 // loadColorPalettes/syncColorLibraryCollapse/renderColorLibraryPanel
-// (Color Library panel rendering) moved to pixi-pro's
-// js/pro/color-library-ui.js (split-pixi-pro-repo) - see that history
-// for prior art.
+// (Color Library panel rendering) live in js/color-library-ui.js.
 
 function makeEmptyBrushEditorGrid(width, height) {
   return Array.from({ length: height }, () => Array(width).fill(false));
@@ -560,27 +489,26 @@ let brushEditorPaintValue = true;
 let brushEditorWidth = BRUSH_EDITOR_SIZE;
 let brushEditorHeight = BRUSH_EDITOR_SIZE;
 
-/** Pro extension point (split-pixi-pro-repo): the Brush editor's current grid size. */
+/** The Brush editor's current grid size - read directly by js/brush-import-ui.js's "Import from image". */
 export function getBrushEditorSize() {
   return { width: brushEditorWidth, height: brushEditorHeight };
 }
 
 // referenceImageSourceImage/referenceImageSmoothing (the reference image
-// layer's own state) moved to pixi-pro's js/pro/layers-ui.js
-// (split-pixi-pro-repo) alongside the rest of the Layers panel.
+// layer's own state) live in js/layers-ui.js, alongside the rest of the
+// Layers panel.
 
 /**
- * Pro extension point (split-pixi-pro-repo): overwrites brushEditorGridState
- * and the grid's DOM 'on' classes with `grid` (same grid[y][x] boolean
- * shape as makeEmptyBrushEditorGrid). Used by `pixi-pro`'s Brush editor
- * "Import from image" (used to live directly in this file as
- * applyBrushEditorSourceImage, thresholding a decoded image via
- * js/brush-import.js's thresholdToGrid - see that repo's
- * js/pro/brush-import.js) to apply its result, including on every
- * subsequent width/height change - see bindBrushEditorOnce's width/
- * height 'change' listeners, which pixi-pro adds its own to re-derive
- * from its own remembered source image. Assumes rebuildBrushEditorGrid()
- * already built the DOM cells at the current dimensions.
+ * Overwrites brushEditorGridState and the grid's DOM 'on' classes with
+ * `grid` (same grid[y][x] boolean shape as makeEmptyBrushEditorGrid).
+ * Called directly by js/brush-import-ui.js's Brush editor "Import from
+ * image" (thresholding a decoded image via js/brush-import.js's
+ * thresholdToGrid) to apply its result, including on every subsequent
+ * width/height change - see bindBrushEditorOnce's width/height 'change'
+ * listeners, and js/brush-import-ui.js's own listeners on the same inputs
+ * which re-derive from its remembered source image. Assumes
+ * rebuildBrushEditorGrid() already built the DOM cells at the current
+ * dimensions.
  */
 export function setBrushEditorGrid(grid) {
   brushEditorGridState = grid;
@@ -659,9 +587,9 @@ function bindBrushEditorOnce() {
   const saveButton = root.querySelector('#brush-editor-save');
 
   // Changing size re-grids from scratch - a brand-new brush each time.
-  // (Pro's "Import from image", if present, adds its own listener here
-  // too - see setBrushEditorGrid - to re-pixelate from its remembered
-  // source at the new size instead, after this one clears the grid.)
+  // (js/brush-import-ui.js adds its own listener here too - see
+  // setBrushEditorGrid - to re-pixelate from its remembered source at the
+  // new size instead, after this one clears the grid.)
   widthInput.addEventListener('change', () => {
     brushEditorWidth = clampBrushEditorDimension(Number(widthInput.value), state.layerStack.width);
     widthInput.value = String(brushEditorWidth);
@@ -721,10 +649,10 @@ function bindBrushEditorOnce() {
 const CONFETTI_COLORS = ['#ff453a', '#ff9f0a', '#ffd60a', '#30d158', '#64d2ff', '#0a84ff', '#bf5af2'];
 
 // MAGIC_PALETTES (Color Library's "magic palette" easter egg names/colors)
-// moved to pixi-pro's js/pro/color-library-ui.js (split-pixi-pro-repo) -
-// it still uses matrixRain/confettiBurst below (both exported), the same
-// shared decorative helpers Standard's own Konami code
-// (bindKonamiCode) and Export celebration (celebrateExport) use.
+// lives in js/color-library-ui.js - it uses matrixRain/confettiBurst
+// below (both exported), the same shared decorative helpers Standard's
+// own Konami code (bindKonamiCode) and Export celebration
+// (celebrateExport) use.
 
 const MATRIX_RAIN_CHARS = '01ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ'.split('');
 const MATRIX_RAIN_COLUMNS = 14;
@@ -850,10 +778,10 @@ function bindKonamiCode() {
  *
  * Delegated on document (mouseover/mouseout, not a per-element
  * querySelectorAll+addEventListener pass) so it also covers elements
- * that don't exist yet at call time - e.g. pixi-pro's Layers panel
- * (split-pixi-pro-repo) tears down and rebuilds its per-row buttons on
- * every render, so a one-time binding would miss them entirely after
- * the first render. mouseenter/mouseleave don't
+ * that don't exist yet at call time - e.g. js/layers-ui.js's Layers
+ * panel tears down and rebuilds its per-row buttons on every render, so
+ * a one-time binding would miss them entirely after the first render.
+ * mouseenter/mouseleave don't
  * bubble, hence mouseover/mouseout + relatedTarget's closest() check
  * below to still fire only on true enter/leave of a [data-tooltip]
  * element, not every pointer move across its children.
@@ -951,8 +879,8 @@ function bindTooltips() {
 
 /**
  * Rebuilds the palette row's swatches from the fixed PALETTE presets
- * plus the Rainbow swatch last. User-added colors now live in the
- * Pro-only Color Library panel (split-pixi-pro-repo), not here.
+ * plus the Rainbow swatch last. User-added colors live in the Color
+ * Library panel (js/color-library-ui.js), not here.
  */
 function renderPaletteRow() {
   paletteRow.innerHTML = '';
@@ -977,7 +905,7 @@ function renderPaletteRow() {
   rainbowSwatch.title = 'Rainbow (Brush tool only)';
   rainbowSwatch.addEventListener('click', () => {
     state.brushRainbow = true;
-    if (disableColorLibrarySequenceHook) disableColorLibrarySequenceHook();
+    setLibrarySequenceEnabled(false);
     syncActiveSwatch();
   });
   paletteRow.appendChild(rainbowSwatch);
@@ -986,26 +914,16 @@ function renderPaletteRow() {
 }
 
 /**
- * Pro extension point (split-pixi-pro-repo): called at the end of
- * syncActiveSwatch (below) with the same `(fgHex, isRainbow)` Standard's
- * own palette row uses, so pixi-pro's Color Library grid can highlight
- * its own active swatch too - this used to be a direct colorLibraryGrid
- * reference inline in syncActiveSwatch. No-op when no Pro module is
- * present.
- */
-let activeSwatchSyncHook = null;
-export function registerActiveSwatchSync(fn) {
-  activeSwatchSyncHook = fn;
-}
-
-/**
  * Toggles .active on whichever palette swatch (or Rainbow) matches
- * current state. Pro extension point: exported so pixi-pro's Color
- * Library module can re-trigger this (and so its registerActiveSwatchSync
- * hook) after rebuilding its own swatch grid - e.g. after loading
- * palettes or switching the active one - without needing to go through
- * setForegroundColor (which has side effects, like clearing Rainbow,
- * that aren't appropriate for "just re-render the highlight").
+ * current state. Exported so js/color-library-ui.js's Color Library
+ * module can re-trigger this after rebuilding its own swatch grid - e.g.
+ * after loading palettes or switching the active one - without needing
+ * to go through setForegroundColor (which has side effects, like
+ * clearing Rainbow, that aren't appropriate for "just re-render the
+ * highlight"). Also calls js/color-library-ui.js's
+ * syncColorLibraryActiveSwatch directly with the same `(fgHex,
+ * isRainbow)` this palette row uses, so its own swatch grid highlight
+ * stays in sync.
  */
 export function syncActiveSwatch() {
   const fgHex = rgbaToHex(state.foregroundColor);
@@ -1014,7 +932,7 @@ export function syncActiveSwatch() {
   });
   const rainbowEl = paletteRow.querySelector('.rainbow-swatch');
   if (rainbowEl) rainbowEl.classList.toggle('active', state.brushRainbow);
-  if (activeSwatchSyncHook) activeSwatchSyncHook(fgHex, state.brushRainbow);
+  syncColorLibraryActiveSwatch(fgHex, state.brushRainbow);
 }
 
 /** Keeps the native color input, hex field, and RGB fields all showing the same color. */
@@ -1037,9 +955,9 @@ function updateFgBgSwatches() {
  * picker, Eyedropper) - the single path every color-pick action goes
  * through, so the picker fields, palette active-state, and FG/BG swatch
  * all stay in sync by construction. Deselects Rainbow, the same way
- * picking a regular color always has. Pro extension point
- * (split-pixi-pro-repo): exported for pixi-pro's Color Library module
- * (its swatch clicks route through this too).
+ * picking a regular color always has. Exported for
+ * js/color-library-ui.js's Color Library module (its swatch clicks
+ * route through this too).
  */
 export function setForegroundColor(rgba) {
   state.foregroundColor = rgba;
@@ -1061,12 +979,10 @@ function setBackgroundColor(rgba) {
 let colorPickerTarget = 'foreground';
 
 /**
- * Pro extension point (split-pixi-pro-repo): whichever color the
- * color-picker-popover is currently editing - used by pixi-pro's Color
- * Library module for its "Add to palette"/"Generate ramp" buttons
- * embedded in that (otherwise Standard) popover. addCurrentColorToActivePalette
- * (the function that used to route both those buttons here) moved to
- * pixi-pro's js/pro/color-library-ui.js.
+ * Whichever color the color-picker-popover is currently editing - used
+ * by js/color-library-ui.js's Color Library module for its "Add to
+ * palette"/"Generate ramp" buttons embedded in that (otherwise Standard)
+ * popover.
  */
 export function getColorPickerCurrentColor() {
   return colorPickerTarget === 'background' ? state.backgroundColor : state.foregroundColor;
@@ -1127,8 +1043,8 @@ function closeColorPicker() {
   root.querySelector('#color-picker-popover').classList.add('hidden');
 }
 
-// openLayersOpacityPopover/closeLayersOpacityPopover moved to pixi-pro's
-// js/pro/layers-ui.js (split-pixi-pro-repo).
+// openLayersOpacityPopover/closeLayersOpacityPopover live in
+// js/layers-ui.js.
 
 /**
  * Wires a panel header (e.g. #layers-panel-header,
@@ -1138,11 +1054,9 @@ function closeColorPicker() {
  * inside the header (e.g. Color Library's add/delete-palette buttons,
  * Layers' "+ Layer" button) so those keep working normally instead of
  * also toggling collapse. `onToggle` owns updating the underlying state
- * and syncing the DOM (see pixi-pro's Layers/Color Library modules' own
- * syncLayersCollapse/syncColorLibraryCollapse). Pro extension point
- * (split-pixi-pro-repo): exported for reuse there - both panels this
- * doc comment describes are Pro-only, this file has no caller of its
- * own anymore.
+ * and syncing the DOM (see js/layers-ui.js's/js/color-library-ui.js's own
+ * syncLayersCollapse/syncColorLibraryCollapse). Exported for reuse by
+ * both those files - this file has no caller of its own.
  */
 export function bindPanelHeaderCollapse(headerEl, onToggle) {
   headerEl.addEventListener('click', (e) => {
@@ -1180,8 +1094,8 @@ export function bindSliderWheel(slider) {
 }
 
 // positionPanelBelow (popover positioning for the Color Library import/
-// ramp preview popovers) moved to pixi-pro's js/pro/color-library-ui.js
-// (split-pixi-pro-repo) alongside its only two callers.
+// ramp preview popovers) lives in js/color-library-ui.js, alongside its
+// only two callers.
 
 /**
  * Applies every tool-scoped UI toggle that follows from `state.currentTool`
@@ -1240,8 +1154,8 @@ function bindDomOnce() {
     bindKonamiCode();
   }
 
-  // Pencil/Eraser Size - shared slider with live readout (Opacity is
-  // Pro-only, see js/pro/pencil-opacity-ui.js in pixi-pro).
+  // Pencil/Eraser Size - shared slider with live readout (Opacity has its
+  // own slider, wired by initPencilOpacity() below).
   pencilOptionsPanel = root.querySelector('#pencil-options');
   const pencilSizeSlider = root.querySelector('#pencil-size-slider');
   const pencilSizeReadout = root.querySelector('#pencil-size-readout');
@@ -1320,13 +1234,13 @@ function bindDomOnce() {
   root.querySelector('#color-picker-close').addEventListener('click', closeColorPicker);
 
   // Close on outside click/Escape, not just the explicit close button -
-  // standard popover behavior. Clicks inside #ramp-preview-row (Pro-only,
-  // split-pixi-pro-repo - absent in pixi, hence the `?.`) don't count as
-  // "outside" here even though it's a sibling, not a descendant, of
-  // #color-picker-popover - it's opened from this popover's own
-  // "Generate ramp" button (present only when pixi-pro's Color Library
-  // module registers it), so closing the color picker out from under an
-  // in-progress ramp preview would be surprising.
+  // standard popover behavior. Clicks inside #ramp-preview-row don't
+  // count as "outside" here even though it's a sibling, not a
+  // descendant, of #color-picker-popover - it's opened from this
+  // popover's own "Generate ramp" button (js/color-library-ui.js), so
+  // closing the color picker out from under an in-progress ramp preview
+  // would be surprising. `?.` still guards a mounted instance whose
+  // markup omits the Color Library panel (embeddable-editor-api).
   // Unlike the document-level listeners guarded by globalListenersBound
   // above/below, these two close over `colorPickerPopover` - a local,
   // freshly looked-up from `root` on every bindDomOnce() call, not a
@@ -1418,13 +1332,12 @@ function bindDomOnce() {
   bindBrushEditorOnce();
 
   // Color Library panel (add-current-color/add-palette/import/ramp-
-  // generator/delete, and the import-preview/ramp-preview popovers) moved
-  // to pixi-pro's js/pro/color-library-ui.js (split-pixi-pro-repo) -
-  // see that history for prior art.
+  // generator/delete, and the import-preview/ramp-preview popovers) is
+  // wired by js/color-library-ui.js's initColorLibrary(), called from
+  // js/app.js.
 
-  // Pro-only (split-pixi-pro-repo): Layers panel (collapse-to-header,
-  // toolbar, opacity popover) wiring moved to pixi-pro's
-  // js/pro/layers-ui.js.
+  // Layers panel (collapse-to-header, toolbar, opacity popover) is wired
+  // by js/layers-ui.js's initLayers(), called from js/app.js.
 
   // Whole right-sidebar visibility toggle (Color Library + Brushes +
   // Layers together), independent of each panel's own collapsed state
@@ -1622,8 +1535,8 @@ function bindDomOnce() {
   // is actually visible, so none of this fires from the Gallery or New
   // Canvas screens.
   // Every document.addEventListener below reads only module-level `root`/
-  // `state`/`toolButtons`/`mergeShortcutHook`/`shiftHeld` (all reassigned
-  // fresh on the calls above/in initWorkspace), never a value local to
+  // `state`/`toolButtons`/`shiftHeld` (all reassigned fresh on the calls
+  // above/in initWorkspace), never a value local to
   // this specific bindDomOnce() call - so one persistent copy of each
   // always acts on whichever root/state is current, and binding only
   // once-ever (globalListenersBound) is correct here, unlike the
@@ -1665,11 +1578,10 @@ function bindDomOnce() {
         return;
       }
 
-      // Cmd/Ctrl+E: merge layers - Pro-only (registerMergeShortcut above),
-      // a no-op keypress in Standard.
+      // Cmd/Ctrl+E: merge layers - see js/layers-ui.js's mergeMarkedOrActiveDown.
       if (key === 'e') {
         e.preventDefault();
-        if (mergeShortcutHook) mergeShortcutHook();
+        mergeMarkedOrActiveDown();
       }
     });
 
@@ -1730,8 +1642,7 @@ function bindDomOnce() {
     state.onRequestGallery?.();
   });
 
-  // Pro-only (split-pixi-pro-repo): "Add layer" and "Add reference image"
-  // wiring moved to pixi-pro's js/pro/layers-ui.js.
+  // "Add layer" and "Add reference image" wiring is in js/layers-ui.js.
 
   state.selectionClearButton.addEventListener('click', clearSelection);
 
@@ -1745,22 +1656,46 @@ function bindDomOnce() {
       }
     }
     state.canvasView.render();
-    commit(); // registerAfterCommit's hook (if any) handles a stale Layers thumbnail
+    commit(); // commit() calls renderLayersPanel() directly, so a stale Layers thumbnail always gets refreshed
+  });
+
+  // Restored merge-pixi-pro-into-standard features (symmetry, pixel-
+  // perfect, Rectangle Filled, Pencil/Eraser Opacity, Brush import from
+  // image, Canvas Settings) - each owns its own toggle/panel wiring, bound
+  // here (like every other Workspace-scoped feature above) rather than at
+  // module load, so a mounted instance's cloned root is respected too.
+  initSymmetry(root);
+  initPixelPerfect(root);
+  initRectangleFill(root);
+  initPencilOpacity(root);
+  initBrushImport(root);
+  canvasSettingsControls = initCanvasSettings({
+    onResize(width, height) {
+      resizeCanvas(width, height);
+      canvasSettingsControls.setCurrentSize(width, height);
+    },
+    onRotate(direction) {
+      rotateCanvas(direction);
+      const { width, height } = getCanvasSize(); // rotate swaps W/H on a non-square canvas
+      canvasSettingsControls.setCurrentSize(width, height);
+    },
+    onRename(name) {
+      renameCurrentProject(name);
+    },
+    root,
   });
 
   globalListenersBound = true;
 }
 
 /**
- * Pro extension points (split-pixi-pro-repo): Canvas Settings (rename/
- * resize/rotate) moved to `pixi-pro` wholesale - `js/canvas-settings.js`'s
- * UI, and its onResize/onRotate/onRename callback bodies, used to live
- * directly in this file. These four exports are what `pixi-pro`'s own
- * canvas-settings-ui.js calls instead: the resize/rotate/rename logic
- * itself (which needs `state`, `commit()`, `updateSelectionControls()` -
- * all workspace-internal) stays here unchanged, only its UI trigger moved.
+ * Canvas Settings (rename/resize/rotate) - js/canvas-settings.js owns the
+ * popover's DOM/UI; these three do the actual mutation, which needs
+ * `state`, `commit()`, `updateSelectionControls()` - all
+ * workspace-internal - so they stay here as the onResize/onRotate/onRename
+ * callback bodies canvasSettingsControls (below) is initialized with.
  */
-export function resizeCanvas(width, height) {
+function resizeCanvas(width, height) {
   state.layerStack.resize(width, height);
   state.canvasView.resetView();
   state.canvasView.render();
@@ -1771,7 +1706,7 @@ export function resizeCanvas(width, height) {
   commit();
 }
 
-export function rotateCanvas(direction) {
+function rotateCanvas(direction) {
   state.layerStack.rotate90(direction);
   state.canvasView.resetView();
   state.canvasView.render();
@@ -1781,23 +1716,31 @@ export function rotateCanvas(direction) {
   commit();
 }
 
-export function renameCurrentProject(name) {
+function renameCurrentProject(name) {
   state.projectName = name;
   renameProject(state.projectId, name);
 }
 
-/** Pro extension point: the current canvas's size, e.g. to refresh a UI after rotateCanvas swaps width/height. */
-export function getCanvasSize() {
+/** The current canvas's size, e.g. to refresh the Canvas Settings panel after rotateCanvas swaps width/height. */
+function getCanvasSize() {
   return { width: state.layerStack.width, height: state.layerStack.height };
 }
 
+// The Canvas Settings popover's controls (setCurrentSize/setCurrentName/
+// close), set once in bindDomOnce() below and called directly from
+// initWorkspace()'s per-project reset so the panel's displayed name/size
+// stays in sync with whichever project is open, and closes on every
+// project switch.
+let canvasSettingsControls = null;
+
 /**
- * Pro extension point: subscribes `fn({ width, height, name })` to run
- * whenever a project opens/switches (workspace.js's per-project reset) -
- * e.g. so a Pro Canvas Settings panel can refresh its displayed name/size
- * and close itself, the same way it used to via
- * canvasSettingsControls.setCurrentSize/setCurrentName/close directly in
- * this file's per-project reset.
+ * Subscribes `fn({ width, height, name })` to run whenever a project
+ * opens/switches (initWorkspace()'s per-project reset, below) - e.g. so
+ * the Color Library panel can reload its palettes or the Layers panel can
+ * refresh itself for the newly-opened project. Also used internally by
+ * Canvas Settings (js/canvas-settings.js's popover) to keep its displayed
+ * name/size in sync and close itself, the same way every other subscriber
+ * does - not a special case.
  */
 const workspaceResetListeners = [];
 export function onWorkspaceReset(fn) {
@@ -1858,7 +1801,7 @@ function redrawBrushPath() {
     if (i % state.brushSpacing !== 0) return;
     const rgba = colorForSequenceIndex(placementIndex);
     const angle = placementIndex * state.brushRotationStep;
-    placeBrush(state.strokeEngine, point.x, point.y, state.currentBrush, rgba, angle, applyPixelTransform);
+    placeBrush(state.strokeEngine, point.x, point.y, state.currentBrush, rgba, angle, applySymmetryTransform);
     placementIndex++;
   });
   clipToSelection(state.strokeEngine, state.strokeBackup, state.selection);
@@ -1903,7 +1846,8 @@ function redrawMovePreview() {
  * Wires the Workspace tab bar, palette, brushes row, and selection
  * controls to `layerStack` and `canvasView`, and owns the undo/redo
  * stack and auto-save for the current project (Layers panel and Canvas
- * Settings are Pro-only, split-pixi-pro-repo - wired separately there).
+ * Settings are wired here too, alongside every other Workspace-scoped
+ * feature - see initLayers()/initCanvasSettings() below).
  * Safe to call repeatedly (once per project opened or created in a
  * session) — DOM listeners bind only once; subsequent calls just reset
  * the drawing state for the new project.
@@ -2047,6 +1991,16 @@ export function initWorkspace({
   tilePreviewToggle.classList.remove('active');
   state.canvasView.setTilePreviewEnabled(false);
 
+  // Canvas Settings panel: refresh its displayed name/size and close it -
+  // a freshly (re)opened project starts with the popover closed, same
+  // reasoning as exportControls.close() below. `?.` guards the very first
+  // initWorkspace() call, before bindDomOnce() has run and assigned this.
+  canvasSettingsControls?.setCurrentSize(layerStack.width, layerStack.height);
+  canvasSettingsControls?.setCurrentName(projectName);
+  canvasSettingsControls?.close();
+  // Every other onWorkspaceReset subscriber (Color Library reloading its
+  // palettes, Layers refreshing its panel) - see onWorkspaceReset's own
+  // doc comment above.
   for (const fn of workspaceResetListeners) fn({ width: layerStack.width, height: layerStack.height, name: projectName });
   exportControls.close();
   // drawing-timelapse-recording: mirrors exportControls.close() above - a
@@ -2113,7 +2067,7 @@ export function initWorkspace({
         activeEngine.floodFill(point.x, point.y, state.foregroundColor);
         clipToSelection(activeEngine, backup, state.selection);
         state.canvasView.render();
-        commit(); // registerAfterCommit's hook (if any) handles a stale Layers thumbnail
+        commit(); // commit() calls renderLayersPanel() directly, so a stale Layers thumbnail always gets refreshed
         return;
       }
 
@@ -2181,7 +2135,7 @@ export function initWorkspace({
       strokeFreehandThick(
         state.strokePoints,
         state.pencilSize,
-        withProPixelTransform(pencilOrEraserApplyPixel(activeEngine), activeEngine)
+        applySymmetryTransform(pencilOrEraserApplyPixel(activeEngine), activeEngine)
       );
       clipToSelection(activeEngine, state.strokeBackup, state.selection);
       state.canvasView.render();
@@ -2238,7 +2192,7 @@ export function initWorkspace({
       strokeFreehandThick(
         state.strokePoints,
         state.pencilSize,
-        withProPixelTransform(pencilOrEraserApplyPixel(state.strokeEngine), state.strokeEngine)
+        applySymmetryTransform(pencilOrEraserApplyPixel(state.strokeEngine), state.strokeEngine)
       );
       clipToSelection(state.strokeEngine, state.strokeBackup, state.selection);
       state.canvasView.render();
@@ -2293,10 +2247,10 @@ export function initWorkspace({
       state.dragStart = null;
       state.dragCurrent = null;
       // Every drawing tool (pencil, eraser, brush, line, rectangle,
-      // selection move) funnels through here - registerAfterCommit's
-      // hook (if any) handles a stale Layers thumbnail, since without it
-      // the thumbnail would go stale until some other action triggers a
-      // re-render.
+      // selection move) funnels through here - commit() calls
+      // renderLayersPanel() directly, so a stale Layers thumbnail always
+      // gets refreshed here rather than waiting on some other action to
+      // trigger a re-render.
       commit();
     },
 

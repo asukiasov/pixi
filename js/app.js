@@ -9,6 +9,8 @@ import { VERSION } from './version.js';
 import { initMagneticHover } from './magnetic-hover.js';
 import { initThemeToggle } from './theme.js';
 import { initIconFontFallback } from './icon-font-fallback.js';
+import { initColorLibrary } from './color-library-ui.js';
+import { initLayers } from './layers-ui.js';
 
 const screens = {
   gallery: document.getElementById('screen-gallery'),
@@ -81,6 +83,14 @@ initMagneticHover([
 // style.css's tokens keying off `data-theme` on <html>), not just inside
 // the Workspace screen where the button happens to live. See js/theme.js.
 initThemeToggle(document.getElementById('theme-toggle'));
+
+// Color Library and Layers panels - wired once here, like every other
+// init* call in this file; their own onWorkspaceReset registrations
+// (js/workspace.js) handle per-project reset. DOM-dependent, so this
+// must run after the Workspace screen's markup exists in index.html
+// (true from module load - no injection involved).
+initColorLibrary();
+initLayers();
 
 function showScreen(name) {
   for (const [key, el] of Object.entries(screens)) {

@@ -133,16 +133,15 @@ describe('placeBrush', () => {
     assert.deepEqual(engine.getPixel(16, 3), [0, 0, 0, 0]);
   });
 
-  // Symmetry/mirror drawing itself moved to pixi-pro (split-pixi-pro-repo)
-  // - see that repo's test suite for mirrorApplyPixel coverage. This just
-  // proves placeBrush's `applyPixelTransform` hook is actually honored,
-  // via a stand-in transform (not mirroring) that any Pro module could
-  // register the same shape of.
+  // See test/symmetry.test.js for mirrorApplyPixel's own coverage. This
+  // just proves placeBrush's `applyPixelTransform` parameter is actually
+  // honored, via a stand-in transform (not mirroring) that any caller
+  // could pass the same shape of.
   test('honors an applyPixelTransform hook when one is given', () => {
     const engine = new PixelEngine(20, 20, 'transparent');
     const brush = { id: 'dot', name: 'Dot', width: 1, height: 1, pixels: [[0, 0]] };
-    // Places at (x, y) and its mirror across x=19 - the same shape a Pro
-    // symmetry hook would use, without depending on that module.
+    // Places at (x, y) and its mirror across x=19 - the same shape
+    // symmetry drawing uses, without depending on that module.
     const mirrorHorizontal = (applyPixel, hookEngine) => (x, y) => {
       applyPixel(x, y);
       applyPixel(hookEngine.width - 1 - x, y);

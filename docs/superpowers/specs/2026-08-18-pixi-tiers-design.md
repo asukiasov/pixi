@@ -1,11 +1,16 @@
 # Pixi Standard/Pro tiers — design
 
-> **Legacy — superseded.** This doc predates the OpenSpec process (see
-> CLAUDE.md's "Process: OpenSpec vs. Superpowers skills") and was the input
-> to `openspec/changes/split-pixi-pro-repo/`, which implements the split
-> this doc designed. Once that change is archived, its spec at
-> `openspec/specs/pixi-pro-distribution/` is the source of truth — this
-> file is kept only as historical design context.
+> **Legacy — superseded, and the split it describes has been reversed.**
+> This doc predates the OpenSpec process (see CLAUDE.md's "Process:
+> OpenSpec vs. Superpowers skills") and was the input to
+> `openspec/changes/archive/2026-08-21-split-pixi-pro-repo/`, which
+> implemented the split this doc designed. That split's own spec,
+> `openspec/specs/pixi-pro-distribution/`, was then retired by
+> `openspec/changes/merge-pixi-pro-into-standard/` (2026-08-24), which
+> reversed the split entirely — all Pro-only features moved back into this
+> single public repo, free, with a voluntary donation ask replacing the
+> paid tier. This file is kept only as historical design context for a
+> tier model that no longer exists.
 
 Design doc for splitting Pixi into two downloadable, self-hosted versions:
 **Standard** (free, open-source) and **Pro** (paid, closed-source). Both are

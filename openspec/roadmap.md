@@ -228,18 +228,20 @@ becomes the next priority:
   reasoning as reference-image-layer above).
 - Animation timeline / onion skinning — explicitly out of scope for now, see
   CLAUDE.md non-goals; would need its own roadmap discussion if ever revisited
-- **Standard/Pro tier split** — splitting Pixi into two downloadable,
-  self-hosted versions: free/open-source Standard (this repo, as-is) and
-  paid/closed-source Pro (new private `pixi-pro` repo, submodules `pixi`).
-  Manual PayPal → GitHub-collaborator access, no automated licensing. Note:
-  this supersedes Phase 4's original Stripe/entitlements sketch for this
-  specific tier split — revisit Phase 4's description if it's still wanted
-  for a different monetization path. Raised 2026-08-18; proposed and
-  implemented via `openspec/changes/split-pixi-pro-repo/` — the design doc
-  and feature-by-feature worksheet that informed it
-  (`docs/superpowers/specs/2026-08-18-pixi-tiers-design.md` and
-  `docs/superpowers/specs/2026-08-17-tier-matrix-worksheet.md`) are legacy
-  input now, superseded by that change's spec once it's archived.
+- ~~**Standard/Pro tier split**~~ — **reversed.** Originally: splitting
+  Pixi into two downloadable, self-hosted versions: free/open-source
+  Standard (this repo, as-is) and paid/closed-source Pro (new private
+  `pixi-pro` repo, submodules `pixi`), manual PayPal → GitHub-collaborator
+  access, no automated licensing. Raised 2026-08-18; proposed and
+  implemented via `openspec/changes/archive/2026-08-21-split-pixi-pro-repo/`.
+  Reversed 2026-08-24 via `openspec/changes/merge-pixi-pro-into-standard/`:
+  all 8 Pro-only features (Layers, Color Library, symmetry, pixel-perfect,
+  Canvas Settings, brush/image import, Rectangle fill/outline, Pencil
+  opacity) moved back into this repo as free, always-present tools, the
+  $5 paid gate is replaced with a voluntary donation ask (README, PayPal),
+  and the private `pixi-pro` repo/Cloudflare demo are retired. Phase 4's
+  original Stripe/entitlements sketch is unaffected by either the split or
+  its reversal — it remains a separate, not-yet-scoped monetization path.
 - **Brush picker UI redesign** — the current Brushes panel (docked right
   sidebar, `#brushes-panel`: grid of predefined + custom brushes, spacing/
   rotation inputs, an editor for drawing new custom patterns) was raised
@@ -300,26 +302,21 @@ becomes the next priority:
   swappable icon font/sprite instead of the hardcoded Material Symbols
   subset, an `options.theme` mount() option — needs its own design pass
   before scoping. Raised 2026-08-22.
-- **Plugin/powerup system, with Pixi Pro as its first plugin.** Today's
-  "Pro extension points" (`registerColorSequenceProvider` and ~20 similar
-  exports in `js/workspace.js`/`lib/pixel-engine/`) are ad-hoc, shaped one
-  at a time around exactly what `pixi-pro` needed — not a stable,
-  discoverable API a third party could register against. And `pixi-pro`
-  itself is distributed as a git submodule with additive files importing
-  straight from `pixi`'s internals
-  (`openspec/changes/archive/2026-08-21-split-pixi-pro-repo/design.md`),
-  closer to a trusted fork than a loaded plugin. Making Pro "the first
-  plugin" for real means two separate pieces of work: (1) formalize the
-  extension points into an actual registration/lifecycle API (no bundler,
-  so plugins would load via dynamic `import()`, not a bundled manifest —
-  native but new infrastructure), and (2) migrate `pixi-pro` onto that API
-  instead of direct internal imports, which also changes Pro's
-  access-control story (today the gate is "you don't have the private
-  repo"; a loadable plugin module needs its own gate). Builds naturally on
-  top of the `style.css`-scoping/theming items above — a plugin API wants
-  scoped styling and stable hook contracts for the same reasons an
-  embedder does. Needs its own brainstorming/design pass before scoping;
-  not queued as ready work. Raised 2026-08-22.
+- ~~**Plugin/powerup system, with Pixi Pro as its first plugin.**~~ —
+  **no longer applicable**, closed out 2026-08-24. Originally: formalize
+  the ad-hoc "Pro extension points" (`registerColorSequenceProvider` and
+  ~20 similar exports) into a real registration/lifecycle API, with
+  `pixi-pro` as the first consumer instead of importing straight from
+  `pixi`'s internals. Raised 2026-08-22. This idea's entire premise was
+  `pixi-pro` as an external, less-trusted API consumer needing a stable
+  public surface to register against — that consumer no longer exists
+  after `openspec/changes/merge-pixi-pro-into-standard/` merged Pro's
+  features back into this repo and removed the extension-hook layer
+  outright (see the "Standard/Pro tier split" entry above). If a genuine
+  third-party plugin need shows up later, it should get its own fresh
+  brainstorming pass rather than resurrecting this one — today's removed
+  hooks were shaped one at a time around exactly what `pixi-pro` needed,
+  never a general-purpose plugin API to begin with.
 - **UI polish pass — refine the design window by window, panel by
   panel.** Raised directly on 2026-08-17, after 2m/2n shipped and real
   usage surfaced rough edges. An open-ended initiative, not one change -

@@ -285,12 +285,10 @@ All of `options.ui` is optional; omitting it keeps every pre-existing
 
 **`gallery` and `tools` (below) are the only configurable chrome.** The rest
 of `WORKSPACE_MARKUP`'s topbar and panels — zoom controls, undo/redo, the
-Export/download button, timelapse recording, the theme toggle — are fixed
-and have no `options.ui` surface to hide or restyle them through the API.
-Looking for Layers, Color Library, symmetry drawing, or another Pro-only
-tool here: they're not reachable through `mount()` at all in Standard,
-configurable or otherwise — see [Known limitations](#known-limitations)
-below for exactly why.
+Export/download button, timelapse recording, the theme toggle, the Layers
+panel, the Color Library panel, symmetry drawing, and every other tool —
+are fixed and have no `options.ui` surface to hide or restyle them through
+the API.
 
 ### `options.ui.gallery`
 
@@ -405,17 +403,6 @@ no keyboard-only or screen-reader-driven path to any tool, color, or
 drawing action today — every interaction goes through pointer events on the
 canvas. If your host page has an accessibility requirement, treat the
 mounted editor as a mouse/touch/pen-only surface until this changes.
-
-**Pro tools aren't reachable from Standard, but the hook surface they plug
-into ships in Standard's own code.** `js/workspace.js` (which `mount()`
-reuses) exposes a handful of registration hooks —
-`registerColorSequenceProvider` and similar — that exist so Pixi Pro's
-private repo can attach its extra panels (Layers, Color Library, symmetry
-drawing) at runtime. Standard never ships Pro's actual implementations
-behind those hooks, so with only this repo loaded they're inert no-ops, not
-a code path that can invoke a Pro feature. But it's not literally "two
-disconnected codebases with zero shared runtime" either — the hook
-registry itself is part of what you're embedding.
 
 **Confirmed (task 4.3):** the repo root [`LICENSE`](../LICENSE) is the
 standard MIT license, with no additional restriction or field-of-use clause.

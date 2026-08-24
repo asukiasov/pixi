@@ -284,8 +284,7 @@ describe('deleteCustomBrush', () => {
 
 // createColorPalette/listColorPalettes/renameColorPalette/
 // addColorToPalette/deleteColorPalette (Color Library's palette CRUD)
-// moved to pixi-pro (split-pixi-pro-repo) - see that repo's
-// test/color-library-persistence.test.js for their coverage.
+// are covered in test/color-library-persistence.test.js, not here.
 
 describe('storage adapter substitution', () => {
   // Proves pluggable-storage-adapter's "Host provides a custom backend"

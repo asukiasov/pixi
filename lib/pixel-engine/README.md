@@ -16,12 +16,13 @@ import them directly as ES modules. Last verified against commit
 
 ## What's in here
 
-Three files, each a plain ES module with no import beyond the others in
+Four files, each a plain ES module with no import beyond the others in
 this folder:
 
 | File | Exports | What it does |
 |---|---|---|
-| `engine.js` | `PixelEngine`, `bresenhamLine`, `circleOffsets`, `strokeFreehandThick`, `registerPathTransform` | A single layer's pixel buffer (`Uint8ClampedArray`, RGBA) and pure drawing operations on it: freehand stroke, flood fill, region extract/clear/stamp, PNG encode |
+| `engine.js` | `PixelEngine`, `bresenhamLine`, `circleOffsets`, `strokeFreehandThick`, `setPixelPerfectEnabled` | A single layer's pixel buffer (`Uint8ClampedArray`, RGBA) and pure drawing operations on it: freehand stroke, flood fill, region extract/clear/stamp, opacity-blended paint/erase, PNG encode |
+| `pixel-perfect.js` | `removeRedundantCorners` | Aseprite-style corner removal for pixel-perfect drawing mode - pure, imported directly by `engine.js` |
 | `layers.js` | `LayerStack`, `BLEND_MODES` | An ordered stack of `PixelEngine` buffers (up to 8) with per-layer visibility/opacity/blend mode, compositing, merge, resize, rotate, and project-record (de)serialization |
 | `undo.js` | `UndoStack` | A capped (20-deep) undo/redo stack of opaque snapshots — you decide what a "snapshot" is; typically a `LayerStack.snapshot()` result |
 

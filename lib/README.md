@@ -8,34 +8,94 @@ you need to use it is on this page. Last verified against commit
 [`706e975`](https://github.com/asukiasov/pixi/commit/706e97521be7784d6cfd73e29b76d14da4b5ff0c)
 (31 commits after tag `v0.3.0`, not yet re-tagged).
 
-**Stability**: there's no semver commitment on this API yet — no
-`CHANGELOG`, no published version number distinct from the repo's own git
-tags. Treat the "last verified against commit" line above as the actual
-contract: if you need certainty a future commit won't change `mount()`'s
-behavior out from under you, pin your copy of the repo to that commit (or
-the nearest tag at/before it) rather than tracking `main`.
+## Embedding checklist
 
-**License**: MIT, matching the repo root [`LICENSE`](../LICENSE). See
-[License and distribution](#license-and-distribution) below for exactly what
-that permits, and how it differs from Pixi Pro.
+For a narrow embed inside another product (an avatar picker, a modal, any
+use that isn't "reuse the whole Workspace as-is") — the decisions below
+are the ones that actually differ from the standalone app's own defaults.
+Each links to the section with the full explanation; nothing here
+duplicates it.
 
-**Get it**: `lib/pixi.js` imports from `lib/pixel-engine/`, `js/canvas-view.js`,
+1. **Serve it, don't bundle it.** No `npm install` — serve Pixi's file
+   tree as static assets and import `lib/pixi.js` by URL. See
+   [No bundler support](#no-bundler-support).
+2. **One instance at a time, page-wide.** `destroy()` the previous
+   instance before mounting a new one (reopening an editor, switching
+   profiles). See [Single active instance](#single-active-instance).
+3. **Always `destroy()` before the host element goes away.** Removing
+   `hostElement` from the DOM yourself (a React/Vue component unmounting)
+   without calling `instance.destroy()` first leaves stale document-level
+   state behind. See [`instance.destroy()`](#instancedestroy).
+4. **Pick a storage adapter deliberately.** The default autosaves into
+   your host page's own IndexedDB, indistinguishable from a real saved
+   project — pass `createInMemoryAdapter()` if the embed shouldn't leave
+   projects behind. See [`options.storage`](#optionsstorage).
+5. **Scope `style.css` yourself.** It's unprefixed global CSS; an iframe
+   or your own scoping step is required to avoid collisions with your
+   host site's styles. See [Style scoping](#style-scoping).
+6. **Crop/mask is on you.** The canvas is always a square PNG — circular
+   or masked presentation (e.g. avatars) is applied host-side after
+   export. See the canvas-shape paragraph in
+   [`Pixi.mount(hostElement, options)`](#piximounthostelement-options).
+7. **Most chrome isn't configurable.** Only the Gallery button and the
+   tool sidebar have an opt-out — everything else in the Workspace topbar
+   is fixed. See [`options.ui`](#optionsui).
+8. **Pin against drift.** There's no semver yet — pin your copy to the
+   commit named in [Stability](#stability) (or the nearest tag at/before
+   it) rather than tracking `main`.
+
+**Full mount, or just the data model?** If you need the actual drawing
+UI, `Pixi.mount()` (this file) is what you want. If your host already
+owns its own canvas rendering and pointer handling and only needs pixel
+data — layers, compositing, undo — see
+[`lib/pixel-engine/`](pixel-engine/README.md) instead; it ships no UI at
+all, so going that route means building your own tool state machine and
+input handling on top of it. There's no documented sizing/performance
+guidance for a lightweight embed (a mobile modal, many concurrent
+instances on one page) either way — if that's a concern for your use
+case, `lib/pixel-engine/` alone is the lighter-weight option, since it
+never mounts the Workspace UI at all.
+
+### Stability
+
+There's no semver commitment on this API yet — no `CHANGELOG`, no published
+version number distinct from the repo's own git tags. Treat the "last
+verified against commit" line above as the actual contract: if you need
+certainty a future commit won't change `mount()`'s behavior out from under
+you, pin your copy of the repo to that commit (or the nearest tag at/before
+it) rather than tracking `main`.
+
+### License
+
+MIT, matching the repo root [`LICENSE`](../LICENSE). See
+[Known limitations](#known-limitations) below for exactly what that
+permits, and how it differs from Pixi Pro.
+
+### Get it
+
+`lib/pixi.js` imports from `lib/pixel-engine/`, `js/canvas-view.js`,
 `js/workspace.js`, and `js/persistence.js` — a mounted instance is the
 standalone app's Workspace screen reused, not a rewrite, so it needs those
 files in place with their existing relative paths. The simplest way to get a
 working copy is what the worked example below does: clone or copy the whole
 Pixi repo and serve it as static files (`python3 -m http.server 8000`, no
 build step — see the repo root [`README.md`](../README.md#quick-start)) and
-import `lib/pixi.js` from a page anywhere under that served root.
+import `lib/pixi.js` from a page anywhere under that served root. If your
+host is a monorepo and copying the whole Pixi repo isn't practical,
+`lib/pixi.js`'s actual dependency set is smaller than that: `lib/pixel-engine/`,
+`js/canvas-view.js`, `js/workspace.js`, `js/persistence.js`, `style.css`, and
+whatever those files import in turn — copying just that subtree, with
+relative paths preserved, works the same way.
 
-**No bundler support today.** This is a deliberate project-wide stance (see
-the repo root `CLAUDE.md`'s non-goals), not a gap waiting to be filled:
-`lib/pixi.js` and everything it imports are plain ES modules loaded via
-relative paths and an import map, not an npm package. If your host app is
-built with webpack/Vite/etc., the practical path is serving Pixi's file
-tree as static assets alongside your build output and importing
-`lib/pixi.js` by URL, the same way `pixi-embed-example.html` does — not
-`npm install`-ing it into your bundle.
+### No bundler support
+
+This is a deliberate project-wide stance (see the repo root `CLAUDE.md`'s
+non-goals), not a gap waiting to be filled: `lib/pixi.js` and everything it
+imports are plain ES modules loaded via relative paths and an import map,
+not an npm package. If your host app is built with webpack/Vite/etc., the
+practical path is serving Pixi's file tree as static assets alongside your
+build output and importing `lib/pixi.js` by URL, the same way
+`pixi-embed-example.html` does — not `npm install`-ing it into your bundle.
 
 ## Worked example
 
@@ -72,6 +132,8 @@ your use case (e.g. avatars) wants a circular/cropped presentation, that's
 a host-side concern layered on top of the exported square PNG — `mount()`
 has no crop/mask option of its own.
 
+### Single active instance
+
 **Exactly one instance (mounted or the standalone app) can be active on the
 whole page at a time** — not one per host element. Mounting a second
 instance into a different container while the first is still active isn't
@@ -92,6 +154,8 @@ whatever CSS sizing you want; the editor's own internal layout (toolbar,
 canvas, side panels) is what actually determines its rendered footprint,
 not `hostElement`'s box.
 
+### Style scoping
+
 Your host page must also load Pixi's stylesheet (`<link rel="stylesheet"
 href=".../style.css">`) — `mount()` does not inject it, since you may want to
 scope or bundle it differently — and the same Material Symbols icon font
@@ -103,11 +167,30 @@ styles can collide either direction; wrapping `hostElement` in an iframe,
 or scoping `style.css` yourself (a CSS layer, a build-time prefixer) before
 you load it, is on you today — `mount()` doesn't do either for you.
 
+**If the Material Symbols font fails to load** (blocked network, ad
+blocker, forgotten `<link>`), the standalone app degrades gracefully: `js/app.js`
+calls `js/icon-font-fallback.js`'s `initIconFontFallback()`, which detects the
+failure and hides the raw ligature text (`style.css`'s `.icon-font-failed`
+rule) so tool buttons stay usable via their `aria-label`/tooltip instead of
+showing garbled text. **`mount()` doesn't call this** — it only imports
+`canvas-view.js`/`workspace.js`/`persistence.js`, not `app.js` — so a mounted
+instance without the font shows the raw, un-hidden ligature text instead. To
+get the same graceful degradation, import and call `initIconFontFallback()`
+from `js/icon-font-fallback.js` yourself.
+
 ### `instance.destroy()`
 
 Unmounts the editor and empties `hostElement` back out. Calling it twice is
 a harmless no-op. Every other instance method throws if called after
 `destroy()`.
+
+**Call this before removing `hostElement` from the DOM yourself** — e.g. a
+React/Vue component unmounting its container. `mount()` reuses
+`js/workspace.js`'s module-level `root` reference and several
+`document`-level event listeners (keyboard shortcuts and similar); nothing
+repoints or tears these down except `destroy()` itself running. Removing the
+host element without calling it first leaves `root` pointing at a detached
+node and those listeners still bound for the rest of the page's lifetime.
 
 ### `instance.loadImage(pngBlobOrImageData)`
 
@@ -166,7 +249,13 @@ whole thing.
 - **`'error'`** — fired if the instance's own initial project-record creation
   fails (e.g. a host-supplied `options.storage.save()` throws). This is your
   only signal for that failure, since without it every subsequent edit would
-  silently fail to persist for the rest of the instance's lifetime.
+  silently fail to persist for the rest of the instance's lifetime. The
+  instance itself stays otherwise fully usable after this — `loadImage()`,
+  `getImage()`, `save()`, `cancel()`, and `destroy()` all keep working
+  normally, so `save()`/`getImage()` are still a reliable way to get pixels
+  out even though autosave is permanently dead for this instance. There's no
+  retry method; the only recovery path is `destroy()` followed by a fresh
+  `mount()`.
 
 ```js
 instance.on('change', () => console.log('edited + autosaved'));
@@ -193,6 +282,15 @@ calls `getImage()`/`destroy()` from its own buttons.
 
 All of `options.ui` is optional; omitting it keeps every pre-existing
 `mount()` caller's behavior unchanged.
+
+**`gallery` and `tools` (below) are the only configurable chrome.** The rest
+of `WORKSPACE_MARKUP`'s topbar and panels — zoom controls, undo/redo, the
+Export/download button, timelapse recording, the theme toggle — are fixed
+and have no `options.ui` surface to hide or restyle them through the API.
+Looking for Layers, Color Library, symmetry drawing, or another Pro-only
+tool here: they're not reachable through `mount()` at all in Standard,
+configurable or otherwise — see [Known limitations](#known-limitations)
+below for exactly why.
 
 ### `options.ui.gallery`
 

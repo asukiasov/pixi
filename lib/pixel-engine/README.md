@@ -113,3 +113,18 @@ pointer/tool handling, no UI. The Pixi app (`js/` in the main repo) builds
 its Workspace screen, tool behavior, and Canvas rendering on top of these
 three classes. If you want a ready-made mountable editor instead of just
 the data model, see `../pixi.js`'s embeddable editor API.
+
+**When this library alone is the right call, instead of `../pixi.js`'s
+`Pixi.mount()`:** your host already owns its own canvas rendering and
+pointer/touch input — a game engine's own render loop, a canvas
+component your framework already manages — and only needs the pixel data
+underneath: layer compositing, undo/redo, PNG export. Going this route
+means building, yourself, everything `mount()` would otherwise give you
+for free: translating pointer events into `(x, y)` calls on
+`PixelEngine`/`LayerStack`, a tool state machine (what "pencil mode" vs.
+"fill mode" even means for your input), and any UI at all (a color
+picker, a tool palette) if your use case needs one. For most embeds —
+including an avatar picker that just needs a drawing surface — `mount()`
+is less work; reach for this library alone only when the host's own
+rendering/input already exists and re-hosting `mount()`'s UI would be the
+redundant part.

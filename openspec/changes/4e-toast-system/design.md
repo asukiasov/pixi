@@ -30,9 +30,10 @@ tests.
 
 **2. Two live regions, created up front.** On first use, the container
 is built with two child regions: `role="status"` (polite) for info and
-`role="alert"` (assertive) for errors. The first message's text is
-inserted on the next animation frame, so screen readers that only watch
-pre-existing regions still announce it.
+`role="alert"` (assertive) for errors. The regions are built at app startup, and each message is appended as
+its own node (pruned after 10 s), so screen readers that only watch
+pre-existing regions still announce it, and back-to-back messages don't
+overwrite each other.
 
 **3. Placement: bottom-centre, above everything except the confirm
 modal.** `position: fixed; bottom: calc(env(safe-area-inset-bottom) +
@@ -64,8 +65,15 @@ after a switch.
 - [Toasts could cover canvas content at the bottom-centre] → They are
   small, short-lived, dismissible, and pass pointer events through
   outside the toast box.
-- [Two quick removals produce two Undo toasts whose indices could
-  interact] → Each undo re-inserts by its own captured index, clamped to
-  the current length. Undoing in reverse order restores exactly; any
-  other order restores every color, possibly with a shifted position.
-  This is acceptable for a palette.
+- [Two quick removals would produce two Undo toasts whose captured
+  indices interact (code review finding)] → only the latest removal is
+  undoable. A new removal dismisses the previous Undo toast, so the
+  remaining toast's index is always valid, because colors are otherwise
+  only appended at the end. A failed undo write shows an error toast
+  instead of failing silently.
+- [VoiceOver can miss announcements in a just-inserted live region, and
+  same-type toasts shown together could overwrite each other's text
+  (code review findings)] → the region is built at app startup
+  (`initToasts()` in `js/app.js`), and each message is appended as its
+  own node instead of replacing the region's text.
+

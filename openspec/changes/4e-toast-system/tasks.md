@@ -20,4 +20,4 @@
 
 - [x] 4.1 `npm test` passes
 - [x] 4.2 Browser check (Playwright): each call site, stacking, hover pause, dismiss, Undo, light/dark, visible while UI hidden, touch
-- [ ] 4.3 web-design-guidelines review, then code review
+- [x] 4.3 web-design-guidelines review, then code review

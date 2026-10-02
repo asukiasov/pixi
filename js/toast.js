@@ -92,6 +92,17 @@ let politeEl = null;
 let assertiveEl = null;
 const toastEls = new Map(); // id -> element, so re-renders keep hover/focus
 
+/**
+ * Builds the toast region (idempotent). Called once at app startup
+ * (js/app.js) so the live regions already exist before the first
+ * message - a region inserted at the same moment as its first text is
+ * often not announced. showToast() also calls it, as a fallback for any
+ * other host.
+ */
+export function initToasts() {
+  ensureBuilt();
+}
+
 function ensureBuilt() {
   if (controller) return;
   const region = document.createElement('div');
@@ -168,13 +179,15 @@ function render(list) {
 
 function announce(toast) {
   const target = toast.type === 'error' ? assertiveEl : politeEl;
-  // Clear, then set on the next frame - some screen readers ignore a
-  // region whose text is replaced with identical text, or that was only
-  // just inserted.
-  target.textContent = '';
-  requestAnimationFrame(() => {
-    target.textContent = toast.message;
-  });
+  // One appended node per message, not a replaced textContent - two
+  // toasts of the same type shown together would otherwise overwrite each
+  // other before the first is read (and identical replacement text isn't
+  // re-announced at all). Pruned once it's surely been read, so the
+  // region doesn't grow without bound.
+  const line = document.createElement('div');
+  line.textContent = toast.message;
+  target.append(line);
+  setTimeout(() => line.remove(), 10000);
 }
 
 /**

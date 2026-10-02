@@ -11,6 +11,7 @@ import { initThemeToggle } from './theme.js';
 import { initIconFontFallback } from './icon-font-fallback.js';
 import { initColorLibrary } from './color-library-ui.js';
 import { initLayers } from './layers-ui.js';
+import { initToasts } from './toast.js';
 
 const screens = {
   gallery: document.getElementById('screen-gallery'),
@@ -91,6 +92,10 @@ initThemeToggle(document.getElementById('theme-toggle'));
 // (true from module load - no injection involved).
 initColorLibrary();
 initLayers();
+// Built at startup, not on the first toast: screen readers (VoiceOver
+// especially) can miss announcements in a live region that was only just
+// inserted - see js/toast.js.
+initToasts();
 
 function showScreen(name) {
   for (const [key, el] of Object.entries(screens)) {

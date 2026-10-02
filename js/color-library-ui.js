@@ -233,6 +233,11 @@ function renderColorLibraryPanel() {
  * moves to the always-enabled "add current color" button instead.
  */
 let removingColor = false;
+// Dismisses the previous removal's Undo toast - only the latest removal
+// is undoable, so its captured index is always still valid (colors are
+// otherwise only ever appended at the end). Undoing an older removal
+// after newer ones would re-insert at a shifted position.
+let dismissPreviousUndo = null;
 async function removeColorAt(index) {
   if (removingColor) return;
   const active = colorPalettes.find((p) => p.id === activePaletteId);
@@ -249,12 +254,18 @@ async function removeColorAt(index) {
   } finally {
     removingColor = false;
   }
-  showToast(`Removed ${hex}`, {
+  dismissPreviousUndo?.();
+  dismissPreviousUndo = showToast(`Removed ${hex}`, {
     action: {
       label: 'Undo',
       onClick: async () => {
-        await insertColorIntoPalette(paletteId, index, hex);
-        await loadColorPalettes();
+        dismissPreviousUndo = null;
+        try {
+          await insertColorIntoPalette(paletteId, index, hex);
+          await loadColorPalettes();
+        } catch {
+          showToast(`Couldn't restore ${hex}. Add it again from the color picker.`, { type: 'error' });
+        }
       },
     },
   });

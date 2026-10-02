@@ -13,7 +13,7 @@
 // imports.
 
 import { getLayerStack, renderCanvas, commit, onWorkspaceReset, bindPanelHeaderCollapse } from './workspace.js';
-import { BLEND_MODES } from '../lib/pixel-engine/layers.js';
+import { BLEND_MODES, REFERENCE_MODES } from '../lib/pixel-engine/layers.js';
 import { decodeImageFile, fitImageToCanvas, UNREADABLE_IMAGE_MESSAGE } from './image-import.js';
 import { confirmDialog } from './confirm-dialog.js';
 import { showToast } from './toast.js';
@@ -393,20 +393,20 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   // unavailable.
   let modeToggleButton = null;
   if (layer.isReferenceImage) {
-    const canGoOriginal = layer.referenceMode === 'original' || !!layer.originalSourceBlob;
+    const canGoOriginal = layer.referenceMode === REFERENCE_MODES.ORIGINAL || !!layer.originalSourceBlob;
     modeToggleButton = document.createElement('button');
     modeToggleButton.type = 'button';
     modeToggleButton.className = 'layer-reference-mode-toggle icon-button no-buzz';
-    modeToggleButton.innerHTML = `<span class="material-symbols-outlined">${layer.referenceMode === 'original' ? 'image' : 'grid_on'}</span>`;
+    modeToggleButton.innerHTML = `<span class="material-symbols-outlined">${layer.referenceMode === REFERENCE_MODES.ORIGINAL ? 'image' : 'grid_on'}</span>`;
     modeToggleButton.disabled = !canGoOriginal;
     modeToggleButton.dataset.tooltip = modeToggleButton.disabled
       ? 'Upload a new reference image to enable Original resolution mode'
-      : layer.referenceMode === 'original'
+      : layer.referenceMode === REFERENCE_MODES.ORIGINAL
         ? 'Original resolution (un-pixelated) - click to switch to Pixelated (fit to canvas grid)'
         : 'Pixelated (fit to canvas grid) - click to switch to Original resolution';
     modeToggleButton.setAttribute('aria-label', 'Toggle reference image resolution mode');
     modeToggleButton.addEventListener('click', () => {
-      layerStack.setReferenceMode(layer.referenceMode === 'original' ? 'pixelated' : 'original');
+      layerStack.setReferenceMode(layer.referenceMode === REFERENCE_MODES.ORIGINAL ? REFERENCE_MODES.PIXELATED : REFERENCE_MODES.ORIGINAL);
       renderCanvas();
       commit();
     });
@@ -420,7 +420,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   // (e.g. after a page reload) since there's nothing to re-fit from
   // without re-uploading.
   let smoothingToggleButton = null;
-  if (layer.isReferenceImage && layer.referenceMode === 'pixelated') {
+  if (layer.isReferenceImage && layer.referenceMode === REFERENCE_MODES.PIXELATED) {
     smoothingToggleButton = document.createElement('button');
     smoothingToggleButton.type = 'button';
     smoothingToggleButton.className = 'layer-reference-smoothing-toggle icon-button no-buzz';
@@ -685,7 +685,7 @@ export function initLayers(root = document) {
     // both for on-screen Original-mode rendering and so it survives a
     // reload via toProjectRecord/fromProjectRecord.
     const added = layerStack.addReferenceImageLayer(imageData.data, 'Reference', {
-      referenceMode: 'original',
+      referenceMode: REFERENCE_MODES.ORIGINAL,
       originalSourceBlob: file,
     });
     if (!added) return; // already has one, or at the 8-layer cap

@@ -191,16 +191,17 @@ whether Rainbow is currently selected.
   other drag, rather than continuing from where the previous drag left off
 
 ### Requirement: Color Library sequence mode (Pencil and Brush)
-The Pencil tool and the Brush tool SHALL each offer a Color Library
+The Pencil tool and the Brush tool SHALL share one Color Library
 sequence toggle (an explicit on/off control, the same "toggle"
 interaction as Rectangle's Filled control — not tied to which regular
 color is currently selected, and distinct from Rainbow's palette-entry
-selection model) — two separate on-screen controls (Pencil's lives in
-the Pencil options panel, Brush's in the Brushes panel, since those two
-panels are never both visible at once) driving one shared on/off state,
-so turning it on/off in either tool's panel is reflected in the other's.
-Revised from this requirement's original Pencil-only scope, once "Brush
-should have the same functionality as Pencil" was requested directly.
+selection model). It is a single on-screen control in the tool options
+area, shown while Pencil or Brush is the active tool and hidden for
+every other tool, driving one on/off state that persists across switches
+between Pencil and Brush. Revised from this requirement's original
+Pencil-only scope, once "Brush should have the same functionality as
+Pencil" was requested directly, and later consolidated from one control
+per tool's panel into this single shared control (AUD-12).
 While enabled, each unique pixel placed along a Pencil stroke, or each
 brush placed (single tap or dragged trail) with the Brush tool, SHALL
 use the next color in the active Color Library palette's color list
@@ -237,15 +238,15 @@ state.
   failing or drawing nothing
 
 #### Scenario: Toggling in one tool's panel is reflected in the other's
-- **WHEN** the user turns the toggle on from the Brush tool's panel, then
+- **WHEN** the user turns the toggle on while Brush is active, then
   switches to the Pencil tool
-- **THEN** the Pencil options panel's toggle already shows enabled (and
-  vice versa) - one shared state, not two independent ones
+- **THEN** the same toggle is still shown and still enabled - one
+  control and one shared state, not two independent ones
 
 #### Scenario: Not shown for Eraser
-- **WHEN** the Eraser tool is active
-- **THEN** no Color Library sequence toggle is shown (Eraser has no draw
-  color to cycle)
+- **WHEN** the Eraser (or any tool other than Pencil and Brush) is
+  active
+- **THEN** no Color Library sequence toggle is shown
 
 ### Requirement: Custom brush creation
 The Brushes panel SHALL offer an "add brush" control that opens a

@@ -381,25 +381,17 @@ would help.
 - `js/export.js:1-2` — `SCALES`, `FORMATS` (follows the rule)
 - `js/theme.js:25,28` — `PREFERENCES`, `CYCLE_ORDER` (follows the rule)
 - `lib/pixel-engine/layers.js:18` — `MIME_TYPES` (follows the rule)
-- `lib/pixel-engine/layers.js:57,145,165,312,376,611` — `referenceMode`'s `'pixelated'`/`'original'` literals, including the `:165` validation `if` check (does not follow the rule; flagged as a real fix candidate — see follow-up list)
+- `lib/pixel-engine/layers.js` — `REFERENCE_MODES` (follows the rule; was inline `'pixelated'`/`'original'` literals at 6+ sites until CFIX-5)
 
 ## Other Observed Patterns
 
-### "Pro extension point" comments mark hooks kept in the open-source repo for the private `pixi-pro` add-on — compliance with the full pattern (tag + named consuming file) is inconsistent
+### ~~"Pro extension point" / `moved to pixi-pro` comments~~ — retired
 
-See `architecture-standards.md`'s "Pro extension point" section for the
-full pattern definition and the compliance-gap finding — restated briefly
-here since it's also a comment-style convention: most instances include
-the `(split-pixi-pro-repo)` tag, a minority (10 of 24, 42%) don't, and
-naming the *specific* consuming pixi-pro file is inconsistent even among
-tagged instances.
-
-### A `moved to pixi-pro's js/pro/<file>.js (split-pixi-pro-repo)` comment marks code extracted to the paid add-on, left as a breadcrumb
-
-- `js/workspace.js:111-127,385-396,632,1030-1031,1083-1084`, `lib/pixel-engine/engine.test.js:73-74,142`, `lib/pixel-engine/README.md:24`
-
-Unlike the "Pro extension point" rule above, this pattern is followed
-consistently — 14/14 instances checked carry the full breadcrumb.
+These two comment conventions marked hooks and extracted code for the
+private `pixi-pro` add-on. That split was reversed on 2026-08-24
+(`merge-pixi-pro-into-standard`), and none of these comments remain in
+the code; see `architecture-standards.md`'s "History" section. CFIX-7
+(10/24 hooks missing the full tag) is closed as no longer applicable.
 
 ### Value clamping to a numeric range uses the repeated `Math.max(min, Math.min(max, value))` idiom (or a locally-scoped `clamp` helper) rather than a shared utility
 
@@ -426,11 +418,14 @@ from what this doc describes.
    doc comment) — now wrapped in `safeMatchMedia()`'s try/catch.
    `js/workspace.js:707-708` — still an unguarded `matchMedia()` call,
    lower severity than #2 (not at module-eval time).
-4. `lib/pixel-engine/layers.js`'s `referenceMode` — inline-relisted string
-   literals instead of a named constant, including in a validation check.
+4. ~~`lib/pixel-engine/layers.js`'s `referenceMode` — inline-relisted string
+   literals instead of a named constant, including in a validation check.~~
+   **Fixed** (CFIX-5) — `REFERENCE_MODES`.
 5. `lib/pixel-engine/layers.js`'s `mergeLayers`/`mergeDown`/`getRenderPlan`
    — touch the DOM transitively (via `#compositeSubset`) without saying so
    in their own doc comments, unlike every other DOM-touching method in
    `lib/`. See `architecture-standards.md`'s DOM-optional rule.
-6. 10/24 "Pro extension point" comments lack the `(split-pixi-pro-repo)`
-   tag and/or a named consuming pixi-pro file.
+6. ~~10/24 "Pro extension point" comments lack the `(split-pixi-pro-repo)`
+   tag and/or a named consuming pixi-pro file.~~ **Closed** (CFIX-7) —
+   no longer applicable: the hooks were removed when `pixi-pro` was
+   merged back (2026-08-24).

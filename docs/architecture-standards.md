@@ -154,43 +154,17 @@ Any *new* adapter-backed, read-modify-write call site needs the same
 per-id serialization — this is unenforced by tooling, same as the `lib/`
 boundary rule above.
 
-## Pattern: "Pro extension point" — aspirational target, inconsistently achieved today
+## History: the `pixi-pro` split and its reversal (no longer a pattern)
 
-Pixi (this repo, MIT) and Pixi Pro (a separate private repo, paid) share
-a codebase lineage — Pro was extracted out of what's now Standard (see
-git history: "Extract Layers panel out to pixi-pro" and similar commits,
-tracked under the `split-pixi-pro-repo` branch/theme). The intended
-pattern:
-
-1. **A hook, not an implementation.** Core logic Pro needs to extend is
-   exposed as a registration function or exported constant, with a no-op
-   default when no Pro module is present.
-2. **A comment names what consumes it**, including a `(split-pixi-pro-repo)`
-   tag and the specific pixi-pro file that calls it.
-3. **Code that moved to Pro leaves a breadcrumb**: `moved to pixi-pro's
-   js/pro/<file>.js (split-pixi-pro-repo)`.
-
-**Correction — this is not consistently achieved.** A full count of "Pro
-extension point" comments across the repo (24 total) found 10 (42%) missing
-the `(split-pixi-pro-repo)` tag entirely, and naming the *specific*
-consuming file is inconsistent even among the tagged ones — several say
-only something generic like "a Pro Canvas Settings panel" rather than a
-filename. This is worth calling out plainly: **the original version of
-this rule cited `js/workspace.js:1476` (`getCanvasSize`) and `:1482`
-(`onWorkspaceReset`) as canonical, fully-compliant examples — in the
-actual source, neither one carries the tag, and neither names a specific
-file.** The rule's own supporting citations didn't hold up.
-
-Part 3 (the breadcrumb pattern) is different — it's followed consistently:
-14/14 `moved to pixi-pro` comments checked carry the full form.
-
-**What this means in practice**: the 3-part hook pattern is the right
-target to aim for on a *new* Pro-facing hook (it's genuinely useful when
-followed — see part 3's consistency for what "actually followed" looks
-like), but don't assume an existing "Pro extension point" comment already
-names its consuming file just because it has the tag; check it. Whether to
-retroactively fix the 10 non-compliant comments is a separate decision,
-tracked in `code-standards.md`'s "Known code issues" list.
+Between 2026-08-21 and 2026-08-24, eight features lived in a separate
+private `pixi-pro` repo, and this repo carried "Pro extension point"
+hooks and `moved to pixi-pro` breadcrumb comments for them. On
+2026-08-24, the `merge-pixi-pro-into-standard` OpenSpec change merged those
+features back and removed the hook layer, so there is one public Pixi
+and none of those comments remain in the code. Don't add new ones. If a
+real third-party plugin need ever appears, it should get its own
+design pass (see `openspec/roadmap.md`'s closed "Plugin/powerup system"
+entry).
 
 ## Constraint: no build step, ever
 

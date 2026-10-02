@@ -19,9 +19,9 @@ decided not worth it) · `deferred` (real, but out of scope for now).
 | CFIX-2 | Unguarded, module-eval-time `matchMedia()` call — throws at import time if `matchMedia` is missing | `js/gallery.js:36` | Med | fixed |
 | CFIX-3 | Unguarded `matchMedia()` call inside `initThemeToggle()` | `js/theme.js:103` | Low | fixed |
 | CFIX-4 | `matchMedia` existence is checked, but the call itself isn't try/caught (also module-eval-time, same as CFIX-2 — corrected from this file's original note) | `js/workspace.js:650-651` | Med | fixed |
-| CFIX-5 | `referenceMode`'s `'pixelated'`/`'original'` values are re-listed as inline string literals at 6+ sites, including a validation check, instead of a named constant | `lib/pixel-engine/layers.js:57,145,165,312,376,611` | Low | deferred |
+| CFIX-5 | `referenceMode`'s `'pixelated'`/`'original'` values are re-listed as inline string literals at 6+ sites, including a validation check, instead of a named constant | `lib/pixel-engine/layers.js:57,145,165,312,376,611` | Low | fixed |
 | CFIX-6 | `mergeLayers`/`mergeDown`/`getRenderPlan` touch the DOM transitively (via `#compositeSubset`) with no "requires a DOM" note in their own doc comments, unlike every other DOM-touching method in `lib/` | `lib/pixel-engine/layers.js` (methods around `:526,561,611`) | Low | fixed |
-| CFIX-7 | 10 of 24 "Pro extension point" comments lack the `(split-pixi-pro-repo)` tag and/or name a specific consuming pixi-pro file | `js/workspace.js:155,198,221,262,271,903,940,1042,1476,1482` | Low | deferred |
+| CFIX-7 | 10 of 24 "Pro extension point" comments lack the `(split-pixi-pro-repo)` tag and/or name a specific consuming pixi-pro file | `js/workspace.js:155,198,221,262,271,903,940,1042,1476,1482` | Low | closed — n/a |
 
 ## Notes per finding
 
@@ -55,6 +55,12 @@ decided not worth it) · `deferred` (real, but out of scope for now).
 - **CFIX-5**: **deferred**, per plan — not a bug, a refactor of working
   production code across 6+ call sites with no current defect; better done
   as deliberate cleanup separate from this fix batch.
+  **Fixed (2026-10-02, `4f-housekeeping`)**: `lib/pixel-engine/layers.js`
+  exports a frozen `REFERENCE_MODES` (`PIXELATED`/`ORIGINAL`), used at
+  every `referenceMode` assignment and comparison there and in
+  `js/layers-ui.js`. The stored string values are unchanged, so saved
+  projects load as before. Covered by `REFERENCE_MODES` tests in
+  `lib/pixel-engine/layers.test.js`.
 - **CFIX-6**: **fixed**. Added "requires a DOM" notes to `mergeLayers`,
   `mergeDown`, `getRenderPlan`, and `composite()`'s doc comments, matching
   `toPNGBlob()`'s existing pattern. Comment-only change, no test needed;
@@ -63,3 +69,8 @@ decided not worth it) · `deferred` (real, but out of scope for now).
   access to the `pixi-pro` repo to confirm which file each hook is
   actually consumed by; guessing would leave wrong information, worse
   than the current honest gap.
+  **Closed as no longer applicable (2026-10-02, `4f-housekeeping`)**:
+  `merge-pixi-pro-into-standard` removed every "Pro extension point" hook
+  and breadcrumb when the Pro features were merged back, so there is
+  nothing left to tag. The standards docs now carry a short history note
+  instead of the pattern.

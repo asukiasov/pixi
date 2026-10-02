@@ -300,6 +300,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   nameLabel.textContent = layer.name;
   nameLabel.tabIndex = 0;
   nameLabel.title = 'Double-click to rename';
+  nameLabel.setAttribute('aria-keyshortcuts', 'Enter F2');
   nameLabel.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== 'F2') return;
     e.preventDefault();

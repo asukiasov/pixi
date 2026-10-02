@@ -29,6 +29,7 @@ import {
   createColorPalette,
   listColorPalettes,
   addColorToPalette,
+  removeColorFromPalette,
   deleteColorPalette,
 } from './persistence.js';
 import { extractPalette } from './color-extraction.js';
@@ -100,6 +101,12 @@ let colorPalettes = [];
 let activePaletteId = null;
 let sequenceEnabled = false;
 let collapsed = false;
+// Edit-colors mode (4c-delete-palette-color): while on, a swatch tap
+// removes that color instead of picking it. Holds the id of the palette
+// edit mode was turned on for, so any path that changes the active
+// palette (dropdown, new/imported/deleted palette) ends it with no reset
+// of its own. Transient UI state, never persisted.
+let editingPaletteId = null;
 
 // DOM refs, assigned once in initColorLibrary() - single active
 // instance, same module-level-state pattern workspace.js itself uses.
@@ -108,6 +115,7 @@ let colorLibraryHeader = null;
 let colorLibraryGrid = null;
 let colorLibrarySelect = null;
 let deletePaletteButton = null;
+let editColorsButton = null;
 let addCurrentColorButton = null;
 let addPaletteButton = null;
 let newPaletteRow = null;
@@ -171,16 +179,32 @@ function renderColorLibraryPanel() {
   colorLibrarySelect.classList.toggle('hidden', sorted.length <= 1);
 
   const active = colorPalettes.find((p) => p.id === activePaletteId);
+  if (!active?.colors.length || editingPaletteId !== activePaletteId) editingPaletteId = null;
+  const editingColors = editingPaletteId !== null;
   colorLibraryGrid.innerHTML = '';
+  colorLibraryGrid.classList.toggle('editing', editingColors);
+  editColorsButton.classList.toggle('active', editingColors);
+  editColorsButton.setAttribute('aria-pressed', String(editingColors));
+  editColorsButton.disabled = !active?.colors.length;
   if (active && active.colors.length > 0) {
-    active.colors.forEach((hex) => {
+    // The built-in default palette can be trimmed but never emptied -
+    // it's the guaranteed populated fallback (see loadColorPalettes).
+    const lastDefaultColor = active.isDefault && active.colors.length <= 1;
+    active.colors.forEach((hex, index) => {
       const swatch = document.createElement('button');
       swatch.type = 'button';
       swatch.className = 'color-library-swatch';
       swatch.style.background = hex;
       swatch.dataset.hex = hex.toLowerCase();
-      swatch.title = hex;
-      swatch.addEventListener('click', () => setForegroundColor(hexToRgba(hex)));
+      if (editingColors) {
+        swatch.title = lastDefaultColor ? `${hex} - the default palette keeps at least one color` : `Remove ${hex}`;
+        swatch.setAttribute('aria-label', `Remove color ${hex}`);
+        swatch.disabled = lastDefaultColor;
+        swatch.addEventListener('click', () => removeColorAt(index));
+      } else {
+        swatch.title = hex;
+        swatch.addEventListener('click', () => setForegroundColor(hexToRgba(hex)));
+      }
       colorLibraryGrid.appendChild(swatch);
     });
   } else if (active) {
@@ -193,6 +217,40 @@ function renderColorLibraryPanel() {
   deletePaletteButton.disabled = colorPalettes.length <= 1 || Boolean(active?.isDefault);
 
   syncActiveSwatch(); // re-derives fgHex/isRainbow from state and calls syncColorLibraryActiveSwatch below
+}
+
+/**
+ * Edit-mode swatch tap: removes that one color (by position - duplicates
+ * are allowed) and re-renders. Taps that land while a removal is still
+ * saving are dropped - the old swatches are still on screen, so a fast
+ * double-tap would otherwise remove a second color, or empty the default
+ * palette past its render-time `disabled` guard (re-checked here for the
+ * same reason). Keeps keyboard focus in the grid, on the swatch that slid
+ * into the removed one's place, so repeated removals don't drop focus to
+ * <body>; once the palette is empty (and the edit toggle disabled), it
+ * moves to the always-enabled "add current color" button instead.
+ */
+let removingColor = false;
+async function removeColorAt(index) {
+  if (removingColor) return;
+  const active = colorPalettes.find((p) => p.id === activePaletteId);
+  if (!active || (active.isDefault && active.colors.length <= 1)) return;
+  removingColor = true;
+  const hadFocus = colorLibraryGrid.contains(document.activeElement);
+  try {
+    await removeColorFromPalette(activePaletteId, index);
+    await loadColorPalettes();
+  } finally {
+    removingColor = false;
+  }
+  if (!hadFocus) return;
+  const swatches = colorLibraryGrid.querySelectorAll('.color-library-swatch');
+  (swatches[Math.min(index, swatches.length - 1)] ?? addCurrentColorButton).focus();
+}
+
+function setEditingColors(on) {
+  editingPaletteId = on ? activePaletteId : null;
+  renderColorLibraryPanel();
 }
 
 async function addCurrentColorToActivePalette(rgba) {
@@ -246,6 +304,7 @@ export function initColorLibrary(root = document) {
   colorLibraryGrid = root.querySelector('#color-library-grid');
   colorLibrarySelect = root.querySelector('#color-library-select');
   deletePaletteButton = root.querySelector('#delete-palette-button');
+  editColorsButton = root.querySelector('#edit-palette-colors-button');
   addCurrentColorButton = root.querySelector('#add-current-color-button');
   addPaletteButton = root.querySelector('#add-palette-button');
   newPaletteRow = root.querySelector('#new-palette-row');
@@ -266,6 +325,11 @@ export function initColorLibrary(root = document) {
   colorLibrarySelect.addEventListener('change', () => {
     activePaletteId = colorLibrarySelect.value;
     renderColorLibraryPanel();
+  });
+
+  editColorsButton.addEventListener('click', () => setEditingColors(editingPaletteId === null));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && editingPaletteId !== null) setEditingColors(false);
   });
 
   addCurrentColorButton.addEventListener('click', () => {
@@ -526,6 +590,7 @@ export function initColorLibrary(root = document) {
     }
     collapsed = false;
     syncColorLibraryCollapse();
+    if (editingPaletteId !== null) setEditingColors(false);
     setLibrarySequenceEnabled(false);
     librarySequencePanel.classList.remove('hidden'); // Pencil is the default tool
     closeImportPreview();

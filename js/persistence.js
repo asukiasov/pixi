@@ -331,6 +331,20 @@ export async function addColorToPalette(id, hex) {
   await db.colorPalettes.update(id, { colors: [...record.colors, hex], updatedAt: Date.now() });
 }
 
+/**
+ * Removes the color at `index` - by position, not hex, since palettes can
+ * hold the same color twice (see addColorToPalette) and only the tapped
+ * swatch should go (4c-delete-palette-color). Out-of-range indices and
+ * unknown ids are no-ops. Protecting the default palette's last color is
+ * the UI's job, same as deleteColorPalette's default-palette guard.
+ */
+export async function removeColorFromPalette(id, index) {
+  const record = await db.colorPalettes.get(id);
+  if (!record || index < 0 || index >= record.colors.length) return;
+  const colors = record.colors.filter((_, i) => i !== index);
+  await db.colorPalettes.update(id, { colors, updatedAt: Date.now() });
+}
+
 export async function deleteColorPalette(id) {
   await db.colorPalettes.delete(id);
 }

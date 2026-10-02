@@ -1144,6 +1144,18 @@ textarea,
   background: var(--color-surface-alt);
 }
 
+/* Pressed toggle in a panel header (#edit-palette-colors-button,
+   4c-delete-palette-color) - the transparent reset above would otherwise
+   hide .tool-button.active's accent fill, leaving no visible "on" state.
+   After the :hover rule so it keeps winning at equal specificity. */
+.panel-header-actions .tool-button.icon-button.active {
+  background: var(--color-accent);
+}
+
+.panel-header-actions .tool-button.icon-button.active:not(:disabled):hover {
+  background: var(--color-accent-strong);
+}
+
 /* 1.1rem, matching .layer-visibility-toggle/.layer-delete-button's own
    glyph-in-XS-box ratio elsewhere in this sidebar (icon-button-size-
    system) - was 1rem on Color Library's buttons only, leaving a visibly
@@ -2077,6 +2089,39 @@ span.layer-lock-icon {
    .palette-swatch:hover. */
 .color-library-swatch:not(.active):hover {
   border-color: var(--color-text-secondary);
+}
+
+/* Edit-colors mode (4c-delete-palette-color) - every swatch shows a ×
+   so it's unmistakable that a tap removes instead of picks. White glyph
+   with a dark outline so it reads on any swatch color, light or dark. */
+.color-library-grid.editing .color-library-swatch {
+  position: relative;
+  border-style: dashed;
+  border-color: var(--color-text-secondary);
+}
+
+.color-library-grid.editing .color-library-swatch::after {
+  content: '×';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 2px #000, 0 0 2px #000;
+  pointer-events: none;
+}
+
+/* The default palette's last color - kept, so no × and no pointer. */
+.color-library-grid.editing .color-library-swatch:disabled {
+  cursor: not-allowed;
+  border-style: solid;
+}
+
+.color-library-grid.editing .color-library-swatch:disabled::after {
+  content: none;
 }
 
 .color-library-empty {

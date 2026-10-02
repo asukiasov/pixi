@@ -485,6 +485,13 @@
             <button type="button" id="library-generate-ramp-button" class="tool-button icon-button" aria-label="Generate ramp from current color" data-tooltip="Generate ramp">
               <span class="material-symbols-outlined">gradient</span>
             </button>
+            <!-- Edit-colors mode (4c-delete-palette-color) - while pressed,
+                 tapping a swatch removes that one color instead of
+                 picking it. A toggle, not long-press/right-click, so it
+                 works the same for mouse, finger, Pencil and keyboard. -->
+            <button type="button" id="edit-palette-colors-button" class="tool-button icon-button" aria-label="Edit colors" aria-pressed="false" data-tooltip="Edit colors">
+              <span class="material-symbols-outlined">edit</span>
+            </button>
             <button type="button" id="delete-palette-button" class="tool-button icon-button no-buzz" aria-label="Delete palette" data-tooltip="Delete palette">
               <span class="material-symbols-outlined">delete</span>
             </button>

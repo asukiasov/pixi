@@ -43,9 +43,9 @@ container itself is `pointer-events: none`; only toasts take pointer
 events, so the empty strip never blocks drawing.
 
 **4. Errors aren't color-only.** Error toasts get a `--color-danger` left
-border *and* an `error` icon glyph (already in the icon subset? no, so
-`error` is added to `icon_names`). Info toasts use the `info` glyph
-(also added).
+border *and* an `error` icon glyph. Info toasts use the `info` glyph.
+Both glyphs are added to `index.html`'s `icon_names` subset, which must
+stay alphabetical.
 
 **5. Autosave failure is throttled by a flag.** `autoSave()` catches a
 rejected save. It shows the error toast only when `saveFailureShown` is

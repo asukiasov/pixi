@@ -14,8 +14,9 @@
 
 import { getLayerStack, renderCanvas, commit, onWorkspaceReset, bindPanelHeaderCollapse } from './workspace.js';
 import { BLEND_MODES } from '../lib/pixel-engine/layers.js';
-import { decodeImageFile, fitImageToCanvas } from './image-import.js';
+import { decodeImageFile, fitImageToCanvas, UNREADABLE_IMAGE_MESSAGE } from './image-import.js';
 import { confirmDialog } from './confirm-dialog.js';
+import { showToast } from './toast.js';
 
 /**
  * Pure state transition for Layers panel marking (multi-select) -
@@ -672,7 +673,10 @@ export function initLayers(root = document) {
     addReferenceImageInput.value = '';
     if (!file) return;
     const image = await decodeImageFile(file);
-    if (!image) return; // unsupported/corrupt file - fail silently, no crash
+    if (!image) {
+      showToast(UNREADABLE_IMAGE_MESSAGE, { type: 'error' });
+      return;
+    }
     referenceImageSmoothing = true; // every new upload starts smoothed, in case Pixelated mode is chosen later
     const layerStack = getLayerStack();
     const imageData = fitImageToCanvas(image, layerStack.width, layerStack.height, referenceImageSmoothing);

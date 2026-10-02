@@ -23,13 +23,15 @@ import {
   disableRainbow,
   syncActiveSwatch,
 } from './workspace.js';
-import { decodeImageFile, downsampleToImageData } from './image-import.js';
+import { decodeImageFile, downsampleToImageData, UNREADABLE_IMAGE_MESSAGE } from './image-import.js';
 import { confirmDialog } from './confirm-dialog.js';
+import { showToast } from './toast.js';
 import {
   createColorPalette,
   listColorPalettes,
   addColorToPalette,
   removeColorFromPalette,
+  insertColorIntoPalette,
   deleteColorPalette,
 } from './persistence.js';
 import { extractPalette } from './color-extraction.js';
@@ -237,12 +239,25 @@ async function removeColorAt(index) {
   if (!active || (active.isDefault && active.colors.length <= 1)) return;
   removingColor = true;
   const hadFocus = colorLibraryGrid.contains(document.activeElement);
+  // Captured now, so Undo targets this palette/position even after a
+  // palette switch (4e-toast-system).
+  const paletteId = activePaletteId;
+  const hex = active.colors[index];
   try {
-    await removeColorFromPalette(activePaletteId, index);
+    await removeColorFromPalette(paletteId, index);
     await loadColorPalettes();
   } finally {
     removingColor = false;
   }
+  showToast(`Removed ${hex}`, {
+    action: {
+      label: 'Undo',
+      onClick: async () => {
+        await insertColorIntoPalette(paletteId, index, hex);
+        await loadColorPalettes();
+      },
+    },
+  });
   if (!hadFocus) return;
   const swatches = colorLibraryGrid.querySelectorAll('.color-library-swatch');
   (swatches[Math.min(index, swatches.length - 1)] ?? addCurrentColorButton).focus();
@@ -438,7 +453,8 @@ export function initColorLibrary(root = document) {
     if (!file) return;
     const image = await decodeImageFile(file);
     if (!image) {
-      importInput.value = ''; // unsupported/corrupt file - no-op, let the user retry
+      importInput.value = ''; // let the user retry with the same file
+      showToast(UNREADABLE_IMAGE_MESSAGE, { type: 'error' });
       return;
     }
     importSampleImageData = downsampleToImageData(image, COLOR_IMPORT_SAMPLE_SIZE, COLOR_IMPORT_SAMPLE_SIZE);

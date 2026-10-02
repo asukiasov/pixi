@@ -8,6 +8,7 @@ import {
   renameColorPalette,
   addColorToPalette,
   removeColorFromPalette,
+  insertColorIntoPalette,
   deleteColorPalette,
 } from '../js/persistence.js';
 
@@ -110,5 +111,26 @@ describe('removeColorFromPalette', () => {
 
   test('a nonexistent palette id is a no-op, not a crash', async () => {
     await assert.doesNotReject(() => removeColorFromPalette('nope', 0));
+  });
+});
+
+describe('insertColorIntoPalette', () => {
+  const colorsOf = async (id) => (await listColorPalettes()).find((p) => p.id === id).colors;
+
+  test('puts a color back at its original index (undo of removeColorFromPalette)', async () => {
+    const created = await createColorPalette('Undo', ['#111111', '#222222', '#333333']);
+    await removeColorFromPalette(created.id, 1);
+    await insertColorIntoPalette(created.id, 1, '#222222');
+    assert.deepEqual(await colorsOf(created.id), ['#111111', '#222222', '#333333']);
+  });
+
+  test('clamps an index past the end to an append', async () => {
+    const created = await createColorPalette('Clamp', ['#111111']);
+    await insertColorIntoPalette(created.id, 9, '#999999');
+    assert.deepEqual(await colorsOf(created.id), ['#111111', '#999999']);
+  });
+
+  test('a nonexistent palette id is a no-op, not a crash', async () => {
+    await assert.doesNotReject(() => insertColorIntoPalette('nope', 0, '#000000'));
   });
 });

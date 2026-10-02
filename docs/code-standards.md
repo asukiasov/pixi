@@ -196,10 +196,34 @@ time) in an environment lacking `matchMedia`.
 - `js/gallery.js:36` — unguarded, module-eval-time `window.matchMedia(...)` (does not follow the rule; flagged as a real fix candidate, not just a doc note — see the follow-up list)
 - `js/workspace.js:707-708` — checks `matchMedia` *exists* before calling it, but doesn't try/catch the call itself
 
-### No `console.*` logging exists anywhere in `js/` or `lib/` — verified even stronger than originally stated (holds in `test/` too)
+### User-facing failures go through a toast, never `alert()`; background failures stay silent unless the user's work is at risk
 
-Confirmed by repo-wide grep across all four locations — failures are
-handled purely through return-value conventions and comments, never logged.
+Added with `4e-toast-system` (spec: `openspec/specs/status-messages`).
+`showToast(message, { type, action })` from `js/toast.js` is the one way
+to tell the user something happened.
+
+- An action the user directly started failed (picked file unreadable,
+  export/encode failed) → `showToast(..., { type: 'error' })`, worded as
+  what failed + what to do next. Examples:
+  `js/brush-import-ui.js`, `js/color-library-ui.js`, `js/layers-ui.js`
+  (all via `UNREADABLE_IMAGE_MESSAGE` from `js/image-import.js`),
+  `js/workspace.js`'s timelapse catch.
+- A background operation failed (theme storage, icon-font probe) →
+  silent, safe fallback, as in the try/catch section above.
+- Exception: a background failure that may lose the user's work
+  (`js/workspace.js`'s `autoSave()`) → one error toast per failure
+  streak, reset by the next success, so it never fires once per stroke.
+- An immediate destructive edit with no confirm dialog (e.g. removing a
+  palette color) → an info toast with an `Undo` action.
+- Never `alert()`/`confirm()` — use `showToast`/`confirmDialog`.
+
+### `console.*` logging is rare — only `console.error` alongside a surfaced failure
+
+**Correction**: this originally said no `console.*` logging existed
+anywhere. Two `console.error` calls do, both in `js/workspace.js` and both
+paired with a user-facing error toast (timelapse encode, autosave), so
+the underlying error object is still available for debugging. Everything
+else is handled through return-value conventions and comments.
 
 ### Mutating persistence functions silently no-op when the target id is missing, mirroring Dexie's own `.update()` semantics — with one known exception
 

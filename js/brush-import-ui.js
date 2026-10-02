@@ -24,7 +24,8 @@
 // reordering.
 
 import { setBrushEditorGrid, getBrushEditorSize } from './workspace.js';
-import { decodeImageFile, downsampleToImageData } from './image-import.js';
+import { decodeImageFile, downsampleToImageData, UNREADABLE_IMAGE_MESSAGE } from './image-import.js';
+import { showToast } from './toast.js';
 import { hasTransparency } from './image-import-extras.js';
 import { thresholdToGrid } from './brush-import.js';
 
@@ -54,7 +55,10 @@ export function initBrushImport(root = document) {
     importInput.value = ''; // reset first, so picking the same file twice still fires 'change'
     if (!file) return;
     const image = await decodeImageFile(file);
-    if (!image) return; // unsupported/corrupt file - fail silently, no crash
+    if (!image) {
+      showToast(UNREADABLE_IMAGE_MESSAGE, { type: 'error' });
+      return;
+    }
     sourceImage = image;
     applySourceImage();
   });

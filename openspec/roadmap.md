@@ -219,21 +219,20 @@ suggestion, not a dependency chain. Raised 2026-08-25 (4e) and
   unreadable-image failures and autosave failure, and gave 4c's color
   removal an Undo. The surface-vs-silent rule is in
   `docs/code-standards.md`.
-- **4f — Housekeeping** (no user-facing change):
-  - Spec sync for AUD-11/AUD-12 (sliding right sidebar, shared
-    `#library-sequence-toggle`) — built directly without updating
-    `openspec/specs/` (`canvas-navigation`, `brushes`); see the UI polish
-    pass entry under "Closed / history" below.
-  - Purge leftover `pixi-pro` add-on wording from
-    `docs/code-standards.md` / `docs/architecture-standards.md`; close
-    CFIX-7 as no longer applicable.
-  - CFIX-5: one named constant for `referenceMode`'s
-    `'pixelated'`/`'original'` values in `lib/pixel-engine/layers.js`.
-  - Finish `merge-pixi-pro-into-standard`: operator deletes the private
-    `pixi-pro` repo and the `pixi-pro.asukiasov.workers.dev` Cloudflare
-    Worker (tasks 7.1–7.2), then archive the change.
+- ~~**4f — Housekeeping**~~ (no user-facing change) — **done**
+  2026-10-02, archived as
+  `openspec/changes/archive/2026-10-02-4f-housekeeping/`: AUD-11/AUD-12
+  synced into `canvas-navigation`/`brushes`; the pixi-pro comment
+  conventions were retired from `docs/code-standards.md` /
+  `docs/architecture-standards.md` (CFIX-7 closed as n/a); CFIX-5 fixed
+  with `REFERENCE_MODES`.
+  - **Still open (operator step):** finish `merge-pixi-pro-into-standard`.
+    Delete the private `pixi-pro` repo and the
+    `pixi-pro.asukiasov.workers.dev` Cloudflare Worker (tasks 7.1–7.2;
+    both still existed on 2026-10-02), then archive the change.
 
-Status: in progress — 4a–4e done.
+Status: done (4a–4f), except the manual `pixi-pro` teardown that closes
+`merge-pixi-pro-into-standard`.
 
 ## Phase 5 — Workspace redesigns
 

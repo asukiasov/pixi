@@ -2544,7 +2544,7 @@ span.layer-lock-icon {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.4rem 0.5rem 0.75rem;
+  padding: 0.25rem 0.25rem 0.25rem 0.75rem;
   background: var(--color-surface);
   color: var(--color-text);
   border: 1px solid var(--color-border);
@@ -2578,7 +2578,8 @@ span.layer-lock-icon {
 
 .toast-action {
   flex: none;
-  min-height: 2rem;
+  /* 44px - comfortable finger target on iPad, Pixi's main device. */
+  min-height: 2.75rem;
   padding: 0.25rem 0.6rem;
   background: transparent;
   color: var(--color-accent);
@@ -2595,8 +2596,8 @@ span.layer-lock-icon {
 
 .toast-close {
   flex: none;
-  width: 2rem;
-  height: 2rem;
+  width: 2.75rem;
+  height: 2.75rem;
   display: grid;
   place-items: center;
   padding: 0;

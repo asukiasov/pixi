@@ -3,6 +3,8 @@
 // reports grid-coordinate draw events upward via handlers. Knows nothing
 // about tools, colors, layers, or the undo stack.
 
+import { clearArea } from './layout.js';
+
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 8;
 const ZOOM_STEP_FACTOR = 1.25; // per +/- button press or keyboard shortcut
@@ -78,8 +80,14 @@ export class CanvasView {
   #tileCopyEls = [];
   #tileCopyCtxs = [];
   #tilePreviewEnabled = false;
+  // (5a-floating-shell) Returns {top, right, bottom, left} CSS px that
+  // floating cards cover inside the container; Fit/Fill/100% size and
+  // centre within what's left. Zero insets (the default - docked layout,
+  // Pixi.mount() embeds) means the whole container, as before.
+  #getClearInsets;
 
-  constructor(canvasEl, containerEl, layerStack) {
+  constructor(canvasEl, containerEl, layerStack, { getClearInsets = () => ({ top: 0, right: 0, bottom: 0, left: 0 }) } = {}) {
+    this.#getClearInsets = getClearInsets;
     this.#canvasEl = canvasEl;
     this.#containerEl = containerEl;
     this.#layerStack = layerStack;
@@ -196,10 +204,10 @@ export class CanvasView {
     this.#aboveCanvasEl.width = width;
     this.#aboveCanvasEl.height = height;
 
-    const containerRect = this.#containerEl.getBoundingClientRect();
+    const area = this.#clearArea();
     const fitScale = Math.max(
       1,
-      Math.floor(Math.min(containerRect.width / width, containerRect.height / height))
+      Math.floor(Math.min(area.width / width, area.height / height))
     );
     this.#baseScale = fitScale;
     this.#canvasEl.style.width = `${width * fitScale}px`;
@@ -242,22 +250,29 @@ export class CanvasView {
     });
 
     this.#scale = 1;
-    this.#panX = (containerRect.width - width * fitScale) / 2;
-    this.#panY = (containerRect.height - height * fitScale) / 2;
+    this.#panX = area.x + (area.width - width * fitScale) / 2;
+    this.#panY = area.y + (area.height - height * fitScale) / 2;
     this.#applyTransform();
     this.#emitZoomChange();
   }
 
+  /** The container area left clear by floating cards (see #getClearInsets). */
+  #clearArea() {
+    return clearArea(this.#containerEl.getBoundingClientRect(), this.#getClearInsets());
+  }
+
   /**
    * Steps the zoom in (`direction` > 0) or out (`direction` < 0) by a fixed
-   * factor, anchored on the container's center so the same part of the
-   * canvas stays under the middle of the screen. Clamped to
+   * factor, anchored on the center of the clear area (the container, minus
+   * any floating cards) so the same part of the canvas stays under the
+   * middle of what's visible. Clamped to
    * MIN_SCALE/MAX_SCALE, same as pinch zoom.
    */
   zoomStep(direction) {
     const containerRect = this.#containerEl.getBoundingClientRect();
-    const cx = containerRect.left + containerRect.width / 2;
-    const cy = containerRect.top + containerRect.height / 2;
+    const area = clearArea(containerRect, this.#getClearInsets());
+    const cx = containerRect.left + area.x + area.width / 2;
+    const cy = containerRect.top + area.y + area.height / 2;
     const factor = direction > 0 ? ZOOM_STEP_FACTOR : 1 / ZOOM_STEP_FACTOR;
     this.#zoomAroundPoint(cx, cy, cx, cy, factor, true);
   }
@@ -297,19 +312,19 @@ export class CanvasView {
     }
 
     const { width, height } = this.#layerStack;
-    const containerRect = this.#containerEl.getBoundingClientRect();
+    const area = this.#clearArea();
 
     if (preset === '100') {
       this.#scale = 1 / this.#baseScale;
     } else if (preset === 'fill') {
-      const coverRatio = Math.max(containerRect.width / width, containerRect.height / height);
+      const coverRatio = Math.max(area.width / width, area.height / height);
       this.#scale = coverRatio / this.#baseScale;
     } else {
       return;
     }
 
-    this.#panX = (containerRect.width - width * this.#baseScale * this.#scale) / 2;
-    this.#panY = (containerRect.height - height * this.#baseScale * this.#scale) / 2;
+    this.#panX = area.x + (area.width - width * this.#baseScale * this.#scale) / 2;
+    this.#panY = area.y + (area.height - height * this.#baseScale * this.#scale) / 2;
     this.#applyTransform();
     this.#emitZoomChange();
   }

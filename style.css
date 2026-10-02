@@ -55,6 +55,22 @@
   --icon-size-m: 1.8rem;
   --icon-size-l: 2.2rem;
   --icon-size-xl: 2.6rem;
+
+  /* Floating workspace (5a-floating-shell): shared card shape/spacing and
+     the frosted-glass tint. Dark tint is --color-bg at 88%: the canvas
+     backdrop behind the cards is light in both themes (#e2e2e2), and at
+     the ~72% first tried, dark cards blended to mid-grey and secondary
+     text dropped to ~2.4:1 - 88% keeps it at ~4.8:1. Light tint is white
+     at 72% (already high-contrast). --glass-border is a hairline that
+     keeps a card's edge visible over artwork of the same colour. See
+     .glass below. */
+  --float-radius: 16px;
+  --float-gap: 0.5rem;
+  --float-edge: 0.75rem;
+  --glass-tint: rgba(28, 28, 30, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: 20px;
+  --float-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
 }
 
 :root[data-theme="light"] {
@@ -77,6 +93,9 @@
   --color-success: #0f7a30;
   --color-overlay: rgba(255, 255, 255, 0.94);
   --color-overlay-soft: rgba(255, 255, 255, 0.8);
+  --glass-tint: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --float-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
 }
 
 * {
@@ -2763,3 +2782,187 @@ span.layer-lock-icon {
   }
 }
 
+
+/* ------------------------------------------------------------------
+   Floating workspace layout (5a-floating-shell)
+
+   Dev-only until 5h: js/layout.js sets data-layout="floating" on
+   #screen-workspace for ?layout=floating. Everything below is scoped to
+   that attribute (or is the inert .glass/.slot-options base), so the
+   docked layout and Pixi.mount() embeds are untouched.
+   ------------------------------------------------------------------ */
+
+/* Frosted-glass card. The opaque surface is the base, so a browser that
+   can't blur keeps a readable card with no extra query; blur is layered
+   on only where supported (Safari/iPad needs the -webkit- prefix).
+
+   The blur lives on a ::before layer, not the card itself: an element
+   with backdrop-filter becomes the containing block for position:fixed
+   descendants, and the colour picker (in the rail) and the palette
+   import/ramp previews (in the right sidebar) are fixed popovers nested
+   inside cards - they'd be positioned against, and clipped by, the card.
+   A .glass element must be positioned (relative/absolute/fixed).
+
+   The reduce-transparency opt-out is a *positive* query on purpose:
+   Safari doesn't know prefers-reduced-transparency, and `not (unknown)`
+   would evaluate false there and switch glass off on every iPad.
+
+   The floating slots get the look by selector rather than a class in
+   index.html, so the shared markup stays unchanged in the docked
+   layout. */
+.glass,
+.workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .slot-options, .pencil-options) {
+  isolation: isolate;
+  background: var(--color-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--float-radius);
+  box-shadow: var(--float-shadow);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass,
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .slot-options, .pencil-options) {
+    background: transparent;
+  }
+
+  .glass::before,
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .slot-options, .pencil-options)::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--glass-tint);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .slot-options, .pencil-options) {
+    background: var(--color-surface);
+  }
+
+  .glass::before,
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .slot-options, .pencil-options)::before {
+    display: none;
+  }
+}
+
+/* Groups the palette row, selection controls and zoom bar into the
+   `options` slot. In the docked layout it must not exist as a box, so
+   its children stay direct flex items of .workspace-main as before. */
+.slot-options {
+  display: contents;
+}
+
+/* Slots: only these variables decide which edge a region sits against.
+   Regions use inset-inline-start/end from them and never set left/right
+   themselves, so 5g's handedness preference swaps the -start/-end pairs
+   and nothing else. Edges include the device safe areas. */
+.workspace-screen[data-layout="floating"] {
+  --slot-top-height: 3.4rem;
+  --slot-rail-width: 3.6rem;
+  --float-edge-top: calc(env(safe-area-inset-top, 0px) + var(--float-edge));
+  --float-edge-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--float-edge));
+  --float-edge-start: calc(env(safe-area-inset-left, 0px) + var(--float-edge));
+  --float-edge-end: calc(env(safe-area-inset-right, 0px) + var(--float-edge));
+  --float-below-top: calc(var(--float-edge-top) + var(--slot-top-height) + var(--float-gap));
+  --slot-tools-start: var(--float-edge-start);
+  --slot-tools-end: auto;
+  --slot-tools-flyout-start: calc(var(--float-edge-start) + var(--slot-rail-width) + var(--float-gap));
+  --slot-tools-flyout-end: auto;
+  --slot-panels-start: auto;
+  --slot-panels-end: var(--float-edge-end);
+  position: relative;
+  overflow: hidden;
+}
+
+/* The wrappers stop being boxes, so their children can be placed against
+   the screen without moving them in the DOM (every id, JS query and 4d's
+   structural .ui-hidden selectors keep working). */
+.workspace-screen[data-layout="floating"] .workspace-body,
+.workspace-screen[data-layout="floating"] .workspace-main {
+  display: contents;
+}
+
+.workspace-screen[data-layout="floating"] .canvas-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.workspace-screen[data-layout="floating"] .slot-top,
+.workspace-screen[data-layout="floating"] .slot-tools,
+.workspace-screen[data-layout="floating"] .slot-panels,
+.workspace-screen[data-layout="floating"] .slot-options {
+  position: absolute;
+  z-index: 20;
+}
+
+.workspace-screen[data-layout="floating"] .slot-top {
+  top: var(--float-edge-top);
+  inset-inline-start: var(--float-edge-start);
+  inset-inline-end: var(--float-edge-end);
+  height: var(--slot-top-height);
+}
+
+.workspace-screen[data-layout="floating"] .slot-tools {
+  top: var(--float-below-top);
+  inset-inline-start: var(--slot-tools-start);
+  inset-inline-end: var(--slot-tools-end);
+  width: var(--slot-rail-width);
+  max-height: calc(100% - var(--float-below-top) - var(--float-edge-bottom));
+}
+
+/* Pencil/Eraser options sit beside the rail, in the same slot. */
+.workspace-screen[data-layout="floating"] .canvas-container > .pencil-options {
+  top: var(--float-below-top);
+  inset-inline-start: var(--slot-tools-flyout-start);
+  inset-inline-end: var(--slot-tools-flyout-end);
+  z-index: 20;
+}
+
+.workspace-screen[data-layout="floating"] .slot-panels {
+  top: var(--float-below-top);
+  inset-inline-start: var(--slot-panels-start);
+  inset-inline-end: var(--slot-panels-end);
+  width: 15rem;
+  height: auto;
+  max-height: calc(100% - var(--float-below-top) - var(--float-edge-bottom));
+}
+
+/* A floating card collapses by fading out, not by animating its width -
+   it no longer shares a row with the canvas, so there's nothing to push.
+   setRightSidebarVisible (js/workspace.js) still sets `inert`. */
+.workspace-screen[data-layout="floating"] .slot-panels.right-sidebar-collapsed {
+  width: 15rem;
+  visibility: hidden;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .workspace-screen[data-layout="floating"] .slot-panels {
+    transition: opacity 0.2s ease, visibility 0.2s;
+  }
+}
+
+.workspace-screen[data-layout="floating"] .slot-options {
+  bottom: var(--float-edge-bottom);
+  inset-inline: 0;
+  margin-inline: auto;
+  width: max-content;
+  max-width: calc(100% - 2 * (var(--float-edge-start) + var(--slot-rail-width) + var(--float-gap)));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Inside the options card the three bars drop their own docked chrome -
+   the card supplies the surface. */
+.workspace-screen[data-layout="floating"] .slot-options > * {
+  background: transparent;
+  border: none;
+}

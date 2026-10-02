@@ -82,7 +82,7 @@
   <main id="screen-workspace" class="screen workspace-screen hidden">
     <!-- Top bar: navigation/toggles/settings/export, icon-only. Separate
          from the tool rail below - these aren't drawing tools. -->
-    <header class="workspace-topbar">
+    <header class="workspace-topbar slot-top">
       <button type="button" id="back-to-gallery-button" class="tool-button icon-button magnetic-hover" aria-label="Gallery" data-tooltip="Gallery">
         <span class="material-symbols-outlined">home</span>
       </button>
@@ -170,7 +170,7 @@
 
     <div class="workspace-body">
     <!-- 1. Tools: vertical icon rail, Photoshop-style. -->
-    <aside id="tools-sidebar" class="tools-sidebar">
+    <aside id="tools-sidebar" class="tools-sidebar slot-tools">
       <button type="button" class="tool-button magnetic-hover" data-tool="move" aria-label="Move" data-tooltip="Move" data-shortcut="V">
         <span class="material-symbols-outlined">arrow_selector_tool</span>
       </button>
@@ -432,28 +432,32 @@
         </div>
       </div>
 
-      <div id="palette-row" class="palette-row"></div>
+      <!-- `options` slot (5a-floating-shell): one floating card in the
+           floating layout; display:contents (no box) in the docked one. -->
+      <div class="slot-options">
+        <div id="palette-row" class="palette-row"></div>
 
-      <div id="selection-controls" class="selection-controls hidden">
-        <button type="button" id="selection-clear-button" class="tool-button no-buzz">Clear selection</button>
-        <button type="button" id="selection-delete-button" class="tool-button no-buzz">Delete</button>
-      </div>
-
-      <nav class="bottom-bar">
-        <!-- 1. Zoom: bottom-left, per the canvas-navigation spec. -->
-        <div class="bottom-bar-group zoom-controls">
-          <button type="button" id="zoom-out-button" class="tool-button icon-button no-buzz" title="Zoom out (Ctrl/Cmd -)">
-            <span class="material-symbols-outlined">remove</span>
-          </button>
-          <span id="zoom-readout" class="zoom-readout">100%</span>
-          <button type="button" id="zoom-in-button" class="tool-button icon-button no-buzz" title="Zoom in (Ctrl/Cmd +)">
-            <span class="material-symbols-outlined">add</span>
-          </button>
-          <button type="button" id="zoom-preset-100" class="tool-button no-buzz" title="Actual size">100%</button>
-          <button type="button" id="zoom-preset-fit" class="tool-button no-buzz" title="Fit the canvas to the screen">Fit</button>
-          <button type="button" id="zoom-preset-fill" class="tool-button no-buzz" title="Fill the screen with the canvas">Fill</button>
+        <div id="selection-controls" class="selection-controls hidden">
+          <button type="button" id="selection-clear-button" class="tool-button no-buzz">Clear selection</button>
+          <button type="button" id="selection-delete-button" class="tool-button no-buzz">Delete</button>
         </div>
-      </nav>
+
+        <nav class="bottom-bar">
+          <!-- 1. Zoom: bottom-left, per the canvas-navigation spec. -->
+          <div class="bottom-bar-group zoom-controls">
+            <button type="button" id="zoom-out-button" class="tool-button icon-button no-buzz" title="Zoom out (Ctrl/Cmd -)">
+              <span class="material-symbols-outlined">remove</span>
+            </button>
+            <span id="zoom-readout" class="zoom-readout">100%</span>
+            <button type="button" id="zoom-in-button" class="tool-button icon-button no-buzz" title="Zoom in (Ctrl/Cmd +)">
+              <span class="material-symbols-outlined">add</span>
+            </button>
+            <button type="button" id="zoom-preset-100" class="tool-button no-buzz" title="Actual size">100%</button>
+            <button type="button" id="zoom-preset-fit" class="tool-button no-buzz" title="Fit the canvas to the screen">Fit</button>
+            <button type="button" id="zoom-preset-fill" class="tool-button no-buzz" title="Fill the screen with the canvas">Fill</button>
+          </div>
+        </nav>
+      </div>
     </div>
 
     <!-- Separate right-hand sidebar, not part of workspace-main's vertical
@@ -462,7 +466,7 @@
          its own collapse-to-header state (click its heading), and the
          whole sidebar has its own show/hide (#right-sidebar-toggle
          above), independent of one another. -->
-    <aside id="right-sidebar" class="right-sidebar">
+    <aside id="right-sidebar" class="right-sidebar slot-panels">
       <!-- Named, persisted palettes of user-added colors - global and
            cross-session, unlike the fixed preset palette-row. Wired in
            js/color-library-ui.js. -->

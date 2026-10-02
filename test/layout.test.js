@@ -1,0 +1,91 @@
+// Floating workspace layout (5a-floating-shell): the dev-only
+// ?layout=floating switch and the clear-area insets the canvas fits into.
+import { test, describe } from 'node:test';
+import assert from 'node:assert/strict';
+import { resolveLayout, clearInsets, clearArea } from '../js/layout.js';
+
+describe('resolveLayout', () => {
+  test('no query string means docked', () => {
+    assert.equal(resolveLayout(''), 'docked');
+  });
+
+  test('layout=floating opts in', () => {
+    assert.equal(resolveLayout('?layout=floating'), 'floating');
+  });
+
+  test('works alongside other parameters', () => {
+    assert.equal(resolveLayout('?foo=1&layout=floating&bar=2'), 'floating');
+  });
+
+  test('any other value stays docked', () => {
+    assert.equal(resolveLayout('?layout=Floating'), 'docked');
+    assert.equal(resolveLayout('?layout=docked'), 'docked');
+    assert.equal(resolveLayout('?layout='), 'docked');
+    assert.equal(resolveLayout('?other=floating'), 'docked');
+  });
+});
+
+describe('clearInsets', () => {
+  const container = { left: 0, top: 0, right: 1000, bottom: 800, width: 1000, height: 800 };
+  const rect = (left, top, width, height) => ({ left, top, width, height, right: left + width, bottom: top + height });
+
+  test('no cards means no insets', () => {
+    assert.deepEqual(clearInsets(container, [], 0), { top: 0, right: 0, bottom: 0, left: 0 });
+  });
+
+  test('each slot pushes in from its own edge, plus the gap', () => {
+    const insets = clearInsets(container, [
+      { slot: 'top', rect: rect(10, 10, 980, 50) },
+      { slot: 'tools', rect: rect(10, 70, 60, 500) },
+      { slot: 'panels', rect: rect(780, 70, 210, 600) },
+      { slot: 'options', rect: rect(300, 740, 400, 50) },
+    ], 8);
+    assert.deepEqual(insets, { top: 68, left: 78, right: 228, bottom: 68 });
+  });
+
+  test('a mirrored layout is read from where cards actually are', () => {
+    const insets = clearInsets(container, [
+      { slot: 'tools', rect: rect(930, 70, 60, 500) },
+      { slot: 'panels', rect: rect(10, 70, 210, 600) },
+    ], 0);
+    assert.equal(insets.right, 70);
+    assert.equal(insets.left, 220);
+  });
+
+  test('hidden (zero-size) cards are ignored', () => {
+    const insets = clearInsets(container, [{ slot: 'panels', rect: rect(1000, 70, 0, 0) }], 8);
+    assert.equal(insets.right, 0);
+  });
+
+  test('two cards against one edge take the larger reach', () => {
+    const insets = clearInsets(container, [
+      { slot: 'options', rect: rect(300, 740, 400, 50) },
+      { slot: 'options', rect: rect(300, 680, 400, 50) },
+    ], 0);
+    assert.equal(insets.bottom, 120);
+  });
+
+  test('works with a container not at the page origin', () => {
+    const offset = { left: 100, top: 50, right: 1100, bottom: 850, width: 1000, height: 800 };
+    const insets = clearInsets(offset, [{ slot: 'top', rect: rect(110, 60, 980, 50) }], 0);
+    assert.equal(insets.top, 60);
+  });
+});
+
+describe('clearArea', () => {
+  test('zero insets is the whole container', () => {
+    assert.deepEqual(clearArea({ width: 1000, height: 800 }, { top: 0, right: 0, bottom: 0, left: 0 }),
+      { x: 0, y: 0, width: 1000, height: 800 });
+  });
+
+  test('insets shrink and offset the area', () => {
+    assert.deepEqual(clearArea({ width: 1000, height: 800 }, { top: 68, right: 228, bottom: 68, left: 78 }),
+      { x: 78, y: 68, width: 694, height: 664 });
+  });
+
+  test('never collapses below 1px, even if cards cover everything', () => {
+    const area = clearArea({ width: 300, height: 200 }, { top: 150, right: 200, bottom: 150, left: 200 });
+    assert.equal(area.width, 1);
+    assert.equal(area.height, 1);
+  });
+});

@@ -276,9 +276,12 @@ floating layout behind a dev-only `data-layout="floating"` switch, so users
 keep the current layout until 5h turns the new one on. 5i is independent
 and can ship at any time.
 
-- **5a — Floating shell**: shared colour/spacing values, the glass card
-  component, the full-screen canvas base, logical positioning, and the
-  dev-only layout switch.
+- ~~**5a — Floating shell**~~ — **done** 2026-10-02, archived as
+  `openspec/changes/archive/2026-10-02-5a-floating-shell/` (new
+  `floating-workspace` spec). Glass card look (blur on a `::before`
+  layer, opaque fallback), full-screen canvas, slot classes with
+  logical insets, clear-area Fit, and the dev-only `?layout=floating`
+  switch. Verified in Chromium only; check on a real iPad before 5h.
 - **5b — Top bar + More menu**: the slim top bar, the zoom pill, and the
   More menu.
 - **5c — Floating tool rail**: the rail plus the FG/BG swatches.
@@ -306,7 +309,7 @@ Follow-ups after 5h:
   and the grid into its own card; revisit whether anything is still wanted
   after 5h.
 
-Status: designed, not started. Next: `/opsx:propose 5a-floating-shell`.
+Status: in progress - 5a done. Next: `/opsx:propose 5b-top-bar-more`.
 
 ## Phase 6 — Settings and Import screens
 

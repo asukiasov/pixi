@@ -221,17 +221,31 @@ function renderColorLibraryPanel() {
 
 /**
  * Edit-mode swatch tap: removes that one color (by position - duplicates
- * are allowed) and re-renders. Keeps keyboard focus in the grid, on the
- * swatch that slid into the removed one's place, so repeated removals
- * don't drop focus to <body>.
+ * are allowed) and re-renders. Taps that land while a removal is still
+ * saving are dropped - the old swatches are still on screen, so a fast
+ * double-tap would otherwise remove a second color, or empty the default
+ * palette past its render-time `disabled` guard (re-checked here for the
+ * same reason). Keeps keyboard focus in the grid, on the swatch that slid
+ * into the removed one's place, so repeated removals don't drop focus to
+ * <body>; once the palette is empty (and the edit toggle disabled), it
+ * moves to the always-enabled "add current color" button instead.
  */
+let removingColor = false;
 async function removeColorAt(index) {
+  if (removingColor) return;
+  const active = colorPalettes.find((p) => p.id === activePaletteId);
+  if (!active || (active.isDefault && active.colors.length <= 1)) return;
+  removingColor = true;
   const hadFocus = colorLibraryGrid.contains(document.activeElement);
-  await removeColorFromPalette(activePaletteId, index);
-  await loadColorPalettes();
+  try {
+    await removeColorFromPalette(activePaletteId, index);
+    await loadColorPalettes();
+  } finally {
+    removingColor = false;
+  }
   if (!hadFocus) return;
   const swatches = colorLibraryGrid.querySelectorAll('.color-library-swatch');
-  (swatches[Math.min(index, swatches.length - 1)] ?? editColorsButton).focus();
+  (swatches[Math.min(index, swatches.length - 1)] ?? addCurrentColorButton).focus();
 }
 
 function setEditingColors(on) {

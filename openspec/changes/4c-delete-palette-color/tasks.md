@@ -14,4 +14,4 @@
 
 - [x] 3.1 `npm test` passes
 - [x] 3.2 Browser check (Playwright): remove with mouse and touch, the Foreground color is unchanged, removal persists across reload, duplicates, Escape/switch exits, Material keeps its last color, user palette empties to the empty state
-- [ ] 3.3 web-design-guidelines review, then code review
+- [x] 3.3 web-design-guidelines review, then code review

@@ -15,4 +15,4 @@
 
 - [x] 3.1 `npm test` passes
 - [x] 3.2 Browser check (Playwright): single click selects with no input; double-click renames; touch double-tap renames (touch emulation); Enter/Escape/blur; empty name; undo restores the old name
-- [ ] 3.3 web-design-guidelines review of the changed UI code, then code review
+- [x] 3.3 web-design-guidelines review of the changed UI code, then code review

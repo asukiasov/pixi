@@ -245,6 +245,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   const layerCount = layers.length;
   const row = document.createElement('div');
   row.className = 'layer-row' + (isActive ? ' active' : '') + (isMarked ? ' marked' : '');
+  row.dataset.layerId = layer.id;
   row.addEventListener('click', (e) => {
     if (e.target.closest('button, input')) return;
     const modified = e.metaKey || e.ctrlKey || e.shiftKey;
@@ -255,7 +256,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
         // This click already landed on the row the first click rendered
         // (the layer is active), so rename in place - re-rendering here
         // would destroy the input before it could take focus.
-        startLayerRename(row, layer, index);
+        startLayerRename(row, layer);
         return;
       }
       lastNameTap = tap;
@@ -304,7 +305,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   nameLabel.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== 'F2') return;
     e.preventDefault();
-    startLayerRename(row, layer, index);
+    startLayerRename(row, layer, { restoreFocus: true });
   });
 
   // Background layer is locked in stacking position; reference image
@@ -456,10 +457,14 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
  * input. Enter/blur commits (via resolveLayerRename - empty/unchanged
  * names commit nothing), Escape cancels; either way the panel re-renders
  * back to the plain label. `done` guards the blur that a commit's own
- * re-render fires on the detached input, and any late event if something
- * else re-renders the panel mid-edit.
+ * re-render fires on the detached input. If something else re-renders
+ * the panel mid-edit (e.g. Cmd+Z), the input is gone and the edit is
+ * dropped, same as Escape - and the layer is looked up by id at commit
+ * time, never by the index it had when the row was built. With
+ * `restoreFocus` (a keyboard-started rename), focus returns to the
+ * layer's name afterwards instead of falling back to <body>.
  */
-function startLayerRename(row, layer, index) {
+function startLayerRename(row, layer, { restoreFocus = false } = {}) {
   const label = row.querySelector('.layer-name');
   if (!label) return;
   const input = document.createElement('input');
@@ -474,12 +479,18 @@ function startLayerRename(row, layer, index) {
   const finish = (save) => {
     if (done) return;
     done = true;
-    const name = save ? resolveLayerRename(input.value, layer.name) : null;
+    if (!input.isConnected) return; // panel re-rendered under the edit
+    const layerStack = getLayerStack();
+    const index = layerStack.getLayers().findIndex((l) => l.id === layer.id);
+    const name = save && index !== -1 ? resolveLayerRename(input.value, layer.name) : null;
     if (name) {
-      getLayerStack().renameLayer(index, name);
+      layerStack.renameLayer(index, name);
       commit(); // re-renders the panel
     } else {
       renderLayersPanel();
+    }
+    if (restoreFocus) {
+      layersPanelList.querySelector(`.layer-row[data-layer-id="${CSS.escape(String(layer.id))}"] .layer-name`)?.focus();
     }
   };
   input.addEventListener('keydown', (e) => {

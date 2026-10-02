@@ -17,4 +17,4 @@
 ## 4. Verification
 
 - [x] 4.1 `npm test` passes; a reference image still toggles Pixelated/Original in the browser
-- [ ] 4.2 Code review
+- [x] 4.2 Code review

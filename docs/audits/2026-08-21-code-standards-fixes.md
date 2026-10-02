@@ -21,7 +21,7 @@ decided not worth it) · `deferred` (real, but out of scope for now).
 | CFIX-4 | `matchMedia` existence is checked, but the call itself isn't try/caught (also module-eval-time, same as CFIX-2 — corrected from this file's original note) | `js/workspace.js:650-651` | Med | fixed |
 | CFIX-5 | `referenceMode`'s `'pixelated'`/`'original'` values are re-listed as inline string literals at 6+ sites, including a validation check, instead of a named constant | `lib/pixel-engine/layers.js:57,145,165,312,376,611` | Low | deferred |
 | CFIX-6 | `mergeLayers`/`mergeDown`/`getRenderPlan` touch the DOM transitively (via `#compositeSubset`) with no "requires a DOM" note in their own doc comments, unlike every other DOM-touching method in `lib/` | `lib/pixel-engine/layers.js` (methods around `:526,561,611`) | Low | fixed |
-| CFIX-7 | 10 of 24 "Pro extension point" comments lack the `(split-pixi-pro-repo)` tag and/or name a specific consuming pixi-pro file | `js/workspace.js:155,198,221,262,271,903,940,1042,1476,1482` | Low | deferred |
+| CFIX-7 | 10 of 24 "Pro extension point" comments lack the `(split-pixi-pro-repo)` tag and/or name a specific consuming pixi-pro file | `js/workspace.js:155,198,221,262,271,903,940,1042,1476,1482` | Low | closed — n/a |
 
 ## Notes per finding
 
@@ -63,3 +63,8 @@ decided not worth it) · `deferred` (real, but out of scope for now).
   access to the `pixi-pro` repo to confirm which file each hook is
   actually consumed by; guessing would leave wrong information, worse
   than the current honest gap.
+  **Closed as no longer applicable (2026-10-02, `4f-housekeeping`)**:
+  `merge-pixi-pro-into-standard` removed every "Pro extension point" hook
+  and breadcrumb when the Pro features were merged back, so there is
+  nothing left to tag. The standards docs now carry a short history note
+  instead of the pattern.

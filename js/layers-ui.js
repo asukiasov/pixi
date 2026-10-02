@@ -77,6 +77,36 @@ export function computeLayerMarkState({ marked, lastClickedId, clickedId, layers
   return { marked: new Set(), lastClickedId: clickedId };
 }
 
+/**
+ * Whether `next` completes a double-click/double-tap begun by `prev` -
+ * both `{ layerId, time, x, y }` records of plain clicks on a layer's
+ * name. Detected by hand rather than via the native `dblclick` event:
+ * every row click re-renders the whole panel, so the two clicks land on
+ * different DOM elements, and iOS Safari's tap-synthesized `dblclick` is
+ * unreliable anyway. Keyed by layer id so it survives that re-render.
+ * `click` fires for mouse, touch and Apple Pencil alike, so one path
+ * covers all three (see openspec/changes/4b-layer-rename-explicit).
+ */
+export function isDoubleTap(prev, next, { maxDelay = 400, maxDistance = 10 } = {}) {
+  if (!prev || prev.layerId !== next.layerId) return false;
+  if (next.time - prev.time > maxDelay) return false;
+  return Math.hypot(next.x - prev.x, next.y - prev.y) <= maxDistance;
+}
+
+/**
+ * The name a rename should commit, or null to keep `current` unchanged -
+ * empty/whitespace-only and unchanged names both skip the commit, so
+ * they never add an empty undo entry.
+ */
+export function resolveLayerRename(raw, current) {
+  const name = raw.trim();
+  return name && name !== current ? name : null;
+}
+
+// Last plain click on a layer name, for isDoubleTap - transient, and
+// deliberately not reset on re-render (that's the point).
+let lastNameTap = null;
+
 // Layers panel marking (multi-select), for merge-layers - transient UI
 // state, not persisted and not part of the undo snapshot. markedLayerIds
 // holds layer ids (not indices), so marks survive an unrelated
@@ -215,8 +245,24 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   const layerCount = layers.length;
   const row = document.createElement('div');
   row.className = 'layer-row' + (isActive ? ' active' : '') + (isMarked ? ' marked' : '');
+  row.dataset.layerId = layer.id;
   row.addEventListener('click', (e) => {
     if (e.target.closest('button, input')) return;
+    const modified = e.metaKey || e.ctrlKey || e.shiftKey;
+    if (!modified && e.target.closest('.layer-name')) {
+      const tap = { layerId: layer.id, time: e.timeStamp, x: e.clientX, y: e.clientY };
+      if (isDoubleTap(lastNameTap, tap)) {
+        lastNameTap = null;
+        // This click already landed on the row the first click rendered
+        // (the layer is active), so rename in place - re-rendering here
+        // would destroy the input before it could take focus.
+        startLayerRename(row, layer);
+        return;
+      }
+      lastNameTap = tap;
+    } else {
+      lastNameTap = null;
+    }
     const { marked, lastClickedId } = computeLayerMarkState({
       marked: markedLayerIds,
       lastClickedId: lastMarkClickedLayerId,
@@ -247,13 +293,19 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
 
   const thumbnail = buildLayerThumbnailCanvas(layer);
 
-  const nameInput = document.createElement('input');
-  nameInput.type = 'text';
-  nameInput.className = 'layer-name-input';
-  nameInput.value = layer.name;
-  nameInput.addEventListener('change', () => {
-    layerStack.renameLayer(index, nameInput.value.trim() || layer.name);
-    commit();
+  // Plain text, not a live input - a single click/tap selects the layer
+  // like anywhere else on the row; double-click/double-tap (see the row
+  // handler above) or Enter/F2 while focused renames.
+  const nameLabel = document.createElement('span');
+  nameLabel.className = 'layer-name';
+  nameLabel.textContent = layer.name;
+  nameLabel.tabIndex = 0;
+  nameLabel.title = 'Double-click to rename';
+  nameLabel.setAttribute('aria-keyshortcuts', 'Enter F2');
+  nameLabel.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== 'F2') return;
+    e.preventDefault();
+    startLayerRename(row, layer, { restoreFocus: true });
   });
 
   // Background layer is locked in stacking position; reference image
@@ -392,12 +444,70 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   actions.className = 'layer-row-actions';
   actions.append(upButton, downButton, deleteButton);
 
-  row.append(visibilityButton, thumbnail, nameInput);
+  row.append(visibilityButton, thumbnail, nameLabel);
   if (lockIcon) row.append(lockIcon);
   if (modeToggleButton) row.append(modeToggleButton);
   if (smoothingToggleButton) row.append(smoothingToggleButton);
   row.append(actions);
   return row;
+}
+
+/**
+ * Swaps `row`'s .layer-name label for a focused, fully selected text
+ * input. Enter/blur commits (via resolveLayerRename - empty/unchanged
+ * names commit nothing), Escape cancels; either way the panel re-renders
+ * back to the plain label. `done` guards the blur that a commit's own
+ * re-render fires on the detached input. If something else re-renders
+ * the panel mid-edit (e.g. Cmd+Z), the input is gone and the edit is
+ * dropped, same as Escape - and the layer is looked up by id at commit
+ * time, never by the index it had when the row was built. With
+ * `restoreFocus` (a keyboard-started rename), focus returns to the
+ * layer's name afterwards instead of falling back to <body>.
+ */
+function startLayerRename(row, layer, { restoreFocus = false } = {}) {
+  const label = row.querySelector('.layer-name');
+  if (!label) return;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'layer-name-input';
+  input.value = layer.name;
+  input.setAttribute('aria-label', 'Layer name');
+  input.autocomplete = 'off';
+  input.spellcheck = false;
+
+  let done = false;
+  const finish = (save) => {
+    if (done) return;
+    done = true;
+    if (!input.isConnected) return; // panel re-rendered under the edit
+    const layerStack = getLayerStack();
+    const index = layerStack.getLayers().findIndex((l) => l.id === layer.id);
+    const name = save && index !== -1 ? resolveLayerRename(input.value, layer.name) : null;
+    if (name) {
+      layerStack.renameLayer(index, name);
+      commit(); // re-renders the panel
+    } else {
+      renderLayersPanel();
+    }
+    if (restoreFocus) {
+      layersPanelList.querySelector(`.layer-row[data-layer-id="${CSS.escape(String(layer.id))}"] .layer-name`)?.focus();
+    }
+  };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      finish(true);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation(); // don't also close an open popover
+      finish(false);
+    }
+  });
+  input.addEventListener('blur', () => finish(true));
+
+  label.replaceWith(input);
+  input.focus();
+  input.select();
 }
 
 /**

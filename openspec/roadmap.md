@@ -154,45 +154,171 @@ built in parallel via separate git worktrees, sharing a small
 `js/image-import.js` decode/downsample utility that each change created
 independently and which was reconciled on merge (see that merge commit).
 
-## Phase 3 — Supabase Auth + sync
+## Phase 3 — Database prep + sync reference (no auth)
 
-- Google sign-in via Supabase Auth only, for now — no email+password.
-  Other providers (Apple, GitHub, magic link, anonymous accounts, etc.)
-  are possible later but explicitly not planned yet; revisit when this
-  phase is actually picked up.
-- Projects sync to Postgres/Storage per the schema in
-  `docs/supabase-database.md`
-- Offline-first behavior: IndexedDB stays the source of truth when signed out
-  or offline; sync is additive, not required to use the app
-- Screen: **Sign in**
+Redefined from the original "Supabase Auth + sync". Pixi is a tool
+developers fork and self-deploy, not a hosted product with a public user
+base, so built-in sign-in is dropped. What remains: the reference
+database schema (`profiles`/`projects` in `docs/supabase-database.md`,
+never applied to the live `pixi` Supabase project) plus a standalone
+`examples/supabase-sync/` module demonstrating the push/pull sync pattern
+against it, not imported by any shipped app code.
 
-Status: **deliberately not started yet** — holding off on the whole
-auth/sync layer for now, not just deferring a decision within it.
+Status: **proposed, not implemented** —
+`openspec/changes/3-database-prep-sync-reference/`. Docs/example-only, no
+app code touched, so it doesn't block Phase 4 — the two can proceed in
+either order.
 
-## Phase 4 — Monetization
+~~**Phase 4 — Monetization**~~ and ~~**Phase 5 — Community feed**~~
+(Stripe entitlements; post/like/comment/report feed) — **dropped, not
+deferred**, by the same change. Built-in monetization and community
+features are out of scope for good; the only money path is the
+voluntary donation ask in the README. The phase numbers below were
+reassigned to the new work.
 
-- Stripe Checkout + Supabase Edge Function webhook + entitlements gating —
-  the one-time-purchase unlock
-- Screen: **Upgrade/unlock**
-- Needs real server compute (Edge Functions) for the webhook and
-  `service_role`-key writes — GitHub Pages hosting can't run this part; see
-  the Secrets & deployment note in `docs/supabase-database.md`
+## Phase 4 — Polish and small fixes
 
-Status: not started, not urgent to detail yet.
+Small, independent, user-facing fixes and housekeeping, raised from real
+use (mostly on iPad). Each sub-change is small enough to propose,
+implement, and archive on its own; order within the phase is a
+suggestion, not a dependency chain. Raised 2026-08-25 (4e) and
+2026-10-02 (4a–4d, 4f).
 
-## Phase 5 — Community feed
+- **4a — iPad: no accidental text selection.** Rapid taps on the UI
+  highlight panel text as if selecting it in a browser page. Add
+  `user-select: none` (and `-webkit-touch-callout: none`) on the app
+  chrome, keeping selection only in real text inputs. Pure bug fix — can
+  skip OpenSpec per CLAUDE.md (systematic-debugging + TDD).
+- **4b — Layer rename on explicit action only.** `js/layers-ui.js`
+  renders each layer's name as an always-live
+  `<input class="layer-name-input">`, so a single click/tap on the name
+  drops straight into text editing. Show it as plain text; single
+  click/tap only selects the layer; rename on double-click/double-tap
+  (or a rename menu item).
+- **4c — Delete a single color from a Color Library palette.** The panel
+  can delete a whole palette (`deleteColorPalette`) but not one specific
+  color in it.
+- **4d — Hide-all-UI toggle.** One button (plus a keyboard shortcut,
+  Photoshop/Procreate-style `Tab`) that hides every panel and toolbar so
+  only the canvas is visible, with a way back that stays reachable while
+  hidden. Goes beyond the existing right-sidebar-only hide.
+- **4e — Error-handling layer (toast/status-message system)** — there's no
+  centralized way to surface a failure to the user today; each call site
+  decides locally (silent-null fallback, a defensive try/catch around a
+  flaky browser API, or `console.error` + a blunt `alert()` as a last
+  resort — see `js/workspace.js`'s timelapse-export catch block, the one
+  place a failure currently has to reach the user at all). Worth a real
+  toast/inline-status component that call sites can push into instead of
+  `alert()`, plus a convention for when to fail silently vs. surface an
+  error. Needs its own design pass (toast placement/stacking, whether
+  errors are dismissible/auto-timeout, how it composes with the existing
+  light/dark theme) before an `/opsx:propose`. Raised 2026-08-25.
+- **4f — Housekeeping** (no user-facing change):
+  - Spec sync for AUD-11/AUD-12 (sliding right sidebar, shared
+    `#library-sequence-toggle`) — built directly without updating
+    `openspec/specs/` (`canvas-navigation`, `brushes`); see the UI polish
+    pass entry under "Closed / history" below.
+  - Purge leftover `pixi-pro` add-on wording from
+    `docs/code-standards.md` / `docs/architecture-standards.md`; close
+    CFIX-7 as no longer applicable.
+  - CFIX-5: one named constant for `referenceMode`'s
+    `'pixelated'`/`'original'` values in `lib/pixel-engine/layers.js`.
+  - Finish `merge-pixi-pro-into-standard`: operator deletes the private
+    `pixi-pro` repo and the `pixi-pro.asukiasov.workers.dev` Cloudflare
+    Worker (tasks 7.1–7.2), then archive the change.
 
-- Post/like/comment/report, plus a moderation queue
-- Screen: **Community feed**
+Status: not started.
 
-Status: not started, not urgent to detail yet.
+## Phase 5 — Workspace redesigns
 
-## Not yet scheduled
+Larger UI reworks, each needing its own brainstorming/design pass before
+an `/opsx:propose`.
 
-Mentioned in early planning but not assigned a phase — pull one in when it
-becomes the next priority:
-- **Settings** screen (stylus calibration, gesture remapping, account)
-- **Import** screen (.aseprite, reference images, palette files)
+- **5a — Brush picker UI redesign** — the current Brushes panel (docked right
+  sidebar, `#brushes-panel`: grid of predefined + custom brushes, spacing/
+  rotation inputs, an editor for drawing new custom patterns) was raised
+  as a possible removal candidate on 2026-08-21 while scoping an unrelated
+  right-sidebar simplification, then explicitly kept — the Brush tool
+  depends on it entirely (no other way to pick a pattern) and there's no
+  replacement UI designed yet. Noted here as a real future want (a less
+  heavyweight brush-picking interface), not a plan to remove the current
+  one before a replacement exists. Needs its own brainstorming/design pass
+  before an `/opsx:propose` — not scoped beyond this note yet.
+- **5b — Smartphone interface — responsive design architecture.** The current
+  Workspace layout (docked left tool sidebar, docked right Layers/Color
+  Library sidebar, fixed top bar) is built for desktop/tablet-width
+  screens. Touch/pen *input* already works end to end (Pointer Events,
+  two-finger pan/pinch — see `lib/README.md`), but the *layout* doesn't
+  reflow for a phone-sized viewport: nothing collapses sidebars into a
+  bottom sheet or off-canvas drawer, nothing resizes the canvas/toolbar
+  proportions below tablet width. This is a real architecture change, not
+  a CSS tweak — closer in scope to a phase than a single change (touches
+  every panel: tools sidebar, right sidebar, top bar, zoom controls, New
+  Canvas/Gallery screens). Needs its own brainstorming/design pass to
+  settle the actual mobile layout (which panels become sheets/drawers, at
+  what breakpoint, whether Gallery/New Canvas need their own mobile
+  treatment) before an `/opsx:propose`. Raised 2026-08-22.
+
+Status: not started.
+
+## Phase 6 — Settings and Import screens
+
+- **6a — Settings** screen (stylus calibration, gesture remapping). The
+  original "account" item is moot now that auth is dropped (Phase 3).
+- **6b — Import** screen (.aseprite, palette files). Reference images are
+  already covered by the reference image layer (see "Closed / history").
+
+Status: not started, not detailed yet.
+
+## On demand — revisit when a real need shows up
+
+Not scheduled into a phase on purpose: each is real work with no
+concrete consumer driving it yet.
+
+- **Scope `style.css` to the mounted editor** — `lib/pixi.js`'s
+  `Pixi.mount()` currently requires loading Pixi's global, unscoped
+  stylesheet (`:root`/`*`/`body` selectors, no `.pixi-`-style prefix, no
+  shadow DOM) into the host page. Fine for the standalone app, real risk
+  for embedding: a host with its own global styles can collide with it
+  either direction, and today the only mitigation is documented workaround
+  (iframe the host element, or prefix `style.css` yourself before loading
+  it — see `lib/README.md`). Worth doing once there's an actual embedding
+  consumer hitting this, rather than speculatively — scoping (CSS layers,
+  a build-time prefix pass, or moving the mounted markup into a shadow
+  root) is real work and the mount API has no confirmed embedder yet to
+  validate the approach against. Raised 2026-08-22 from a junior-dev audit
+  of `lib/README.md`.
+- **Keyboard/screen-reader support for the drawing tools** — the mounted
+  and standalone editors are both pointer-only today: no keyboard path to
+  select a tool, pick a color, or draw, and no screen-reader-facing
+  structure around the canvas. Documented as a known limitation in
+  `lib/README.md` rather than fixed, since it's a genuinely large,
+  open-ended initiative (equivalent in scope to a full a11y pass across
+  every tool and panel, not a one-off fix) with no specific product need
+  driving it yet. Revisit if an actual accessibility requirement shows up
+  (a customer, an embedding host, a legal requirement) rather than
+  speculatively. Raised 2026-08-22 from a junior-dev audit of
+  `lib/README.md`.
+- **Custom theming/icons/styling** — a supported way to override colors,
+  the icon set, and general styling without forking `style.css` line by
+  line, for both the standalone app (a user-facing theme option beyond
+  the existing light/dark/system toggle) and `Pixi.mount()` embedders (who
+  today can only load Pixi's stylesheet as-is or override it with brittle,
+  unscoped CSS overrides — see the `style.css` scoping item above, which
+  this would likely build on top of once that lands: a scoped stylesheet
+  is what makes safe, contained overrides possible in the first place).
+  Shape still open — CSS custom properties for a theme token set, a
+  swappable icon font/sprite instead of the hardcoded Material Symbols
+  subset, an `options.theme` mount() option — needs its own design pass
+  before scoping. Raised 2026-08-22.
+- Animation timeline / onion skinning — explicitly out of scope for now, see
+  CLAUDE.md non-goals; would need its own roadmap discussion if ever revisited
+
+## Closed / history
+
+Items raised outside the phase plan that have since shipped, been
+reversed, or stopped applying. Kept for the record.
+
 - ~~**Reference image layer (trace-over)**~~ — upload an image onto its
   own layer as a visual guide (not downsampled/pixelated - kept at
   original fidelity, only scaled down to fit the fixed canvas size when
@@ -226,8 +352,6 @@ becomes the next priority:
   composite. Raised 2026-08-18; proposed and implemented via
   `openspec/changes/merge-layers/` (tier-gating itself deferred, same
   reasoning as reference-image-layer above).
-- Animation timeline / onion skinning — explicitly out of scope for now, see
-  CLAUDE.md non-goals; would need its own roadmap discussion if ever revisited
 - ~~**Standard/Pro tier split**~~ — **reversed.** Originally: splitting
   Pixi into two downloadable, self-hosted versions: free/open-source
   Standard (this repo, as-is) and paid/closed-source Pro (new private
@@ -242,66 +366,6 @@ becomes the next priority:
   and the private `pixi-pro` repo/Cloudflare demo are retired. Phase 4's
   original Stripe/entitlements sketch is unaffected by either the split or
   its reversal — it remains a separate, not-yet-scoped monetization path.
-- **Brush picker UI redesign** — the current Brushes panel (docked right
-  sidebar, `#brushes-panel`: grid of predefined + custom brushes, spacing/
-  rotation inputs, an editor for drawing new custom patterns) was raised
-  as a possible removal candidate on 2026-08-21 while scoping an unrelated
-  right-sidebar simplification, then explicitly kept — the Brush tool
-  depends on it entirely (no other way to pick a pattern) and there's no
-  replacement UI designed yet. Noted here as a real future want (a less
-  heavyweight brush-picking interface), not a plan to remove the current
-  one before a replacement exists. Needs its own brainstorming/design pass
-  before an `/opsx:propose` — not scoped beyond this note yet.
-- **Scope `style.css` to the mounted editor** — `lib/pixi.js`'s
-  `Pixi.mount()` currently requires loading Pixi's global, unscoped
-  stylesheet (`:root`/`*`/`body` selectors, no `.pixi-`-style prefix, no
-  shadow DOM) into the host page. Fine for the standalone app, real risk
-  for embedding: a host with its own global styles can collide with it
-  either direction, and today the only mitigation is documented workaround
-  (iframe the host element, or prefix `style.css` yourself before loading
-  it — see `lib/README.md`). Worth doing once there's an actual embedding
-  consumer hitting this, rather than speculatively — scoping (CSS layers,
-  a build-time prefix pass, or moving the mounted markup into a shadow
-  root) is real work and the mount API has no confirmed embedder yet to
-  validate the approach against. Raised 2026-08-22 from a junior-dev audit
-  of `lib/README.md`.
-- **Keyboard/screen-reader support for the drawing tools** — the mounted
-  and standalone editors are both pointer-only today: no keyboard path to
-  select a tool, pick a color, or draw, and no screen-reader-facing
-  structure around the canvas. Documented as a known limitation in
-  `lib/README.md` rather than fixed, since it's a genuinely large,
-  open-ended initiative (equivalent in scope to a full a11y pass across
-  every tool and panel, not a one-off fix) with no specific product need
-  driving it yet. Revisit if an actual accessibility requirement shows up
-  (a customer, an embedding host, a legal requirement) rather than
-  speculatively. Raised 2026-08-22 from a junior-dev audit of
-  `lib/README.md`.
-- **Smartphone interface — responsive design architecture.** The current
-  Workspace layout (docked left tool sidebar, docked right Layers/Color
-  Library sidebar, fixed top bar) is built for desktop/tablet-width
-  screens. Touch/pen *input* already works end to end (Pointer Events,
-  two-finger pan/pinch — see `lib/README.md`), but the *layout* doesn't
-  reflow for a phone-sized viewport: nothing collapses sidebars into a
-  bottom sheet or off-canvas drawer, nothing resizes the canvas/toolbar
-  proportions below tablet width. This is a real architecture change, not
-  a CSS tweak — closer in scope to a phase than a single change (touches
-  every panel: tools sidebar, right sidebar, top bar, zoom controls, New
-  Canvas/Gallery screens). Needs its own brainstorming/design pass to
-  settle the actual mobile layout (which panels become sheets/drawers, at
-  what breakpoint, whether Gallery/New Canvas need their own mobile
-  treatment) before an `/opsx:propose`. Raised 2026-08-22.
-- **Custom theming/icons/styling** — a supported way to override colors,
-  the icon set, and general styling without forking `style.css` line by
-  line, for both the standalone app (a user-facing theme option beyond
-  the existing light/dark/system toggle) and `Pixi.mount()` embedders (who
-  today can only load Pixi's stylesheet as-is or override it with brittle,
-  unscoped CSS overrides — see the `style.css` scoping item above, which
-  this would likely build on top of once that lands: a scoped stylesheet
-  is what makes safe, contained overrides possible in the first place).
-  Shape still open — CSS custom properties for a theme token set, a
-  swappable icon font/sprite instead of the hardcoded Material Symbols
-  subset, an `options.theme` mount() option — needs its own design pass
-  before scoping. Raised 2026-08-22.
 - ~~**Plugin/powerup system, with Pixi Pro as its first plugin.**~~ —
   **no longer applicable**, closed out 2026-08-24. Originally: formalize
   the ad-hoc "Pro extension points" (`registerColorSequenceProvider` and

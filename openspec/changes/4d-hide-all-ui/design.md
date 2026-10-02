@@ -31,12 +31,20 @@ container's rect, toggle the class, read the rect again, then call a new
 under the user's finger. *Alternative:* `resetView()` (re-fit). Rejected
 because it throws away the user's zoom and pan.
 
-**3. Tab only when nothing interactive is focused.** A pure
-`isHideUiShortcut(event, activeElement)` returns true only for plain Tab
-(no Shift/Meta/Ctrl/Alt) when the focused element is `<body>`, `null`,
-or the canvas container. Any focused control keeps normal Tab
-navigation, so keyboard users are never trapped. Bare-key tool
-shortcuts already work when focus is on `<body>`, so this matches them.
+**3. Tab only when nothing interactive is focused and the user was
+drawing.** A pure `isHideUiShortcut(event, activeElement, { uiHidden,
+canvasEngaged })` accepts only a plain Tab (no Shift/Meta/Ctrl/Alt) when
+the focused element is `<body>`, `null`, or the canvas container. While
+the interface is visible, it also requires `canvasEngaged`: the last
+`pointerdown` landed on the canvas. Without that condition, a keyboard
+user arriving on `<body>` (e.g. after opening a project with Enter)
+could never Tab into the controls, because every Tab would just toggle
+the UI (code review finding). Because the canvas `preventDefault`s its
+`pointerdown`, the browser no longer blurs the previously clicked tool
+button. The capture-phase listener that sets `canvasEngaged` therefore
+blurs it explicitly, restoring normal click-elsewhere behavior. While
+hidden, there is nothing to navigate to, so Tab on `<body>` (or on the
+floating restore button) always restores.
 
 **4. Floating restore button.** `#show-ui-button` is a fixed-position
 icon button at the top-right, offset by `env(safe-area-inset-*)`. It is
@@ -46,9 +54,23 @@ it if a now-hidden control had focus; when the interface returns, focus
 moves to the top-bar toggle in the same case. Focus is never lost to a
 hidden element.
 
-**5. Escape restores.** Escape already clears the selection, so
-restoring in the same keypress is harmless. It also gives a familiar
-"get me out" key.
+**5. Escape restores, and only restores.** The restore listener is
+registered before the existing Escape-clears-selection listener and
+calls `stopImmediatePropagation()`. Pressing Escape to leave hidden mode
+therefore does not also drop the user's marquee selection.
+
+**6. Standalone app only, not the `Pixi.mount()` embed.** In an embed,
+the host page owns the layout, and a `position: fixed` restore button
+would escape the embed. A document-level Tab listener would also grab
+the host page's Tab key. `lib/pixi.js`'s markup omits both buttons, and
+`workspace.js` treats a missing `#show-ui-button` as "feature off": the
+click bindings, `setUiHidden`, and the keydown handler all no-op.
+
+**7. Re-init while hidden re-fits.** A project open (or embed-style
+re-init) while hidden has already fit the view to the full-size
+container. `setUiHidden(false)` reports whether it changed anything, and
+if it did, the view is re-fitted (`setZoomPreset('fit')`), so the canvas
+isn't left off-centre.
 
 **Icons:** `fullscreen` (hide) and `fullscreen_exit` (show) are added
 to the `icon_names` subset in `index.html`. The list must stay

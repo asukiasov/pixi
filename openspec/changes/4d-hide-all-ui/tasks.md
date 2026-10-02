@@ -14,4 +14,4 @@
 
 - [x] 3.1 `npm test` passes
 - [x] 3.2 Browser check (Playwright): every region hides, the canvas doesn't move, drawing works while hidden, the restore button works by click and touch, Tab toggles only with nothing focused, Escape restores, a project switch resets it, light/dark screenshots
-- [ ] 3.3 web-design-guidelines review, then code review
+- [x] 3.3 web-design-guidelines review, then code review

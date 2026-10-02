@@ -39,14 +39,18 @@ function decodeViaImgElement(file) {
   });
 }
 
+/** Shared error-toast text for a picked file decodeImageFile can't read. */
+export const UNREADABLE_IMAGE_MESSAGE = "Couldn't read that image. Try a PNG, JPEG, GIF, WebP, or SVG file.";
+
 /**
  * Decodes a File (from an `image/*` file input) into an ImageBitmap, or
  * an HTMLImageElement for formats createImageBitmap() can't decode (see
  * decodeViaImgElement) - downsampleToImageData below accepts either
  * interchangeably, both exposing .width/.height and working with
  * drawImage(). Returns null instead of throwing on a file neither path
- * can decode, so callers can fail silently - no console error, no crash -
- * rather than treat a bad pick as a hard error.
+ * can decode - no console error, no crash. Callers surface that as an
+ * error toast with UNREADABLE_IMAGE_MESSAGE (4e-toast-system: a failed
+ * user-picked file is worth telling them about, not a silent no-op).
  */
 export async function decodeImageFile(file) {
   try {

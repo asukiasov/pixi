@@ -21,6 +21,7 @@ import { initCanvasSettings } from './canvas-settings.js';
 // invoked later - true of every call site below.
 import { renderLayersPanel, clearLayerMarksAndRefresh, mergeMarkedOrActiveDown } from './layers-ui.js';
 import { isHideUiShortcut } from './hide-ui.js';
+import { showToast } from './toast.js';
 import { getColorSequenceColor, setLibrarySequenceEnabled, syncColorLibraryActiveSwatch } from './color-library-ui.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
@@ -179,6 +180,8 @@ let showUiButton = null;
 // isHideUiShortcut) - lets Tab hide the UI mid-drawing without stealing
 // it from a keyboard user who hasn't touched the canvas.
 let canvasEngaged = false;
+// Autosave failure toast throttle (4e-toast-system) - see autoSave().
+let saveFailureShown = false;
 let tilePreviewToggle = null;
 let foregroundSwatchEl = null;
 let backgroundSwatchEl = null;
@@ -264,8 +267,22 @@ function updateUndoRedoButtons() {
 async function autoSave() {
   state.onChange();
   const adapter = _activeAdapter();
-  const thumbnail = await state.layerStack.toPNGBlob();
-  await saveProject(state.projectId, state.layerStack, thumbnail, adapter);
+  try {
+    const thumbnail = await state.layerStack.toPNGBlob();
+    await saveProject(state.projectId, state.layerStack, thumbnail, adapter);
+    saveFailureShown = false;
+  } catch (err) {
+    // 4e-toast-system: the one background failure worth surfacing - the
+    // user's work may not be stored. Once per failure streak (cleared by
+    // the next successful save), not once per stroke. Standalone app
+    // only: an embed's host supplies its own storage adapter and owns
+    // that error surface.
+    console.error('Autosave failed:', err);
+    if (root === document && !saveFailureShown) {
+      saveFailureShown = true;
+      showToast("Couldn't save your latest changes. Keep this tab open and export a copy to be safe.", { type: 'error' });
+    }
+  }
 }
 
 export function commit() {
@@ -1541,11 +1558,10 @@ function bindDomOnce() {
       // check) would only surface as an unhandled promise rejection - the
       // finally block below still resets the UI and clears the buffer, so
       // the user would see nothing at all: no file, no error, and no way
-      // to know a retry is even possible. console.error at minimum leaves
-      // a trace; alert is blunt but matches this app having no toast/
-      // status-message system to surface an inline error into instead.
+      // to know a retry is even possible. console.error leaves a trace for
+      // debugging; the toast (4e-toast-system) is what the user sees.
       console.error('Timelapse encode failed:', err);
-      alert('Could not save the timelapse video. Please try recording again.');
+      showToast("Couldn't save the timelapse video. Try recording again.", { type: 'error' });
     } finally {
       timelapseSaveButton.disabled = false;
       timelapseSaveButton.innerHTML = originalLabel;

@@ -345,6 +345,19 @@ export async function removeColorFromPalette(id, index) {
   await db.colorPalettes.update(id, { colors, updatedAt: Date.now() });
 }
 
+/**
+ * Inserts `hex` at `index` (clamped to an append past the end) - the undo
+ * of removeColorFromPalette, used by the Color Library's "Undo" toast
+ * (4e-toast-system). Unknown ids are a no-op.
+ */
+export async function insertColorIntoPalette(id, index, hex) {
+  const record = await db.colorPalettes.get(id);
+  if (!record) return;
+  const colors = [...record.colors];
+  colors.splice(Math.max(0, Math.min(index, colors.length)), 0, hex);
+  await db.colorPalettes.update(id, { colors, updatedAt: Date.now() });
+}
+
 export async function deleteColorPalette(id) {
   await db.colorPalettes.delete(id);
 }

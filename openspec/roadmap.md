@@ -203,24 +203,22 @@ suggestion, not a dependency chain. Raised 2026-08-25 (4e) and
   "Edit colors" toggle in the Color Library header: while pressed, a tap
   on a swatch removes that one color (same on mouse, touch, Pencil,
   keyboard). The default palette keeps at least one color. Removal is
-  immediate (no undo yet) - a candidate first consumer for 4e's toasts.
+  immediate; 4e added an Undo toast for the latest removal.
 - ~~**4d — Hide-all-UI toggle.**~~ — **done** 2026-10-02, archived as
   `openspec/changes/archive/2026-10-02-4d-hide-all-ui/` (new
   `hide-interface` spec). A top-bar "Hide interface" button, or Tab after
   drawing, leaves only the canvas (which doesn't move); a floating 44px
   "Show interface" button in the top-right corner, Tab, or Escape bring
   it back. Standalone app only - not in the `Pixi.mount()` embed.
-- **4e — Error-handling layer (toast/status-message system)** — there's no
-  centralized way to surface a failure to the user today; each call site
-  decides locally (silent-null fallback, a defensive try/catch around a
-  flaky browser API, or `console.error` + a blunt `alert()` as a last
-  resort — see `js/workspace.js`'s timelapse-export catch block, the one
-  place a failure currently has to reach the user at all). Worth a real
-  toast/inline-status component that call sites can push into instead of
-  `alert()`, plus a convention for when to fail silently vs. surface an
-  error. Needs its own design pass (toast placement/stacking, whether
-  errors are dismissible/auto-timeout, how it composes with the existing
-  light/dark theme) before an `/opsx:propose`. Raised 2026-08-25.
+- ~~**4e — Error-handling layer (toast/status-message system)**~~ —
+  **done** 2026-10-02, archived as
+  `openspec/changes/archive/2026-10-02-4e-toast-system/` (new
+  `status-messages` spec). `js/toast.js`: bottom-centre, dismissible,
+  auto-hiding (pauses on hover/focus), max-3, screen-reader-announced
+  toasts. Replaced the timelapse `alert()`, surfaced the three silent
+  unreadable-image failures and autosave failure, and gave 4c's color
+  removal an Undo. The surface-vs-silent rule is in
+  `docs/code-standards.md`.
 - **4f — Housekeeping** (no user-facing change):
   - Spec sync for AUD-11/AUD-12 (sliding right sidebar, shared
     `#library-sequence-toggle`) — built directly without updating
@@ -235,7 +233,7 @@ suggestion, not a dependency chain. Raised 2026-08-25 (4e) and
     `pixi-pro` repo and the `pixi-pro.asukiasov.workers.dev` Cloudflare
     Worker (tasks 7.1–7.2), then archive the change.
 
-Status: in progress — 4a–4d done.
+Status: in progress — 4a–4e done.
 
 ## Phase 5 — Workspace redesigns
 

@@ -191,12 +191,12 @@ suggestion, not a dependency chain. Raised 2026-08-25 (4e) and
   none`; `input`/`textarea`/`[contenteditable]` explicitly opt back in
   (iOS Safari can leave inputs uneditable under an unselectable
   ancestor). Guarded by `test/text-selection.test.js`.
-- **4b — Layer rename on explicit action only.** `js/layers-ui.js`
-  renders each layer's name as an always-live
-  `<input class="layer-name-input">`, so a single click/tap on the name
-  drops straight into text editing. Show it as plain text; single
-  click/tap only selects the layer; rename on double-click/double-tap
-  (or a rename menu item).
+- ~~**4b — Layer rename on explicit action only.**~~ — **done**
+  2026-10-02, archived as
+  `openspec/changes/archive/2026-10-02-4b-layer-rename-explicit/`. The
+  name is plain text; a single click/tap selects the layer;
+  double-click/double-tap (hand-detected, so it survives the panel's
+  per-click re-render and works on iPad) or Enter/F2 renames.
 - **4c — Delete a single color from a Color Library palette.** The panel
   can delete a whole palette (`deleteColorPalette`) but not one specific
   color in it.
@@ -229,7 +229,7 @@ suggestion, not a dependency chain. Raised 2026-08-25 (4e) and
     `pixi-pro` repo and the `pixi-pro.asukiasov.workers.dev` Cloudflare
     Worker (tasks 7.1–7.2), then archive the change.
 
-Status: in progress — 4a done.
+Status: in progress — 4a, 4b done.
 
 ## Phase 5 — Workspace redesigns
 

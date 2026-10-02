@@ -197,9 +197,13 @@ suggestion, not a dependency chain. Raised 2026-08-25 (4e) and
   name is plain text; a single click/tap selects the layer;
   double-click/double-tap (hand-detected, so it survives the panel's
   per-click re-render and works on iPad) or Enter/F2 renames.
-- **4c — Delete a single color from a Color Library palette.** The panel
-  can delete a whole palette (`deleteColorPalette`) but not one specific
-  color in it.
+- ~~**4c — Delete a single color from a Color Library palette.**~~ —
+  **done** 2026-10-02, archived as
+  `openspec/changes/archive/2026-10-02-4c-delete-palette-color/`. An
+  "Edit colors" toggle in the Color Library header: while pressed, a tap
+  on a swatch removes that one color (same on mouse, touch, Pencil,
+  keyboard). The default palette keeps at least one color. Removal is
+  immediate (no undo yet) - a candidate first consumer for 4e's toasts.
 - **4d — Hide-all-UI toggle.** One button (plus a keyboard shortcut,
   Photoshop/Procreate-style `Tab`) that hides every panel and toolbar so
   only the canvas is visible, with a way back that stays reachable while
@@ -229,7 +233,7 @@ suggestion, not a dependency chain. Raised 2026-08-25 (4e) and
     `pixi-pro` repo and the `pixi-pro.asukiasov.workers.dev` Cloudflare
     Worker (tasks 7.1–7.2), then archive the change.
 
-Status: in progress — 4a, 4b done.
+Status: in progress — 4a, 4b, 4c done.
 
 ## Phase 5 — Workspace redesigns
 

@@ -381,7 +381,7 @@ would help.
 - `js/export.js:1-2` — `SCALES`, `FORMATS` (follows the rule)
 - `js/theme.js:25,28` — `PREFERENCES`, `CYCLE_ORDER` (follows the rule)
 - `lib/pixel-engine/layers.js:18` — `MIME_TYPES` (follows the rule)
-- `lib/pixel-engine/layers.js:57,145,165,312,376,611` — `referenceMode`'s `'pixelated'`/`'original'` literals, including the `:165` validation `if` check (does not follow the rule; flagged as a real fix candidate — see follow-up list)
+- `lib/pixel-engine/layers.js` — `REFERENCE_MODES` (follows the rule; was inline `'pixelated'`/`'original'` literals at 6+ sites until CFIX-5)
 
 ## Other Observed Patterns
 
@@ -418,8 +418,9 @@ from what this doc describes.
    doc comment) — now wrapped in `safeMatchMedia()`'s try/catch.
    `js/workspace.js:707-708` — still an unguarded `matchMedia()` call,
    lower severity than #2 (not at module-eval time).
-4. `lib/pixel-engine/layers.js`'s `referenceMode` — inline-relisted string
-   literals instead of a named constant, including in a validation check.
+4. ~~`lib/pixel-engine/layers.js`'s `referenceMode` — inline-relisted string
+   literals instead of a named constant, including in a validation check.~~
+   **Fixed** (CFIX-5) — `REFERENCE_MODES`.
 5. `lib/pixel-engine/layers.js`'s `mergeLayers`/`mergeDown`/`getRenderPlan`
    — touch the DOM transitively (via `#compositeSubset`) without saying so
    in their own doc comments, unlike every other DOM-touching method in

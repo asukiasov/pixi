@@ -1431,6 +1431,7 @@ textarea,
   background: var(--color-accent-strong);
 }
 
+.layer-row.active .layer-name,
 .layer-row.active .layer-name-input,
 .layer-row.active .layer-reorder-button,
 .layer-row.active .layer-delete-button,
@@ -1515,14 +1516,35 @@ textarea,
   flex: 1 1 2rem;
   min-width: 2rem;
   background: transparent;
-  border: 1px solid transparent;
+  /* Only ever present while renaming (4b-layer-rename-explicit), so the
+     border always shows - currentColor so it stays visible on the active
+     row's accent background too. */
+  border: 1px solid currentColor;
+  outline: none;
   color: inherit;
   font-size: 0.85rem;
   padding: 0.15rem 0.3rem;
   border-radius: 0.3rem;
 }
 
-.layer-name-input:focus-visible {
+/* The name's at-rest display (4b-layer-rename-explicit) - plain text, so
+   a tap selects the layer instead of opening a text field. Same flex
+   sizing, font and padding as .layer-name-input above (border included,
+   as a transparent 1px) so swapping one for the other doesn't shift the
+   row. Truncates instead of wrapping. */
+.layer-name {
+  flex: 1 1 2rem;
+  min-width: 2rem;
+  border: 1px solid transparent;
+  font-size: 0.85rem;
+  padding: 0.15rem 0.3rem;
+  border-radius: 0.3rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layer-name:focus-visible {
   border-color: var(--color-accent);
   outline: none;
 }

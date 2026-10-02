@@ -234,42 +234,87 @@ suggestion, not a dependency chain. Raised 2026-08-25 (4e) and
 Status: done (4a–4f), except the manual `pixi-pro` teardown that closes
 `merge-pixi-pro-into-standard`.
 
-## Phase 5 — Workspace redesigns
+## Phase 5 — Floating workspace redesign
 
-Larger UI reworks, each needing its own brainstorming/design pass before
-an `/opsx:propose`.
+Rebuilds the Workspace as floating controls over a full-screen canvas,
+modeled on Pixelmator (iPad) and Linearity Curve, reasoned through TRIZ
+principles (separation in space/time, merging, taking out, dynamics, local
+quality). Brainstormed and approved 2026-10-02. Tuned for iPad landscape +
+Apple Pencil first; desktop with a mouse must keep working.
 
-- **5a — Brush picker UI redesign** — the current Brushes panel (docked right
-  sidebar, `#brushes-panel`: grid of predefined + custom brushes, spacing/
-  rotation inputs, an editor for drawing new custom patterns) was raised
-  as a possible removal candidate on 2026-08-21 while scoping an unrelated
-  right-sidebar simplification, then explicitly kept — the Brush tool
-  depends on it entirely (no other way to pick a pattern) and there's no
-  replacement UI designed yet. Noted here as a real future want (a less
-  heavyweight brush-picking interface), not a plan to remove the current
-  one before a replacement exists. Needs its own brainstorming/design pass
-  before an `/opsx:propose` — not scoped beyond this note yet.
-- **5b — Smartphone interface — responsive design architecture.** The current
-  Workspace layout (docked left tool sidebar, docked right Layers/Color
-  Library sidebar, fixed top bar) is built for desktop/tablet-width
-  screens. Touch/pen *input* already works end to end (Pointer Events,
-  two-finger pan/pinch — see `lib/README.md`), but the *layout* doesn't
-  reflow for a phone-sized viewport: nothing collapses sidebars into a
-  bottom sheet or off-canvas drawer, nothing resizes the canvas/toolbar
-  proportions below tablet width. This is a real architecture change, not
-  a CSS tweak — closer in scope to a phase than a single change (touches
-  every panel: tools sidebar, right sidebar, top bar, zoom controls, New
-  Canvas/Gallery screens). Needs its own brainstorming/design pass to
-  settle the actual mobile layout (which panels become sheets/drawers, at
-  what breakpoint, whether Gallery/New Canvas need their own mobile
-  treatment) before an `/opsx:propose`. Raised 2026-08-22.
+Target layout:
 
-Status: not started.
+- **Canvas** is full-screen; everything else floats over it as frosted-glass
+  cards (semi-transparent blurred backdrop, ~16px radius, soft shadow; solid
+  fallback under `prefers-reduced-transparency` or without
+  `backdrop-filter` support).
+- **Top bar**: back, project title, zoom % pill (opens a menu with
+  100%/Fit/Fill/−/+), undo/redo, and a ⋯ **More** menu holding Canvas
+  settings, Export, Timelapse record, Tile preview, Theme, Hide interface,
+  and Prefs. While a timelapse is recording, More shows a red dot.
+- **Left tool rail**: the same tools as today, with the FG/BG swatches,
+  swap, and reset at its foot.
+- **Tool-options bar**: one floating pill at the bottom centre whose
+  contents follow the active tool. It merges `#pencil-options`,
+  `#rectangle-options`, `#square-constraint-options`,
+  `#library-sequence-options`, pixel-perfect and symmetry (moved out of the
+  top bar), and brush spacing/rotation. It is hidden for tools with no
+  options.
+- **Right side**: a mini-rail of Layers / Colors / Brushes icons. Each opens
+  its own card, and open cards stack down the right edge. Layers is pinned
+  open by default.
+- **Selection actions** float next to the active selection.
+- **Prefs** (from More): which cards are pinned, how cards open (mini-rail /
+  edge tabs / contextual auto-open), handedness (mirrors the whole layout),
+  and auto-hide while drawing. This pulls part of 6a forward.
+- **Positioning rule**: every floating part is positioned by logical
+  start/end, never hard-coded left/right. Handedness mirroring is then one
+  flag, and the later phone layout only re-places existing parts.
+
+Delivery: one big switch, built from small changes. 5a–5g build the
+floating layout behind a dev-only `data-layout="floating"` switch, so users
+keep the current layout until 5h turns the new one on. 5i is independent
+and can ship at any time.
+
+- **5a — Floating shell**: shared colour/spacing values, the glass card
+  component, the full-screen canvas base, logical positioning, and the
+  dev-only layout switch.
+- **5b — Top bar + More menu**: the slim top bar, the zoom pill, and the
+  More menu.
+- **5c — Floating tool rail**: the rail plus the FG/BG swatches.
+- **5d — Tool-options bar**: the single contextual bar described above.
+- **5e — Cards + mini-rail**: stackable Layers/Colors/Brushes cards and the
+  right mini-rail.
+- **5f — Selection action bar**: selection actions that follow the
+  selection.
+- **5g — Prefs**: the Prefs screen with the four settings above.
+- **5h — Switch on**: make the floating layout the default, delete the old
+  docked-layout CSS/markup, sync specs and `docs/ui-reference.md`.
+- **5i — Palette merge** (independent): the fixed 16-swatch `#palette-row`
+  becomes Color Library's default palette, and the row is removed. Its
+  Rainbow swatch (Brush-only, mutually exclusive with the Color Library
+  sequence) becomes a toggle in the tool-options bar.
+
+Follow-ups after 5h:
+
+- **Phone layout** (was 5b, raised 2026-08-22): re-places the same floating
+  parts below tablet width (rail at the bottom, cards as sheets). The
+  logical-positioning rule exists for this. Gallery and New Canvas still
+  need their own phone treatment decided.
+- **Brush picker** (was 5a, raised 2026-08-21): wanted a less heavyweight
+  brush-picking interface. 5d/5e move spacing/rotation into the options bar
+  and the grid into its own card; revisit whether anything is still wanted
+  after 5h.
+
+Status: designed, not started. Next: `/opsx:propose 5a-floating-shell`.
 
 ## Phase 6 — Settings and Import screens
 
 - **6a — Settings** screen (stylus calibration, gesture remapping). The
   original "account" item is moot now that auth is dropped (Phase 3).
+  Layout prefs (pinned cards, card-open style, handedness, auto-hide) are
+  covered earlier by 5g; 6a should extend that Prefs screen rather than add
+  a second one.
 - **6b — Import** screen (.aseprite, palette files). Reference images are
   already covered by the reference image layer (see "Closed / history").
 

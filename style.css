@@ -101,6 +101,23 @@ body {
   font-family: system-ui, sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
+  /* App chrome isn't selectable page text - without this, fast taps /
+     double-taps on iPad selected toolbar and panel labels, and a long
+     press opened Safari's copy/lookup callout. Real text fields opt back
+     in below. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Re-enabled explicitly, not left to inherit: iOS Safari can make inputs
+   inside a user-select: none ancestor unselectable or uneditable. */
+input,
+textarea,
+[contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 .hidden {

@@ -184,11 +184,13 @@ implement, and archive on its own; order within the phase is a
 suggestion, not a dependency chain. Raised 2026-08-25 (4e) and
 2026-10-02 (4a–4d, 4f).
 
-- **4a — iPad: no accidental text selection.** Rapid taps on the UI
-  highlight panel text as if selecting it in a browser page. Add
-  `user-select: none` (and `-webkit-touch-callout: none`) on the app
-  chrome, keeping selection only in real text inputs. Pure bug fix — can
-  skip OpenSpec per CLAUDE.md (systematic-debugging + TDD).
+- ~~**4a — iPad: no accidental text selection.**~~ — **done** 2026-10-02
+  (pure bug fix, no OpenSpec change). Rapid taps on the UI highlighted
+  panel text as if selecting it in a browser page. `body` in
+  `style.css` now sets `user-select: none` + `-webkit-touch-callout:
+  none`; `input`/`textarea`/`[contenteditable]` explicitly opt back in
+  (iOS Safari can leave inputs uneditable under an unselectable
+  ancestor). Guarded by `test/text-selection.test.js`.
 - **4b — Layer rename on explicit action only.** `js/layers-ui.js`
   renders each layer's name as an always-live
   `<input class="layer-name-input">`, so a single click/tap on the name
@@ -227,7 +229,7 @@ suggestion, not a dependency chain. Raised 2026-08-25 (4e) and
     `pixi-pro` repo and the `pixi-pro.asukiasov.workers.dev` Cloudflare
     Worker (tasks 7.1–7.2), then archive the change.
 
-Status: not started.
+Status: in progress — 4a done.
 
 ## Phase 5 — Workspace redesigns
 

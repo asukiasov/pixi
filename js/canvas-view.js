@@ -263,6 +263,19 @@ export class CanvasView {
   }
 
   /**
+   * Shifts the pan offset by (dx, dy) CSS pixels, zoom unchanged. Used by
+   * js/workspace.js's hide-all-UI toggle (4d-hide-all-ui) to cancel out
+   * the container's own move when the surrounding chrome hides/shows, so
+   * the drawing stays put on screen instead of jumping by the tool rail's
+   * width and the top bar's height.
+   */
+  panBy(dx, dy) {
+    this.#panX += dx;
+    this.#panY += dy;
+    this.#applyTransform();
+  }
+
+  /**
    * Jumps to a named zoom preset. '100' bypasses MIN_SCALE/MAX_SCALE
    * deliberately — see design.md: a small canvas can legitimately need a
    * scale below MIN_SCALE to reach exactly one canvas pixel per CSS pixel.

@@ -204,10 +204,12 @@ suggestion, not a dependency chain. Raised 2026-08-25 (4e) and
   on a swatch removes that one color (same on mouse, touch, Pencil,
   keyboard). The default palette keeps at least one color. Removal is
   immediate (no undo yet) - a candidate first consumer for 4e's toasts.
-- **4d — Hide-all-UI toggle.** One button (plus a keyboard shortcut,
-  Photoshop/Procreate-style `Tab`) that hides every panel and toolbar so
-  only the canvas is visible, with a way back that stays reachable while
-  hidden. Goes beyond the existing right-sidebar-only hide.
+- ~~**4d — Hide-all-UI toggle.**~~ — **done** 2026-10-02, archived as
+  `openspec/changes/archive/2026-10-02-4d-hide-all-ui/` (new
+  `hide-interface` spec). A top-bar "Hide interface" button, or Tab after
+  drawing, leaves only the canvas (which doesn't move); a floating 44px
+  "Show interface" button in the top-right corner, Tab, or Escape bring
+  it back. Standalone app only - not in the `Pixi.mount()` embed.
 - **4e — Error-handling layer (toast/status-message system)** — there's no
   centralized way to surface a failure to the user today; each call site
   decides locally (silent-null fallback, a defensive try/catch around a
@@ -233,7 +235,7 @@ suggestion, not a dependency chain. Raised 2026-08-25 (4e) and
     `pixi-pro` repo and the `pixi-pro.asukiasov.workers.dev` Cloudflare
     Worker (tasks 7.1–7.2), then archive the change.
 
-Status: in progress — 4a, 4b, 4c done.
+Status: in progress — 4a–4d done.
 
 ## Phase 5 — Workspace redesigns
 

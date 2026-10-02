@@ -59,6 +59,19 @@ canvas + bottom bar) → right sidebar, plus several popovers positioned
 via `position: fixed` + JS (clamped to viewport) rather than living in
 normal document flow.
 
+**Floating layout (dev-only, 5a-floating-shell).** Opening the app with
+`?layout=floating` sets `data-layout="floating"` on `#screen-workspace`
+(`js/layout.js`): the canvas container fills the screen and the regions
+float over it as frosted-glass cards, each in a slot class -
+`.slot-top` (top bar), `.slot-tools` (tool rail, plus `#pencil-options`
+beside it), `.slot-panels` (right sidebar), `.slot-options` (a wrapper
+around `#palette-row`, `#selection-controls`, `.bottom-bar`; box-less
+`display: contents` in the docked layout). Fit/Fill/100% centre the
+canvas in the area the visible cards leave clear. Without the parameter,
+and always in `Pixi.mount()` embeds, the docked layout below is
+unchanged. Phase 5 redesigns each region; 5h makes floating the default.
+Spec: `floating-workspace`.
+
 ### Top bar (`.workspace-topbar`)
 
 Icon-only buttons, left-to-right, `magnetic-hover` class (iOS-only

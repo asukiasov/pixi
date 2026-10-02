@@ -12,12 +12,19 @@ import { initIconFontFallback } from './icon-font-fallback.js';
 import { initColorLibrary } from './color-library-ui.js';
 import { initLayers } from './layers-ui.js';
 import { initToasts } from './toast.js';
+import { resolveLayout, applyLayout, measureClearInsets } from './layout.js';
 
 const screens = {
   gallery: document.getElementById('screen-gallery'),
   newCanvas: document.getElementById('screen-new-canvas'),
   workspace: document.getElementById('screen-workspace'),
 };
+
+// Floating workspace layout (5a-floating-shell) - dev-only opt-in via
+// ?layout=floating until 5h makes it the default. Read once: the router
+// only rewrites the hash, so the query survives screen changes.
+const layout = resolveLayout(location.search);
+applyLayout(screens.workspace, layout);
 
 // AUD-5: detect whether the Material Symbols icon font (index.html's
 // fonts.googleapis.com <link>) actually loaded, and fall back to hiding
@@ -121,7 +128,11 @@ function openWorkspace({ layerStack, projectId, projectName }) {
   currentWorkspaceProjectId = projectId;
 
   if (!canvasView) {
-    canvasView = new CanvasView(canvasEl, containerEl, layerStack);
+    // Floating layout: fit into the area the floating cards leave clear.
+    const options = layout === 'floating'
+      ? { getClearInsets: () => measureClearInsets(screens.workspace, containerEl) }
+      : {};
+    canvasView = new CanvasView(canvasEl, containerEl, layerStack, options);
     canvasView.resetView();
     canvasView.render();
     // One-shot re-fit after the browser's first real paint: the very first

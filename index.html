@@ -32,7 +32,7 @@
        keep it sorted alphabetically — the Google Fonts API 400s the whole
        request (breaking every icon on the page, not just an unsorted one)
        if icon_names isn't in alphabetical order. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check_box,check_box_outline_blank,close,colorize,crop_free,dark_mode,delete,dock_to_right,download,edit,expand_more,fiber_manual_record,flip,format_color_fill,gradient,grid_on,grid_view,home,horizontal_rule,image,image_arrow_up,ink_eraser,layers,light_mode,lock,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,settings,swap_horiz,undo,visibility,visibility_off" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check_box,check_box_outline_blank,close,colorize,crop_free,dark_mode,delete,dock_to_right,download,edit,expand_more,fiber_manual_record,flip,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,home,horizontal_rule,image,image_arrow_up,ink_eraser,layers,light_mode,lock,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,settings,swap_horiz,undo,visibility,visibility_off" />
 </head>
 <body>
   <main id="screen-gallery" class="screen">
@@ -144,6 +144,12 @@
       <button type="button" id="right-sidebar-toggle" class="tool-button icon-button active magnetic-hover" aria-label="Right panel" data-tooltip="Right panel">
         <span class="material-symbols-outlined">dock_to_right</span>
       </button>
+      <!-- Hide-all-UI (4d-hide-all-ui): hides every workspace region but
+           the canvas; #show-ui-button below is the way back. Tab toggles
+           too, while nothing interactive has focus - see js/hide-ui.js. -->
+      <button type="button" id="hide-ui-toggle" class="tool-button icon-button magnetic-hover" aria-label="Hide interface (Tab)" data-tooltip="Hide interface (Tab)">
+        <span class="material-symbols-outlined">fullscreen</span>
+      </button>
       <!-- Light/dark/system theme toggle. Right end of the top bar, after
            the right-sidebar toggle - see js/theme.js. Icon/label/tooltip
            are set by initThemeToggle() to reflect the current preference
@@ -153,6 +159,14 @@
         <span class="material-symbols-outlined">brightness_auto</span>
       </button>
     </header>
+
+    <!-- The way back from hide-all-UI - fixed to the top-right corner,
+         rendered only while #screen-workspace has .ui-hidden (js/
+         workspace.js's setUiHidden). Inside the workspace screen so it
+         can never show over the Gallery. -->
+    <button type="button" id="show-ui-button" class="show-ui-button hidden" aria-label="Show interface (Tab or Esc)" title="Show interface (Tab or Esc)">
+      <span class="material-symbols-outlined" aria-hidden="true">fullscreen_exit</span>
+    </button>
 
     <div class="workspace-body">
     <!-- 1. Tools: vertical icon rail, Photoshop-style. -->

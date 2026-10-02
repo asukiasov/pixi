@@ -20,6 +20,7 @@ import { initCanvasSettings } from './canvas-settings.js';
 // exports at module-evaluation time, only from inside function bodies
 // invoked later - true of every call site below.
 import { renderLayersPanel, clearLayerMarksAndRefresh, mergeMarkedOrActiveDown } from './layers-ui.js';
+import { isHideUiShortcut } from './hide-ui.js';
 import { getColorSequenceColor, setLibrarySequenceEnabled, syncColorLibraryActiveSwatch } from './color-library-ui.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
@@ -172,6 +173,8 @@ let brushesPanelGrid = null;
 let deleteBrushButton = null;
 let rightSidebar = null;
 let rightSidebarToggle = null;
+let hideUiToggle = null;
+let showUiButton = null;
 let tilePreviewToggle = null;
 let foregroundSwatchEl = null;
 let backgroundSwatchEl = null;
@@ -417,6 +420,37 @@ function setRightSidebarVisible(visible) {
   rightSidebar.classList.toggle('right-sidebar-collapsed', !visible);
   rightSidebar.inert = !visible;
   rightSidebarToggle.classList.toggle('active', visible);
+}
+
+/**
+ * Hide-all-UI (4d-hide-all-ui): `.ui-hidden` on #screen-workspace hides
+ * every chrome region via CSS (display:none, so they also leave tab order
+ * and the a11y tree), leaving only the canvas plus the floating
+ * #show-ui-button. Independent of the right sidebar's own visible state,
+ * which comes back as it was. `keepCanvasStill` compensates the pan for
+ * the canvas container's own move, so the drawing doesn't jump; the
+ * project-open reset skips it, since that view is about to be reset
+ * anyway. Focus never stays on a control that just disappeared: hiding
+ * moves it to #show-ui-button, showing moves it back to the top-bar
+ * toggle - but only when it was on one of those, so a mouse/touch user's
+ * focus (usually <body>) isn't grabbed.
+ */
+function setUiHidden(hidden, { keepCanvasStill = true } = {}) {
+  const screen = root.querySelector('#screen-workspace');
+  if (screen.classList.contains('ui-hidden') === hidden) return;
+  const container = root.querySelector('#workspace-canvas-container');
+  const active = document.activeElement;
+  const focusWillVanish = hidden
+    ? active && active !== document.body && screen.contains(active) && !container.contains(active)
+    : active === showUiButton;
+  const before = container.getBoundingClientRect();
+  screen.classList.toggle('ui-hidden', hidden);
+  showUiButton.classList.toggle('hidden', !hidden);
+  if (keepCanvasStill) {
+    const after = container.getBoundingClientRect();
+    state.canvasView.panBy(before.left - after.left, before.top - after.top);
+  }
+  if (focusWillVanish) (hidden ? showUiButton : hideUiToggle).focus();
 }
 
 /**
@@ -1349,6 +1383,14 @@ function bindDomOnce() {
     setRightSidebarVisible(state.rightSidebarVisible);
   });
 
+  // Hide-all-UI (4d-hide-all-ui) - top-bar toggle plus the floating way
+  // back; the Tab/Escape shortcuts are bound once with the other global
+  // keydown listeners below.
+  hideUiToggle = root.querySelector('#hide-ui-toggle');
+  showUiButton = root.querySelector('#show-ui-button');
+  hideUiToggle.addEventListener('click', () => setUiHidden(true));
+  showUiButton.addEventListener('click', () => setUiHidden(false));
+
   // drawing-timelapse-recording: Record toggle + review popover. Toggling
   // starts/stops state.timelapseRecorder; commit() (above) appends frames
   // while it's active. Stopping with at least one captured frame opens
@@ -1582,6 +1624,26 @@ function bindDomOnce() {
       if (key === 'e') {
         e.preventDefault();
         mergeMarkedOrActiveDown();
+      }
+    });
+
+    // Hide-all-UI (4d-hide-all-ui): Tab toggles only while nothing
+    // interactive has focus (see isHideUiShortcut) - with a control
+    // focused it keeps navigating focus. The one exception is the
+    // floating #show-ui-button, the only control left while hidden, where
+    // Tab means "bring it back". Escape always restores.
+    document.addEventListener('keydown', (e) => {
+      const screen = root.querySelector('#screen-workspace');
+      if (screen.classList.contains('hidden')) return;
+      const hidden = screen.classList.contains('ui-hidden');
+      if (e.key === 'Escape') {
+        if (hidden) setUiHidden(false);
+        return;
+      }
+      const onShowButton = hidden && document.activeElement === showUiButton;
+      if (isHideUiShortcut(e, onShowButton ? document.body : document.activeElement)) {
+        e.preventDefault();
+        setUiHidden(!hidden);
       }
     });
 
@@ -1973,6 +2035,7 @@ export function initWorkspace({
   root.querySelector('#brush-spacing').value = '1';
   root.querySelector('#brush-rotation').value = '0';
   setRightSidebarVisible(true);
+  setUiHidden(false, { keepCanvasStill: false });
   // Every tool-scoped panel/mode toggle (Brushes, pencil-options,
   // square-constraint, pan/move mode) follows state.currentTool alone -
   // shared with the tool-button click handler via applyToolScopedUI()

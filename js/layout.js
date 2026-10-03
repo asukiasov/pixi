@@ -88,3 +88,15 @@ export function visibleAnchor(el, fallback) {
   if (!fallback || el.getClientRects().length > 0) return el;
   return fallback;
 }
+
+/**
+ * Which inline side of `anchorRect` faces the canvas (5c-floating-tool-rail):
+ * 'end' when the anchor's centre is in the left half of the viewport,
+ * otherwise 'start'. Worked out from where the anchor actually is, not
+ * from the slot variables, so a rail mirrored by handedness (5g) or
+ * re-placed by the phone layout opens its tooltips and popovers inward
+ * with no other change.
+ */
+export function canvasSide(anchorRect, viewportWidth) {
+  return anchorRect.left + anchorRect.width / 2 < viewportWidth / 2 ? 'end' : 'start';
+}

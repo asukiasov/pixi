@@ -136,3 +136,52 @@ describe('floating top bar (5b)', () => {
     assert.match(item.body, /min-height:\s*44px/);
   });
 });
+
+describe('floating tool rail (5c)', () => {
+  const FLOATING = '.workspace-screen[data-layout="floating"]';
+  const RAIL = ['.tool-rail-tools', '.fg-bg-swatch-stack', '.fg-bg-corner-button', '.swap-corner', '.reset-corner'];
+
+  test('outside the floating layout the only .tool-rail-tools rule is display: contents', () => {
+    const docked = all.filter((r) => r.selector.includes('.tool-rail-tools') && !r.selector.startsWith(FLOATING));
+    assert.equal(docked.length, 1);
+    assert.equal(docked[0].selector, '.tool-rail-tools');
+    assert.match(docked[0].body, /^\s*display:\s*contents;\s*$/);
+  });
+
+  test('only the tool list scrolls, and the floating rail itself does not clip', () => {
+    const scroller = all.find((r) => r.selector === `${FLOATING} .tool-rail-tools`);
+    assert.match(scroller.body, /overflow-y:\s*auto/);
+    assert.match(scroller.body, /min-height:\s*0/);
+    const rail = all.filter((r) => r.selector === `${FLOATING} .slot-tools`);
+    const overflow = rail.filter((r) => /(^|[\s;])overflow(-[xy])?:/.test(r.body));
+    assert.equal(overflow.length, 1);
+    assert.match(overflow[0].body, /overflow:\s*visible/);
+  });
+
+  test('the swatches are ordered after the tool-scoped toggles', () => {
+    const toggles = all.find((r) => r.selector === `${FLOATING} .tools-sidebar .rectangle-options`);
+    const swatches = all.find((r) => r.selector === `${FLOATING} .tools-sidebar .fg-bg-swatches`);
+    const order = (r) => Number(/order:\s*(\d+)/.exec(r.body)[1]);
+    assert.ok(order(swatches) > order(toggles));
+  });
+
+  test('tool buttons use the 44px rail size', () => {
+    const root = all.find((r) => r.selector === FLOATING && /--rail-button-size:/.test(r.body));
+    assert.match(root.body, /--rail-button-size:\s*2\.75rem/);
+    const buttons = all.find((r) => r.selector.startsWith(FLOATING) && r.selector.includes('.tool-rail-tools') && r.selector.endsWith('.tool-button'));
+    assert.match(buttons.body, /width:\s*var\(--rail-button-size\)/);
+    assert.match(buttons.body, /height:\s*var\(--rail-button-size\)/);
+  });
+
+  test('new rail and swatch overrides are scoped to the floating layout', () => {
+    const added = all.filter((r) => RAIL.some((s) => r.selector.includes(s)) && /rail-padding|rail-button-size|1\.5rem/.test(r.body));
+    assert.ok(added.length >= 4);
+    for (const r of added) assert.ok(r.selector.startsWith(FLOATING), r.selector);
+  });
+
+  test('Swap/Reset hit areas are 24px (1.5rem)', () => {
+    const corner = all.find((r) => r.selector === `${FLOATING} .fg-bg-corner-button`);
+    assert.match(corner.body, /width:\s*1\.5rem/);
+    assert.match(corner.body, /height:\s*1\.5rem/);
+  });
+});

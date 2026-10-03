@@ -534,7 +534,7 @@ function openLayersOpacityPopover() {
   layersPanelOpacityNumber.focus();
 }
 
-function closeLayersOpacityPopover() {
+export function closeLayersOpacityPopover() {
   layersPanelOpacityPopover.classList.add('hidden');
 }
 

@@ -63,8 +63,8 @@ normal document flow.
 `?layout=floating` sets `data-layout="floating"` on `#screen-workspace`
 (`js/layout.js`): the canvas container fills the screen and the regions
 float over it as frosted-glass cards, each in a slot class -
-`.slot-top` (top bar), `.slot-tools` (tool rail), `.slot-panels` (right
-sidebar), `.slot-options` (a wrapper around the tool-options bar,
+`.slot-top` (top bar), `.slot-tools` (tool rail), `.slot-panels` (the
+panel mini-rail and the right sidebar's card column, 5e), `.slot-options` (a wrapper around the tool-options bar,
 `#palette-row`, `#selection-controls`, `.bottom-bar`; box-less
 `display: contents` in the docked layout). Fit/Fill/100% centre the
 canvas in the area the visible cards leave clear. Without the parameter,
@@ -75,8 +75,7 @@ Spec: `floating-workspace`.
 **Floating top bar (5b-top-bar-more).** In the floating layout the top
 bar is slim: Back, `#topbar-title` (read-only project name, truncated,
 full name in `title`), `#zoom-pill` (current %, opens `#zoom-menu`:
-100%/Fit/Fill/Zoom out/Zoom in), the Layers toggle (until 5e moves it),
-Undo, Redo, `#right-sidebar-toggle`, and
+100%/Fit/Fill/Zoom out/Zoom in), Undo, Redo, and
 `#more-button` (opens `#more-menu`: Canvas settings, Export, Record
 timelapse, Tile preview, Theme Light/Dark/System, Hide interface). The
 buttons those menus replace, and `.bottom-bar`, stay in the DOM but are
@@ -86,7 +85,9 @@ button (`visibleAnchor` in `js/layout.js`). While recording, More shows
 a red dot (CSS `:has(#record-toggle.recording)`) and is named "More
 (recording)". Markup is `.floating-only`, hidden in the docked layout and
 absent from `Pixi.mount()` embeds. Wiring: `js/floating-topbar.js` (once,
-from `js/app.js`), menu behaviour in `js/topbar-menu.js`.
+from `js/app.js`), menu behaviour in `js/topbar-menu.js`. The Layers
+and right-sidebar toggles are hidden too (5e): the panel mini-rail
+replaces them.
 
 **Floating tool rail (5c-floating-tool-rail).** In the floating layout
 `#tools-sidebar` starts below the top bar and hugs its contents. The ten
@@ -130,6 +131,33 @@ its unit (`aria-valuetext`), toggles report `aria-pressed`, and tooltips
 open above the bar. Markup is `.floating-only` and absent from
 `Pixi.mount()` embeds. Wiring: `js/tool-options-bar.js` (once, from
 `js/app.js`).
+
+**Floating panel cards + mini-rail (5e-cards-mini-rail).** In the
+floating layout `#panel-rail` (Colors, Brushes, Layers; 44px disclosure
+buttons with `aria-expanded`/`aria-controls`) sits against the end edge
+below the top bar, and `#right-sidebar` becomes a see-through column
+beside it (`--slot-cards-start/end`) in which Color Library, Brushes and
+Layers are each their own glass card, in that order. A card is open or
+closed - no collapse-to-header: the panels' existing `.collapsed` state
+means "not displayed", the chevron is hidden, and a `.panel-close`
+button in each header closes the card (focus moves to its rail button;
+a tap on the title does nothing, and the `role="button"` headers get
+`tabindex="-1"`). Colors forwards to `#color-library-header`, Layers to
+the hidden `#layers-panel-toggle`, Brushes calls `setBrushesCardOpen()`
+(`js/workspace.js`; `.collapsed` is the user's flag, `.hidden` stays the
+Brush-tool scoping, so a closed Brushes card stays closed across tool
+switches). Rail state is mirrored from each card's class by a
+`MutationObserver`; outside the Brush tool the Brushes button is
+`aria-disabled` and reads "Brushes (Brush tool)". All three cards reopen
+on project open; nothing is remembered. When the open cards don't fit
+they share the height by flex shrink and each scrolls inside itself,
+headers always visible; the column also stops above the bottom cards
+where those reach under it (`--slot-options-reach`, measured by a
+`ResizeObserver`). Closing a card cancels the palette import/ramp
+previews (Colors), the layer opacity popover (Layers) or the brush
+editor (Brushes). Opening and closing cards never re-fits the canvas.
+Wiring: `js/panel-rail.js` (once, from `js/app.js`). The docked
+sidebar, its collapse-to-header and its top bar toggles are unchanged.
 
 ### Top bar (`.workspace-topbar`)
 

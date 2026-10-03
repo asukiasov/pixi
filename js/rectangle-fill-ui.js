@@ -20,6 +20,7 @@ export function initRectangleFill(root = document) {
   const toggle = root.querySelector('#rectangle-fill-toggle');
   const iconOutline = root.querySelector('#rectangle-fill-icon-outline');
   const iconFilled = root.querySelector('#rectangle-fill-icon-filled');
+  if (!toggle) return; // standalone-only (absent from lib/pixi.js's embed markup)
 
   function setFilled(next) {
     filled = next;

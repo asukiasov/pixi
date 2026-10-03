@@ -22,6 +22,7 @@ export function getPencilOpacity() {
 export function initPencilOpacity(root = document) {
   const slider = root.querySelector('#pencil-opacity-slider');
   const readout = root.querySelector('#pencil-opacity-readout');
+  if (!slider) return; // standalone-only (absent from lib/pixi.js's embed markup)
 
   slider.addEventListener('input', () => {
     const value = Number(slider.value);

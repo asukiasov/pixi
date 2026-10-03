@@ -16,6 +16,7 @@ let enabled = false;
 
 export function initPixelPerfect(root = document) {
   const toggle = root.querySelector('#pixel-perfect-toggle');
+  if (!toggle) return; // standalone-only (absent from lib/pixi.js's embed markup)
 
   toggle.addEventListener('click', () => {
     enabled = !enabled;

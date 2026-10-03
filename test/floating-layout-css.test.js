@@ -34,8 +34,16 @@ function rules(source) {
   return out;
 }
 
-const all = rules(css);
-const GLASS = '.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar';
+// Component classes (.glass, .ghost-button, .slider, .swatch-pair - see
+// components.html) share rule lists with the floating selectors that give
+// the floating workspace the same look. They're for the components page,
+// not the docked layout, so they're dropped here before the scoping checks.
+const COMPONENT = /^\.(glass|ghost-button|slider|swatch-pair)\b/;
+const all = rules(css).flatMap((r) => {
+  const sels = r.selector.split(/,(?![^(]*\))/).map((x) => x.trim()).filter((x) => !COMPONENT.test(x));
+  return sels.length ? [{ ...r, selector: sels.join(',\n') }] : [];
+});
+const GLASS = '.slot-tools, .panel-rail, .options-card, .tool-options-bar';
 const GLASS_CARDS = '.right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel)';
 
 describe('glass card (5a)', () => {
@@ -440,5 +448,32 @@ describe('narrow windows (5h)', () => {
     const palette = docked('.palette-row')[0].body;
     assert.match(palette, /overflow-x:\s*auto/);
     assert.doesNotMatch(palette, /min-width|max-width/);
+  });
+});
+
+describe('Pixelmator visual pass', () => {
+  const FLOATING = '.workspace-screen[data-layout="floating"]';
+
+  test('the top bar is no card: pass-through, and its groups are glass', () => {
+    const top = all.find((r) => r.selector === `${FLOATING} .slot-top` && /pointer-events/.test(r.body));
+    assert.match(top.body, /pointer-events:\s*none/);
+    assert.match(top.body, /background:\s*transparent/);
+    const glass = all.filter((r) => r.selector.includes(GLASS));
+    for (const r of glass) {
+      assert.doesNotMatch(r.selector, /\.slot-top/);
+      for (const id of ['#back-to-gallery-button', '#zoom-pill', '.topbar-group', '#more-button']) assert.ok(r.selector.includes(id), id);
+    }
+  });
+
+  test('the old accent fills for pressed/open floating buttons are gone', () => {
+    const accent = all.filter((r) => r.selector.startsWith(FLOATING) && /\[aria-(pressed|expanded)="true"\]/.test(r.selector)
+      && /var\(--color-accent/.test(r.body));
+    assert.deepEqual(accent.map((r) => r.selector), []);
+  });
+
+  test('the floating workspace has a themed backdrop', () => {
+    const canvas = all.find((r) => r.selector === `${FLOATING} .canvas-container`);
+    assert.match(canvas.body, /background:\s*var\(--workspace-backdrop\)/);
+    assert.match(all.find((r) => r.selector === ':root[data-theme="light"]').body, /--workspace-backdrop:/);
   });
 });

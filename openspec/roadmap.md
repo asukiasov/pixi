@@ -316,7 +316,13 @@ and can ship at any time.
   Layers and right-sidebar toggles. Open/closed resets on project open;
   remembering it is 5g's pinned cards.
 - **5f — Selection action bar**: selection actions that follow the
-  selection.
+  selection. Proposed 2026-10-03 as
+  `openspec/changes/5f-selection-action-bar/`: Clear selection and
+  Delete in a glass bar centred above the selection (below when there's
+  no room, held at the edge of the clear area otherwise), hidden while a
+  selection is drawn or moved, following pan and zoom live. The palette
+  card loses its selection controls. Done 2026-10-03, styled as a
+  Pixelmator-like pill (fast-pan lag still to check on a real iPad).
 - **5g — Prefs**: the Prefs screen with the four settings above.
 - **5h — Switch on**: make the floating layout the default, delete the old
   docked-layout CSS/markup, sync specs and `docs/ui-reference.md`.
@@ -325,6 +331,32 @@ and can ship at any time.
     phase as 5f, as its own change, `5h-switch-on-floating`. Deleting the
     docked CSS/markup stays later: `Pixi.mount()` embeds are always
     docked and still depend on it.
+  - Why ahead of 5g: once 5f lands, every region of the target layout
+    exists. 5g's Prefs only tune that layout (pinned cards, open mode,
+    handedness, auto-hide), and nothing in them is needed to use it.
+    Turning it on first gets the floating layout into real use sooner,
+    and 5g is then built against the layout people actually have.
+  - Proposed 2026-10-03 as `openspec/changes/5h-switch-on-floating/`,
+    built after 5f. The standalone app is always floating, with no
+    opt-out: `?layout` is ignored, including `?layout=docked`. It is
+    floating at every width. Below 600px the panel cards start closed,
+    and the card column, tool-options bar and palette row are fixed so
+    every control stays reachable. Fit now runs after the per-open card
+    resets.
+  - Remaining 5h, as a later change after 5g: delete the docked
+    CSS/markup and the source controls behind the floating proxies, and
+    sync `layers`, `color-library`, `brushes`, `hide-interface`,
+    `canvas-navigation` and `docs/ui-reference.md`. It needs the embed fix
+    below first.
+- **Embed mount fix** (bug fix, no OpenSpec change needed): every
+  `Pixi.mount()` embed throws on mount, because `lib/pixi.js`'s markup
+  lacks `#record-toggle` (added by the timelapse change), which
+  `workspace.js` reads unconditionally. Found during 5d (task 5.9). The
+  switch-on does not depend on it (embeds don't load `app.js`, and
+  `lib/pixi.js` is untouched). After the switch-on, though, the broken
+  embed is the only place the docked layout runs. Fix it right after the
+  switch-on, and in any case before the docked-deletion change, which
+  has to verify that embeds still work.
 - **5i — Palette merge** (independent): the fixed 16-swatch `#palette-row`
   becomes Color Library's default palette, and the row is removed. Its
   Rainbow swatch (Brush-only, mutually exclusive with the Color Library
@@ -341,8 +373,11 @@ Follow-ups after 5h:
   and the grid into its own card; revisit whether anything is still wanted
   after 5h.
 
-Status: in progress - 5a–5e done. Next: `/opsx:propose 5f-selection-action-bar`
-and `/opsx:propose 5h-switch-on-floating`.
+Status: in progress - 5a–5f done; the 5h switch-on proposed.
+Next: `/opsx:apply 5h-switch-on-floating`, then the embed mount fix.
+Visual direction for all floating work: Pixelmator's airy, frosted-glass
+look (references in `docs/Screenshots of other apps/`), keeping Pixi's
+own panel arrangement.
 
 ## Phase 6 — Settings and Import screens
 

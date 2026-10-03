@@ -2,7 +2,7 @@
 // floating layout's rail. The DOM wiring is checked by hand in the browser.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { panelRailState, applyPanelRailState, optionsReach } from '../js/panel-rail.js';
+import { panelRailState, applyPanelRailState, optionsReach, openCardDefaults, NARROW_MAX_WIDTH } from '../js/panel-rail.js';
 
 // A stand-in for an element's DOMTokenList (contains, not Set#has).
 const classes = (...names) => ({ contains: (name) => names.includes(name) });
@@ -100,5 +100,24 @@ describe('optionsReach', () => {
 
   test('works with a screen not at the page origin', () => {
     assert.equal(optionsReach(rect(397, 750, 997, 858), rect(958, 124, 1198, 700), rect(100, 50, 1280, 870)), 120);
+  });
+});
+
+describe('openCardDefaults', () => {
+  const allOpen = { colors: true, brushes: true, layers: true };
+  const allClosed = { colors: false, brushes: false, layers: false };
+
+  test('windows 600px and wider open every card', () => {
+    assert.deepEqual(openCardDefaults(1180), allOpen);
+    assert.deepEqual(openCardDefaults(600), allOpen);
+  });
+
+  test('narrower windows start with every card closed', () => {
+    assert.deepEqual(openCardDefaults(599), allClosed);
+    assert.deepEqual(openCardDefaults(390), allClosed);
+  });
+
+  test('the threshold is the exported constant', () => {
+    assert.equal(NARROW_MAX_WIDTH, 600);
   });
 });

@@ -1,6 +1,6 @@
 // Floating layout's panel mini-rail and card close buttons
-// (5e-cards-mini-rail). Wired once from js/app.js, only in the floating
-// layout.
+// (5e-cards-mini-rail). Wired once from js/app.js (the standalone app is
+// always floating; embeds never load this).
 //
 // A card's open/closed state is the panel's existing collapsed state
 // (.collapsed on the card), never stored here: Colors forwards to its
@@ -47,6 +47,39 @@ export function optionsReach(optionsRect, columnRect, screenRect) {
   return overlaps ? Math.max(0, Math.round(screenRect.bottom - optionsRect.top)) : 0;
 }
 
+/** Windows narrower than this (CSS px) open projects with every card closed. */
+export const NARROW_MAX_WIDTH = 600;
+
+/**
+ * Which cards a project opens with (5h-switch-on-floating): all three at
+ * NARROW_MAX_WIDTH and wider, none below it, so a phone-width window
+ * fits the canvas between the tool rail and the mini-rail. Decided from
+ * the width at open only; resizing never opens or closes a card.
+ */
+export function openCardDefaults(viewportWidth) {
+  const open = viewportWidth >= NARROW_MAX_WIDTH;
+  return { colors: open, brushes: open, layers: open };
+}
+
+// Kept from initPanelRail for applyOpenCardDefaults.
+let brushesSetter = null;
+
+/**
+ * Closes the cards openCardDefaults says should start closed, through the
+ * same paths the rail uses. Called right after initWorkspace() has reset
+ * all three to open, so it never opens anything.
+ */
+export function applyOpenCardDefaults(root = document) {
+  const defaults = openCardDefaults(window.innerWidth);
+  const isOpen = (id) => {
+    const card = root.querySelector(`#${id}`);
+    return card && !card.classList.contains('collapsed');
+  };
+  if (!defaults.colors && isOpen('color-library-panel')) root.querySelector('#color-library-header')?.click();
+  if (!defaults.layers && isOpen('layers-panel')) root.querySelector('#layers-panel-toggle')?.click();
+  if (!defaults.brushes) brushesSetter?.(false);
+}
+
 const PANELS = [
   {
     card: 'color-library-panel',
@@ -71,6 +104,7 @@ const PANELS = [
  *   so this module stays importable by its unit tests.
  */
 export function initPanelRail({ root = document, setBrushesCardOpen, closeLayersOpacityPopover }) {
+  brushesSetter = setBrushesCardOpen;
   const rail = root.querySelector('#panel-rail');
   if (!rail) return;
   const byId = (id) => root.querySelector(`#${id}`);

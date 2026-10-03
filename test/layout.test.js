@@ -1,29 +1,8 @@
-// Floating workspace layout (5a-floating-shell): the dev-only
-// ?layout=floating switch and the clear-area insets the canvas fits into.
+// Floating workspace layout (5a-floating-shell): the clear-area insets the
+// canvas fits into, and the anchor/side helpers.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveLayout, clearInsets, clearArea, visibleAnchor, canvasSide } from '../js/layout.js';
-
-describe('resolveLayout', () => {
-  test('no query string means docked', () => {
-    assert.equal(resolveLayout(''), 'docked');
-  });
-
-  test('layout=floating opts in', () => {
-    assert.equal(resolveLayout('?layout=floating'), 'floating');
-  });
-
-  test('works alongside other parameters', () => {
-    assert.equal(resolveLayout('?foo=1&layout=floating&bar=2'), 'floating');
-  });
-
-  test('any other value stays docked', () => {
-    assert.equal(resolveLayout('?layout=Floating'), 'docked');
-    assert.equal(resolveLayout('?layout=docked'), 'docked');
-    assert.equal(resolveLayout('?layout='), 'docked');
-    assert.equal(resolveLayout('?other=floating'), 'docked');
-  });
-});
+import { clearInsets, clearArea, visibleAnchor, canvasSide } from '../js/layout.js';
 
 describe('clearInsets', () => {
   const container = { left: 0, top: 0, right: 1000, bottom: 800, width: 1000, height: 800 };

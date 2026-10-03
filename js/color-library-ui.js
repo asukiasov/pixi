@@ -611,12 +611,16 @@ export function initColorLibrary(root = document) {
   let paletteLoaded = false;
 
   onWorkspaceReset(async () => {
+    // Before the await: the open/closed reset must land synchronously,
+    // so js/app.js's applyOpenCardDefaults() (run right after
+    // initWorkspace() returns) isn't undone once the first palette load
+    // resolves.
+    collapsed = false;
+    syncColorLibraryCollapse();
     if (!paletteLoaded) {
       paletteLoaded = true;
       await loadColorPalettes(); // async; renders the panel once palettes arrive
     }
-    collapsed = false;
-    syncColorLibraryCollapse();
     if (editingPaletteId !== null) setEditingColors(false);
     setLibrarySequenceEnabled(false);
     librarySequencePanel.classList.remove('hidden'); // Pencil is the default tool

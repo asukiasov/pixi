@@ -59,5 +59,7 @@
 - [x] 5.7 Hide interface (Tab): the bar hides and comes back with the rest
 - [x] 5.8 Top bar shows Back, title, zoom pill, Layers, Undo, Redo, right sidebar, More. Rail shows only tools and swatches, and keeps its size across tool switches. The Brushes panel shows no Spacing/Rotation rows
 - [ ] 5.9 Without the parameter: the docked layout looks and behaves exactly as before, including the Pencil/Eraser flyout, rail toggles, top bar Pixel-perfect/Symmetry, and the Brushes panel fields. A `Pixi.mount()` embed still works
+  - Docked part verified: pixel-identical to `main` at 1180×820 for Pencil, Eraser, Brush, Rectangle, Select and Bucket, and with Pixel-perfect/Symmetry on.
+  - Open: `lib/pixi-embed-example.html` throws on mount (`bindDomOnce()` binds `#record-toggle`, which `lib/pixi.js`'s markup lacks). This is the same on `main` (pre-existing since the timelapse change), not caused by 5d. Fixing it needs embed markup, which is outside 5d's scope.
 - [x] 5.10 Run `web-design-guidelines` on the changed markup/CSS/JS before code review
 - [x] 5.11 Update `docs/ui-reference.md` with a floating tool-options bar paragraph, and adjust the 5b/5c paragraphs that list Pixel-perfect/Symmetry in the top bar and the toggles in the rail

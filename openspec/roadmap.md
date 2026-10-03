@@ -295,7 +295,16 @@ and can ship at any time.
   foot, 44px tool buttons, 24px Swap/Reset hit areas, tooltips and the
   colour picker open toward the canvas, and `aria-pressed` on tools in
   both layouts.
-- **5d — Tool-options bar**: the single contextual bar described above.
+- ~~**5d — Tool-options bar**~~ — **done** 2026-10-03, archived as
+  `openspec/changes/archive/2026-10-03-5d-tool-options-bar/`. One
+  bottom-centre bar above the palette card whose controls follow the
+  active tool. They are proxies (`data-forward`) for the existing
+  controls, which are now hidden in the floating layout: the
+  Pencil/Eraser flyout, the rail toggles, the top bar's Pixel-perfect and
+  Symmetry, and the Brushes panel's Spacing/Rotation rows. Show/hide is
+  CSS-only via `data-current-tool`. Task 5.9 was left open: `Pixi.mount()`
+  embeds already crash on mount, because `lib/pixi.js` lacks
+  `#record-toggle` from the timelapse change. That needs its own fix.
 - **5e — Cards + mini-rail**: stackable Layers/Colors/Brushes cards and the
   right mini-rail.
 - **5f — Selection action bar**: selection actions that follow the
@@ -319,7 +328,7 @@ Follow-ups after 5h:
   and the grid into its own card; revisit whether anything is still wanted
   after 5h.
 
-Status: in progress - 5a, 5b and 5c done. Next: `/opsx:propose 5d-tool-options-bar`.
+Status: in progress - 5a–5d done. Next: `/opsx:propose 5e-cards-mini-rail`.
 
 ## Phase 6 — Settings and Import screens
 

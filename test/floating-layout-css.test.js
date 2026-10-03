@@ -35,7 +35,7 @@ function rules(source) {
 }
 
 const all = rules(css);
-const GLASS = '.slot-top, .slot-tools, .slot-panels, .slot-options, .pencil-options';
+const GLASS = '.slot-top, .slot-tools, .slot-panels, .options-card, .tool-options-bar';
 
 describe('glass card (5a)', () => {
   test('the opaque base sits outside any at-rule and has no blur', () => {
@@ -158,11 +158,9 @@ describe('floating tool rail (5c)', () => {
     assert.match(overflow[0].body, /overflow:\s*visible/);
   });
 
-  test('the swatches are ordered after the tool-scoped toggles', () => {
-    const toggles = all.find((r) => r.selector === `${FLOATING} .tools-sidebar .rectangle-options`);
-    const swatches = all.find((r) => r.selector === `${FLOATING} .tools-sidebar .fg-bg-swatches`);
-    const order = (r) => Number(/order:\s*(\d+)/.exec(r.body)[1]);
-    assert.ok(order(swatches) > order(toggles));
+  test('the rail has no ordering rules left over from its tool-scoped toggles (5d)', () => {
+    const ordered = all.filter((r) => r.selector.startsWith(FLOATING) && r.selector.includes('.tools-sidebar') && /(^|[\s;])order:/.test(r.body));
+    assert.equal(ordered.length, 0);
   });
 
   test('tool buttons use the 44px rail size', () => {
@@ -183,5 +181,82 @@ describe('floating tool rail (5c)', () => {
     const corner = all.find((r) => r.selector === `${FLOATING} .fg-bg-corner-button`);
     assert.match(corner.body, /width:\s*1\.5rem/);
     assert.match(corner.body, /height:\s*1\.5rem/);
+  });
+});
+
+describe('floating tool-options bar (5d)', () => {
+  const FLOATING = '.workspace-screen[data-layout="floating"]';
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const BAR = ['.tool-options-bar', '.tool-options-group', '.tool-options-slider', '.tool-options-label', '.tool-options-readout', '.tool-options-filled', '.brush-stroke-settings'];
+  const MOVED = ['#pencil-options', '#rectangle-options', '#square-constraint-options', '#library-sequence-options', '#pixel-perfect-toggle', '#symmetry-toggle', '.brush-stroke-settings'];
+
+  test('every bar rule is scoped to the floating layout', () => {
+    const barRules = all.filter((r) => BAR.some((s) => r.selector.includes(s)) && !r.selector.includes('.tool-options-symmetry'));
+    assert.ok(barRules.length >= 8);
+    for (const r of barRules) {
+      if (r.selector.includes(GLASS)) continue; // the shared glass list (5a)
+      for (const sel of r.selector.split(/,(?![^(]*\))/)) assert.ok(sel.trim().startsWith(FLOATING), sel.trim());
+    }
+  });
+
+  test('the options column and palette card rules are scoped to the floating layout', () => {
+    const column = all.filter((r) => r.selector.includes('.slot-options') && /pointer-events|gap|align-items/.test(r.body));
+    assert.ok(column.length >= 2);
+    for (const r of column) assert.ok(r.selector.startsWith(FLOATING), r.selector);
+    const column0 = all.find((r) => r.selector === `${FLOATING} .slot-options` && /flex-direction:\s*column/.test(r.body));
+    assert.match(column0.body, /pointer-events:\s*none/);
+    assert.match(column0.body, /gap:\s*var\(--float-gap\)/);
+    assert.match(column0.body, /align-items:\s*center/);
+  });
+
+  test('outside the floating layout the only .options-card rule is display: contents', () => {
+    const docked = all.filter((r) => r.selector.includes('.options-card') && !r.selector.startsWith(FLOATING) && !r.selector.includes(GLASS));
+    assert.equal(docked.length, 1);
+    assert.equal(docked[0].selector, '.options-card');
+    assert.match(docked[0].body, /^\s*display:\s*contents;\s*$/);
+  });
+
+  test('the moved controls are hidden only in the floating layout', () => {
+    const hiding = all.filter((r) => /display:\s*none/.test(r.body) && r.selector.startsWith(FLOATING));
+    for (const id of MOVED) assert.ok(hiding.some((r) => r.selector.includes(id)), `${id} is hidden in the floating layout`);
+    const elsewhere = all.filter((r) => /display:\s*none/.test(r.body) && !r.selector.startsWith(FLOATING)
+      && MOVED.some((id) => new RegExp(`${id.replace('.', '\\.')}(?![-\\w])`).test(r.selector)));
+    assert.deepEqual(elsewhere.map((r) => r.selector), []);
+  });
+
+  test('the bar-hiding rule and the data-tools lists name every tool exactly once', () => {
+    const tools = new Set([...html.matchAll(/data-tool="([a-z]+)"/g)].map((m) => m[1]));
+    assert.equal(tools.size, 10);
+    const shown = new Set([...html.matchAll(/data-tools="([^"]*)"/g)].flatMap((m) => m[1].split(/\s+/).filter(Boolean)));
+    const hideRule = all.find((r) => r.selector.endsWith('.tool-options-bar') && /display:\s*none/.test(r.body) && r.selector.includes('data-current-tool'));
+    const hidden = new Set([...hideRule.selector.matchAll(/data-current-tool="([a-z]+)"/g)].map((m) => m[1]));
+    for (const t of hidden) assert.ok(!shown.has(t), `${t} is both hidden and shown`);
+    assert.deepEqual([...new Set([...hidden, ...shown])].sort(), [...tools].sort());
+  });
+
+  test('each tool with options has a rule showing its groups', () => {
+    const shown = new Set([...html.matchAll(/data-tools="([^"]*)"/g)].flatMap((m) => m[1].split(/\s+/).filter(Boolean)));
+    const showRule = all.find((r) => r.selector.includes('.tool-options-group[data-tools~=') && /display:\s*flex/.test(r.body));
+    for (const t of shown) {
+      assert.ok(showRule.selector.includes(`[data-current-tool="${t}"] .tool-options-group[data-tools~="${t}"]`), t);
+    }
+  });
+
+  test('bar buttons use the 44px rail size and slider hit boxes are 44px tall', () => {
+    const buttons = all.find((r) => r.selector === `${FLOATING} .tool-options-bar .tool-button`);
+    assert.match(buttons.body, /width:\s*var\(--rail-button-size\)/);
+    assert.match(buttons.body, /height:\s*var\(--rail-button-size\)/);
+    const range = all.find((r) => r.selector === `${FLOATING} .tool-options-slider input[type="range"]`);
+    assert.match(range.body, /height:\s*44px/);
+  });
+
+  test('the symmetry badge is drawn on both the source and the bar proxy', () => {
+    for (const mode of ['horizontal', 'vertical', 'both']) {
+      assert.ok(all.some((r) => r.selector === `:is(#symmetry-toggle, .tool-options-symmetry)[data-symmetry-mode='${mode}']::after`), mode);
+    }
+  });
+
+  test('the Pencil/Eraser flyout slot variables are gone', () => {
+    assert.doesNotMatch(css, /--slot-tools-flyout/);
   });
 });

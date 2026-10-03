@@ -893,9 +893,26 @@ function bindTooltips() {
       const floatingRail = isTopbar ? null : target.closest('.workspace-screen[data-layout="floating"] .tools-sidebar');
       const railRect = floatingRail?.getBoundingClientRect();
       const railOpensStart = floatingRail !== null && canvasSide(railRect, window.innerWidth) === 'start';
+      // Floating tool-options bar (5d-tool-options-bar): it sits at the
+      // bottom edge, so tooltips open above it, kept inside the viewport.
+      // Measured from the bar's top edge, so a control on a wrapped second
+      // row doesn't put its tooltip over the first row.
+      const optionsBar = isTopbar || floatingRail !== null ? null : target.closest('.tool-options-bar');
+      const isOptionsBar = optionsBar !== null;
       tooltipEl.classList.toggle('below', isTopbar);
-      tooltipEl.classList.toggle('left-side', isRightSidebar || railOpensStart);
-      if (isTopbar) {
+      tooltipEl.classList.toggle('above', isOptionsBar);
+      tooltipEl.classList.toggle('left-side', !isOptionsBar && (isRightSidebar || railOpensStart));
+      if (isOptionsBar) {
+        const tooltipRect = tooltipEl.getBoundingClientRect();
+        const margin = 8;
+        const centre = rect.left + rect.width / 2;
+        const left = Math.max(margin, Math.min(centre - tooltipRect.width / 2, window.innerWidth - tooltipRect.width - margin));
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.style.top = `${Math.max(margin, optionsBar.getBoundingClientRect().top - tooltipRect.height - 10)}px`;
+        tooltipEl.style.transform = 'none';
+        // The arrow still points at the target when the bubble is clamped.
+        tooltipEl.style.setProperty('--tooltip-arrow-x', `${centre - left}px`);
+      } else if (isTopbar) {
         tooltipEl.style.left = `${rect.left + rect.width / 2}px`;
         tooltipEl.style.top = `${rect.bottom + 10}px`;
         tooltipEl.style.transform = 'translateX(-50%)';
@@ -1216,6 +1233,11 @@ function applyToolScopedUI() {
     'hidden',
     state.currentTool !== 'rectangle' && state.currentTool !== 'selection'
   );
+  // Floating tool-options bar (5d-tool-options-bar): CSS shows the bar's
+  // groups from this attribute, and js/tool-options-bar.js refreshes its
+  // slider values when it is set. Nothing in the docked layout reads it.
+  const workspaceScreen = root.querySelector('.workspace-screen');
+  if (workspaceScreen) workspaceScreen.dataset.currentTool = state.currentTool;
 }
 
 function bindDomOnce() {

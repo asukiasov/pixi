@@ -494,6 +494,13 @@ textarea,
   flex: none;
 }
 
+/* Wraps the ten tool buttons so the floating rail can scroll them on
+   their own (5c-floating-tool-rail). Docked, it is not a box at all, so
+   the buttons stay direct flex items of .tools-sidebar as before. */
+.tool-rail-tools {
+  display: contents;
+}
+
 /* Rectangle's Filled toggle - tool-scoped, bottom of the tools sidebar. */
 .rectangle-options {
   display: flex;
@@ -2864,7 +2871,11 @@ span.layer-lock-icon {
    and nothing else. Edges include the device safe areas. */
 .workspace-screen[data-layout="floating"] {
   --slot-top-height: 3.4rem;
-  --slot-rail-width: 3.6rem;
+  /* 44px tool buttons (5c); the rail is that plus its padding and the
+     card's 1px border on each side (border-box). */
+  --rail-button-size: 2.75rem;
+  --rail-padding: 0.5rem;
+  --slot-rail-width: calc(var(--rail-button-size) + 2 * var(--rail-padding) + 2px);
   --float-edge-top: calc(env(safe-area-inset-top, 0px) + var(--float-edge));
   --float-edge-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--float-edge));
   --float-edge-start: calc(env(safe-area-inset-left, 0px) + var(--float-edge));
@@ -3159,4 +3170,113 @@ span.layer-lock-icon {
   .workspace-screen[data-layout="floating"] .workspace-topbar:has(#record-toggle.recording) #more-button::after {
     animation: timelapse-record-pulse 1.4s ease-in-out infinite;
   }
+}
+
+/* ------------------------------------------------------------------
+   Floating tool rail (5c-floating-tool-rail)
+
+   The rail hugs its contents below the top bar. Only .tool-rail-tools
+   scrolls, so the tool-scoped toggles and the color swatches (moved to
+   the foot with `order`, without touching the shared markup) always
+   stay visible. The rail itself no longer clips, so magnetic hover and
+   the Swap/Reset hit areas can't be cut off at its edge.
+   ------------------------------------------------------------------ */
+
+.workspace-screen[data-layout="floating"] .slot-tools {
+  padding: var(--rail-padding);
+  overflow: visible;
+}
+
+/* Bleeds into the rail's padding (and pads back) so the scroll box's
+   clipping edge is the card's edge, leaving room for magnetic hover's
+   translate/scale. No visible scrollbar: a classic desktop scrollbar
+   would eat the rail's width; wheel, trackpad and touch still scroll. */
+.workspace-screen[data-layout="floating"] .tool-rail-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  margin: calc(-1 * var(--rail-padding)) calc(-1 * var(--rail-padding)) 0;
+  padding: var(--rail-padding) var(--rail-padding) 0.25rem;
+}
+
+.workspace-screen[data-layout="floating"] .tool-rail-tools::-webkit-scrollbar {
+  display: none;
+}
+
+.workspace-screen[data-layout="floating"] :is(.tool-rail-tools, .rectangle-options) .tool-button {
+  width: var(--rail-button-size);
+  height: var(--rail-button-size);
+  flex: none;
+}
+
+.workspace-screen[data-layout="floating"] .tools-sidebar .rectangle-options {
+  order: 1;
+  flex: none;
+}
+
+.workspace-screen[data-layout="floating"] .tools-sidebar .fg-bg-swatches {
+  order: 2;
+}
+
+/* Swatch pair: 44px square, each face 28px (docked: 27.2px). The two
+   faces leave a free 16px square in the top-right and bottom-left
+   corners for Swap and Reset. */
+.workspace-screen[data-layout="floating"] .fg-bg-swatch-stack {
+  width: var(--rail-button-size);
+  height: var(--rail-button-size);
+  margin: 0;
+}
+
+.workspace-screen[data-layout="floating"] .fg-bg-swatch {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+/* Swap/Reset: the button becomes a transparent 24px hit area that covers
+   the free corner square and reaches out into the rail's padding, never
+   over a swatch face. Its inner edges sit 1px clear of the faces:
+   flush, Chrome's hit testing gave the faces' outermost pixel row to
+   the corner button. The outer 1px lands on the card's border. The
+   visible 1.05rem circle is drawn by ::before, centred in it, so the
+   corner icons look as before. 24px, not 44px: two 44px areas can't
+   fit beside the faces in a 44px stack (see the change's design.md). */
+.workspace-screen[data-layout="floating"] .fg-bg-corner-button {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.workspace-screen[data-layout="floating"] .fg-bg-corner-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 1.05rem;
+  height: 1.05rem;
+  z-index: -1;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-bg);
+}
+
+.workspace-screen[data-layout="floating"] .fg-bg-corner-button:hover::before {
+  background: var(--color-surface-alt);
+}
+
+.workspace-screen[data-layout="floating"] .swap-corner {
+  top: calc(-1 * var(--rail-padding) - 1px);
+  inset-inline-end: calc(-1 * var(--rail-padding) - 1px);
+}
+
+.workspace-screen[data-layout="floating"] .reset-corner {
+  bottom: calc(-1 * var(--rail-padding) - 1px);
+  inset-inline-start: calc(-1 * var(--rail-padding) - 1px);
 }

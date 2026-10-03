@@ -2,7 +2,7 @@
 // ?layout=floating switch and the clear-area insets the canvas fits into.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveLayout, clearInsets, clearArea, visibleAnchor } from '../js/layout.js';
+import { resolveLayout, clearInsets, clearArea, visibleAnchor, canvasSide } from '../js/layout.js';
 
 describe('resolveLayout', () => {
   test('no query string means docked', () => {
@@ -106,5 +106,27 @@ describe('visibleAnchor', () => {
   test('a missing fallback still returns the element', () => {
     const toggle = el(0);
     assert.equal(visibleAnchor(toggle, null), toggle);
+  });
+});
+
+describe('canvasSide', () => {
+  const rect = (left, width) => ({ left, width });
+
+  test('a rail on the left opens toward the end (right)', () => {
+    assert.equal(canvasSide(rect(12, 60), 1180), 'end');
+  });
+
+  test('a rail on the right opens toward the start (left)', () => {
+    assert.equal(canvasSide(rect(1108, 60), 1180), 'start');
+  });
+
+  test('an anchor exactly centred opens toward the start', () => {
+    assert.equal(canvasSide(rect(560, 60), 1180), 'start');
+  });
+
+  test('uses the anchor centre, not its left edge, in a narrow viewport', () => {
+    // Left edge is in the left half, centre is not.
+    assert.equal(canvasSide(rect(140, 60), 320), 'start');
+    assert.equal(canvasSide(rect(20, 60), 320), 'end');
   });
 });

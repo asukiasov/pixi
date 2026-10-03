@@ -22,7 +22,8 @@ import { initCanvasSettings } from './canvas-settings.js';
 import { renderLayersPanel, clearLayerMarksAndRefresh, mergeMarkedOrActiveDown } from './layers-ui.js';
 import { isHideUiShortcut } from './hide-ui.js';
 import { showToast } from './toast.js';
-import { visibleAnchor } from './layout.js';
+import { visibleAnchor, canvasSide } from './layout.js';
+import { syncToolButtons } from './tool-rail.js';
 import { getColorSequenceColor, setLibrarySequenceEnabled, syncColorLibraryActiveSwatch } from './color-library-ui.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
@@ -886,21 +887,28 @@ function bindTooltips() {
       // those show to the left instead (see .tool-tooltip.left-side).
       const isTopbar = target.closest('.workspace-topbar') !== null;
       const isRightSidebar = !isTopbar && target.closest('.right-sidebar') !== null;
+      // Floating rail (5c-floating-tool-rail): open on whichever side of
+      // the rail faces the canvas, measured from the rail's edge, so a
+      // rail mirrored to the right edge (5g) opens inward too.
+      const floatingRail = isTopbar ? null : target.closest('.workspace-screen[data-layout="floating"] .tools-sidebar');
+      const railRect = floatingRail?.getBoundingClientRect();
+      const railOpensStart = floatingRail !== null && canvasSide(railRect, window.innerWidth) === 'start';
       tooltipEl.classList.toggle('below', isTopbar);
-      tooltipEl.classList.toggle('left-side', isRightSidebar);
+      tooltipEl.classList.toggle('left-side', isRightSidebar || railOpensStart);
       if (isTopbar) {
         tooltipEl.style.left = `${rect.left + rect.width / 2}px`;
         tooltipEl.style.top = `${rect.bottom + 10}px`;
         tooltipEl.style.transform = 'translateX(-50%)';
-      } else if (isRightSidebar) {
+      } else if (isRightSidebar || railOpensStart) {
         // Measured after the content above is set (width depends on the
         // text), so the tooltip's own width is known before positioning.
         const tooltipRect = tooltipEl.getBoundingClientRect();
-        tooltipEl.style.left = `${rect.left - tooltipRect.width - 12}px`;
+        const edge = railOpensStart ? railRect : rect;
+        tooltipEl.style.left = `${edge.left - tooltipRect.width - 12}px`;
         tooltipEl.style.top = `${rect.top + rect.height / 2}px`;
         tooltipEl.style.transform = 'translateY(-50%)';
       } else {
-        tooltipEl.style.left = `${rect.right + 12}px`;
+        tooltipEl.style.left = `${(railRect ?? rect).right + 12}px`;
         tooltipEl.style.top = `${rect.top + rect.height / 2}px`;
         tooltipEl.style.transform = 'translateY(-50%)';
       }
@@ -1090,12 +1098,23 @@ function openColorPicker(target, anchorEl) {
   const popRect = popover.getBoundingClientRect();
   const margin = 8;
 
-  // Prefer opening to the right of the anchor; flip to the left if that
-  // would run off the right edge (previously it never did this - the
-  // popover could render partly or fully off-screen on a narrow window).
-  let left = rect.right + 12;
-  if (left + popRect.width > window.innerWidth - margin) {
-    left = rect.left - popRect.width - 12;
+  // In the floating layout (5c-floating-tool-rail) the picker opens past
+  // the rail's edge on the side facing the canvas, so it never covers the
+  // rail, wherever the rail sits. Docked, it prefers the anchor's right.
+  // Either way it flips if the preferred side would run off screen
+  // (previously it never did this - the popover could render partly or
+  // fully off-screen on a narrow window).
+  const floatingRail = anchorEl.closest('.workspace-screen[data-layout="floating"] .tools-sidebar');
+  const sideRect = floatingRail ? floatingRail.getBoundingClientRect() : rect;
+  let left;
+  if (floatingRail && canvasSide(sideRect, window.innerWidth) === 'start') {
+    left = sideRect.left - popRect.width - 12;
+    if (left < margin) left = sideRect.right + 12;
+  } else {
+    left = sideRect.right + 12;
+    if (left + popRect.width > window.innerWidth - margin) {
+      left = sideRect.left - popRect.width - 12;
+    }
   }
   left = Math.max(margin, Math.min(left, window.innerWidth - popRect.width - margin));
 
@@ -1208,7 +1227,7 @@ function bindDomOnce() {
   toolButtons.forEach((button) => {
     button.addEventListener('click', () => {
       state.currentTool = button.dataset.tool;
-      toolButtons.forEach((b) => b.classList.toggle('active', b === button));
+      syncToolButtons(toolButtons, state.currentTool);
       applyToolScopedUI();
     });
   });
@@ -2099,8 +2118,8 @@ export function initWorkspace({
     const allowed = !enabledTools || enabledTools.includes(b.dataset.tool);
     b.classList.toggle('hidden', !allowed);
     b.disabled = !allowed;
-    b.classList.toggle('active', b.dataset.tool === state.currentTool);
   });
+  syncToolButtons(toolButtons, state.currentTool);
   // Which color is currently selected resets, back to the first preset
   // (matching state.foregroundColor's default above).
   colorPickerTarget = 'foreground';

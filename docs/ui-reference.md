@@ -88,6 +88,21 @@ a red dot (CSS `:has(#record-toggle.recording)`) and is named "More
 absent from `Pixi.mount()` embeds. Wiring: `js/floating-topbar.js` (once,
 from `js/app.js`), menu behaviour in `js/topbar-menu.js`.
 
+**Floating tool rail (5c-floating-tool-rail).** In the floating layout
+`#tools-sidebar` starts below the top bar and hugs its contents. The ten
+tool buttons (44px, `--rail-button-size`) sit in `.tool-rail-tools`, the
+only part that scrolls (scrollbar hidden), so on a short screen the
+tool-scoped toggles (`#rectangle-options`, `#square-constraint-options`,
+`#library-sequence-options`) and the FG/BG swatches stay visible below
+it; CSS `order` puts the swatches last. In the docked layout
+`.tool-rail-tools` is `display: contents` and nothing changes. Swap and
+Reset keep their corner icons but are 24px transparent hit areas (the
+circle is a `::before`) reaching into the rail padding, never over a
+swatch face. Rail tooltips and the color picker open on the side facing
+the canvas (`canvasSide` in `js/layout.js`), past the rail's edge. In
+both layouts each tool button carries `aria-pressed`, kept in sync with
+`.active` by `syncToolButtons` (`js/tool-rail.js`).
+
 ### Top bar (`.workspace-topbar`)
 
 Icon-only buttons, left-to-right, `magnetic-hover` class (iOS-only

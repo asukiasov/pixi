@@ -1,3 +1,5 @@
+import { visibleAnchor } from './layout.js';
+
 const SCALES = [1, 2, 4, 8];
 const FORMATS = ['png', 'webp', 'jpg'];
 
@@ -107,7 +109,9 @@ export function initExport({ onExport, getProjectName, root = document }) {
     // to read a size from.
     panel.classList.remove('hidden');
     if (wasHidden) {
-      positionPanel(panel, toggleButton);
+      // Floating layout: the toggle is hidden and this opens from the More
+      // menu, so anchor to More instead (5b-top-bar-more).
+      positionPanel(panel, visibleAnchor(toggleButton, root.querySelector('#more-button')));
     } else {
       close();
     }

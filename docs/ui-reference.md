@@ -72,6 +72,22 @@ and always in `Pixi.mount()` embeds, the docked layout below is
 unchanged. Phase 5 redesigns each region; 5h makes floating the default.
 Spec: `floating-workspace`.
 
+**Floating top bar (5b-top-bar-more).** In the floating layout the top
+bar is slim: Back, `#topbar-title` (read-only project name, truncated,
+full name in `title`), `#zoom-pill` (current %, opens `#zoom-menu`:
+100%/Fit/Fill/Zoom out/Zoom in), the kept Pixel-perfect/Symmetry/Layers
+toggles (until 5d/5e move them), Undo, Redo, `#right-sidebar-toggle`, and
+`#more-button` (opens `#more-menu`: Canvas settings, Export, Record
+timelapse, Tile preview, Theme Light/Dark/System, Hide interface). The
+buttons those menus replace, and `.bottom-bar`, stay in the DOM but are
+`display: none`; menu items forward clicks to them (`data-forward`), so
+each feature keeps one code path. Popovers from More anchor to the More
+button (`visibleAnchor` in `js/layout.js`). While recording, More shows
+a red dot (CSS `:has(#record-toggle.recording)`) and is named "More
+(recording)". Markup is `.floating-only`, hidden in the docked layout and
+absent from `Pixi.mount()` embeds. Wiring: `js/floating-topbar.js` (once,
+from `js/app.js`), menu behaviour in `js/topbar-menu.js`.
+
 ### Top bar (`.workspace-topbar`)
 
 Icon-only buttons, left-to-right, `magnetic-hover` class (iOS-only
@@ -158,7 +174,6 @@ in `js/workspace.js`):
   outline/filled toggle using two swapped inline SVGs (not the webfont
   icon — the subsetted font only bakes one FILL-axis point).
 - `#square-constraint-options` (Rectangle + Selection) —
-  `#square-constraint-toggle`, "1:1" text button, on/off equivalent of
   holding Shift while dragging (for touch, which has no Shift key).
 - `#library-sequence-options` (Pencil + Brush only) —
   `#library-sequence-toggle` ("Color Library sequence", cycles through

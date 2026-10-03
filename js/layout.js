@@ -77,3 +77,14 @@ export function measureClearInsets(screenEl, containerEl) {
   probe.remove();
   return clearInsets(containerEl.getBoundingClientRect(), cards, gap);
 }
+
+/**
+ * `el` if it is rendered, otherwise `fallback`. In the floating layout
+ * (5b-top-bar-more) the top bar buttons that moved into the More menu are
+ * display:none, so popovers anchored to them, and focus returning to
+ * them, go to the More button instead.
+ */
+export function visibleAnchor(el, fallback) {
+  if (!fallback || el.getClientRects().length > 0) return el;
+  return fallback;
+}

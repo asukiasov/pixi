@@ -109,6 +109,7 @@ function safeMatchMedia(query) {
  * Wires the theme toggle button: applies the persisted/system-resolved
  * theme immediately, keeps it live if `preference === 'system'` and the
  * OS scheme changes, and cycles+persists the preference on click.
+ * Returns `{ getPreference, setPreference }` for other theme controls.
  *
  * Called once at boot (js/app.js), not per Workspace open - the button is
  * a static element present for the whole page lifetime, unlike Workspace-
@@ -134,11 +135,17 @@ export function initThemeToggle(button) {
     if (preference === 'system') apply();
   });
 
-  button.addEventListener('click', () => {
-    preference = nextThemePreference(preference);
+  function setPreference(value) {
+    preference = normalizeThemePreference(value);
     writeStoredPreference(preference);
     apply();
-  });
+  }
+
+  button.addEventListener('click', () => setPreference(nextThemePreference(preference)));
 
   apply();
+
+  // For the floating layout's More menu (5b-top-bar-more), which picks a
+  // specific theme rather than cycling; this button stays in sync.
+  return { getPreference: () => preference, setPreference };
 }

@@ -32,7 +32,7 @@
        keep it sorted alphabetically — the Google Fonts API 400s the whole
        request (breaking every icon on the page, not just an unsorted one)
        if icon_names isn't in alphabetical order. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check_box,check_box_outline_blank,close,colorize,crop_free,dark_mode,delete,dock_to_right,download,edit,error,expand_more,fiber_manual_record,flip,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,layers,light_mode,lock,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,settings,swap_horiz,undo,visibility,visibility_off" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check_box,check_box_outline_blank,close,colorize,crop_free,dark_mode,delete,dock_to_right,download,edit,error,expand_more,fiber_manual_record,flip,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,layers,light_mode,lock,more_horiz,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,settings,swap_horiz,undo,visibility,visibility_off" />
 </head>
 <body>
   <main id="screen-gallery" class="screen">
@@ -86,6 +86,26 @@
       <button type="button" id="back-to-gallery-button" class="tool-button icon-button magnetic-hover" aria-label="Gallery" data-tooltip="Gallery">
         <span class="material-symbols-outlined">home</span>
       </button>
+      <!-- Floating layout only (5b-top-bar-more): project title and zoom
+           pill. .floating-only is display:none in the docked layout. The
+           zoom menu's items forward to the bottom bar's zoom buttons,
+           which are hidden in this layout - see js/floating-topbar.js. -->
+      <span id="topbar-title" class="topbar-title floating-only"></span>
+      <button type="button" id="zoom-pill" class="zoom-pill floating-only magnetic-hover" aria-label="Zoom, 100%" data-tooltip="Zoom">
+        <span id="zoom-pill-readout">100%</span>
+      </button>
+      <div id="zoom-menu" class="topbar-menu floating-only hidden" role="menu" aria-label="Zoom">
+        <button type="button" class="topbar-menu-item" role="menuitem" data-forward="zoom-preset-100">100%</button>
+        <button type="button" class="topbar-menu-item" role="menuitem" data-forward="zoom-preset-fit">Fit</button>
+        <button type="button" class="topbar-menu-item" role="menuitem" data-forward="zoom-preset-fill">Fill</button>
+        <div class="topbar-menu-separator" role="separator"></div>
+        <button type="button" class="topbar-menu-item" role="menuitem" data-forward="zoom-out-button" data-keep-open>
+          <span class="material-symbols-outlined" aria-hidden="true">remove</span>Zoom out
+        </button>
+        <button type="button" class="topbar-menu-item" role="menuitem" data-forward="zoom-in-button" data-keep-open>
+          <span class="material-symbols-outlined" aria-hidden="true">add</span>Zoom in
+        </button>
+      </div>
       <!-- Pixel-perfect drawing (Aseprite-style corner removal) - see
            js/pixel-perfect-ui.js/lib/pixel-engine/engine.js. -->
       <button type="button" id="pixel-perfect-toggle" class="tool-button icon-button magnetic-hover" aria-label="Pixel-perfect" data-tooltip="Pixel-perfect">
@@ -158,6 +178,48 @@
       <button type="button" id="theme-toggle" class="tool-button icon-button magnetic-hover" aria-label="Theme: System" data-tooltip="Theme: System">
         <span class="material-symbols-outlined">brightness_auto</span>
       </button>
+      <!-- Floating layout only (5b-top-bar-more): the More menu replaces
+           the Canvas Settings, Export, Record, Tile preview, Hide
+           interface and Theme buttons, which are hidden in this layout.
+           Items forward to those buttons (data-forward) so each feature
+           keeps one code path; Theme sets a preference directly - see
+           js/floating-topbar.js. The red dot while recording is CSS
+           (:has(#record-toggle.recording)) in style.css. -->
+      <button type="button" id="more-button" class="tool-button icon-button floating-only magnetic-hover" aria-label="More" data-tooltip="More">
+        <span class="material-symbols-outlined">more_horiz</span>
+      </button>
+      <div id="more-menu" class="topbar-menu floating-only hidden" role="menu" aria-label="More">
+        <button type="button" class="topbar-menu-item" role="menuitem" data-forward="canvas-settings-toggle">
+          <span class="material-symbols-outlined" aria-hidden="true">settings</span>Canvas settings
+        </button>
+        <button type="button" class="topbar-menu-item" role="menuitem" data-forward="export-button">
+          <span class="material-symbols-outlined" aria-hidden="true">download</span>Export
+        </button>
+        <button type="button" class="topbar-menu-item" role="menuitemcheckbox" aria-checked="false" data-forward="record-toggle">
+          <span class="material-symbols-outlined" aria-hidden="true">fiber_manual_record</span><span class="topbar-menu-label">Record timelapse</span>
+        </button>
+        <button type="button" class="topbar-menu-item" role="menuitemcheckbox" aria-checked="false" data-forward="tile-preview-toggle">
+          <span class="material-symbols-outlined" aria-hidden="true">grid_view</span>Tile preview
+        </button>
+        <div class="topbar-menu-separator" role="separator"></div>
+        <div role="group" aria-labelledby="more-menu-theme-label">
+          <div id="more-menu-theme-label" class="topbar-menu-heading">Theme</div>
+          <button type="button" class="topbar-menu-item" role="menuitemradio" aria-checked="false" data-theme-choice="light">
+            <span class="material-symbols-outlined" aria-hidden="true">light_mode</span>Light
+          </button>
+          <button type="button" class="topbar-menu-item" role="menuitemradio" aria-checked="false" data-theme-choice="dark">
+            <span class="material-symbols-outlined" aria-hidden="true">dark_mode</span>Dark
+          </button>
+          <button type="button" class="topbar-menu-item" role="menuitemradio" aria-checked="false" data-theme-choice="system">
+            <span class="material-symbols-outlined" aria-hidden="true">brightness_auto</span>System
+          </button>
+        </div>
+        <div class="topbar-menu-separator" role="separator"></div>
+        <button type="button" class="topbar-menu-item" role="menuitem" data-forward="hide-ui-toggle" aria-keyshortcuts="Tab">
+          <span class="material-symbols-outlined" aria-hidden="true">fullscreen</span>Hide interface
+          <kbd class="topbar-menu-shortcut" aria-hidden="true">Tab</kbd>
+        </button>
+      </div>
     </header>
 
     <!-- The way back from hide-all-UI - fixed to the top-right corner,

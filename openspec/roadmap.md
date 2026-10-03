@@ -271,9 +271,10 @@ Target layout:
   start/end, never hard-coded left/right. Handedness mirroring is then one
   flag, and the later phone layout only re-places existing parts.
 
-Delivery: one big switch, built from small changes. 5a–5g build the
+Delivery: one big switch, built from small changes. 5a–5f build the
 floating layout behind a dev-only `data-layout="floating"` switch, so users
-keep the current layout until 5h turns the new one on. 5i is independent
+keep the current layout until 5h turns the new one on (pulled ahead of
+5g, see 5h below). 5i is independent
 and can ship at any time.
 
 - ~~**5a — Floating shell**~~ — **done** 2026-10-02, archived as
@@ -305,13 +306,25 @@ and can ship at any time.
   CSS-only via `data-current-tool`. Task 5.9 was left open: `Pixi.mount()`
   embeds already crash on mount, because `lib/pixi.js` lacks
   `#record-toggle` from the timelapse change. That needs its own fix.
-- **5e — Cards + mini-rail**: stackable Layers/Colors/Brushes cards and the
-  right mini-rail.
+- ~~**5e — Cards + mini-rail**~~ — **done** 2026-10-03, archived as
+  `openspec/changes/archive/2026-10-03-5e-cards-mini-rail/`. A mini-rail
+  of Colors / Brushes / Layers against the right edge, each opening its
+  own glass card. Open cards stack in one column beside it, share the
+  height when they don't fit, and stop above the bottom cards (measured).
+  A card is open or closed (no collapse-to-header) with a close button.
+  Brushes stays Brush-tool-only but can be closed. The top bar lost its
+  Layers and right-sidebar toggles. Open/closed resets on project open;
+  remembering it is 5g's pinned cards.
 - **5f — Selection action bar**: selection actions that follow the
   selection.
 - **5g — Prefs**: the Prefs screen with the four settings above.
 - **5h — Switch on**: make the floating layout the default, delete the old
   docked-layout CSS/markup, sync specs and `docs/ui-reference.md`.
+  - Decided 2026-10-03: the switch-on itself (floating becomes the
+    standalone app's default) moves ahead of 5g and ships in the same
+    phase as 5f, as its own change, `5h-switch-on-floating`. Deleting the
+    docked CSS/markup stays later: `Pixi.mount()` embeds are always
+    docked and still depend on it.
 - **5i — Palette merge** (independent): the fixed 16-swatch `#palette-row`
   becomes Color Library's default palette, and the row is removed. Its
   Rainbow swatch (Brush-only, mutually exclusive with the Color Library
@@ -328,7 +341,8 @@ Follow-ups after 5h:
   and the grid into its own card; revisit whether anything is still wanted
   after 5h.
 
-Status: in progress - 5a–5d done. Next: `/opsx:propose 5e-cards-mini-rail`.
+Status: in progress - 5a–5e done. Next: `/opsx:propose 5f-selection-action-bar`
+and `/opsx:propose 5h-switch-on-floating`.
 
 ## Phase 6 — Settings and Import screens
 

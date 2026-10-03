@@ -152,12 +152,16 @@
 
       <div class="workspace-topbar-spacer"></div>
 
-      <button type="button" id="undo-button" class="tool-button icon-button magnetic-hover" disabled aria-label="Undo" data-tooltip="Undo">
-        <span class="material-symbols-outlined">undo</span>
-      </button>
-      <button type="button" id="redo-button" class="tool-button icon-button magnetic-hover" disabled aria-label="Redo" data-tooltip="Redo">
-        <span class="material-symbols-outlined">redo</span>
-      </button>
+      <!-- One glass pill in the floating layout; display:contents in the
+           docked one. -->
+      <div class="topbar-group">
+        <button type="button" id="undo-button" class="tool-button icon-button magnetic-hover" disabled aria-label="Undo" data-tooltip="Undo">
+          <span class="material-symbols-outlined">undo</span>
+        </button>
+        <button type="button" id="redo-button" class="tool-button icon-button magnetic-hover" disabled aria-label="Redo" data-tooltip="Redo">
+          <span class="material-symbols-outlined">redo</span>
+        </button>
+      </div>
       <!-- VSCode-style whole-panel toggle: hides/shows the entire right
            sidebar (Color Library + Brushes + Layers together), independent
            of each panel's own collapsed state (#layers-panel-toggle above
@@ -516,30 +520,46 @@
         <div id="tool-options-bar" class="tool-options-bar floating-only" role="group" aria-label="Tool options">
           <div class="tool-options-group" data-tools="pencil eraser">
             <!-- Source: #pencil-size-slider (js/workspace.js). -->
-            <div class="tool-options-slider">
-              <label class="tool-options-label" for="tool-options-size">Size</label>
-              <input type="range" id="tool-options-size" data-forward="pencil-size-slider" data-forward-event="input" />
-              <span class="tool-options-readout" aria-hidden="true"></span>
+            <div class="tool-options-slider slider">
+              <label class="tool-options-label visually-hidden" for="tool-options-size">Size</label>
+              <span class="slider-icon slider-icon-dot" aria-hidden="true"></span>
+              <span class="slider-input">
+                <input type="range" id="tool-options-size" data-forward="pencil-size-slider" data-forward-event="input" />
+                <span class="tool-options-readout slider-bubble" aria-hidden="true"></span>
+              </span>
+              <span class="slider-icon slider-icon-ring" aria-hidden="true"></span>
             </div>
             <!-- Source: #pencil-opacity-slider (js/pencil-opacity-ui.js). -->
-            <div class="tool-options-slider">
-              <label class="tool-options-label" for="tool-options-opacity">Opacity</label>
-              <input type="range" id="tool-options-opacity" data-forward="pencil-opacity-slider" data-forward-event="input" />
-              <span class="tool-options-readout" aria-hidden="true"></span>
+            <div class="tool-options-slider slider">
+              <label class="tool-options-label visually-hidden" for="tool-options-opacity">Opacity</label>
+              <span class="slider-icon slider-icon-faint" aria-hidden="true"></span>
+              <span class="slider-input">
+                <input type="range" id="tool-options-opacity" data-forward="pencil-opacity-slider" data-forward-event="input" />
+                <span class="tool-options-readout slider-bubble" aria-hidden="true"></span>
+              </span>
+              <span class="slider-icon slider-icon-solid" aria-hidden="true"></span>
             </div>
           </div>
           <div class="tool-options-group" data-tools="brush">
             <!-- Source: #brush-spacing (js/workspace.js, Brushes panel). -->
-            <div class="tool-options-slider">
-              <label class="tool-options-label" for="tool-options-spacing">Spacing</label>
-              <input type="range" id="tool-options-spacing" data-forward="brush-spacing" data-forward-event="change" data-unit="px" />
-              <span class="tool-options-readout" aria-hidden="true"></span>
+            <div class="tool-options-slider slider">
+              <label class="tool-options-label visually-hidden" for="tool-options-spacing">Spacing</label>
+              <span class="slider-icon slider-icon-near" aria-hidden="true"></span>
+              <span class="slider-input">
+                <input type="range" id="tool-options-spacing" data-forward="brush-spacing" data-forward-event="change" data-unit="px" />
+                <span class="tool-options-readout slider-bubble" aria-hidden="true"></span>
+              </span>
+              <span class="slider-icon slider-icon-far" aria-hidden="true"></span>
             </div>
             <!-- Source: #brush-rotation (js/workspace.js, Brushes panel). -->
-            <div class="tool-options-slider">
-              <label class="tool-options-label" for="tool-options-rotation">Rotation</label>
-              <input type="range" id="tool-options-rotation" data-forward="brush-rotation" data-forward-event="change" data-unit="°" />
-              <span class="tool-options-readout" aria-hidden="true"></span>
+            <div class="tool-options-slider slider">
+              <label class="tool-options-label visually-hidden" for="tool-options-rotation">Rotation</label>
+              <span class="slider-icon" aria-hidden="true"><span class="material-symbols-outlined">rotate_left</span></span>
+              <span class="slider-input">
+                <input type="range" id="tool-options-rotation" data-forward="brush-rotation" data-forward-event="change" data-unit="°" />
+                <span class="tool-options-readout slider-bubble" aria-hidden="true"></span>
+              </span>
+              <span class="slider-icon" aria-hidden="true"><span class="material-symbols-outlined">rotate_right</span></span>
             </div>
           </div>
           <div class="tool-options-group" data-tools="rectangle">

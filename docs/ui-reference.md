@@ -77,6 +77,18 @@ panel mini-rail and the right sidebar's card column, 5e), `.slot-options` (a wra
 bar, 5f). Fit/Fill/100% centre the
 canvas in the area the visible cards leave clear. `Pixi.mount()` embeds
 never call `applyLayout`, so they always render the docked layout.
+**Visual pass (Pixelmator-style).** The floating workspace sits on a
+themed gradient backdrop (`--workspace-backdrop`; dark in the dark
+theme, light in the light one) and its cards are see-through frosted
+glass (`--glass-tint` 62%, 28px blur, saturate 1.8, a faint inner top
+highlight, 22px radius). The tool rail, panel mini-rail, palette card,
+tool-options bar and selection bar are pills. Buttons on glass are ghost
+buttons: no border or fill at rest, a subtle fill on hover, and a solid
+disk (white on dark, inverted in light) while pressed, active or open;
+disabled at 35%. The shared pieces - `.glass`, `.glass-pill`,
+`.glass-circle`, `.ghost-button`, `.slider`, `.swatch-pair` - are in
+`style.css` ("Components") and shown in every state on
+`components.html`; the floating controls get the same look by selector.
 Spec: `floating-workspace` (takes precedence over other capabilities'
 docked descriptions in the floating layout).
 
@@ -98,7 +110,9 @@ palette card is `max-width: 100%; min-width: 0`, so `#palette-row`
 scrolls sideways inside it.
 
 **Floating top bar (5b-top-bar-more).** In the floating layout the top
-bar is slim: Back, `#topbar-title` (read-only project name, truncated,
+bar is no card of its own (pass-through; each group is its own glass:
+Home and More are glass circles, the title is bare text, the zoom pill
+and the Undo/Redo `.topbar-group` are glass pills) and is slim: Back, `#topbar-title` (read-only project name, truncated,
 full name in `title`), `#zoom-pill` (current %, opens `#zoom-menu`:
 100%/Fit/Fill/Zoom out/Zoom in), Undo, Redo, and
 `#more-button` (opens `#more-menu`: Canvas settings, Export, Record
@@ -122,9 +136,11 @@ FG/BG swatches at the foot stay visible below it. The tool-scoped
 toggles are not in the floating rail (5d moved them to the tool-options
 bar), so choosing a tool never changes its size. In the docked layout
 `.tool-rail-tools` is `display: contents` and nothing changes. Swap and
-Reset keep their corner icons but are 24px transparent hit areas (the
-circle is a `::before`) reaching into the rail padding, never over a
-swatch face. Rail tooltips and the color picker open on the side facing
+Reset are plain corner icons on 24px transparent hit areas reaching into
+the rail padding, never over a swatch face. The swatches are
+overlapping 28px circles with a white ring (no separator line above
+them), so they follow the pill rail's round end; palette-row swatches
+are circles too, and panel card titles are Title Case semibold. Rail tooltips and the color picker open on the side facing
 the canvas (`canvasSide` in `js/layout.js`), past the rail's edge. In
 both layouts each tool button carries `aria-pressed`, kept in sync with
 `.active` by `syncToolButtons` (`js/tool-rail.js`).
@@ -150,7 +166,13 @@ labels and the Symmetry mode badge are mirrored back by a
 re-read whenever `data-current-tool` is set, which covers the resets on
 project open. The sources are `display: none` in the floating layout:
 `#pencil-options`, the rail toggles, the top bar's Pixel-perfect and
-Symmetry, and the Brushes panel's `.brush-stroke-settings` rows. The
+Symmetry, and the Brushes panel's `.brush-stroke-settings` rows. Sliders are `.slider` components: a 6px
+track filled to the thumb, a white pill thumb, an icon at each end
+(Size: dot/ring, Opacity: faint/solid, Spacing: near/far dots, Rotation:
+rotate left/right) with the label visually hidden, and the value in a
+bubble over the thumb only while adjusting (`showReadout()` sets `--f`,
+the 0..1 fraction; `.is-adjusting` is added on input and cleared after
+900ms). The
 bar is `role="group"` "Tool options"; sliders report their value with
 its unit (`aria-valuetext`), toggles report `aria-pressed`, and tooltips
 open above the bar. Markup is `.floating-only` and absent from

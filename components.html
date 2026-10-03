@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pixi Components</title>
+  <script src="js/theme-boot.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=brush,edit,ink_eraser,layers,more_horiz,palette,redo,restart_alt,rotate_left,rotate_right,swap_horiz,undo" />
+  <!-- The workspace's shared components (style.css, "Components"), each in
+       every state, over a colourful pixel backdrop so the glass shows. -->
+  <style>
+    body { overflow: auto; height: auto; background: var(--color-bg); color: var(--color-text); font-family: system-ui, sans-serif; }
+    .doc { max-width: 52rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+    .doc header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .doc h1 { font-size: 1.5rem; margin: 0; }
+    .doc h2 { font-size: 1.15rem; margin: 2.25rem 0 0.25rem; }
+    .doc p, .doc dd { color: var(--color-text-secondary); margin: 0.25rem 0 0.75rem; line-height: 1.45; }
+    .doc code { font-size: 0.85em; }
+    .demo { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 1.25rem; padding: 1.5rem; border-radius: 14px; overflow: hidden; background: #222 center / cover no-repeat; image-rendering: pixelated; }
+    .demo figure { margin: 0; display: grid; justify-items: center; gap: 0.4rem; }
+    .demo figcaption { font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 999px; background: rgba(0, 0, 0, 0.55); color: #fff; }
+    .glass { position: relative; display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem; }
+    .glass.glass-card { padding: 1rem 1.25rem; border-radius: var(--float-radius); }
+    .demo .slider { min-width: 16rem; padding: 0 0.75rem; }
+    .demo .fg-bg-swatch { position: absolute; }
+  </style>
+</head>
+<body>
+  <main class="doc">
+    <header>
+      <h1>Pixi Components</h1>
+      <div class="glass glass-pill" role="group" aria-label="Theme">
+        <button type="button" class="ghost-button ghost-text" data-theme-choice="dark" aria-pressed="false">Dark</button>
+        <button type="button" class="ghost-button ghost-text" data-theme-choice="light" aria-pressed="false">Light</button>
+      </div>
+    </header>
+
+    <h2>Glass</h2>
+    <p><code>.glass</code> frosted card (blur on <code>::before</code>, off under reduced transparency), with <code>.glass-pill</code> and <code>.glass-circle</code> shapes. Clickable glass lights up on hover; open (<code>aria-expanded</code>) is a solid disk.</p>
+    <div class="demo">
+      <figure><div class="glass glass-card">Card</div><figcaption>.glass</figcaption></figure>
+      <figure><div class="glass glass-pill"><button type="button" class="ghost-button" aria-label="Undo"><span class="material-symbols-outlined" aria-hidden="true">undo</span></button><button type="button" class="ghost-button" aria-label="Redo" disabled><span class="material-symbols-outlined" aria-hidden="true">redo</span></button></div><figcaption>.glass-pill</figcaption></figure>
+      <figure><button type="button" class="glass glass-circle" aria-label="More" aria-expanded="false"><span class="material-symbols-outlined" aria-hidden="true">more_horiz</span></button><figcaption>circle</figcaption></figure>
+      <figure><button type="button" class="glass glass-circle" aria-label="More, open" aria-expanded="true"><span class="material-symbols-outlined" aria-hidden="true">more_horiz</span></button><figcaption>open</figcaption></figure>
+    </div>
+
+    <h2>Ghost button</h2>
+    <p><code>.ghost-button</code>: no border or fill at rest, a subtle fill on hover, a solid disk when pressed, active or open (inverted in the light theme), 35% when disabled. Circular for icons; add <code>.ghost-text</code> for a text pill.</p>
+    <div class="demo">
+      <div class="glass glass-pill">
+        <figure><button type="button" class="ghost-button" aria-label="Pencil" aria-pressed="false"><span class="material-symbols-outlined" aria-hidden="true">edit</span></button><figcaption>rest</figcaption></figure>
+        <figure><button type="button" class="ghost-button" aria-label="Brush" aria-pressed="true"><span class="material-symbols-outlined" aria-hidden="true">brush</span></button><figcaption>pressed</figcaption></figure>
+        <figure><button type="button" class="ghost-button" aria-label="Layers" aria-expanded="true"><span class="material-symbols-outlined" aria-hidden="true">layers</span></button><figcaption>open</figcaption></figure>
+        <figure><button type="button" class="ghost-button" aria-label="Eraser" disabled><span class="material-symbols-outlined" aria-hidden="true">ink_eraser</span></button><figcaption>disabled</figcaption></figure>
+        <figure><button type="button" class="ghost-button ghost-text">Delete</button><figcaption>text</figcaption></figure>
+      </div>
+    </div>
+
+    <h2>Slider</h2>
+    <p><code>.slider</code>: a 6px track filled to the thumb, a white pill thumb, icons at both ends (the label is <code>.visually-hidden</code>), and a value bubble while adjusting. Set <code>--f</code> (0..1) and <code>.is-adjusting</code> from script.</p>
+    <div class="demo">
+      <figure><div class="glass glass-pill">
+        <div class="slider"><label class="visually-hidden" for="demo-size">Size</label><span class="slider-icon slider-icon-dot" aria-hidden="true"></span><span class="slider-input"><input type="range" id="demo-size" min="1" max="20" value="4" data-unit="px" /><span class="slider-bubble" aria-hidden="true"></span></span><span class="slider-icon slider-icon-ring" aria-hidden="true"></span></div>
+      </div><figcaption>Size, rest</figcaption></figure>
+      <figure><div class="glass glass-pill">
+        <div class="slider is-adjusting" data-sticky><label class="visually-hidden" for="demo-opacity">Opacity</label><span class="slider-icon slider-icon-faint" aria-hidden="true"></span><span class="slider-input"><input type="range" id="demo-opacity" min="1" max="100" value="70" data-unit="%" /><span class="slider-bubble" aria-hidden="true"></span></span><span class="slider-icon slider-icon-solid" aria-hidden="true"></span></div>
+      </div><figcaption>Opacity, adjusting</figcaption></figure>
+      <figure><div class="glass glass-pill">
+        <div class="slider"><label class="visually-hidden" for="demo-spacing">Spacing</label><span class="slider-icon slider-icon-near" aria-hidden="true"></span><span class="slider-input"><input type="range" id="demo-spacing" min="1" max="32" value="12" data-unit="px" /><span class="slider-bubble" aria-hidden="true"></span></span><span class="slider-icon slider-icon-far" aria-hidden="true"></span></div>
+      </div><figcaption>Spacing</figcaption></figure>
+      <figure><div class="glass glass-pill">
+        <div class="slider"><label class="visually-hidden" for="demo-rotation">Rotation</label><span class="slider-icon" aria-hidden="true"><span class="material-symbols-outlined">rotate_left</span></span><span class="slider-input"><input type="range" id="demo-rotation" min="0" max="360" value="90" data-unit="°" /><span class="slider-bubble" aria-hidden="true"></span></span><span class="slider-icon" aria-hidden="true"><span class="material-symbols-outlined">rotate_right</span></span></div>
+      </div><figcaption>Rotation</figcaption></figure>
+    </div>
+
+    <h2>Swatch pair</h2>
+    <p><code>.swatch-pair</code>: foreground and background as overlapping ringed circles in a 44px stack, with Swap and Reset as plain icons in the free corners.</p>
+    <div class="demo">
+      <figure><div class="glass glass-pill" style="padding: 0.5rem">
+        <div class="swatch-pair">
+          <button type="button" class="fg-bg-swatch bg-swatch" aria-label="Background color" style="background: #ffd60a"></button>
+          <button type="button" class="fg-bg-swatch fg-swatch" aria-label="Foreground color" style="background: #ff375f"></button>
+          <button type="button" class="fg-bg-corner-button swap-corner" aria-label="Swap colors"><span class="material-symbols-outlined" aria-hidden="true">swap_horiz</span></button>
+          <button type="button" class="fg-bg-corner-button reset-corner" aria-label="Reset colors"><span class="material-symbols-outlined" aria-hidden="true">restart_alt</span></button>
+        </div>
+      </div><figcaption>.swatch-pair</figcaption></figure>
+    </div>
+  </main>
+
+  <script type="module">
+    // A random pixel-art backdrop for every demo, so the glass has
+    // something to blur.
+    const colors = ['#ff375f', '#ff9f0a', '#ffd60a', '#30d158', '#64d2ff', '#0a84ff', '#bf5af2', '#1c1c1e', '#f2f2f7'];
+    const canvas = document.createElement('canvas');
+    canvas.width = 40; canvas.height = 16;
+    const ctx = canvas.getContext('2d');
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 40; x++) {
+      ctx.fillStyle = colors[(x * 7 + y * 3 + ((x * y) % 5)) % colors.length];
+      ctx.fillRect(x, y, 1, 1);
+    }
+    const url = canvas.toDataURL();
+    for (const demo of document.querySelectorAll('.demo')) demo.style.backgroundImage = `url(${url})`;
+
+    // The same contract js/tool-options-bar.js uses: --f and .is-adjusting.
+    for (const input of document.querySelectorAll('.slider input')) {
+      const box = input.closest('.slider');
+      const bubble = box.querySelector('.slider-bubble');
+      let timer = 0;
+      const show = () => {
+        box.style.setProperty('--f', String((input.value - input.min) / (input.max - input.min)));
+        bubble.textContent = `${input.value}${input.dataset.unit}`;
+        input.setAttribute('aria-valuetext', bubble.textContent);
+      };
+      input.addEventListener('input', () => {
+        show();
+        if (box.hasAttribute('data-sticky')) return;
+        box.classList.add('is-adjusting');
+        clearTimeout(timer);
+        timer = setTimeout(() => box.classList.remove('is-adjusting'), 900);
+      });
+      show();
+    }
+
+    const themeButtons = document.querySelectorAll('[data-theme-choice]');
+    const setTheme = (theme) => {
+      document.documentElement.setAttribute('data-theme', theme);
+      for (const b of themeButtons) b.setAttribute('aria-pressed', String(b.dataset.themeChoice === theme));
+    };
+    for (const b of themeButtons) b.addEventListener('click', () => setTheme(b.dataset.themeChoice));
+    setTheme(document.documentElement.getAttribute('data-theme') || 'dark');
+  </script>
+</body>
+</html>

@@ -8,6 +8,6 @@
 // whatever branch GitHub Pages is serving to tell a stale cached copy
 // apart from the real latest deploy.
 export const VERSION = {
-  commit: 'df22ebc',
-  builtAt: '2026-10-02T15:43:23Z',
+  commit: '37813c5',
+  builtAt: '2026-10-03T04:02:24Z',
 };

@@ -2807,10 +2807,11 @@ span.layer-lock-icon {
 /* ------------------------------------------------------------------
    Floating workspace layout (5a-floating-shell)
 
-   Dev-only until 5h: js/layout.js sets data-layout="floating" on
-   #screen-workspace for ?layout=floating. Everything below is scoped to
-   that attribute (or is the inert .glass/.slot-options base), so the
-   docked layout and Pixi.mount() embeds are untouched.
+   Always on in the standalone app (5h-switch-on-floating): js/app.js
+   sets data-layout="floating" on #screen-workspace at boot, whatever the
+   query string. Pixi.mount() embeds never set it, so they stay docked.
+   Everything below is scoped to that attribute (or is the inert
+   .glass/.slot-options base), so the docked embed layout is untouched.
    ------------------------------------------------------------------ */
 
 /* Frosted-glass card. The opaque surface is the base, so a browser that
@@ -2915,6 +2916,11 @@ span.layer-lock-icon {
      (5e-cards-mini-rail). 5g's handedness flip swaps this pair too. */
   --slot-cards-start: auto;
   --slot-cards-end: calc(var(--float-edge-end) + var(--slot-rail-width) + var(--float-gap));
+  /* The room between the tool rail (plus a gap) and the card column's end
+     edge (5h-switch-on-floating): on a narrow window the column shrinks
+     to this instead of covering the rail. Built from the same start/end
+     variables, so 5g's handedness swap keeps it right. */
+  --slot-cards-room: calc(100% - (var(--slot-tools-start) + var(--slot-rail-width) + var(--float-gap)) - var(--slot-cards-end) - var(--float-gap));
   position: relative;
   overflow: hidden;
 }
@@ -2961,7 +2967,7 @@ span.layer-lock-icon {
   top: var(--float-below-top);
   inset-inline-start: var(--slot-cards-start);
   inset-inline-end: var(--slot-cards-end);
-  width: 15rem;
+  width: min(15rem, var(--slot-cards-room));
   height: auto;
   /* Stops above the bottom cards where they reach under the column
      (--slot-options-reach, measured by js/panel-rail.js; 0 otherwise). */
@@ -2972,7 +2978,7 @@ span.layer-lock-icon {
    it no longer shares a row with the canvas, so there's nothing to push.
    setRightSidebarVisible (js/workspace.js) still sets `inert`. */
 .workspace-screen[data-layout="floating"] .right-sidebar.right-sidebar-collapsed {
-  width: 15rem;
+  width: min(15rem, var(--slot-cards-room));
   visibility: hidden;
   opacity: 0;
 }
@@ -3009,7 +3015,10 @@ span.layer-lock-icon {
   position: relative;
   display: flex;
   flex-direction: column;
+  /* Never wider than the slot, so #palette-row's overflow-x scrolls
+     inside the card on a narrow window (5h-switch-on-floating). */
   max-width: 100%;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -3345,6 +3354,7 @@ span.layer-lock-icon {
   align-items: center;
   justify-content: center;
   gap: 0 0.75rem;
+  min-width: 0;
   max-width: 100%;
   padding: 0.25rem 0.75rem;
 }
@@ -3362,10 +3372,16 @@ span.layer-lock-icon {
   display: none;
 }
 
+/* Groups (and so a group's two sliders) wrap when the bar runs out of
+   room, so every control stays inside it (5h-switch-on-floating). */
 .workspace-screen[data-layout="floating"] .tool-options-group {
   display: none;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0 0.75rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .workspace-screen[data-layout="floating"][data-current-tool="pencil"] .tool-options-group[data-tools~="pencil"],
@@ -3378,8 +3394,10 @@ span.layer-lock-icon {
 
 .workspace-screen[data-layout="floating"] .tool-options-slider {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   gap: 0.4rem;
+  min-width: 0;
 }
 
 .workspace-screen[data-layout="floating"] .tool-options-label {
@@ -3397,7 +3415,12 @@ span.layer-lock-icon {
 .workspace-screen[data-layout="floating"] .tool-options-slider input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
+  /* 7rem when there's room, down to 4rem on a narrow window. The width
+     keeps the max-content size at 7rem: without it Chromium sizes the
+     bar from the range input's wider native width. */
   width: 7rem;
+  flex: 1 1 7rem;
+  min-width: 4rem;
   height: 44px;
   margin: 0;
   background: transparent;

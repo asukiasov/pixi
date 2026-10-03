@@ -383,3 +383,62 @@ describe('floating selection action bar (5f)', () => {
     assert.match(docked[1].body, /flex:\s*1/);
   });
 });
+
+describe('narrow windows (5h)', () => {
+  const FLOATING = '.workspace-screen[data-layout="floating"]';
+  const bodyOf = (selector) => all.filter((r) => r.selector === selector).map((r) => r.body);
+
+  test('--slot-cards-room is built only from the slot variables', () => {
+    const decl = /--slot-cards-room:\s*([^;]+);/.exec(css);
+    assert.ok(decl);
+    const vars = decl[1].match(/--[\w-]+/g);
+    assert.deepEqual([...new Set(vars)].sort(), ['--float-gap', '--slot-cards-end', '--slot-rail-width', '--slot-tools-start']);
+  });
+
+  test('the card column (open and collapsed) is capped by --slot-cards-room', () => {
+    for (const sel of [`${FLOATING} .right-sidebar`, `${FLOATING} .right-sidebar.right-sidebar-collapsed`]) {
+      const widths = bodyOf(sel).map((b) => /(?:^|[\s;])width:\s*([^;]+);/.exec(b)?.[1]).filter(Boolean);
+      assert.deepEqual(widths, ['min(15rem, var(--slot-cards-room))'], sel);
+    }
+  });
+
+  test('no floating rule keeps a fixed 15rem width', () => {
+    for (const r of all.filter((x) => x.selector.includes('[data-layout="floating"]'))) {
+      assert.doesNotMatch(r.body, /(?:^|[\s;])width:\s*15rem/, r.selector);
+    }
+  });
+
+  test('the tool-options bar, its groups and the palette card can shrink', () => {
+    for (const sel of [`${FLOATING} .tool-options-bar`, `${FLOATING} .tool-options-group`, `${FLOATING} .options-card`]) {
+      const body = bodyOf(sel).join(';');
+      assert.match(body, /min-width:\s*0/, sel);
+      assert.match(body, /max-width:\s*100%/, sel);
+    }
+    for (const sel of [`${FLOATING} .tool-options-bar`, `${FLOATING} .tool-options-group`]) {
+      assert.match(bodyOf(sel).join(';'), /flex-wrap:\s*wrap/, sel);
+    }
+  });
+
+  test('the range input shrinks from 7rem to 4rem, keeping its 44px hit height', () => {
+    const body = bodyOf(`${FLOATING} .tool-options-slider input[type="range"]`).join(';');
+    assert.match(body, /flex:\s*1 1 7rem/);
+    assert.match(body, /min-width:\s*4rem/);
+    assert.match(body, /height:\s*44px/);
+  });
+
+  test('the new constraints are all scoped to the floating layout', () => {
+    for (const r of all.filter((x) => /--slot-cards-room|flex:\s*1 1 7rem/.test(x.body))) {
+      assert.ok(r.selector.includes('[data-layout="floating"]'), r.selector);
+    }
+  });
+
+  test('the docked .right-sidebar, .palette-row and .options-card rules are unchanged', () => {
+    const docked = (sel) => all.filter((r) => r.context === '' && r.selector === sel);
+    assert.match(docked('.right-sidebar')[0].body, /width:\s*clamp\(8rem, 22vw, 13rem\)/);
+    assert.equal(docked('.options-card').length, 1);
+    assert.match(docked('.options-card')[0].body, /^\s*display:\s*contents;\s*$/);
+    const palette = docked('.palette-row')[0].body;
+    assert.match(palette, /overflow-x:\s*auto/);
+    assert.doesNotMatch(palette, /min-width|max-width/);
+  });
+});

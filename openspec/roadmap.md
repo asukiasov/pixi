@@ -271,10 +271,10 @@ Target layout:
   start/end, never hard-coded left/right. Handedness mirroring is then one
   flag, and the later phone layout only re-places existing parts.
 
-Delivery: one big switch, built from small changes. 5a–5f build the
-floating layout behind a dev-only `data-layout="floating"` switch, so users
-keep the current layout until 5h turns the new one on (pulled ahead of
-5g, see 5h below). 5i is independent
+Delivery: one big switch, built from small changes. 5a–5f built the
+floating layout behind a dev-only `data-layout="floating"` switch; the 5h
+switch-on (pulled ahead of 5g, see 5h below) made it the standalone app's
+only layout on 2026-10-03. 5i is independent
 and can ship at any time.
 
 - ~~**5a — Floating shell**~~ — **done** 2026-10-02, archived as
@@ -315,7 +315,7 @@ and can ship at any time.
   Brushes stays Brush-tool-only but can be closed. The top bar lost its
   Layers and right-sidebar toggles. Open/closed resets on project open;
   remembering it is 5g's pinned cards.
-- **5f — Selection action bar**: selection actions that follow the
+- ~~**5f — Selection action bar**~~ — **done**: selection actions that follow the
   selection. Proposed 2026-10-03 as
   `openspec/changes/5f-selection-action-bar/`: Clear selection and
   Delete in a glass bar centred above the selection (below when there's
@@ -336,13 +336,16 @@ and can ship at any time.
     handedness, auto-hide), and nothing in them is needed to use it.
     Turning it on first gets the floating layout into real use sooner,
     and 5g is then built against the layout people actually have.
-  - Proposed 2026-10-03 as `openspec/changes/5h-switch-on-floating/`,
-    built after 5f. The standalone app is always floating, with no
+  - ~~Switch-on~~ **done** 2026-10-03, archived as
+    `openspec/changes/archive/2026-10-03-5h-switch-on-floating/`, built
+    after 5f. The standalone app is always floating, with no
     opt-out: `?layout` is ignored, including `?layout=docked`. It is
     floating at every width. Below 600px the panel cards start closed,
     and the card column, tool-options bar and palette row are fixed so
     every control stays reachable. Fit now runs after the per-open card
-    resets.
+    resets. Verified headless in Chromium and WebKit (1180×820, 768×1024,
+    390×844, 844×390); the real-iPad check (task 5.10) is still the
+    user's to do.
   - Remaining 5h, as a later change after 5g: delete the docked
     CSS/markup and the source controls behind the floating proxies, and
     sync `layers`, `color-library`, `brushes`, `hide-interface`,
@@ -373,8 +376,9 @@ Follow-ups after 5h:
   and the grid into its own card; revisit whether anything is still wanted
   after 5h.
 
-Status: in progress - 5a–5f done; the 5h switch-on proposed.
-Next: `/opsx:apply 5h-switch-on-floating`, then the embed mount fix.
+Status: in progress - 5a–5f and the 5h switch-on done.
+Next: the embed mount fix (bug fix), then 5g (Prefs), then the rest of
+5h (docked deletion).
 Visual direction for all floating work: Pixelmator's airy, frosted-glass
 look (references in `docs/Screenshots of other apps/`), keeping Pixi's
 own panel arrangement.

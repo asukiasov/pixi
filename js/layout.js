@@ -1,11 +1,7 @@
-// Floating workspace layout (5a-floating-shell). Dev-only until 5h: the
-// page opts in with ?layout=floating, read once at boot. Embeds
-// (lib/pixi.js) never call this, so they always stay docked.
-
-/** 'floating' only for an exact `layout=floating` query parameter. */
-export function resolveLayout(search) {
-  return new URLSearchParams(search).get('layout') === 'floating' ? 'floating' : 'docked';
-}
+// Floating workspace layout (5a-floating-shell). Always floating in the
+// standalone app (5h-switch-on-floating): js/app.js applies it at boot and
+// no query parameter changes that. Embeds (lib/pixi.js) never call
+// applyLayout, so they stay docked.
 
 /** Sets or clears `data-layout` on the workspace screen. */
 export function applyLayout(screenEl, layout) {

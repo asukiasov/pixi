@@ -12,10 +12,10 @@ import { initIconFontFallback } from './icon-font-fallback.js';
 import { initColorLibrary } from './color-library-ui.js';
 import { initLayers, closeLayersOpacityPopover } from './layers-ui.js';
 import { initToasts } from './toast.js';
-import { resolveLayout, applyLayout, measureClearInsets } from './layout.js';
+import { applyLayout, measureClearInsets } from './layout.js';
 import { initFloatingTopbar } from './floating-topbar.js';
 import { initToolOptionsBar } from './tool-options-bar.js';
-import { initPanelRail } from './panel-rail.js';
+import { initPanelRail, applyOpenCardDefaults } from './panel-rail.js';
 import { initSelectionBar } from './selection-bar.js';
 
 const screens = {
@@ -24,11 +24,10 @@ const screens = {
   workspace: document.getElementById('screen-workspace'),
 };
 
-// Floating workspace layout (5a-floating-shell) - dev-only opt-in via
-// ?layout=floating until 5h makes it the default. Read once: the router
-// only rewrites the hash, so the query survives screen changes.
-const layout = resolveLayout(location.search);
-applyLayout(screens.workspace, layout);
+// Floating workspace layout (5a-floating-shell): the standalone app's only
+// layout since 5h-switch-on-floating. Any ?layout= parameter is ignored.
+// Embeds (lib/pixi.js) never load this file, so they stay docked.
+applyLayout(screens.workspace, 'floating');
 
 // AUD-5: detect whether the Material Symbols icon font (index.html's
 // fonts.googleapis.com <link>) actually loaded, and fall back to hiding
@@ -99,20 +98,20 @@ const theme = initThemeToggle(document.getElementById('theme-toggle'));
 // Floating layout's zoom pill and More menu (5b-top-bar-more). Once, like
 // the theme toggle above: every item forwards to a control that exists
 // for the whole page lifetime, so nothing here is per-project.
-if (layout === 'floating') initFloatingTopbar({ theme });
+initFloatingTopbar({ theme });
 // Floating layout's tool-options bar (5d-tool-options-bar). Once, for the
 // same reason: its proxies forward to controls that exist for the whole
 // page lifetime, and it re-reads their values on every tool change.
-if (layout === 'floating') initToolOptionsBar({ bindSliderWheel });
+initToolOptionsBar({ bindSliderWheel });
 // Floating layout's panel mini-rail and card close buttons
 // (5e-cards-mini-rail). Once, for the same reason: it forwards to the
 // panels' own collapse controls and mirrors their state from each card.
-if (layout === 'floating') initPanelRail({ setBrushesCardOpen, closeLayersOpacityPopover });
+initPanelRail({ setBrushesCardOpen, closeLayersOpacityPopover });
 // Floating layout's selection action bar (5f-selection-action-bar). Once:
 // it forwards to the selection controls, and follows the view through
 // workspace.js's onCanvasViewChange, which outlives each project's view
 // handlers.
-if (layout === 'floating') initSelectionBar({ onCanvasViewChange, currentSelectionClientRect });
+initSelectionBar({ onCanvasViewChange, currentSelectionClientRect });
 
 // Color Library and Layers panels - wired once here, like every other
 // init* call in this file; their own onWorkspaceReset registrations
@@ -151,10 +150,9 @@ function openWorkspace({ layerStack, projectId, projectName }) {
 
   if (!canvasView) {
     // Floating layout: fit into the area the floating cards leave clear.
-    const options = layout === 'floating'
-      ? { getClearInsets: () => measureClearInsets(screens.workspace, containerEl) }
-      : {};
-    canvasView = new CanvasView(canvasEl, containerEl, layerStack, options);
+    canvasView = new CanvasView(canvasEl, containerEl, layerStack, {
+      getClearInsets: () => measureClearInsets(screens.workspace, containerEl),
+    });
     canvasView.resetView();
     canvasView.render();
     // One-shot re-fit after the browser's first real paint: the very first
@@ -184,6 +182,13 @@ function openWorkspace({ layerStack, projectId, projectName }) {
       navigate({ screen: 'gallery' });
     },
   });
+  // initWorkspace() has just reset every card to open; close the ones a
+  // narrow window starts without, then fit again. This is what makes Fit
+  // see the cards that are actually open on every open, not only the
+  // first (setLayerStack() above fitted beside the previous project's).
+  applyOpenCardDefaults();
+  canvasView.resetView();
+  canvasView.render();
 }
 
 /** Loads a project by ID and opens it in the Workspace. */

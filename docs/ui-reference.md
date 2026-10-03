@@ -54,14 +54,20 @@ Spec: `canvas-creation`. Implementation: `js/new-canvas.js`.
 
 ## Workspace (`#screen-workspace`)
 
-The main drawing screen. Layout: top bar → body (left tools sidebar +
-canvas + bottom bar) → right sidebar, plus several popovers positioned
-via `position: fixed` + JS (clamped to viewport) rather than living in
+The main drawing screen. The standalone app always uses the floating
+layout described first below; the docked layout (top bar → body (left
+tools sidebar + canvas + bottom bar) → right sidebar) is what
+`Pixi.mount()` embeds use, and the floating paragraphs say how each
+region differs from it. Several popovers are positioned via
+`position: fixed` + JS (clamped to viewport) rather than living in
 normal document flow.
 
-**Floating layout (dev-only, 5a-floating-shell).** Opening the app with
-`?layout=floating` sets `data-layout="floating"` on `#screen-workspace`
-(`js/layout.js`): the canvas container fills the screen and the regions
+**Floating layout (5a-floating-shell, always on since
+5h-switch-on-floating).** `js/app.js` calls
+`applyLayout(screens.workspace, 'floating')` at boot, which sets
+`data-layout="floating"` on `#screen-workspace` (`js/layout.js`); any
+`?layout=` parameter is ignored, and there is no way to switch layout.
+The canvas container fills the screen and the regions
 float over it as frosted-glass cards, each in a slot class -
 `.slot-top` (top bar), `.slot-tools` (tool rail), `.slot-panels` (the
 panel mini-rail and the right sidebar's card column, 5e), `.slot-options` (a wrapper around the tool-options bar,
@@ -69,10 +75,27 @@ panel mini-rail and the right sidebar's card column, 5e), `.slot-options` (a wra
 `display: contents` in the docked layout; in the floating layout
 `#selection-controls` is hidden and shown through the selection action
 bar, 5f). Fit/Fill/100% centre the
-canvas in the area the visible cards leave clear. Without the parameter,
-and always in `Pixi.mount()` embeds, the docked layout below is
-unchanged. Phase 5 redesigns each region; 5h makes floating the default.
-Spec: `floating-workspace`.
+canvas in the area the visible cards leave clear. `Pixi.mount()` embeds
+never call `applyLayout`, so they always render the docked layout.
+Spec: `floating-workspace` (takes precedence over other capabilities'
+docked descriptions in the floating layout).
+
+**Narrow windows (5h-switch-on-floating).** Floating at every width,
+with no separate narrow layout. A project opened in a window narrower
+than `NARROW_MAX_WIDTH` (600 CSS px, `js/panel-rail.js`) starts with
+Colors, Brushes and Layers closed: `openWorkspace()` (`js/app.js`) calls
+`applyOpenCardDefaults()` right after `initWorkspace()` has reset all
+three to open, then re-runs `resetView()`, so Fit always sees the cards
+actually open (on every open, not only the first). The width at open
+decides; resizing never opens or closes a card. Constraint fixes, all
+floating-scoped CSS: the card column is
+`min(15rem, var(--slot-cards-room))`, where `--slot-cards-room` is the
+space between the tool rail and the mini-rail, so cards never cover the
+rail; `#tool-options-bar` and its groups wrap (`min-width: 0`,
+`max-width: 100%`), and sliders shrink from 7rem to 4rem (`flex: 1 1
+7rem`, still 44px tall), so the two sliders stack when needed; the
+palette card is `max-width: 100%; min-width: 0`, so `#palette-row`
+scrolls sideways inside it.
 
 **Floating top bar (5b-top-bar-more).** In the floating layout the top
 bar is slim: Back, `#topbar-title` (read-only project name, truncated,

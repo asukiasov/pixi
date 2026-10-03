@@ -1943,6 +1943,37 @@ export function onWorkspaceReset(fn) {
 }
 
 /**
+ * Subscribes `fn()` to every canvas view change - pan, zoom, pinch,
+ * presets, and the selection overlay moving (CanvasView's onViewChange).
+ * Registered once and kept across project opens: initWorkspace() replaces
+ * the view's handlers on every open, so a module wired once at boot (the
+ * floating selection action bar, js/selection-bar.js) subscribes here
+ * instead of on the view.
+ */
+const canvasViewChangeListeners = [];
+export function onCanvasViewChange(fn) {
+  canvasViewChangeListeners.push(fn);
+}
+
+/** The current view's selection overlay box (client px), or null. */
+export function currentSelectionClientRect() {
+  return state?.canvasView?.getSelectionClientRect() ?? null;
+}
+
+/**
+ * Marks the workspace screen while a selection is being drawn (Select) or
+ * dragged (Move with a selection). Set in both layouts, like
+ * data-current-tool; only the floating CSS reads it, to hide the selection
+ * action bar during the gesture (5f-selection-action-bar).
+ */
+function setSelectionDrag(on) {
+  const screen = root.querySelector('.workspace-screen');
+  if (!screen) return;
+  if (on) screen.dataset.selectionDrag = '';
+  else delete screen.dataset.selectionDrag;
+}
+
+/**
  * Redraws the current line/rectangle preview (or committed shape) from the
  * pre-drag backup, applying the selection clip if one is active. Shared by
  * onDrawMove (live preview) and onDrawEnd (final commit) so both look and
@@ -2216,6 +2247,7 @@ export function initWorkspace({
   // freshly opened project always starts with none.
   canvasView.setSelectionRect(null);
   updateSelectionControls();
+  setSelectionDrag(false);
 
   // Baseline snapshot so the very first stroke can be undone back to
   // whatever state the project was in when opened.
@@ -2235,8 +2267,13 @@ export function initWorkspace({
       setZoomReadout(percent);
     },
 
+    onViewChange() {
+      for (const fn of canvasViewChangeListeners) fn();
+    },
+
     onDrawStart(point) {
       const tool = state.currentTool;
+      if (tool === 'selection' || (tool === 'move' && state.selection)) setSelectionDrag(true);
 
       if (tool === 'selection') {
         state.dragStart = point;
@@ -2401,6 +2438,7 @@ export function initWorkspace({
 
     onDrawEnd() {
       const tool = state.currentTool;
+      setSelectionDrag(false);
 
       if (tool === 'selection') {
         if (!state.dragStart) return;
@@ -2457,6 +2495,7 @@ export function initWorkspace({
 
     onDrawCancel() {
       const tool = state.currentTool;
+      setSelectionDrag(false);
 
       if (tool === 'selection') {
         state.dragStart = null;

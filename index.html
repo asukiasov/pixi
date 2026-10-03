@@ -576,10 +576,15 @@
 
         <!-- Palette card (5d-tool-options-bar): the floating layout's card
              under the tool-options bar; display:contents (no box) in the
-             docked one. -->
+             docked one. In the floating layout it holds only the palette:
+             #selection-controls is hidden there, and its buttons show in
+             #selection-bar instead (5f-selection-action-bar). -->
         <div class="options-card">
           <div id="palette-row" class="palette-row"></div>
 
+          <!-- Docked layout only; in the floating layout these are shown
+               through #selection-bar's proxies (5f-selection-action-bar),
+               which still read this element's .hidden to show/hide. -->
           <div id="selection-controls" class="selection-controls hidden">
             <button type="button" id="selection-clear-button" class="tool-button no-buzz">Clear selection</button>
             <button type="button" id="selection-delete-button" class="tool-button no-buzz">Delete</button>
@@ -601,6 +606,16 @@
             <button type="button" id="zoom-preset-fill" class="tool-button no-buzz" title="Fill the screen with the canvas">Fill</button>
           </div>
         </nav>
+      </div>
+
+      <!-- Selection action bar (5f-selection-action-bar), floating layout
+           only. Not in any slot: js/selection-bar.js places it next to the
+           selection, and Fit ignores it. Proxies for #selection-clear-button
+           and #selection-delete-button (js/workspace.js) until the docked
+           layout is deleted and these can become the real controls. -->
+      <div id="selection-bar" class="selection-bar floating-only" role="group" aria-label="Selection actions">
+        <button type="button" class="tool-button no-buzz" data-forward="selection-clear-button">Clear selection</button>
+        <button type="button" class="tool-button no-buzz" data-forward="selection-delete-button">Delete</button>
       </div>
     </div>
 

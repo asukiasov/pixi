@@ -142,6 +142,35 @@ describe('initThemeToggle', () => {
     if (restoreGlobals) restoreGlobals();
   });
 
+  test('setPreference picks a specific theme, saves it and updates the button', () => {
+    const { html, storage, button } = setUp({ storedPreference: 'system', osPrefersDark: false });
+    const theme = initThemeToggle(button);
+    assert.equal(theme.getPreference(), 'system');
+
+    theme.setPreference('dark');
+    assert.equal(theme.getPreference(), 'dark');
+    assert.equal(html.getAttribute('data-theme'), 'dark');
+    assert.equal(storage.getItem('pixi-theme-preference'), 'dark');
+    assert.equal(button.getAttribute('aria-label'), 'Theme: Dark');
+    assert.equal(button.icon.textContent, 'dark_mode');
+  });
+
+  test('the click cycle continues from a value set with setPreference', () => {
+    const { storage, button } = setUp({ storedPreference: 'light' });
+    const theme = initThemeToggle(button);
+    theme.setPreference('system');
+    button.click(); // system -> light
+    assert.equal(theme.getPreference(), 'light');
+    assert.equal(storage.getItem('pixi-theme-preference'), 'light');
+  });
+
+  test('setPreference ignores unknown values by falling back to system', () => {
+    const { button } = setUp({ storedPreference: 'dark' });
+    const theme = initThemeToggle(button);
+    theme.setPreference('neon');
+    assert.equal(theme.getPreference(), 'system');
+  });
+
   test('applies the stored preference immediately on init', () => {
     const { html, button } = setUp({ storedPreference: 'dark' });
     initThemeToggle(button);

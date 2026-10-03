@@ -22,6 +22,7 @@ import { initCanvasSettings } from './canvas-settings.js';
 import { renderLayersPanel, clearLayerMarksAndRefresh, mergeMarkedOrActiveDown } from './layers-ui.js';
 import { isHideUiShortcut } from './hide-ui.js';
 import { showToast } from './toast.js';
+import { visibleAnchor } from './layout.js';
 import { getColorSequenceColor, setLibrarySequenceEnabled, syncColorLibraryActiveSwatch } from './color-library-ui.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
@@ -187,6 +188,9 @@ let foregroundSwatchEl = null;
 let backgroundSwatchEl = null;
 
 let zoomReadout = null;
+// Floating layout's zoom pill (5b-top-bar-more) - mirrors zoomReadout.
+// Absent from lib/pixi.js's embed markup, hence the `?.` where it's set.
+let zoomPillReadout = null;
 let pencilOptionsPanel = null;
 
 // drawing-timelapse-recording: tracked like colorPickerOutsideClickHandler/
@@ -476,7 +480,9 @@ function setUiHidden(hidden, { keepCanvasStill = true } = {}) {
     const after = container.getBoundingClientRect();
     state.canvasView.panBy(before.left - after.left, before.top - after.top);
   }
-  if (focusWillVanish) (hidden ? showUiButton : hideUiToggle).focus();
+  // In the floating layout #hide-ui-toggle is hidden (Hide interface is in
+  // the More menu), so focus returns to More instead.
+  if (focusWillVanish) (hidden ? showUiButton : visibleAnchor(hideUiToggle, root.querySelector('#more-button'))).focus();
   return true;
 }
 
@@ -1444,7 +1450,9 @@ function bindDomOnce() {
   }
 
   function positionTimelapsePanel() {
-    const rect = recordToggleButton.getBoundingClientRect();
+    // Floating layout: #record-toggle is hidden and Record lives in the
+    // More menu, so anchor to More instead (5b-top-bar-more).
+    const rect = visibleAnchor(recordToggleButton, root.querySelector('#more-button')).getBoundingClientRect();
     const panelRect = timelapsePanel.getBoundingClientRect();
     const margin = 8;
     let top = rect.bottom + 8;
@@ -1588,6 +1596,7 @@ function bindDomOnce() {
   // Zoom: +/- buttons and the three presets all just call the CanvasView
   // API directly - it owns all the actual zoom/pan math (see design.md).
   zoomReadout = root.querySelector('#zoom-readout');
+  zoomPillReadout = root.querySelector('#zoom-pill-readout');
   root.querySelector('#zoom-out-button').addEventListener('click', () => state.canvasView.zoomStep(-1));
   root.querySelector('#zoom-in-button').addEventListener('click', () => state.canvasView.zoomStep(1));
   root.querySelector('#zoom-preset-100').addEventListener('click', () => state.canvasView.setZoomPreset('100'));
@@ -1826,6 +1835,29 @@ function rotateCanvas(direction) {
 function renameCurrentProject(name) {
   state.projectName = name;
   renameProject(state.projectId, name);
+  syncTopbarTitle();
+}
+
+function setZoomReadout(percent) {
+  zoomReadout.textContent = `${percent}%`;
+  if (zoomPillReadout) {
+    zoomPillReadout.textContent = `${percent}%`;
+    // The label must contain the visible text, or speech users can't say
+    // "click 2100%" and screen readers hide the zoom level.
+    zoomPillReadout.parentElement.setAttribute('aria-label', `Zoom, ${percent}%`);
+  }
+}
+
+/**
+ * Floating layout's read-only project title (5b-top-bar-more). The `title`
+ * attribute keeps the full name reachable when CSS truncates it. Absent
+ * from lib/pixi.js's embed markup.
+ */
+function syncTopbarTitle() {
+  const titleEl = root.querySelector('#topbar-title');
+  if (!titleEl) return;
+  titleEl.textContent = state.projectName;
+  titleEl.title = state.projectName;
 }
 
 /** The current canvas's size, e.g. to refresh the Canvas Settings panel after rotateCanvas swaps width/height. */
@@ -2108,6 +2140,7 @@ export function initWorkspace({
   // initWorkspace() call, before bindDomOnce() has run and assigned this.
   canvasSettingsControls?.setCurrentSize(layerStack.width, layerStack.height);
   canvasSettingsControls?.setCurrentName(projectName);
+  syncTopbarTitle();
   canvasSettingsControls?.close();
   // Every other onWorkspaceReset subscriber (Color Library reloading its
   // palettes, Layers refreshing its panel) - see onWorkspaceReset's own
@@ -2136,13 +2169,13 @@ export function initWorkspace({
   // CanvasView's constructor + resetView() already ran (see app.js)
   // before setHandlers below registers onZoomChange, so that first
   // Fit Screen's zoom-change event has nowhere to land yet.
-  zoomReadout.textContent = `${canvasView.getZoomPercent()}%`;
+  setZoomReadout(canvasView.getZoomPercent());
 
   canvasView.setHandlers({
     // Fires on every zoom change (buttons, shortcuts, presets, touch
     // pinch, and the initial Fit Screen from resetView) — see design.md.
     onZoomChange(percent) {
-      zoomReadout.textContent = `${percent}%`;
+      setZoomReadout(percent);
     },
 
     onDrawStart(point) {

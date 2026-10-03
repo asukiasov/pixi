@@ -13,6 +13,7 @@ import { initColorLibrary } from './color-library-ui.js';
 import { initLayers } from './layers-ui.js';
 import { initToasts } from './toast.js';
 import { resolveLayout, applyLayout, measureClearInsets } from './layout.js';
+import { initFloatingTopbar } from './floating-topbar.js';
 
 const screens = {
   gallery: document.getElementById('screen-gallery'),
@@ -90,7 +91,12 @@ initMagneticHover([
 // the resolved theme applies globally (Gallery/New Canvas included, via
 // style.css's tokens keying off `data-theme` on <html>), not just inside
 // the Workspace screen where the button happens to live. See js/theme.js.
-initThemeToggle(document.getElementById('theme-toggle'));
+const theme = initThemeToggle(document.getElementById('theme-toggle'));
+
+// Floating layout's zoom pill and More menu (5b-top-bar-more). Once, like
+// the theme toggle above: every item forwards to a control that exists
+// for the whole page lifetime, so nothing here is per-project.
+if (layout === 'floating') initFloatingTopbar({ theme });
 
 // Color Library and Layers panels - wired once here, like every other
 // init* call in this file; their own onWorkspaceReset registrations

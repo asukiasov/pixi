@@ -99,3 +99,40 @@ describe('floating layout slots (5a)', () => {
     assert.match(canvas.body, /inset:\s*0/);
   });
 });
+
+describe('floating top bar (5b)', () => {
+  const FLOATING = '.workspace-screen[data-layout="floating"]';
+  const MOVED = ['#canvas-settings-toggle', '#export-button', '#record-toggle', '#tile-preview-toggle', '#hide-ui-toggle', '#theme-toggle', '.bottom-bar'];
+
+  test('moved controls and the bottom zoom bar are hidden only in the floating layout', () => {
+    const hiding = all.filter((r) => /display:\s*none/.test(r.body) && MOVED.some((id) => r.selector.includes(id)));
+    for (const id of MOVED) {
+      const rule = hiding.find((r) => r.selector.includes(id));
+      assert.ok(rule, `${id} has a hiding rule`);
+      assert.ok(rule.selector.startsWith(FLOATING), `${id} is hidden only under ${FLOATING}`);
+    }
+  });
+
+  test('.floating-only markup is hidden outside the floating layout', () => {
+    const base = all.find((r) => r.context === '' && r.selector === '.floating-only');
+    assert.ok(base);
+    assert.match(base.body, /display:\s*none/);
+    for (const id of ['#topbar-title', '#zoom-pill', '#more-button']) {
+      const shown = all.find((r) => r.selector.startsWith(FLOATING) && r.selector.includes(id) && /display:\s*(block|inline-flex|flex)/.test(r.body));
+      assert.ok(shown, `${id} is shown in the floating layout`);
+    }
+  });
+
+  test('the recording dot on More pulses only without a reduced-motion preference', () => {
+    const dot = all.filter((r) => r.selector.includes('#record-toggle.recording') && r.selector.includes('#more-button::after'));
+    assert.ok(dot.some((r) => r.context === '' && !/animation/.test(r.body)));
+    const animated = dot.filter((r) => /animation/.test(r.body));
+    assert.ok(animated.length > 0);
+    for (const r of animated) assert.match(r.context, /prefers-reduced-motion:\s*no-preference/);
+  });
+
+  test('top bar menu items are at least 44px tall', () => {
+    const item = all.find((r) => r.selector === '.topbar-menu-item');
+    assert.match(item.body, /min-height:\s*44px/);
+  });
+});

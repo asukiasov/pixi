@@ -2,7 +2,7 @@
 // ?layout=floating switch and the clear-area insets the canvas fits into.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveLayout, clearInsets, clearArea } from '../js/layout.js';
+import { resolveLayout, clearInsets, clearArea, visibleAnchor } from '../js/layout.js';
 
 describe('resolveLayout', () => {
   test('no query string means docked', () => {
@@ -87,5 +87,24 @@ describe('clearArea', () => {
     const area = clearArea({ width: 300, height: 200 }, { top: 150, right: 200, bottom: 150, left: 200 });
     assert.equal(area.width, 1);
     assert.equal(area.height, 1);
+  });
+});
+
+describe('visibleAnchor', () => {
+  const el = (boxes) => ({ getClientRects: () => ({ length: boxes }) });
+
+  test('an element that is rendered is its own anchor', () => {
+    const toggle = el(1);
+    assert.equal(visibleAnchor(toggle, el(1)), toggle);
+  });
+
+  test('an element with no box falls back', () => {
+    const fallback = el(1);
+    assert.equal(visibleAnchor(el(0), fallback), fallback);
+  });
+
+  test('a missing fallback still returns the element', () => {
+    const toggle = el(0);
+    assert.equal(visibleAnchor(toggle, null), toggle);
   });
 });

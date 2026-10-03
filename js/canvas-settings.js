@@ -4,6 +4,8 @@
 // bindDomOnce() per openspec/changes/merge-pixi-pro-into-standard/
 // design.md (no extension-hook indirection).
 
+import { visibleAnchor } from './layout.js';
+
 const MIN_SIZE = 1;
 const MAX_SIZE = 256;
 
@@ -66,7 +68,9 @@ export function initCanvasSettings({ onResize, onRotate, onRename, root = docume
     // to read a size from.
     panel.classList.remove('hidden');
     if (wasHidden) {
-      positionPanel(panel, toggleButton);
+      // Floating layout: the toggle is hidden and this opens from the More
+      // menu, so anchor to More instead (5b-top-bar-more).
+      positionPanel(panel, visibleAnchor(toggleButton, root.querySelector('#more-button')));
     } else {
       close();
     }

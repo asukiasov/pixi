@@ -363,7 +363,7 @@ textarea,
 /* Workspace screen */
 
 .material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
   font-size: 1.4rem;
   line-height: 1;
 }
@@ -3942,4 +3942,27 @@ span.layer-lock-icon {
   text-transform: none;
   letter-spacing: normal;
   color: var(--color-text);
+}
+
+/* Color Library swatches match the palette row: round. */
+.workspace-screen[data-layout="floating"] .color-library-swatch {
+  border-radius: 50%;
+}
+
+/* Icons on glass: a step larger than the docked 1.4rem (the font is the
+   light 300 weight everywhere, see .material-symbols-outlined). */
+.workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .tool-options-bar) .tool-button .material-symbols-outlined {
+  font-size: 1.6rem;
+}
+
+/* The colour picker is a fixed popover inside the tool rail, so it paints
+   in the rail's stacking context (z-index 20) - under the bottom cards,
+   which come later in the DOM at the same z-index. Lift the rail above
+   them (still under the top bar's menus) while the picker is open. */
+.workspace-screen[data-layout="floating"] .slot-tools:has(#color-picker-popover:not(.hidden)) {
+  z-index: 25;
+}
+
+.workspace-screen[data-layout="floating"] .color-picker-popover-header .icon-button {
+  border-radius: 50%;
 }

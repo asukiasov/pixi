@@ -199,6 +199,9 @@ function syncLayersPanelToolbar() {
  * stale, instead of a call at every mutating handler below.
  */
 export function renderLayersPanel() {
+  // initLayers() runs only from js/app.js - a Pixi.mount() embed has no
+  // Layers panel, but commit() still calls this on every stroke.
+  if (!layersPanelList) return;
   const layerStack = getLayerStack();
   const layers = layerStack.getLayers();
   const activeIndex = layerStack.getActiveIndex();

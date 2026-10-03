@@ -25,6 +25,7 @@ let symmetryMode = 'off';
 
 export function initSymmetry(root = document) {
   const symmetryToggle = root.querySelector('#symmetry-toggle');
+  if (!symmetryToggle) return; // standalone-only (absent from lib/pixi.js's embed markup)
 
   function updateSymmetryToggle() {
     symmetryToggle.classList.toggle('active', symmetryMode !== 'off');

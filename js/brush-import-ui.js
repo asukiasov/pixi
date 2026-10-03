@@ -40,6 +40,7 @@ export function initBrushImport(root = document) {
   const clearButton = root.querySelector('#brush-editor-clear');
   const cancelButton = root.querySelector('#brush-editor-cancel');
   const saveButton = root.querySelector('#brush-editor-save');
+  if (!importButton) return; // standalone-only (absent from lib/pixi.js's embed markup)
 
   function applySourceImage() {
     if (!sourceImage) return;

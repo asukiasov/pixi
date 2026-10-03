@@ -57,6 +57,9 @@ export function initCanvasSettings({ onResize, onRotate, onRename, root = docume
   const applyButton = root.querySelector('#canvas-settings-apply');
   const rotateCWButton = root.querySelector('#canvas-settings-rotate-cw');
   const rotateCCWButton = root.querySelector('#canvas-settings-rotate-ccw');
+  // Standalone-only (absent from lib/pixi.js's embed markup); callers
+  // already treat the returned controls as optional.
+  if (!toggleButton || !panel) return null;
 
   function close() {
     panel.classList.add('hidden');

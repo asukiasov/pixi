@@ -351,15 +351,17 @@ and can ship at any time.
     sync `layers`, `color-library`, `brushes`, `hide-interface`,
     `canvas-navigation` and `docs/ui-reference.md`. It needs the embed fix
     below first.
-- **Embed mount fix** (bug fix, no OpenSpec change needed): every
-  `Pixi.mount()` embed throws on mount, because `lib/pixi.js`'s markup
-  lacks `#record-toggle` (added by the timelapse change), which
-  `workspace.js` reads unconditionally. Found during 5d (task 5.9). The
-  switch-on does not depend on it (embeds don't load `app.js`, and
-  `lib/pixi.js` is untouched). After the switch-on, though, the broken
-  embed is the only place the docked layout runs. Fix it right after the
-  switch-on, and in any case before the docked-deletion change, which
-  has to verify that embeds still work.
+- **Embed mount fix** — done 2026-10-03 (bug fix, no OpenSpec change).
+  `Pixi.mount()` threw on mount because `lib/pixi.js`'s embed markup has
+  drifted behind `index.html`. The `#record-toggle` crash was the first
+  of several: symmetry, pixel-perfect, rectangle-fill, pencil-opacity,
+  brush-import and Canvas Settings each crashed on their missing toggles
+  too, and every stroke's `commit()` crashed in `renderLayersPanel()`
+  (the embed has no Layers panel). Each one now skips binding when its
+  element is absent, the same pattern hide-UI and the zoom pill already
+  used. The embed template was not extended, so embeds stay a reduced
+  editor. Verified headless: the embed example mounts docked and draws
+  with no console errors, and the standalone app is unchanged.
 - **5i — Palette merge** (independent): the fixed 16-swatch `#palette-row`
   becomes Color Library's default palette, and the row is removed. Its
   Rainbow swatch (Brush-only, mutually exclusive with the Color Library
@@ -376,9 +378,9 @@ Follow-ups after 5h:
   and the grid into its own card; revisit whether anything is still wanted
   after 5h.
 
-Status: in progress - 5a–5f and the 5h switch-on done.
-Next: the embed mount fix (bug fix), then 5g (Prefs), then the rest of
-5h (docked deletion).
+Status: in progress - 5a–5f, the 5h switch-on and the embed mount fix
+done.
+Next: 5g (Prefs), then the rest of 5h (docked deletion).
 Visual direction for all floating work: Pixelmator's airy, frosted-glass
 look (references in `docs/Screenshots of other apps/`), keeping Pixi's
 own panel arrangement.

@@ -1,5 +1,5 @@
 import { initNewCanvasScreen } from './new-canvas.js';
-import { initWorkspace, bindSliderWheel, setBrushesCardOpen } from './workspace.js';
+import { initWorkspace, bindSliderWheel, setBrushesCardOpen, onCanvasViewChange, currentSelectionClientRect } from './workspace.js';
 import { CanvasView } from './canvas-view.js';
 import { initGallery } from './gallery.js';
 import { loadProject } from './persistence.js';
@@ -16,6 +16,7 @@ import { resolveLayout, applyLayout, measureClearInsets } from './layout.js';
 import { initFloatingTopbar } from './floating-topbar.js';
 import { initToolOptionsBar } from './tool-options-bar.js';
 import { initPanelRail } from './panel-rail.js';
+import { initSelectionBar } from './selection-bar.js';
 
 const screens = {
   gallery: document.getElementById('screen-gallery'),
@@ -107,6 +108,11 @@ if (layout === 'floating') initToolOptionsBar({ bindSliderWheel });
 // (5e-cards-mini-rail). Once, for the same reason: it forwards to the
 // panels' own collapse controls and mirrors their state from each card.
 if (layout === 'floating') initPanelRail({ setBrushesCardOpen, closeLayersOpacityPopover });
+// Floating layout's selection action bar (5f-selection-action-bar). Once:
+// it forwards to the selection controls, and follows the view through
+// workspace.js's onCanvasViewChange, which outlives each project's view
+// handlers.
+if (layout === 'floating') initSelectionBar({ onCanvasViewChange, currentSelectionClientRect });
 
 // Color Library and Layers panels - wired once here, like every other
 // init* call in this file; their own onWorkspaceReset registrations

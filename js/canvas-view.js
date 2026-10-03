@@ -458,6 +458,22 @@ export class CanvasView {
     this.#applyTransform();
   }
 
+  /**
+   * The selection overlay's on-screen box (client pixels, at the current
+   * pan and zoom), or null while no selection is shown. Read by the
+   * floating selection action bar (5f-selection-action-bar).
+   */
+  getSelectionClientRect() {
+    if (this.#selectionOverlayEl.classList.contains('hidden')) return null;
+    return this.#selectionOverlayEl.getBoundingClientRect();
+  }
+
+  /**
+   * The single choke point for everything that moves the canvas or the
+   * selection overlay on screen: Hand-tool pan, zoom steps, wheel/keyboard
+   * zoom, pinch, panBy, presets, resetView and setSelectionRect all end
+   * here, so `onViewChange` (5f-selection-action-bar) fires for each.
+   */
   #applyTransform() {
     // (6-add-tile-seamless-preview) A single transform on #wrapperEl (the
     // tile-preview group) replaces the old per-element loop: #canvasEl
@@ -473,6 +489,7 @@ export class CanvasView {
     // getBoundingClientRect() already accounts for however many ancestor
     // transforms are stacked above an element.
     this.#wrapperEl.style.transform = `translate(${this.#panX}px, ${this.#panY}px) scale(${this.#scale})`;
+    this.#handlers.onViewChange?.();
   }
 
   #emitZoomChange() {

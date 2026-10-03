@@ -326,3 +326,60 @@ describe('floating panel cards + mini-rail (5e)', () => {
     }
   });
 });
+
+describe('floating selection action bar (5f)', () => {
+  const FLOATING = '.workspace-screen[data-layout="floating"]';
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const isGlass = (r) => r.selector.includes(GLASS);
+  const selectors = (r) => r.selector.split(/,(?![^(]*\))/).map((s) => s.trim());
+
+  test('every #selection-bar rule and the #selection-controls hide are scoped to the floating layout', () => {
+    const barRules = all.filter((r) => !isGlass(r) && /#selection-bar|\.selection-bar/.test(r.selector));
+    assert.ok(barRules.length >= 4);
+    for (const r of barRules) for (const sel of selectors(r)) assert.ok(sel.startsWith(FLOATING), sel);
+    const hide = all.filter((r) => r.selector.includes('#selection-controls') && /display:\s*none/.test(r.body));
+    assert.ok(hide.some((r) => r.selector === `${FLOATING} #selection-controls`));
+    for (const r of hide) assert.ok(r.selector.startsWith(FLOATING), r.selector);
+  });
+
+  test('outside the floating layout nothing styles the bar but .floating-only', () => {
+    const docked = all.filter((r) => !isGlass(r) && !r.selector.startsWith(FLOATING) && /selection-bar/.test(r.selector));
+    assert.deepEqual(docked.map((r) => r.selector), []);
+    assert.match(html, /id="selection-bar" class="selection-bar floating-only"/);
+  });
+
+  test('shown only while the source is, and hidden during selection drags', () => {
+    const hidden = all.find((r) => r.selector === `${FLOATING}:has(#selection-controls.hidden) #selection-bar`);
+    assert.match(hidden.body, /display:\s*none/);
+    const drag = all.find((r) => r.selector === `${FLOATING}[data-selection-drag] #selection-bar`);
+    assert.match(drag.body, /visibility:\s*hidden/);
+  });
+
+  test('the bar is fixed and positioned with logical insets only', () => {
+    const bar = all.find((r) => r.selector === `${FLOATING} #selection-bar`);
+    assert.match(bar.body, /position:\s*fixed/);
+    assert.match(bar.body, /inset-block-start:\s*var\(--selection-bar-y/);
+    assert.match(bar.body, /inset-inline-start:\s*var\(--selection-bar-x/);
+    assert.match(bar.body, /pointer-events:\s*auto/);
+    assert.doesNotMatch(bar.body, /(?<![-\w])(top|left|right|bottom)\s*:/);
+  });
+
+  test('buttons are at least the 44px rail size', () => {
+    const buttons = all.find((r) => r.selector === `${FLOATING} #selection-bar .tool-button`);
+    assert.match(buttons.body, /min-width:\s*var\(--rail-button-size\)/);
+    assert.match(buttons.body, /min-height:\s*var\(--rail-button-size\)/);
+  });
+
+  test('the glass lists name #selection-bar', () => {
+    const glass = all.filter(isGlass);
+    assert.ok(glass.length >= 5);
+    for (const r of glass) assert.ok(r.selector.includes('#selection-bar'), r.selector);
+  });
+
+  test('the docked .selection-controls rules are unchanged', () => {
+    const docked = all.filter((r) => /\.selection-controls/.test(r.selector) && !r.selector.startsWith(FLOATING));
+    assert.deepEqual(docked.map((r) => r.selector), ['.selection-controls', '.selection-controls .tool-button']);
+    assert.match(docked[0].body, /display:\s*flex/);
+    assert.match(docked[1].body, /flex:\s*1/);
+  });
+});

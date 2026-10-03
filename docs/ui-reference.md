@@ -66,7 +66,9 @@ float over it as frosted-glass cards, each in a slot class -
 `.slot-top` (top bar), `.slot-tools` (tool rail), `.slot-panels` (the
 panel mini-rail and the right sidebar's card column, 5e), `.slot-options` (a wrapper around the tool-options bar,
 `#palette-row`, `#selection-controls`, `.bottom-bar`; box-less
-`display: contents` in the docked layout). Fit/Fill/100% centre the
+`display: contents` in the docked layout; in the floating layout
+`#selection-controls` is hidden and shown through the selection action
+bar, 5f). Fit/Fill/100% centre the
 canvas in the area the visible cards leave clear. Without the parameter,
 and always in `Pixi.mount()` embeds, the docked layout below is
 unchanged. Phase 5 redesigns each region; 5h makes floating the default.
@@ -107,8 +109,8 @@ both layouts each tool button carries `aria-pressed`, kept in sync with
 **Floating tool-options bar (5d-tool-options-bar).** In the floating
 layout `.slot-options` is a see-through column of two cards at the
 bottom centre: `#tool-options-bar` on top, then `.options-card`
-(`#palette-row` and `#selection-controls`; `display: contents` in the
-docked layout). The bar shows only the active tool's options: Pencil
+(`#palette-row`, plus `#selection-controls`, which is `display: none`
+here since 5f; `display: contents` in the docked layout). The bar shows only the active tool's options: Pencil
 Size, Opacity, Pixel-perfect, Symmetry, Color Library sequence; Eraser
 the same without the sequence; Brush Spacing, Rotation, Symmetry,
 sequence; Rectangle Filled, 1:1; Select 1:1. It is hidden for Move,
@@ -158,6 +160,38 @@ previews (Colors), the layer opacity popover (Layers) or the brush
 editor (Brushes). Opening and closing cards never re-fits the canvas.
 Wiring: `js/panel-rail.js` (once, from `js/app.js`). The docked
 sidebar, its collapse-to-header and its top bar toggles are unchanged.
+
+**Floating selection action bar (5f-selection-action-bar).** In the
+floating layout Clear selection and Delete sit in `#selection-bar`, a
+small glass pill (borderless pill buttons, Pixelmator-style) next to the selection instead of in the palette card
+(so the palette card no longer changes height). Its two buttons are
+proxies (`data-forward`) for `#selection-clear-button` and
+`#selection-delete-button`. Show/hide is CSS-only: the bar is
+`display: none` while the source `#selection-controls` has `.hidden`
+(`:has()`), and `visibility: hidden` while the workspace screen has
+`data-selection-drag`, which `js/workspace.js` sets during a Select drag
+or a Move drag of a selection (in both layouts; only floating CSS reads
+it). The bar belongs to no slot, so Fit and `--slot-options-reach`
+ignore it. Placement is `placeSelectionBar()` (pure, unit-tested):
+centred on the selection overlay's on-screen box, above it with the
+float gap, flipped below when there's no room above, and otherwise (the
+selection fills the view, or is entirely outside the clear area) held
+at the nearest edge of the clear area. The bounds are the clear area
+left by the slot cards, or the screen inset by `--float-edge-*` when the
+clear area is too small for the bar. It follows the view through
+`CanvasView`'s `onViewChange` (fired from `#applyTransform()`, the one
+place every pan, zoom, pinch, preset and `setSelectionRect` goes
+through), which `js/workspace.js` fans out to `onCanvasViewChange()`
+listeners across project opens. The clear area is cached and
+re-measured only by a `ResizeObserver`/class observer on the slot cards
+and the screen. Position is written as `--selection-bar-x/y` (logical
+insets) in one rAF per change, `z-index` 15, just under the cards, so
+their popovers cover it. The bar is `role="group"` "Selection actions",
+44px tall buttons. Showing it never moves focus; if it hides while
+focused (keyboard Clear selection), focus moves to the active tool's
+rail button. 4d's structural rule hides it with the interface. Wiring:
+`js/selection-bar.js` (once, from `js/app.js`). Docked layout and embeds
+unchanged.
 
 ### Top bar (`.workspace-topbar`)
 

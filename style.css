@@ -2832,7 +2832,7 @@ span.layer-lock-icon {
    index.html, so the shared markup stays unchanged in the docked
    layout. */
 .glass,
-.workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar),
+.workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar),
 .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel) {
   isolation: isolate;
   background: var(--color-surface);
@@ -2843,13 +2843,13 @@ span.layer-lock-icon {
 
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   .glass,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar),
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar),
   .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel) {
     background: transparent;
   }
 
   .glass::before,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar)::before,
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar)::before,
   .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel)::before {
     content: '';
     position: absolute;
@@ -2865,20 +2865,21 @@ span.layer-lock-icon {
 
 @media (prefers-reduced-transparency: reduce) {
   .glass,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar),
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar),
   .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel) {
     background: var(--color-surface);
   }
 
   .glass::before,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar)::before,
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar)::before,
   .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel)::before {
     display: none;
   }
 }
 
 /* Groups the palette row, selection controls and zoom bar into the
-   `options` slot. In the docked layout it must not exist as a box, so
+   `options` slot (in the floating layout the selection controls are
+   hidden; #selection-bar shows them instead, see 5f below). In the docked layout it must not exist as a box, so
    its children stay direct flex items of .workspace-main as before. */
 .slot-options {
   display: contents;
@@ -3605,5 +3606,62 @@ span.layer-lock-icon {
 }
 
 .workspace-screen[data-layout="floating"] .panel-close:hover {
+  background: var(--color-surface-alt);
+}
+
+/* ------------------------------------------------------------------
+   Floating selection action bar (5f-selection-action-bar)
+
+   Clear selection and Delete, next to the selection instead of in the
+   palette card. Not in a slot: js/selection-bar.js writes its client
+   position into --selection-bar-x/y. Shown only while the source
+   #selection-controls is (its .hidden, read back with :has()), and kept
+   in place but invisible during a Select/Move drag (data-selection-drag,
+   js/workspace.js), so it can be placed before it reappears. 4d's
+   structural .ui-hidden rule hides it with the interface.
+   ------------------------------------------------------------------ */
+
+.workspace-screen[data-layout="floating"] #selection-controls {
+  display: none;
+}
+
+/* Below the slot cards (z-index 20), so popovers nested in them (the
+   colour picker, palette previews) cover it; above the canvas. */
+.workspace-screen[data-layout="floating"] #selection-bar {
+  position: fixed;
+  inset-block-start: var(--selection-bar-y, 0px);
+  inset-inline-start: var(--selection-bar-x, 0px);
+  z-index: 15;
+  display: flex;
+  gap: var(--float-gap);
+  padding: 0.3rem;
+  border-radius: 999px;
+  pointer-events: auto;
+}
+
+.workspace-screen[data-layout="floating"]:has(#selection-controls.hidden) #selection-bar {
+  display: none;
+}
+
+.workspace-screen[data-layout="floating"][data-selection-drag] #selection-bar {
+  visibility: hidden;
+}
+
+.workspace-screen[data-layout="floating"] #selection-bar .tool-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--rail-button-size);
+  min-height: var(--rail-button-size);
+  padding: 0 1.1rem;
+  flex: none;
+  border-radius: 999px;
+  background: transparent;
+  border-color: transparent;
+  white-space: nowrap;
+}
+
+/* A Pixelmator-style pill: borderless buttons that light up on hover. */
+.workspace-screen[data-layout="floating"] #selection-bar .tool-button:not(:disabled):hover {
   background: var(--color-surface-alt);
 }

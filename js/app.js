@@ -1,5 +1,5 @@
 import { initNewCanvasScreen } from './new-canvas.js';
-import { initWorkspace, bindSliderWheel } from './workspace.js';
+import { initWorkspace, bindSliderWheel, setBrushesCardOpen } from './workspace.js';
 import { CanvasView } from './canvas-view.js';
 import { initGallery } from './gallery.js';
 import { loadProject } from './persistence.js';
@@ -10,11 +10,12 @@ import { initMagneticHover } from './magnetic-hover.js';
 import { initThemeToggle } from './theme.js';
 import { initIconFontFallback } from './icon-font-fallback.js';
 import { initColorLibrary } from './color-library-ui.js';
-import { initLayers } from './layers-ui.js';
+import { initLayers, closeLayersOpacityPopover } from './layers-ui.js';
 import { initToasts } from './toast.js';
 import { resolveLayout, applyLayout, measureClearInsets } from './layout.js';
 import { initFloatingTopbar } from './floating-topbar.js';
 import { initToolOptionsBar } from './tool-options-bar.js';
+import { initPanelRail } from './panel-rail.js';
 
 const screens = {
   gallery: document.getElementById('screen-gallery'),
@@ -102,6 +103,10 @@ if (layout === 'floating') initFloatingTopbar({ theme });
 // same reason: its proxies forward to controls that exist for the whole
 // page lifetime, and it re-reads their values on every tool change.
 if (layout === 'floating') initToolOptionsBar({ bindSliderWheel });
+// Floating layout's panel mini-rail and card close buttons
+// (5e-cards-mini-rail). Once, for the same reason: it forwards to the
+// panels' own collapse controls and mirrors their state from each card.
+if (layout === 'floating') initPanelRail({ setBrushesCardOpen, closeLayersOpacityPopover });
 
 // Color Library and Layers panels - wired once here, like every other
 // init* call in this file; their own onWorkspaceReset registrations

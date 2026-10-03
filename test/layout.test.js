@@ -65,6 +65,24 @@ describe('clearInsets', () => {
     assert.equal(insets.bottom, 120);
   });
 
+  // 5e-cards-mini-rail: the panels slot is a rail against the edge plus a
+  // column of cards beside it; the column's left edge decides the inset.
+  test('mini-rail and card column: the column reaches furthest', () => {
+    const insets = clearInsets(container, [
+      { slot: 'panels', rect: rect(928, 70, 62, 160) },
+      { slot: 'panels', rect: rect(680, 70, 240, 500) },
+    ], 8);
+    assert.equal(insets.right, 328);
+  });
+
+  test('mini-rail with every card closed: the rail decides the inset', () => {
+    const insets = clearInsets(container, [
+      { slot: 'panels', rect: rect(928, 70, 62, 160) },
+      { slot: 'panels', rect: rect(680, 70, 240, 0) },
+    ], 8);
+    assert.equal(insets.right, 80);
+  });
+
   test('works with a container not at the page origin', () => {
     const offset = { left: 100, top: 50, right: 1100, bottom: 850, width: 1000, height: 800 };
     const insets = clearInsets(offset, [{ slot: 'top', rect: rect(110, 60, 980, 50) }], 0);

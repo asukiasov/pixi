@@ -35,7 +35,8 @@ function rules(source) {
 }
 
 const all = rules(css);
-const GLASS = '.slot-top, .slot-tools, .slot-panels, .options-card, .tool-options-bar';
+const GLASS = '.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar';
+const GLASS_CARDS = '.right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel)';
 
 describe('glass card (5a)', () => {
   test('the opaque base sits outside any at-rule and has no blur', () => {
@@ -258,5 +259,70 @@ describe('floating tool-options bar (5d)', () => {
 
   test('the Pencil/Eraser flyout slot variables are gone', () => {
     assert.doesNotMatch(css, /--slot-tools-flyout/);
+  });
+});
+
+describe('floating panel cards + mini-rail (5e)', () => {
+  const FLOATING = '.workspace-screen[data-layout="floating"]';
+  const NEW = ['.panel-rail', '.panel-close', '--slot-cards-', '--panel-card-min-height'];
+  const isGlass = (r) => r.selector.includes(GLASS);
+
+  test('every new rail, card, close and column rule is scoped to the floating layout', () => {
+    const newRules = all.filter((r) => !isGlass(r) && (NEW.some((s) => r.selector.includes(s) || r.body.includes(s))
+      || r.selector.includes('.right-sidebar >') || /\.right-sidebar\s*>\s*\.collapsed/.test(r.selector)));
+    assert.ok(newRules.length >= 8);
+    for (const r of newRules) {
+      for (const sel of r.selector.split(/,(?![^(]*\))/)) assert.ok(sel.trim().startsWith(FLOATING), sel.trim());
+    }
+  });
+
+  test('outside the floating layout nothing styles .panel-rail, .panel-close or a closed Brushes card', () => {
+    const docked = all.filter((r) => !r.selector.startsWith(FLOATING) && !isGlass(r)
+      && /\.panel-rail|\.panel-close|\.brushes-panel\.collapsed/.test(r.selector));
+    assert.deepEqual(docked.map((r) => r.selector), []);
+  });
+
+  test('the glass lists name the rail and the three cards, not the whole sidebar', () => {
+    assert.doesNotMatch(css, /:is\([^)]*\.slot-panels[^)]*\)/);
+    const glass = all.filter(isGlass);
+    assert.ok(glass.length >= 5);
+    for (const r of glass) assert.ok(r.selector.includes(GLASS_CARDS), r.selector);
+  });
+
+  test('the card column is a see-through, pass-through flex column', () => {
+    const column = all.find((r) => r.selector === `${FLOATING} .right-sidebar` && /flex-direction:\s*column/.test(r.body));
+    assert.match(column.body, /pointer-events:\s*none/);
+    assert.match(column.body, /gap:\s*var\(--float-gap\)/);
+    assert.match(column.body, /background:\s*transparent/);
+  });
+
+  test('rail and column positions use only logical insets and their slot variables', () => {
+    const rail = all.find((r) => r.selector === `${FLOATING} .panel-rail`);
+    assert.match(rail.body, /inset-inline-end:\s*var\(--slot-panels-end\)/);
+    assert.match(rail.body, /inset-inline-start:\s*var\(--slot-panels-start\)/);
+    const column = all.find((r) => r.selector === `${FLOATING} .right-sidebar` && /inset-inline-end/.test(r.body));
+    assert.match(column.body, /inset-inline-end:\s*var\(--slot-cards-end\)/);
+    assert.match(column.body, /inset-inline-start:\s*var\(--slot-cards-start\)/);
+  });
+
+  test('a closed card is not displayed, and the chevron gives way to the close button', () => {
+    assert.ok(all.some((r) => r.selector === `${FLOATING} .right-sidebar > .collapsed` && /display:\s*none/.test(r.body)));
+    assert.ok(all.some((r) => r.selector === `${FLOATING} .panel-collapse-chevron` && /display:\s*none/.test(r.body)));
+  });
+
+  test('the top bar Layers and right-sidebar toggles are hidden only in the floating layout', () => {
+    const hiding = all.filter((r) => r.selector.startsWith(FLOATING) && /display:\s*none/.test(r.body));
+    for (const id of ['#layers-panel-toggle', '#right-sidebar-toggle']) assert.ok(hiding.some((r) => r.selector.includes(id)), id);
+    const elsewhere = all.filter((r) => !r.selector.startsWith(FLOATING) && /display:\s*none/.test(r.body)
+      && /#layers-panel-toggle|#right-sidebar-toggle/.test(r.selector));
+    assert.deepEqual(elsewhere.map((r) => r.selector), []);
+  });
+
+  test('rail and close buttons use the 44px rail size', () => {
+    for (const sel of [`${FLOATING} .panel-rail .tool-button`, `${FLOATING} .panel-close`]) {
+      const r = all.find((x) => x.selector === sel);
+      assert.match(r.body, /width:\s*var\(--rail-button-size\)/, sel);
+      assert.match(r.body, /height:\s*var\(--rail-button-size\)/, sel);
+    }
   });
 });

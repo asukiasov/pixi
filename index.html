@@ -115,7 +115,9 @@
       <button type="button" id="symmetry-toggle" class="tool-button icon-button magnetic-hover" data-symmetry-mode="off" aria-label="Symmetry: off" data-tooltip="Symmetry: off">
         <span class="material-symbols-outlined">flip</span>
       </button>
-      <!-- Layers panel toggle - wired in js/layers-ui.js. -->
+      <!-- Layers panel toggle - wired in js/layers-ui.js. Hidden in the
+           floating layout, where the Layers button in #panel-rail
+           forwards to it (5e-cards-mini-rail). -->
       <button type="button" id="layers-panel-toggle" class="tool-button icon-button active magnetic-hover" aria-label="Layers" data-tooltip="Layers">
         <span class="material-symbols-outlined">layers</span>
       </button>
@@ -160,7 +162,9 @@
            sidebar (Color Library + Brushes + Layers together), independent
            of each panel's own collapsed state (#layers-panel-toggle above
            only affects the Layers panel). Right end of the top bar,
-           closest to the panel it controls - see js/workspace.js. -->
+           closest to the panel it controls - see js/workspace.js.
+           Hidden in the floating layout, with no replacement: each card
+           closes on its own (5e-cards-mini-rail). -->
       <button type="button" id="right-sidebar-toggle" class="tool-button icon-button active magnetic-hover" aria-label="Right panel" data-tooltip="Right panel">
         <span class="material-symbols-outlined">dock_to_right</span>
       </button>
@@ -605,7 +609,27 @@
          (tool-scoped, see js/workspace.js) → Layers - each section has
          its own collapse-to-header state (click its heading), and the
          whole sidebar has its own show/hide (#right-sidebar-toggle
-         above), independent of one another. -->
+         above), independent of one another.
+         Floating layout (5e-cards-mini-rail): this becomes a see-through
+         column and each section is its own card, open or closed (the
+         collapsed state means closed), opened from #panel-rail below and
+         closed from its header's .panel-close. -->
+    <!-- Panel mini-rail (5e-cards-mini-rail), floating layout only. Each
+         button opens/closes one card; its state is mirrored back from the
+         card's class by js/panel-rail.js. Sources, for 5h: Colors forwards
+         to #color-library-header, Layers to #layers-panel-toggle, Brushes
+         calls setBrushesCardOpen (js/workspace.js). -->
+    <nav id="panel-rail" class="panel-rail slot-panels floating-only" aria-label="Panels">
+      <button type="button" class="tool-button icon-button" aria-controls="color-library-panel" aria-expanded="true" data-forward="color-library-header" aria-label="Colors" data-tooltip="Colors">
+        <span class="material-symbols-outlined" aria-hidden="true">palette</span>
+      </button>
+      <button type="button" class="tool-button icon-button" aria-controls="brushes-panel" aria-expanded="false" aria-label="Brushes" data-tooltip="Brushes">
+        <span class="material-symbols-outlined" aria-hidden="true">brush</span>
+      </button>
+      <button type="button" class="tool-button icon-button" aria-controls="layers-panel" aria-expanded="true" data-forward="layers-panel-toggle" aria-label="Layers" data-tooltip="Layers">
+        <span class="material-symbols-outlined" aria-hidden="true">layers</span>
+      </button>
+    </nav>
     <aside id="right-sidebar" class="right-sidebar slot-panels">
       <!-- Named, persisted palettes of user-added colors - global and
            cross-session, unlike the fixed preset palette-row. Wired in
@@ -615,6 +639,9 @@
           <div class="panel-header-top">
             <h2>Color Library</h2>
             <span class="material-symbols-outlined panel-collapse-chevron">expand_more</span>
+            <button type="button" class="tool-button icon-button panel-close floating-only" aria-label="Close Color Library" data-tooltip="Close">
+              <span class="material-symbols-outlined" aria-hidden="true">close</span>
+            </button>
           </div>
           <div class="panel-header-actions color-library-header-actions">
             <!-- Adds the current Foreground color to the active palette
@@ -723,6 +750,9 @@
       <div id="brushes-panel" class="brushes-panel">
         <div class="brushes-panel-header">
           <h2>Brushes</h2>
+          <button type="button" class="tool-button icon-button panel-close floating-only" aria-label="Close Brushes" data-tooltip="Close">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
         </div>
         <!-- .brush-stroke-settings rows are hidden in the floating layout,
              where the tool-options bar shows them as sliders. -->
@@ -791,6 +821,9 @@
           <div class="panel-header-top">
             <h2>Layers</h2>
             <span class="material-symbols-outlined panel-collapse-chevron">expand_more</span>
+            <button type="button" class="tool-button icon-button panel-close floating-only" aria-label="Close Layers" data-tooltip="Close">
+              <span class="material-symbols-outlined" aria-hidden="true">close</span>
+            </button>
           </div>
           <div class="panel-header-actions layers-panel-header-actions">
             <!-- reference-image-layer: trace-over guide upload, disabled once

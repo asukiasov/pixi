@@ -2832,7 +2832,8 @@ span.layer-lock-icon {
    index.html, so the shared markup stays unchanged in the docked
    layout. */
 .glass,
-.workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .options-card, .tool-options-bar) {
+.workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar),
+.workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel) {
   isolation: isolate;
   background: var(--color-surface);
   border: 1px solid var(--glass-border);
@@ -2842,12 +2843,14 @@ span.layer-lock-icon {
 
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   .glass,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .options-card, .tool-options-bar) {
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar),
+  .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel) {
     background: transparent;
   }
 
   .glass::before,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .options-card, .tool-options-bar)::before {
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar)::before,
+  .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel)::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -2862,12 +2865,14 @@ span.layer-lock-icon {
 
 @media (prefers-reduced-transparency: reduce) {
   .glass,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .options-card, .tool-options-bar) {
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar),
+  .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel) {
     background: var(--color-surface);
   }
 
   .glass::before,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .options-card, .tool-options-bar)::before {
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar)::before,
+  .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel)::before {
     display: none;
   }
 }
@@ -2905,6 +2910,10 @@ span.layer-lock-icon {
   --slot-tools-end: auto;
   --slot-panels-start: auto;
   --slot-panels-end: var(--float-edge-end);
+  /* The panel cards sit beside the mini-rail, toward the canvas
+     (5e-cards-mini-rail). 5g's handedness flip swaps this pair too. */
+  --slot-cards-start: auto;
+  --slot-cards-end: calc(var(--float-edge-end) + var(--slot-rail-width) + var(--float-gap));
   position: relative;
   overflow: hidden;
 }
@@ -2946,26 +2955,29 @@ span.layer-lock-icon {
   max-height: calc(100% - var(--float-below-top) - var(--float-edge-bottom));
 }
 
-.workspace-screen[data-layout="floating"] .slot-panels {
+/* The card column (5e-cards-mini-rail): see "Floating panel cards" below. */
+.workspace-screen[data-layout="floating"] .right-sidebar {
   top: var(--float-below-top);
-  inset-inline-start: var(--slot-panels-start);
-  inset-inline-end: var(--slot-panels-end);
+  inset-inline-start: var(--slot-cards-start);
+  inset-inline-end: var(--slot-cards-end);
   width: 15rem;
   height: auto;
-  max-height: calc(100% - var(--float-below-top) - var(--float-edge-bottom));
+  /* Stops above the bottom cards where they reach under the column
+     (--slot-options-reach, measured by js/panel-rail.js; 0 otherwise). */
+  max-height: calc(100% - var(--float-below-top) - max(var(--float-edge-bottom), var(--slot-options-reach, 0px) + var(--float-gap)));
 }
 
 /* A floating card collapses by fading out, not by animating its width -
    it no longer shares a row with the canvas, so there's nothing to push.
    setRightSidebarVisible (js/workspace.js) still sets `inert`. */
-.workspace-screen[data-layout="floating"] .slot-panels.right-sidebar-collapsed {
+.workspace-screen[data-layout="floating"] .right-sidebar.right-sidebar-collapsed {
   width: 15rem;
   visibility: hidden;
   opacity: 0;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .workspace-screen[data-layout="floating"] .slot-panels {
+  .workspace-screen[data-layout="floating"] .right-sidebar {
     transition: opacity 0.2s ease, visibility 0.2s;
   }
 }
@@ -3452,4 +3464,146 @@ span.layer-lock-icon {
 .workspace-screen[data-layout="floating"] .tool-options-filled[aria-pressed="true"] .tool-options-filled-off,
 .workspace-screen[data-layout="floating"] .tool-options-filled:not([aria-pressed="true"]) .tool-options-filled-on {
   display: none;
+}
+
+/* ------------------------------------------------------------------
+   Floating panel cards + mini-rail (5e-cards-mini-rail)
+
+   #right-sidebar becomes a see-through column and Color Library,
+   Brushes and Layers are each their own card in it, beside #panel-rail.
+   A card is open or closed: .collapsed (the panels' existing collapse
+   state, see js/panel-rail.js) means not displayed, and the header's
+   chevron gives way to a close button. When the open cards don't fit,
+   flex shrink shares the height and each card scrolls inside itself;
+   no measuring. The top bar's Layers and right-sidebar toggles are
+   hidden: the rail and the close buttons replace them.
+   ------------------------------------------------------------------ */
+
+.workspace-screen[data-layout="floating"] :is(#layers-panel-toggle, #right-sidebar-toggle) {
+  display: none;
+}
+
+.workspace-screen[data-layout="floating"] .panel-rail {
+  top: var(--float-below-top);
+  inset-inline-start: var(--slot-panels-start);
+  inset-inline-end: var(--slot-panels-end);
+  width: var(--slot-rail-width);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: var(--rail-padding);
+}
+
+.workspace-screen[data-layout="floating"] .panel-rail .tool-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--rail-button-size);
+  height: var(--rail-button-size);
+  padding: 0;
+  flex: none;
+}
+
+/* Open = an active tool's look. */
+.workspace-screen[data-layout="floating"] .panel-rail .tool-button[aria-expanded="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.workspace-screen[data-layout="floating"] .panel-rail .tool-button[aria-expanded="true"]:hover {
+  background: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+}
+
+/* Unavailable (Brushes outside the Brush tool): dimmed but focusable,
+   so its tooltip can explain why. */
+.workspace-screen[data-layout="floating"] .panel-rail .tool-button[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.workspace-screen[data-layout="floating"] .right-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--float-gap);
+  background: transparent;
+  border: none;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.workspace-screen[data-layout="floating"] .right-sidebar > * {
+  pointer-events: auto;
+}
+
+.workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel) {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  min-height: var(--panel-card-min-height);
+  max-height: none;
+  overflow: hidden;
+}
+
+/* Floor for the shared-height shrink: the card's header stays whole. */
+.workspace-screen[data-layout="floating"] :is(.color-library-panel, .layers-panel) {
+  --panel-card-min-height: 6rem;
+}
+
+.workspace-screen[data-layout="floating"] .brushes-panel {
+  --panel-card-min-height: 3.5rem;
+}
+
+/* Colors can't push Layers off the screen on a long palette. */
+.workspace-screen[data-layout="floating"] .right-sidebar > .color-library-panel {
+  max-height: 40vh;
+}
+
+.workspace-screen[data-layout="floating"] .right-sidebar > * > :is(.panel-header, .brushes-panel-header, .brushes-panel-toolbar) {
+  flex: none;
+}
+
+.workspace-screen[data-layout="floating"] :is(.color-library-body, .layers-panel-body, .brushes-panel-grid, .brush-editor-panel) {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.workspace-screen[data-layout="floating"] .right-sidebar > .collapsed {
+  display: none;
+}
+
+/* Only the close button (and the header's other controls) take pointer
+   input; a tap on the title doesn't close the card. */
+.workspace-screen[data-layout="floating"] .right-sidebar .panel-header {
+  pointer-events: none;
+  cursor: default;
+}
+
+.workspace-screen[data-layout="floating"] .right-sidebar .panel-header :is(button, select, input) {
+  pointer-events: auto;
+}
+
+.workspace-screen[data-layout="floating"] .panel-collapse-chevron {
+  display: none;
+}
+
+.workspace-screen[data-layout="floating"] .panel-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--rail-button-size);
+  height: var(--rail-button-size);
+  margin-inline-start: auto;
+  padding: 0;
+  flex: none;
+  background: transparent;
+  border: none;
+}
+
+.workspace-screen[data-layout="floating"] .panel-close:hover {
+  background: var(--color-surface-alt);
 }

@@ -639,6 +639,20 @@ function closeBrushEditor() {
 }
 
 /**
+ * Opens or closes the Brushes card in the floating layout
+ * (5e-cards-mini-rail), from js/panel-rail.js. Two independent classes
+ * decide whether the panel shows: `.hidden` is the tool's (Brush only,
+ * applyToolScopedUI), `.collapsed` is the user's (this). So a closed card
+ * stays closed across tool switches, and an open one reappears with the
+ * Brush tool. Only floating CSS reads `.collapsed` here, and nothing in
+ * the docked layout calls this with `false`.
+ */
+export function setBrushesCardOpen(open) {
+  brushesPanel.classList.toggle('collapsed', !open);
+  if (!open) closeBrushEditor();
+}
+
+/**
  * Wires the editor's width/height inputs and paint/erase-by-drag on the
  * grid. Listens on the grid container (not per-cell pointerenter) and
  * resolves the cell under the pointer via elementFromPoint on every move —
@@ -890,7 +904,8 @@ function bindTooltips() {
       // Floating rail (5c-floating-tool-rail): open on whichever side of
       // the rail faces the canvas, measured from the rail's edge, so a
       // rail mirrored to the right edge (5g) opens inward too.
-      const floatingRail = isTopbar ? null : target.closest('.workspace-screen[data-layout="floating"] .tools-sidebar');
+      // The panel mini-rail (5e-cards-mini-rail) is a rail too.
+      const floatingRail = isTopbar ? null : target.closest('.workspace-screen[data-layout="floating"] :is(.tools-sidebar, .panel-rail)');
       const railRect = floatingRail?.getBoundingClientRect();
       const railOpensStart = floatingRail !== null && canvasSide(railRect, window.innerWidth) === 'start';
       // Floating tool-options bar (5d-tool-options-bar): it sits at the
@@ -2152,6 +2167,7 @@ export function initWorkspace({
   renderBrushesPanel();
   root.querySelector('#brush-spacing').value = '1';
   root.querySelector('#brush-rotation').value = '0';
+  setBrushesCardOpen(true);
   setRightSidebarVisible(true);
   // A re-init while hidden (e.g. an embed-style loadImage(), or opening
   // another project) already fit the view to the full-size container;

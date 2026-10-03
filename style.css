@@ -393,12 +393,13 @@ textarea,
    horizontal / vertical / both), styled with the same .active accent
    treatment as every other topbar toggle plus a small letter badge (H/V/4)
    so the three "on" states stay visually distinguishable from each other,
-   not just from off - see js/symmetry-ui.js. */
-#symmetry-toggle {
+   not just from off - see js/symmetry-ui.js. The floating tool-options
+   bar's proxy (.tool-options-symmetry, 5d) draws the same badge. */
+:is(#symmetry-toggle, .tool-options-symmetry) {
   position: relative;
 }
 
-#symmetry-toggle::after {
+:is(#symmetry-toggle, .tool-options-symmetry)::after {
   content: '';
   position: absolute;
   bottom: 0.15rem;
@@ -417,17 +418,17 @@ textarea,
   transition: opacity 150ms ease-out;
 }
 
-#symmetry-toggle[data-symmetry-mode='horizontal']::after {
+:is(#symmetry-toggle, .tool-options-symmetry)[data-symmetry-mode='horizontal']::after {
   content: 'H';
   opacity: 1;
 }
 
-#symmetry-toggle[data-symmetry-mode='vertical']::after {
+:is(#symmetry-toggle, .tool-options-symmetry)[data-symmetry-mode='vertical']::after {
   content: 'V';
   opacity: 1;
 }
 
-#symmetry-toggle[data-symmetry-mode='both']::after {
+:is(#symmetry-toggle, .tool-options-symmetry)[data-symmetry-mode='both']::after {
   content: '4';
   opacity: 1;
 }
@@ -693,6 +694,19 @@ textarea,
   transform: translateX(-50%);
   border-right-color: transparent;
   border-bottom-color: var(--color-surface);
+}
+
+/* Floating tool-options bar (5d): it sits at the bottom edge, so its
+   tooltips open above, arrow pointing down at the target. The arrow's x
+   is set by bindTooltips, since the bubble may be clamped to the
+   viewport. */
+.tool-tooltip.above::after {
+  right: auto;
+  left: var(--tooltip-arrow-x, 50%);
+  top: 100%;
+  transform: translateX(-50%);
+  border-right-color: transparent;
+  border-top-color: var(--color-surface);
 }
 
 /* .right-sidebar buttons sit near the viewport's right edge - a tooltip
@@ -2818,7 +2832,7 @@ span.layer-lock-icon {
    index.html, so the shared markup stays unchanged in the docked
    layout. */
 .glass,
-.workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .slot-options, .pencil-options) {
+.workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .options-card, .tool-options-bar) {
   isolation: isolate;
   background: var(--color-surface);
   border: 1px solid var(--glass-border);
@@ -2828,12 +2842,12 @@ span.layer-lock-icon {
 
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   .glass,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .slot-options, .pencil-options) {
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .options-card, .tool-options-bar) {
     background: transparent;
   }
 
   .glass::before,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .slot-options, .pencil-options)::before {
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .options-card, .tool-options-bar)::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -2848,12 +2862,12 @@ span.layer-lock-icon {
 
 @media (prefers-reduced-transparency: reduce) {
   .glass,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .slot-options, .pencil-options) {
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .options-card, .tool-options-bar) {
     background: var(--color-surface);
   }
 
   .glass::before,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .slot-options, .pencil-options)::before {
+  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .slot-panels, .options-card, .tool-options-bar)::before {
     display: none;
   }
 }
@@ -2862,6 +2876,12 @@ span.layer-lock-icon {
    `options` slot. In the docked layout it must not exist as a box, so
    its children stay direct flex items of .workspace-main as before. */
 .slot-options {
+  display: contents;
+}
+
+/* The palette card inside the options slot (5d-tool-options-bar). Same
+   reasoning: no box in the docked layout. */
+.options-card {
   display: contents;
 }
 
@@ -2883,8 +2903,6 @@ span.layer-lock-icon {
   --float-below-top: calc(var(--float-edge-top) + var(--slot-top-height) + var(--float-gap));
   --slot-tools-start: var(--float-edge-start);
   --slot-tools-end: auto;
-  --slot-tools-flyout-start: calc(var(--float-edge-start) + var(--slot-rail-width) + var(--float-gap));
-  --slot-tools-flyout-end: auto;
   --slot-panels-start: auto;
   --slot-panels-end: var(--float-edge-end);
   position: relative;
@@ -2928,14 +2946,6 @@ span.layer-lock-icon {
   max-height: calc(100% - var(--float-below-top) - var(--float-edge-bottom));
 }
 
-/* Pencil/Eraser options sit beside the rail, in the same slot. */
-.workspace-screen[data-layout="floating"] .canvas-container > .pencil-options {
-  top: var(--float-below-top);
-  inset-inline-start: var(--slot-tools-flyout-start);
-  inset-inline-end: var(--slot-tools-flyout-end);
-  z-index: 20;
-}
-
 .workspace-screen[data-layout="floating"] .slot-panels {
   top: var(--float-below-top);
   inset-inline-start: var(--slot-panels-start);
@@ -2960,6 +2970,11 @@ span.layer-lock-icon {
   }
 }
 
+/* A see-through column of two cards (5d-tool-options-bar): the
+   tool-options bar on top, the palette card below. Its box spans both
+   while the bar shows, so measureClearInsets fits the canvas above
+   whatever is visible. The gap between the cards passes pointer input
+   through to the canvas. */
 .workspace-screen[data-layout="floating"] .slot-options {
   bottom: var(--float-edge-bottom);
   inset-inline: 0;
@@ -2968,12 +2983,26 @@ span.layer-lock-icon {
   max-width: calc(100% - 2 * (var(--float-edge-start) + var(--slot-rail-width) + var(--float-gap)));
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: var(--float-gap);
+  pointer-events: none;
+}
+
+.workspace-screen[data-layout="floating"] .slot-options > * {
+  pointer-events: auto;
+}
+
+.workspace-screen[data-layout="floating"] .options-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
   overflow: hidden;
 }
 
-/* Inside the options card the three bars drop their own docked chrome -
-   the card supplies the surface. */
-.workspace-screen[data-layout="floating"] .slot-options > * {
+/* Inside the palette card the bars drop their own docked chrome - the
+   card supplies the surface. */
+.workspace-screen[data-layout="floating"] .options-card > * {
   background: transparent;
   border: none;
 }
@@ -3176,9 +3205,8 @@ span.layer-lock-icon {
    Floating tool rail (5c-floating-tool-rail)
 
    The rail hugs its contents below the top bar. Only .tool-rail-tools
-   scrolls, so the tool-scoped toggles and the color swatches (moved to
-   the foot with `order`, without touching the shared markup) always
-   stay visible. The rail itself no longer clips, so magnetic hover and
+   scrolls, so the color swatches at the foot always stay visible (the
+   tool-scoped toggles moved to the tool-options bar in 5d). The rail itself no longer clips, so magnetic hover and
    the Swap/Reset hit areas can't be cut off at its edge.
    ------------------------------------------------------------------ */
 
@@ -3209,19 +3237,10 @@ span.layer-lock-icon {
   display: none;
 }
 
-.workspace-screen[data-layout="floating"] :is(.tool-rail-tools, .rectangle-options) .tool-button {
+.workspace-screen[data-layout="floating"] .tool-rail-tools .tool-button {
   width: var(--rail-button-size);
   height: var(--rail-button-size);
   flex: none;
-}
-
-.workspace-screen[data-layout="floating"] .tools-sidebar .rectangle-options {
-  order: 1;
-  flex: none;
-}
-
-.workspace-screen[data-layout="floating"] .tools-sidebar .fg-bg-swatches {
-  order: 2;
 }
 
 /* Swatch pair: 44px square, each face 28px (docked: 27.2px). The two
@@ -3279,4 +3298,158 @@ span.layer-lock-icon {
 .workspace-screen[data-layout="floating"] .reset-corner {
   bottom: calc(-1 * var(--rail-padding) - 1px);
   inset-inline-start: calc(-1 * var(--rail-padding) - 1px);
+}
+
+/* ------------------------------------------------------------------
+   Floating tool-options bar (5d-tool-options-bar)
+
+   One card above the palette card whose groups follow the active tool.
+   Show/hide is CSS-only: each group lists its tools in data-tools, and
+   js/workspace.js's applyToolScopedUI() records data-current-tool on the
+   workspace screen. The controls are proxies for the existing ones
+   (js/tool-options-bar.js), which are hidden here along with the other
+   places they used to show: the Pencil/Eraser flyout, the rail toggles,
+   the top bar's Pixel-perfect/Symmetry and the Brushes panel's
+   Spacing/Rotation rows.
+   ------------------------------------------------------------------ */
+
+.workspace-screen[data-layout="floating"] :is(
+  #pencil-options,
+  #rectangle-options,
+  #square-constraint-options,
+  #library-sequence-options,
+  #pixel-perfect-toggle,
+  #symmetry-toggle,
+  .brush-stroke-settings
+) {
+  display: none;
+}
+
+.workspace-screen[data-layout="floating"] .tool-options-bar {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0 0.75rem;
+  max-width: 100%;
+  padding: 0.25rem 0.75rem;
+}
+
+/* Tools with no options: no bar at all. Together with the data-tools
+   lists in index.html this names every tool exactly once (checked in
+   test/floating-layout-css.test.js). */
+.workspace-screen[data-layout="floating"]:is(
+  [data-current-tool="move"],
+  [data-current-tool="bucket"],
+  [data-current-tool="line"],
+  [data-current-tool="hand"],
+  [data-current-tool="eyedropper"]
+) .tool-options-bar {
+  display: none;
+}
+
+.workspace-screen[data-layout="floating"] .tool-options-group {
+  display: none;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.workspace-screen[data-layout="floating"][data-current-tool="pencil"] .tool-options-group[data-tools~="pencil"],
+.workspace-screen[data-layout="floating"][data-current-tool="eraser"] .tool-options-group[data-tools~="eraser"],
+.workspace-screen[data-layout="floating"][data-current-tool="brush"] .tool-options-group[data-tools~="brush"],
+.workspace-screen[data-layout="floating"][data-current-tool="rectangle"] .tool-options-group[data-tools~="rectangle"],
+.workspace-screen[data-layout="floating"][data-current-tool="selection"] .tool-options-group[data-tools~="selection"] {
+  display: flex;
+}
+
+.workspace-screen[data-layout="floating"] .tool-options-slider {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.workspace-screen[data-layout="floating"] .tool-options-label {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.workspace-screen[data-layout="floating"] .tool-options-readout {
+  width: 2.6rem;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A 44px-tall hit box around a thin track. */
+.workspace-screen[data-layout="floating"] .tool-options-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 7rem;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.workspace-screen[data-layout="floating"] .tool-options-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+}
+
+.workspace-screen[data-layout="floating"] .tool-options-slider input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+}
+
+.workspace-screen[data-layout="floating"] .tool-options-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  margin-top: calc(2px - 0.5rem);
+  border: none;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.workspace-screen[data-layout="floating"] .tool-options-slider input[type="range"]::-moz-range-thumb {
+  width: 1rem;
+  height: 1rem;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.workspace-screen[data-layout="floating"] .tool-options-slider input[type="range"]:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+  border-radius: 0.4rem;
+}
+
+.workspace-screen[data-layout="floating"] .tool-options-bar .tool-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--rail-button-size);
+  height: var(--rail-button-size);
+  padding: 0;
+  flex: none;
+}
+
+/* Pressed = the sources' .tool-button.active look. */
+.workspace-screen[data-layout="floating"] .tool-options-bar .tool-button[aria-pressed="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.workspace-screen[data-layout="floating"] .tool-options-bar .tool-button[aria-pressed="true"]:not(:disabled):hover {
+  background: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+}
+
+.workspace-screen[data-layout="floating"] .tool-options-filled[aria-pressed="true"] .tool-options-filled-off,
+.workspace-screen[data-layout="floating"] .tool-options-filled:not([aria-pressed="true"]) .tool-options-filled-on {
+  display: none;
 }

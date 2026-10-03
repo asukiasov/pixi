@@ -502,11 +502,84 @@
       <!-- `options` slot (5a-floating-shell): one floating card in the
            floating layout; display:contents (no box) in the docked one. -->
       <div class="slot-options">
-        <div id="palette-row" class="palette-row"></div>
+        <!-- Tool-options bar (5d-tool-options-bar), floating layout only.
+             Every control is a proxy for an existing control
+             (data-forward="<source id>"), wired in js/tool-options-bar.js;
+             slider ranges are copied from the source at init. Which groups
+             show is CSS-only: data-tools here, data-current-tool on the
+             workspace screen. 5h deletes the sources and makes these the
+             real controls. -->
+        <div id="tool-options-bar" class="tool-options-bar floating-only" role="group" aria-label="Tool options">
+          <div class="tool-options-group" data-tools="pencil eraser">
+            <!-- Source: #pencil-size-slider (js/workspace.js). -->
+            <div class="tool-options-slider">
+              <label class="tool-options-label" for="tool-options-size">Size</label>
+              <input type="range" id="tool-options-size" data-forward="pencil-size-slider" data-forward-event="input" />
+              <span class="tool-options-readout" aria-hidden="true"></span>
+            </div>
+            <!-- Source: #pencil-opacity-slider (js/pencil-opacity-ui.js). -->
+            <div class="tool-options-slider">
+              <label class="tool-options-label" for="tool-options-opacity">Opacity</label>
+              <input type="range" id="tool-options-opacity" data-forward="pencil-opacity-slider" data-forward-event="input" />
+              <span class="tool-options-readout" aria-hidden="true"></span>
+            </div>
+          </div>
+          <div class="tool-options-group" data-tools="brush">
+            <!-- Source: #brush-spacing (js/workspace.js, Brushes panel). -->
+            <div class="tool-options-slider">
+              <label class="tool-options-label" for="tool-options-spacing">Spacing</label>
+              <input type="range" id="tool-options-spacing" data-forward="brush-spacing" data-forward-event="change" data-unit="px" />
+              <span class="tool-options-readout" aria-hidden="true"></span>
+            </div>
+            <!-- Source: #brush-rotation (js/workspace.js, Brushes panel). -->
+            <div class="tool-options-slider">
+              <label class="tool-options-label" for="tool-options-rotation">Rotation</label>
+              <input type="range" id="tool-options-rotation" data-forward="brush-rotation" data-forward-event="change" data-unit="°" />
+              <span class="tool-options-readout" aria-hidden="true"></span>
+            </div>
+          </div>
+          <div class="tool-options-group" data-tools="rectangle">
+            <!-- Source: #rectangle-fill-toggle (js/rectangle-fill-ui.js).
+                 Same two inline SVGs, swapped by [aria-pressed] in CSS. -->
+            <button type="button" class="tool-button icon-button tool-options-filled" data-forward="rectangle-fill-toggle" aria-pressed="false" aria-label="Filled" data-tooltip="Filled rectangle">
+              <svg class="rectangle-fill-icon tool-options-filled-off" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Zm80-80h640v-480H160v480Zm0 0v-480 480Z"/></svg>
+              <svg class="rectangle-fill-icon tool-options-filled-on" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Z"/></svg>
+            </button>
+          </div>
+          <div class="tool-options-group" data-tools="rectangle selection">
+            <!-- Source: #square-constraint-toggle (js/workspace.js). -->
+            <button type="button" class="tool-button square-constraint-button" data-forward="square-constraint-toggle" aria-pressed="false" aria-label="1:1 proportion" data-tooltip="1:1 proportion (like holding Shift)">1:1</button>
+          </div>
+          <div class="tool-options-group" data-tools="pencil eraser">
+            <!-- Source: #pixel-perfect-toggle (js/pixel-perfect-ui.js). -->
+            <button type="button" class="tool-button icon-button" data-forward="pixel-perfect-toggle" aria-pressed="false" aria-label="Pixel-perfect" data-tooltip="Pixel-perfect">
+              <span class="material-symbols-outlined" aria-hidden="true">grid_on</span>
+            </button>
+          </div>
+          <div class="tool-options-group" data-tools="pencil eraser brush">
+            <!-- Source: #symmetry-toggle (js/symmetry-ui.js). -->
+            <button type="button" class="tool-button icon-button tool-options-symmetry" data-forward="symmetry-toggle" data-symmetry-mode="off" aria-pressed="false" aria-label="Symmetry: off" data-tooltip="Symmetry: off">
+              <span class="material-symbols-outlined" aria-hidden="true">flip</span>
+            </button>
+          </div>
+          <div class="tool-options-group" data-tools="pencil brush">
+            <!-- Source: #library-sequence-toggle (js/color-library-ui.js). -->
+            <button type="button" class="tool-button icon-button" data-forward="library-sequence-toggle" aria-pressed="false" aria-label="Color Library sequence" data-tooltip="Color Library sequence">
+              <span class="material-symbols-outlined" aria-hidden="true">palette</span>
+            </button>
+          </div>
+        </div>
 
-        <div id="selection-controls" class="selection-controls hidden">
-          <button type="button" id="selection-clear-button" class="tool-button no-buzz">Clear selection</button>
-          <button type="button" id="selection-delete-button" class="tool-button no-buzz">Delete</button>
+        <!-- Palette card (5d-tool-options-bar): the floating layout's card
+             under the tool-options bar; display:contents (no box) in the
+             docked one. -->
+        <div class="options-card">
+          <div id="palette-row" class="palette-row"></div>
+
+          <div id="selection-controls" class="selection-controls hidden">
+            <button type="button" id="selection-clear-button" class="tool-button no-buzz">Clear selection</button>
+            <button type="button" id="selection-delete-button" class="tool-button no-buzz">Delete</button>
+          </div>
         </div>
 
         <nav class="bottom-bar">
@@ -651,12 +724,14 @@
         <div class="brushes-panel-header">
           <h2>Brushes</h2>
         </div>
-        <div class="brushes-panel-row">
+        <!-- .brush-stroke-settings rows are hidden in the floating layout,
+             where the tool-options bar shows them as sliders. -->
+        <div class="brushes-panel-row brush-stroke-settings">
           <label class="brushes-spacing-label">Spacing
             <input type="number" id="brush-spacing" min="1" max="20" value="1" /> px
           </label>
         </div>
-        <div class="brushes-panel-row">
+        <div class="brushes-panel-row brush-stroke-settings">
           <label class="brushes-spacing-label">Rotation
             <input type="number" id="brush-rotation" min="0" max="359" value="0" /> °
           </label>

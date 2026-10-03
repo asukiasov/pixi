@@ -63,9 +63,9 @@ normal document flow.
 `?layout=floating` sets `data-layout="floating"` on `#screen-workspace`
 (`js/layout.js`): the canvas container fills the screen and the regions
 float over it as frosted-glass cards, each in a slot class -
-`.slot-top` (top bar), `.slot-tools` (tool rail, plus `#pencil-options`
-beside it), `.slot-panels` (right sidebar), `.slot-options` (a wrapper
-around `#palette-row`, `#selection-controls`, `.bottom-bar`; box-less
+`.slot-top` (top bar), `.slot-tools` (tool rail), `.slot-panels` (right
+sidebar), `.slot-options` (a wrapper around the tool-options bar,
+`#palette-row`, `#selection-controls`, `.bottom-bar`; box-less
 `display: contents` in the docked layout). Fit/Fill/100% centre the
 canvas in the area the visible cards leave clear. Without the parameter,
 and always in `Pixi.mount()` embeds, the docked layout below is
@@ -75,8 +75,8 @@ Spec: `floating-workspace`.
 **Floating top bar (5b-top-bar-more).** In the floating layout the top
 bar is slim: Back, `#topbar-title` (read-only project name, truncated,
 full name in `title`), `#zoom-pill` (current %, opens `#zoom-menu`:
-100%/Fit/Fill/Zoom out/Zoom in), the kept Pixel-perfect/Symmetry/Layers
-toggles (until 5d/5e move them), Undo, Redo, `#right-sidebar-toggle`, and
+100%/Fit/Fill/Zoom out/Zoom in), the Layers toggle (until 5e moves it),
+Undo, Redo, `#right-sidebar-toggle`, and
 `#more-button` (opens `#more-menu`: Canvas settings, Export, Record
 timelapse, Tile preview, Theme Light/Dark/System, Hide interface). The
 buttons those menus replace, and `.bottom-bar`, stay in the DOM but are
@@ -92,9 +92,9 @@ from `js/app.js`), menu behaviour in `js/topbar-menu.js`.
 `#tools-sidebar` starts below the top bar and hugs its contents. The ten
 tool buttons (44px, `--rail-button-size`) sit in `.tool-rail-tools`, the
 only part that scrolls (scrollbar hidden), so on a short screen the
-tool-scoped toggles (`#rectangle-options`, `#square-constraint-options`,
-`#library-sequence-options`) and the FG/BG swatches stay visible below
-it; CSS `order` puts the swatches last. In the docked layout
+FG/BG swatches at the foot stay visible below it. The tool-scoped
+toggles are not in the floating rail (5d moved them to the tool-options
+bar), so choosing a tool never changes its size. In the docked layout
 `.tool-rail-tools` is `display: contents` and nothing changes. Swap and
 Reset keep their corner icons but are 24px transparent hit areas (the
 circle is a `::before`) reaching into the rail padding, never over a
@@ -102,6 +102,34 @@ swatch face. Rail tooltips and the color picker open on the side facing
 the canvas (`canvasSide` in `js/layout.js`), past the rail's edge. In
 both layouts each tool button carries `aria-pressed`, kept in sync with
 `.active` by `syncToolButtons` (`js/tool-rail.js`).
+
+**Floating tool-options bar (5d-tool-options-bar).** In the floating
+layout `.slot-options` is a see-through column of two cards at the
+bottom centre: `#tool-options-bar` on top, then `.options-card`
+(`#palette-row` and `#selection-controls`; `display: contents` in the
+docked layout). The bar shows only the active tool's options: Pencil
+Size, Opacity, Pixel-perfect, Symmetry, Color Library sequence; Eraser
+the same without the sequence; Brush Spacing, Rotation, Symmetry,
+sequence; Rectangle Filled, 1:1; Select 1:1. It is hidden for Move,
+Bucket, Line, Hand and Eyedropper, and showing, changing or hiding it
+never re-fits the canvas. Which groups show is CSS-only: each
+`.tool-options-group` lists its tools in `data-tools`, and
+`applyToolScopedUI()` records `data-current-tool` on the workspace
+screen (in both layouts; only floating CSS reads it). Every control is
+a proxy for the control it replaces (`data-forward`): buttons forward
+clicks, sliders forward their value (`input` for Size/Opacity, `change`
+for Spacing/Rotation, so those apply while dragging). On/off state,
+labels and the Symmetry mode badge are mirrored back by a
+`MutationObserver` on each source; slider values and readouts are
+re-read whenever `data-current-tool` is set, which covers the resets on
+project open. The sources are `display: none` in the floating layout:
+`#pencil-options`, the rail toggles, the top bar's Pixel-perfect and
+Symmetry, and the Brushes panel's `.brush-stroke-settings` rows. The
+bar is `role="group"` "Tool options"; sliders report their value with
+its unit (`aria-valuetext`), toggles report `aria-pressed`, and tooltips
+open above the bar. Markup is `.floating-only` and absent from
+`Pixi.mount()` embeds. Wiring: `js/tool-options-bar.js` (once, from
+`js/app.js`).
 
 ### Top bar (`.workspace-topbar`)
 

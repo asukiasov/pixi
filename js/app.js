@@ -1,5 +1,5 @@
 import { initNewCanvasScreen } from './new-canvas.js';
-import { initWorkspace } from './workspace.js';
+import { initWorkspace, bindSliderWheel } from './workspace.js';
 import { CanvasView } from './canvas-view.js';
 import { initGallery } from './gallery.js';
 import { loadProject } from './persistence.js';
@@ -14,6 +14,7 @@ import { initLayers } from './layers-ui.js';
 import { initToasts } from './toast.js';
 import { resolveLayout, applyLayout, measureClearInsets } from './layout.js';
 import { initFloatingTopbar } from './floating-topbar.js';
+import { initToolOptionsBar } from './tool-options-bar.js';
 
 const screens = {
   gallery: document.getElementById('screen-gallery'),
@@ -97,6 +98,10 @@ const theme = initThemeToggle(document.getElementById('theme-toggle'));
 // the theme toggle above: every item forwards to a control that exists
 // for the whole page lifetime, so nothing here is per-project.
 if (layout === 'floating') initFloatingTopbar({ theme });
+// Floating layout's tool-options bar (5d-tool-options-bar). Once, for the
+// same reason: its proxies forward to controls that exist for the whole
+// page lifetime, and it re-reads their values on every tool change.
+if (layout === 'floating') initToolOptionsBar({ bindSliderWheel });
 
 // Color Library and Layers panels - wired once here, like every other
 // init* call in this file; their own onWorkspaceReset registrations

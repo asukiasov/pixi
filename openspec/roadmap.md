@@ -282,9 +282,19 @@ and can ship at any time.
   layer, opaque fallback), full-screen canvas, slot classes with
   logical insets, clear-area Fit, and the dev-only `?layout=floating`
   switch. Verified in Chromium only; check on a real iPad before 5h.
-- **5b — Top bar + More menu**: the slim top bar, the zoom pill, and the
-  More menu.
-- **5c — Floating tool rail**: the rail plus the FG/BG swatches.
+- ~~**5b — Top bar + More menu**~~ — **done** 2026-10-03, archived as
+  `openspec/changes/archive/2026-10-03-5b-top-bar-more/`. Slim top bar
+  with project title, zoom pill menu, and a More menu whose items
+  forward clicks to the existing (now hidden) buttons; shared
+  `js/topbar-menu.js` menu-button helper; recording dot on More.
+  Pixel-perfect, Symmetry, Layers and the right-sidebar toggle stay in
+  the top bar until 5d/5e.
+- ~~**5c — Floating tool rail**~~ — **done** 2026-10-03, archived as
+  `openspec/changes/archive/2026-10-03-5c-floating-tool-rail/`. Rail
+  hugs its contents with only the tools scrolling, swatches at the
+  foot, 44px tool buttons, 24px Swap/Reset hit areas, tooltips and the
+  colour picker open toward the canvas, and `aria-pressed` on tools in
+  both layouts.
 - **5d — Tool-options bar**: the single contextual bar described above.
 - **5e — Cards + mini-rail**: stackable Layers/Colors/Brushes cards and the
   right mini-rail.
@@ -309,7 +319,7 @@ Follow-ups after 5h:
   and the grid into its own card; revisit whether anything is still wanted
   after 5h.
 
-Status: in progress - 5a done. Next: `/opsx:propose 5b-top-bar-more`.
+Status: in progress - 5a, 5b and 5c done. Next: `/opsx:propose 5d-tool-options-bar`.
 
 ## Phase 6 — Settings and Import screens
 

@@ -104,7 +104,8 @@ export function initCustomizeToolsSheet({ getPrefs, setPrefs, root = document })
   sheet.addEventListener('click', (e) => {
     const button = e.target.closest('.customize-tools-tile');
     if (!button) return;
-    if (suppressClick) {
+    // detail is 0 for a keyboard (Enter/Space) click.
+    if (suppressClick && e.detail > 0) {
       suppressClick = false;
       return;
     }
@@ -279,7 +280,9 @@ export function initCustomizeToolsSheet({ getPrefs, setPrefs, root = document })
       return;
     }
     // The click that follows the release would otherwise move the tile
-    // to the other list as well.
+    // to the other list as well. The flag may outlive the drag (the drop
+    // re-renders the lists, and a touch drag fires no click), so only
+    // pointer clicks honour it and the next press clears it.
     suppressClick = true;
     dropDrag();
   });

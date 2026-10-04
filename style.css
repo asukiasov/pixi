@@ -221,7 +221,9 @@ textarea,
   flex: 1 0 auto;
   display: grid;
   place-items: center;
-  padding: 1.5rem 0;
+  /* Extra top room keeps the hero clear of the theme pill (.home-theme)
+     on short screens, e.g. a landscape phone. */
+  padding: 3.5rem 0 1.5rem;
 }
 
 .home-hero {

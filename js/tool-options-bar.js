@@ -25,6 +25,16 @@ export function forwardValue(proxy, source, eventType) {
   proxy.value = source.value;
 }
 
+const ADJUSTING_MS = 900;
+
+/** A range input's value as a 0..1 fraction of its min..max (0 when the range is empty). */
+export function sliderFraction(input) {
+  const min = Number(input.min || 0);
+  const max = Number(input.max || 100);
+  if (!(max > min)) return 0;
+  return Math.min(1, Math.max(0, (Number(input.value) - min) / (max - min)));
+}
+
 const MIRRORED_ATTRIBUTES = ['aria-label', 'data-tooltip', 'data-symmetry-mode'];
 
 /** Copies a source toggle's on/off state, label and symmetry mode onto its proxy. */
@@ -70,19 +80,30 @@ export function initToolOptionsBar({ root = document, bindSliderWheel }) {
     for (const name of ['min', 'max', 'step']) {
       if (source.hasAttribute(name)) proxy.setAttribute(name, source.getAttribute(name));
     }
-    const slider = { proxy, source, readout, sourceReadout };
+    const slider = { proxy, source, readout, sourceReadout, box: proxy.closest('.slider') ?? proxy.parentElement, timer: 0 };
     sliders.push(slider);
     proxy.addEventListener('input', () => {
       forwardValue(proxy, source, proxy.dataset.forwardEvent);
       showReadout(slider);
+      markAdjusting(slider);
     });
     if (sourceReadout) bindSliderWheel?.(proxy);
   }
 
-  function showReadout({ proxy, source, readout, sourceReadout }) {
+  // The one place a bar slider updates: readout text, aria-valuetext, and
+  // --f (the value's 0..1 fraction) for the filled track and the bubble.
+  function showReadout({ proxy, source, readout, sourceReadout, box }) {
     const text = sourceReadout ? sourceReadout.textContent : `${source.value}${proxy.dataset.unit ?? ''}`;
     readout.textContent = text;
     proxy.setAttribute('aria-valuetext', text);
+    box.style.setProperty('--f', String(sliderFraction(proxy)));
+  }
+
+  // Shows the value bubble while the value is changing (drag, keys, wheel).
+  function markAdjusting(slider) {
+    slider.box.classList.add('is-adjusting');
+    clearTimeout(slider.timer);
+    slider.timer = setTimeout(() => slider.box.classList.remove('is-adjusting'), ADJUSTING_MS);
   }
 
   // A plain .value assignment on a source (initWorkspace()'s reset on

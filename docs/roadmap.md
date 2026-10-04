@@ -409,6 +409,29 @@ and can ship at any time.
   same backdrop. Reuses the 5a `.glass` card, light and dark. No secondary
   hero action: the app has no "open an image as a project" flow. Verified
   headless in Chromium and WebKit at 1180×820, 768×1024 and 390×844.
+- **New Canvas redesign** (planned 2026-10-05, not started): follows
+  Pixelmator Pro's New Document screen
+  (`docs/Screenshots of other apps/other screens/create new doc.png`).
+  The card widens to two areas: a preset grid on the left, an inspector
+  (~260px) on the right; on phones they stack and Create stays fixed at
+  the bottom.
+  - **Preset tiles** replace the text buttons: "Last used" first, then
+    16/32/64/128. Each tile previews the chosen background (checkerboard
+    or white) with a pixel grid at its size, with the size underneath.
+    Typing a custom size adds a selected "Custom W×H" tile.
+  - **Inspector**: Preset summary row; Size W/H with a swap button
+    (portrait/landscape) for sizes that aren't square; Background as two
+    picture tiles in the same ring style as the presets, not radios;
+    Cancel (back to the Gallery) and Create at the bottom.
+  - **Remember the last choice**: last size and background saved in
+    `js/prefs.js` and selected when the screen opens.
+  - Built from Forma UI tokens and components (`forma-ui/`), so Lines
+    can reuse the dialog layout.
+  - Out of scope: template collections sidebar, search, units,
+    resolution, colour depth.
+  - Process: brainstorming → design doc → plan; TDD for the
+    remember-last logic and preset/Custom syncing; `web-design-guidelines`
+    pass; update `docs/specs`, `docs/ui-reference.md`.
 - **5i — Palette merge** (independent): the fixed 16-swatch `#palette-row`
   becomes Color Library's default palette, and the row is removed. Its
   Rainbow swatch (Brush-only, mutually exclusive with the Color Library
@@ -432,7 +455,7 @@ Follow-ups after 5h:
 
 Status: in progress - 5a–5g, Customize Tools, the 5h switch-on, the
 embed mount fix, the home screen redesign and its theme setting done.
-Next: the rest of 5h (docked deletion).
+Next: the rest of 5h (docked deletion); New Canvas redesign planned.
 Visual direction for all floating work: Pixelmator's airy, frosted-glass
 look (references in `docs/Screenshots of other apps/`), keeping Pixi's
 own panel arrangement.

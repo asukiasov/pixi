@@ -1,8 +1,9 @@
 import { listProjects, deleteProject } from './persistence.js';
 import { confirmDialog } from './confirm-dialog.js';
+import { formatCanvasSize, formatEdited } from './gallery-format.js';
 
 /**
- * Wires the Gallery screen: project grid, "+ New Canvas", open, and
+ * Wires the Gallery screen: project grid, "New Canvas", open, and
  * delete-with-confirm. Bind once; call the returned `refresh()` whenever
  * the Gallery becomes visible, since the project list can have changed
  * elsewhere (a new project created, an existing one auto-saved).
@@ -27,7 +28,7 @@ export function initGallery({ onOpenProject, onNewCanvas }) {
   return { refresh };
 }
 
-const PAW_PARADE_CLICKS = 7; // rapid clicks on the "Pixi" title required
+const PAW_PARADE_CLICKS = 7; // rapid clicks on the "Pixi" wordmark required
 const PAW_PARADE_WINDOW_MS = 2000; // ...within this window, or the count resets
 const PAW_PARADE_LENGTH = 10; // paw prints in the trail
 
@@ -48,13 +49,13 @@ try {
 }
 
 /**
- * Easter egg: clicking the Gallery's "Pixi" title 7 times within 2
+ * Easter egg: clicking the Gallery's "Pixi" wordmark 7 times within 2
  * seconds sends a trail of paw prints walking across the screen - a nod
  * to the Hand tool's paw cursors (assets/cursors/pets*.svg). Purely
  * decorative, no state, self-removing.
  */
 function bindPawParadeEasterEgg() {
-  const title = document.querySelector('.gallery-header h1');
+  const title = document.querySelector('.home-wordmark');
   if (!title) return;
   let clickCount = 0;
   let windowStart = 0;
@@ -96,17 +97,24 @@ function pawParade() {
   setTimeout(() => trail.remove(), 2200);
 }
 
+/**
+ * One Recents tile: an "open" button (thumbnail, name, size, last edited)
+ * and a sibling delete button - siblings, not nested, since a button
+ * can't contain another button.
+ */
 function buildProjectTile(project, onOpenProject, refresh) {
-  const tile = document.createElement('div');
+  const tile = document.createElement('li');
   tile.className = 'gallery-tile';
-  tile.addEventListener('click', (e) => {
-    if (e.target.closest('button')) return;
-    onOpenProject(project.id);
-  });
+
+  const openButton = document.createElement('button');
+  openButton.type = 'button';
+  openButton.className = 'gallery-tile-open';
+  openButton.addEventListener('click', () => onOpenProject(project.id));
 
   const img = document.createElement('img');
   img.className = 'gallery-thumbnail';
-  img.alt = project.name;
+  // Decorative: the project name is right below it, inside the same button.
+  img.alt = '';
   if (project.thumbnail) {
     // Not revoked: thumbnails are tiny and the grid only rebuilds on
     // Gallery visits, not continuously — an accepted simplification for
@@ -114,18 +122,31 @@ function buildProjectTile(project, onOpenProject, refresh) {
     img.src = URL.createObjectURL(project.thumbnail);
   }
 
-  const name = document.createElement('div');
+  const name = document.createElement('span');
   name.className = 'gallery-tile-name';
   name.textContent = project.name;
+
+  const meta = document.createElement('span');
+  meta.className = 'gallery-tile-meta';
+  const size = document.createElement('span');
+  size.textContent = formatCanvasSize(project);
+  meta.append(size);
+  if (Number.isFinite(project.updatedAt)) {
+    const edited = document.createElement('time');
+    edited.dateTime = new Date(project.updatedAt).toISOString();
+    edited.textContent = formatEdited(project.updatedAt);
+    meta.append(edited);
+  }
+
+  openButton.append(img, name, meta);
 
   const deleteButton = document.createElement('button');
   deleteButton.type = 'button';
   deleteButton.className = 'gallery-tile-delete';
-  deleteButton.innerHTML = '<span class="material-symbols-outlined">delete</span>';
+  deleteButton.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">delete</span>';
   deleteButton.title = 'Delete project';
-  deleteButton.setAttribute('aria-label', 'Delete project');
-  deleteButton.addEventListener('click', async (e) => {
-    e.stopPropagation();
+  deleteButton.setAttribute('aria-label', `Delete "${project.name}"`);
+  deleteButton.addEventListener('click', async () => {
     const proceed = await confirmDialog({
       title: 'Delete project?',
       message: `Delete "${project.name}"? This can't be undone.`,
@@ -135,6 +156,6 @@ function buildProjectTile(project, onOpenProject, refresh) {
     refresh();
   });
 
-  tile.append(img, name, deleteButton);
+  tile.append(openButton, deleteButton);
   return tile;
 }

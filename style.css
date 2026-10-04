@@ -71,6 +71,12 @@
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-blur: 20px;
   --float-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
+
+  /* Home screen (Gallery + New Canvas) artwork scrim - a radial
+     vignette over assets/home-bg.webp so the glass cards stay readable
+     over the busy centre. Dark darkens, light washes toward --color-bg. */
+  --home-scrim-inner: rgba(0, 0, 0, 0.42);
+  --home-scrim-outer: rgba(0, 0, 0, 0.82);
 }
 
 :root[data-theme="light"] {
@@ -96,6 +102,8 @@
   --glass-tint: rgba(255, 255, 255, 0.72);
   --glass-border: rgba(0, 0, 0, 0.08);
   --float-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+  --home-scrim-inner: rgba(236, 236, 240, 0.3);
+  --home-scrim-outer: rgba(236, 236, 240, 0.78);
 }
 
 * {
@@ -149,91 +157,212 @@ textarea,
   flex-direction: column;
 }
 
-/* Gallery screen */
+/* Home screen: Gallery + New Canvas (home-screen redesign, after
+   Pixelmator Pro for iPad's file picker). Full-bleed artwork, a scrim,
+   and the shared .glass cards from the floating workspace on top - the
+   glass rules (opaque fallback, @supports blur, reduced transparency)
+   all come from .glass, these rules only lay the cards out. */
 
-#screen-gallery {
+.home-screen {
   position: relative;
-  padding: 1rem;
-  gap: 1rem;
+  /* Own stacking context, so .home-backdrop's z-index: -1 lands above
+     this screen's background but below its content. */
+  isolation: isolate;
   overflow-y: auto;
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) 0 max(1rem, env(safe-area-inset-left));
+  /* Shown until the artwork decodes (and the fallback if it never
+     does) - close to the artwork's own near-black. */
+  background: #0b0b0e;
 }
 
-/* Bottom-right corner of the Gallery screen only - see index.html's
-   comment for why. Deliberately tiny/low-contrast: a diagnostic, not UI
-   chrome anyone's meant to notice unless they're looking for it. */
-.version-badge {
-  position: absolute;
-  right: 0.6rem;
-  bottom: 0.4rem;
-  margin: 0;
-  font-family: ui-monospace, monospace;
-  font-size: 0.65rem;
-  color: var(--color-border);
+.home-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
   pointer-events: none;
 }
 
-.gallery-header {
+/* The artwork is 1376x768, soft when stretched across a large screen:
+   the slight blur reads as depth instead, and the scale pushes the
+   blur's faded edge off-screen. */
+.home-backdrop img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(3px);
+  transform: scale(1.06);
+}
+
+.home-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 40%, var(--home-scrim-inner), var(--home-scrim-outer) 75%);
+}
+
+.home-hero-wrap {
+  flex: 1 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem 0;
+}
+
+.home-hero {
+  position: relative;
+  --glass-blur: 28px;
+  width: min(100%, 34rem);
+  padding: clamp(1.75rem, 5vw, 3rem) clamp(1.25rem, 5vw, 3rem);
+  border-radius: 28px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  gap: 1.5rem;
+  text-align: center;
 }
 
-.gallery-header h1 {
+.home-wordmark {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: clamp(3.25rem, 11vw, 6rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  /* Clicked 7x for the Paw Parade (js/gallery.js); not a link. */
+  cursor: default;
 }
 
-.gallery-header .primary-button {
+.home-hero .primary-button {
   margin-top: 0;
-  width: auto;
-  padding: 0.6rem 1rem;
-  font-size: 1rem;
+  min-width: 14rem;
+  padding: 0.85rem 1.75rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* Bottom sheet, like Pixelmator's Recents: full width bar the floating
+   gutter, flush with the bottom edge. The grid scrolls inside it so the
+   hero stays put. */
+.home-recents {
+  position: relative;
+  --glass-blur: 32px;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 52dvh;
+  display: flex;
+  flex-direction: column;
+  margin: 0 calc(var(--float-edge) - max(1rem, env(safe-area-inset-right))) 0 calc(var(--float-edge) - max(1rem, env(safe-area-inset-left)));
+  padding: 1rem 1.25rem max(1rem, env(safe-area-inset-bottom));
+  border-bottom: none;
+  border-radius: 24px 24px 0 0;
+}
+
+.home-recents-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Top-right: the Recents sheet now covers the bottom. Deliberately tiny
+   and low-contrast - a diagnostic, not UI chrome (see index.html). */
+.version-badge {
+  position: absolute;
+  top: max(0.4rem, env(safe-area-inset-top));
+  right: max(0.6rem, env(safe-area-inset-right));
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
 }
 
 .gallery-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0.5rem;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 1rem 0.75rem;
 }
 
 .gallery-tile {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
-  overflow: hidden;
-  cursor: pointer;
+  min-width: 0;
 }
 
+.gallery-tile-open {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.4rem 0.4rem 0.5rem;
+  border: none;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.gallery-tile-open:hover {
+  background: var(--color-accent-soft);
+}
+
+.gallery-tile-open:focus-visible,
+.gallery-tile-delete:focus-visible,
+.home-screen .primary-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Same checkerboard idea as the canvas's transparency backdrop, so a
+   transparent project reads as transparent rather than as grey. */
 .gallery-thumbnail {
   width: 100%;
   aspect-ratio: 1;
+  margin-bottom: 0.35rem;
   object-fit: contain;
-  background: #e2e2e2;
+  background: repeating-conic-gradient(#e2e2e2 0 25%, #cfcfcf 0 50%) 0 0 / 12px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   display: block;
 }
 
 .gallery-tile-name {
-  padding: 0.4rem;
-  font-size: 0.8rem;
+  max-width: 100%;
+  font-size: 0.85rem;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.gallery-tile-meta {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
 .gallery-tile-delete {
   position: absolute;
-  top: 0.3rem;
-  right: 0.3rem;
-  width: 1.8rem;
-  height: 1.8rem;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: var(--icon-size-m);
+  height: var(--icon-size-m);
   border: none;
-  border-radius: 0.3rem;
+  border-radius: 0.5rem;
   background: var(--color-overlay-soft);
   color: inherit;
   display: flex;
@@ -241,8 +370,29 @@ textarea,
   justify-content: center;
   padding: 0;
   cursor: pointer;
+  touch-action: manipulation;
   /* AUD-5: contain the icon-font-failure fallback text (see .icon-button). */
   overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.gallery-tile:hover .gallery-tile-delete,
+.gallery-tile:focus-within .gallery-tile-delete {
+  opacity: 1;
+}
+
+/* Touch screens have no hover to reveal it. */
+@media (hover: none) {
+  .gallery-tile-delete {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-tile-delete {
+    transition: none;
+  }
 }
 
 .gallery-tile-delete .material-symbols-outlined {
@@ -250,17 +400,73 @@ textarea,
 }
 
 .gallery-empty-state {
+  margin: 0.5rem 0 1rem;
   color: var(--color-text-secondary);
   text-align: center;
-  margin-top: 2rem;
 }
 
-/* New Canvas screen */
+/* Phones: three tiles across instead of two oversized ones. */
+@media (max-width: 480px) {
+  .home-recents {
+    padding-inline: 0.75rem;
+  }
+
+  .gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+    gap: 0.75rem 0.25rem;
+  }
+
+  .gallery-tile-open {
+    padding-inline: 0.25rem;
+  }
+
+  .gallery-tile-delete {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+}
+
+/* Short viewports (landscape phones): no room for a fixed-height sheet,
+   so the whole screen scrolls instead of the grid. */
+@media (max-height: 560px) {
+  .home-recents {
+    max-height: none;
+  }
+
+  .gallery-grid {
+    overflow-y: visible;
+  }
+}
+
+/* New Canvas screen: the same backdrop, the form in a glass card. */
 
 #screen-new-canvas {
-  padding: 1rem;
-  gap: 1rem;
-  overflow-y: auto;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.new-canvas-card {
+  position: relative;
+  --glass-blur: 28px;
+  width: min(100%, 30rem);
+  margin: auto 0;
+  padding: 1.5rem;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.new-canvas-card h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.new-canvas-card .primary-button {
+  margin-top: 1rem;
+  border-radius: 999px;
+  font-weight: 600;
 }
 
 .field-group h2 {
@@ -343,6 +549,11 @@ textarea,
   background: var(--color-accent);
   color: white;
   cursor: pointer;
+  touch-action: manipulation;
+}
+
+.primary-button:hover {
+  background: var(--color-accent-strong);
 }
 
 /* Workspace screen */

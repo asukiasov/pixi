@@ -2987,9 +2987,10 @@ span.layer-lock-icon {
   /* The room the card column has (5h-switch-on-floating): on a narrow
      window it shrinks to this instead of covering a rail. */
   --slot-cards-room: calc(100% - var(--slot-cards-far) - var(--slot-cards-offset) - var(--float-gap));
-  /* How far the rails reach in from the fuller side; the centred bottom
-     slot keeps this clear on both sides. */
-  --slot-side-reserve: calc(var(--float-edge-start) + var(--slot-step));
+  /* How far the rails reach in from each side; the bottom slot is
+     centred between these. */
+  --slot-reserve-start: calc(var(--float-edge-start) + var(--slot-step));
+  --slot-reserve-end: calc(var(--float-edge-end) + var(--slot-step));
   position: relative;
   overflow: hidden;
 }
@@ -3005,7 +3006,8 @@ span.layer-lock-icon {
   --slot-cards-end: auto;
   --slot-cards-offset: calc(var(--float-edge-start) + var(--slot-step));
   --slot-cards-far: calc(var(--float-edge-end) + var(--slot-step));
-  --slot-side-reserve: calc(var(--float-edge-start) + var(--slot-step));
+  --slot-reserve-start: calc(var(--float-edge-start) + var(--slot-step));
+  --slot-reserve-end: calc(var(--float-edge-end) + var(--slot-step));
 }
 
 .workspace-screen[data-layout="floating"][data-tools-side="left"][data-panels-side="left"] {
@@ -3017,7 +3019,8 @@ span.layer-lock-icon {
   --slot-cards-end: auto;
   --slot-cards-offset: calc(var(--float-edge-start) + 2 * var(--slot-step));
   --slot-cards-far: var(--float-edge-end);
-  --slot-side-reserve: calc(var(--float-edge-start) + 2 * var(--slot-step));
+  --slot-reserve-start: calc(var(--float-edge-start) + 2 * var(--slot-step));
+  --slot-reserve-end: var(--float-edge-end);
 }
 
 .workspace-screen[data-layout="floating"][data-tools-side="right"][data-panels-side="right"] {
@@ -3029,7 +3032,8 @@ span.layer-lock-icon {
   --slot-cards-end: var(--slot-cards-offset);
   --slot-cards-offset: calc(var(--float-edge-end) + 2 * var(--slot-step));
   --slot-cards-far: var(--float-edge-start);
-  --slot-side-reserve: calc(var(--float-edge-end) + 2 * var(--slot-step));
+  --slot-reserve-start: var(--float-edge-start);
+  --slot-reserve-end: calc(var(--float-edge-end) + 2 * var(--slot-step));
 }
 
 /* The wrappers stop being boxes, so their children can be placed against
@@ -3126,10 +3130,12 @@ span.layer-lock-icon {
    through to the canvas. */
 .workspace-screen[data-layout="floating"] .slot-options {
   bottom: var(--float-edge-bottom);
-  inset-inline: 0;
+  /* Centred in the room between the rails (5g-prefs: with both on one
+     side that is off the screen's centre). */
+  inset-inline: var(--slot-reserve-start) var(--slot-reserve-end);
   margin-inline: auto;
   width: max-content;
-  max-width: calc(100% - 2 * var(--slot-side-reserve));
+  max-width: calc(100% - var(--slot-reserve-start) - var(--slot-reserve-end));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -4041,18 +4047,22 @@ span.layer-lock-icon {
    Settings sheet: a centred glass sheet, a centred title with a round
    ✓ at the end, muted section headings, and rows grouped on an inset
    surface with hairline separators - label at the start, a switch or a
-   value-with-chevrons select at the end. The look comes from .glass
-   (opaque under reduced transparency); the tint is denser than the
-   floating cards' because the sheet holds reading text over artwork.
-   Every row is a <label>, so the whole row is the hit target.
+   value-with-chevrons select at the end. Opaque, with the floating
+   cards' border, radius and shadow but not their glass: the sheet is
+   reading text over a dimmed page, and WebKit draws the blurred cards
+   through a translucent top-layer sheet. Every row is a <label>, so
+   the whole row is the hit target.
    ------------------------------------------------------------------ */
 .prefs-sheet {
-  --glass-tint: color-mix(in srgb, var(--color-surface) 88%, transparent);
   --prefs-fill: color-mix(in srgb, var(--color-text) 7%, transparent);
   --prefs-hairline: color-mix(in srgb, var(--color-text) 12%, transparent);
   width: min(34rem, calc(100vw - 2rem));
   max-height: min(44rem, calc(100dvh - 2rem));
   padding: 0;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--float-radius);
+  background: var(--color-surface);
+  box-shadow: var(--float-shadow);
   color: var(--color-text);
   overflow: hidden;
 }

@@ -483,7 +483,7 @@ describe('Pixelmator visual pass', () => {
 describe('side prefs (5g)', () => {
   const FLOATING = '.workspace-screen[data-layout="floating"]';
   const VARS = ['--slot-tools-start', '--slot-tools-end', '--slot-panels-start', '--slot-panels-end',
-    '--slot-cards-start', '--slot-cards-end', '--slot-cards-offset', '--slot-cards-far', '--slot-side-reserve'];
+    '--slot-cards-start', '--slot-cards-end', '--slot-cards-offset', '--slot-cards-far', '--slot-reserve-start', '--slot-reserve-end'];
   const declared = (body) => new Map([...body.matchAll(/(--slot-[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
   const sideRule = (tools, panels) => all.find((r) => r.selector === `${FLOATING}[data-tools-side="${tools}"][data-panels-side="${panels}"]`);
 
@@ -521,9 +521,16 @@ describe('side prefs (5g)', () => {
     }
   });
 
-  test('the bottom slot is capped by the side reserve on both sides', () => {
+  test('the bottom slot is centred between the rails, each side keeping its own reserve clear', () => {
     const options = all.find((r) => r.selector === `${FLOATING} .slot-options` && /max-width/.test(r.body));
-    assert.match(options.body, /max-width:\s*calc\(100% - 2 \* var\(--slot-side-reserve\)\)/);
+    assert.match(options.body, /inset-inline:\s*var\(--slot-reserve-start\) var\(--slot-reserve-end\)/);
+    assert.match(options.body, /margin-inline:\s*auto/);
+    assert.match(options.body, /max-width:\s*calc\(100% - var\(--slot-reserve-start\) - var\(--slot-reserve-end\)\)/);
+  });
+
+  test('on the same side the far reserve is just the edge', () => {
+    assert.equal(declared(sideRule('left', 'left').body).get('--slot-reserve-end'), 'var(--float-edge-end)');
+    assert.equal(declared(sideRule('right', 'right').body).get('--slot-reserve-start'), 'var(--float-edge-start)');
   });
 });
 
@@ -557,7 +564,11 @@ describe('Prefs sheet (5g)', () => {
     assert.ok(px(all.find((r) => r.selector === '.prefs-select select'), 'min-height') >= 44);
   });
 
-  test('the sheet gets the shared glass look and a dimmed backdrop', () => {
+  test('the sheet is opaque, over a dimmed backdrop', () => {
     assert.ok(all.some((r) => r.selector === '.prefs-sheet::backdrop'));
+    const sheet = all.filter((r) => r.selector === '.prefs-sheet');
+    assert.equal(sheet.length, 1);
+    assert.match(sheet[0].body, /background:\s*var\(--color-surface\)/);
+    assert.doesNotMatch(sheet[0].body, /backdrop-filter/);
   });
 });

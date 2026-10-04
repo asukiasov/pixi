@@ -40,11 +40,11 @@
          .home-backdrop in style.css). Repeated in #screen-new-canvas;
          same URL, so the second one is a cache hit. -->
     <div class="home-backdrop" aria-hidden="true">
-      <img src="assets/home-bg.webp" alt="" decoding="async" />
+      <img src="assets/home-bg.webp" alt="" width="1376" height="768" decoding="async" />
     </div>
     <div class="home-hero-wrap">
       <div class="home-hero glass">
-        <h1 class="home-wordmark">Pixi</h1>
+        <h1 class="home-wordmark" translate="no">Pixi</h1>
         <button type="button" id="gallery-new-canvas-button" class="primary-button">New Canvas</button>
       </div>
     </div>
@@ -64,7 +64,7 @@
 
   <main id="screen-new-canvas" class="screen home-screen hidden">
     <div class="home-backdrop" aria-hidden="true">
-      <img src="assets/home-bg.webp" alt="" decoding="async" />
+      <img src="assets/home-bg.webp" alt="" width="1376" height="768" decoding="async" />
     </div>
     <div class="new-canvas-card glass">
       <h1>New Canvas</h1>
@@ -78,8 +78,8 @@
           <button type="button" class="preset-button" data-size="128">128×128</button>
         </div>
         <div class="custom-size-row">
-          <label>W <input type="number" id="custom-width" min="1" max="256" placeholder="e.g. 24…" /></label>
-          <label>H <input type="number" id="custom-height" min="1" max="256" placeholder="e.g. 96…" /></label>
+          <label>W <input type="number" id="custom-width" name="custom-width" autocomplete="off" min="1" max="256" placeholder="e.g. 24…" /></label>
+          <label>H <input type="number" id="custom-height" name="custom-height" autocomplete="off" min="1" max="256" placeholder="e.g. 96…" /></label>
         </div>
       </section>
 

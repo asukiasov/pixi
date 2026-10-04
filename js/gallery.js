@@ -115,6 +115,10 @@ function buildProjectTile(project, onOpenProject, refresh) {
   img.className = 'gallery-thumbnail';
   // Decorative: the project name is right below it, inside the same button.
   img.alt = '';
+  // Intrinsic size up front so the grid doesn't shift as thumbnails
+  // decode; CSS still sizes the tile (square, contain).
+  img.width = project.width || 1;
+  img.height = project.height || 1;
   if (project.thumbnail) {
     // Not revoked: thumbnails are tiny and the grid only rebuilds on
     // Gallery visits, not continuously — an accepted simplification for

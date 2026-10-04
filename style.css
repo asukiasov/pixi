@@ -4015,3 +4015,23 @@ span.layer-lock-icon {
 .workspace-screen[data-layout="floating"] .color-picker-popover-header .icon-button {
   border-radius: 50%;
 }
+
+/* ------------------------------------------------------------------
+   Hide while drawing (5g-prefs). With the pref on, js/workspace.js sets
+   data-stroking on the screen for the length of a Pencil, Eraser,
+   Brush, Line or Rectangle stroke. Every floating region fades after a
+   short delay (a tap never flickers) and lets input through; on release
+   the rule stops matching and they are back at once. Opacity only, so
+   nothing moves and the canvas is never re-fitted.
+   ------------------------------------------------------------------ */
+.workspace-screen[data-layout="floating"][data-auto-hide="on"][data-stroking] :is(.slot-top, .slot-tools, .panel-rail, .right-sidebar, .slot-options, #selection-bar) {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0s linear 0.25s;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .workspace-screen[data-layout="floating"][data-auto-hide="on"][data-stroking] :is(.slot-top, .slot-tools, .panel-rail, .right-sidebar, .slot-options, #selection-bar) {
+    transition: opacity 0.15s ease 0.25s;
+  }
+}

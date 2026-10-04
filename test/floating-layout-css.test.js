@@ -526,3 +526,25 @@ describe('side prefs (5g)', () => {
     assert.match(options.body, /max-width:\s*calc\(100% - 2 \* var\(--slot-side-reserve\)\)/);
   });
 });
+
+describe('hide while drawing (5g)', () => {
+  const STROKING = '.workspace-screen[data-layout="floating"][data-auto-hide="on"][data-stroking]';
+  const hiding = all.filter((r) => r.selector.includes(STROKING) && /opacity:\s*0\b/.test(r.body));
+
+  test('every floating region fades and stops taking input mid-stroke', () => {
+    assert.ok(hiding.length > 0);
+    const selectors = hiding.map((r) => r.selector).join('\n');
+    for (const part of ['.slot-top', '.slot-tools', '.panel-rail', '.right-sidebar', '.slot-options', '#selection-bar']) {
+      assert.ok(selectors.includes(part), part);
+    }
+    for (const r of hiding) assert.match(r.body, /pointer-events:\s*none/);
+  });
+
+  test('the fade waits a moment, so a tap does not flicker, with or without motion', () => {
+    const delays = all.filter((r) => r.selector.includes(STROKING) && /transition:/.test(r.body));
+    assert.ok(delays.length >= 2);
+    for (const r of delays) assert.match(r.body, /transition:\s*opacity\s+\S+\s+\S+\s+0\.25s/);
+    assert.ok(delays.some((r) => r.context.includes('prefers-reduced-motion: no-preference')));
+    assert.ok(delays.some((r) => r.context === '' && /opacity\s+0s/.test(r.body)));
+  });
+});

@@ -10,6 +10,15 @@
 // failed read or write is silent: the defaults, or the change for this
 // session only.
 
+/**
+ * @typedef {{
+ *   toolsSide: 'left' | 'right',
+ *   panelsSide: 'left' | 'right',
+ *   pinned: { colors: boolean, brushes: boolean, layers: boolean },
+ *   autoHide: boolean,
+ * }} Prefs
+ */
+
 export const PREFS_STORAGE_KEY = 'pixi-prefs';
 
 const SIDES = ['left', 'right'];

@@ -209,6 +209,9 @@
         <button type="button" class="topbar-menu-item" role="menuitemcheckbox" aria-checked="false" data-forward="tile-preview-toggle">
           <span class="material-symbols-outlined" aria-hidden="true">grid_view</span>Tile preview
         </button>
+        <button type="button" id="more-prefs" class="topbar-menu-item" role="menuitem" aria-haspopup="dialog">
+          <span class="material-symbols-outlined" aria-hidden="true">tune</span>Prefs
+        </button>
         <div class="topbar-menu-separator" role="separator"></div>
         <div role="group" aria-labelledby="more-menu-theme-label">
           <div id="more-menu-theme-label" class="topbar-menu-heading">Theme</div>
@@ -237,6 +240,76 @@
     <button type="button" id="show-ui-button" class="show-ui-button hidden" aria-label="Show interface (Tab or Esc)" title="Show interface (Tab or Esc)">
       <span class="material-symbols-outlined" aria-hidden="true">fullscreen_exit</span>
     </button>
+
+    <!-- Prefs sheet (5g-prefs), opened from More. A native modal <dialog>
+         (focus containment, Escape, inert background); js/prefs-sheet.js
+         wires it, js/prefs.js holds the values. Changes apply at once. -->
+    <dialog id="prefs-sheet" class="prefs-sheet glass" aria-labelledby="prefs-title">
+      <div class="prefs-sheet-inner">
+        <header class="prefs-header">
+          <h2 id="prefs-title" class="prefs-title">Prefs</h2>
+          <button type="button" id="prefs-done" class="prefs-done" aria-label="Done">
+            <span class="material-symbols-outlined" aria-hidden="true">check</span>
+          </button>
+        </header>
+        <div class="prefs-body">
+          <section class="prefs-section" aria-labelledby="prefs-layout-heading">
+            <h3 id="prefs-layout-heading" class="prefs-section-heading">Layout</h3>
+            <div class="prefs-group">
+              <label class="prefs-row">
+                <span class="prefs-row-label">Tools side</span>
+                <span class="prefs-select">
+                  <select id="prefs-tools-side" name="toolsSide">
+                    <option value="left">Left</option>
+                    <option value="right">Right</option>
+                  </select>
+                  <span class="material-symbols-outlined" aria-hidden="true">unfold_more</span>
+                </span>
+              </label>
+              <label class="prefs-row">
+                <span class="prefs-row-label">Panels side</span>
+                <span class="prefs-select">
+                  <select id="prefs-panels-side" name="panelsSide">
+                    <option value="left">Left</option>
+                    <option value="right">Right</option>
+                  </select>
+                  <span class="material-symbols-outlined" aria-hidden="true">unfold_more</span>
+                </span>
+              </label>
+            </div>
+            <p class="prefs-note">On the same side, the tool rail sits on the outside and the panels next to it.</p>
+          </section>
+          <section class="prefs-section" aria-labelledby="prefs-pinned-heading">
+            <h3 id="prefs-pinned-heading" class="prefs-section-heading">Open when a project opens</h3>
+            <div class="prefs-group">
+              <label class="prefs-row">
+                <span class="prefs-row-label">Colors</span>
+                <input type="checkbox" role="switch" class="prefs-switch" data-pin="colors">
+              </label>
+              <label class="prefs-row">
+                <span class="prefs-row-label">Brushes</span>
+                <input type="checkbox" role="switch" class="prefs-switch" data-pin="brushes">
+              </label>
+              <label class="prefs-row">
+                <span class="prefs-row-label">Layers</span>
+                <input type="checkbox" role="switch" class="prefs-switch" data-pin="layers">
+              </label>
+            </div>
+            <p class="prefs-note">Takes effect the next time a project opens. Windows narrower than 600&nbsp;pixels always open with the panels closed.</p>
+          </section>
+          <section class="prefs-section" aria-labelledby="prefs-drawing-heading">
+            <h3 id="prefs-drawing-heading" class="prefs-section-heading">Drawing</h3>
+            <div class="prefs-group">
+              <label class="prefs-row">
+                <span class="prefs-row-label">Hide interface while drawing</span>
+                <input type="checkbox" role="switch" class="prefs-switch" id="prefs-auto-hide" aria-describedby="prefs-auto-hide-note">
+              </label>
+            </div>
+            <p id="prefs-auto-hide-note" class="prefs-note">Fades the bars and panels during Pencil, Eraser, Brush, Line and Rectangle strokes.</p>
+          </section>
+        </div>
+      </div>
+    </dialog>
 
     <div class="workspace-body">
     <!-- 1. Tools: vertical icon rail, Photoshop-style. -->

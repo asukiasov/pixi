@@ -548,3 +548,16 @@ describe('hide while drawing (5g)', () => {
     assert.ok(delays.some((r) => r.context === '' && /opacity\s+0s/.test(r.body)));
   });
 });
+
+describe('Prefs sheet (5g)', () => {
+  test('rows, the Done button and the selects are at least 44px tall', () => {
+    const px = (r, prop) => Number(new RegExp(`(?:^|[\\s;])${prop}:\\s*(\\d+)px`).exec(r.body)?.[1]);
+    assert.ok(px(all.find((r) => r.selector === '.prefs-row'), 'min-height') >= 44);
+    assert.ok(px(all.find((r) => r.selector === '.prefs-done'), 'height') >= 44);
+    assert.ok(px(all.find((r) => r.selector === '.prefs-select select'), 'min-height') >= 44);
+  });
+
+  test('the sheet gets the shared glass look and a dimmed backdrop', () => {
+    assert.ok(all.some((r) => r.selector === '.prefs-sheet::backdrop'));
+  });
+});

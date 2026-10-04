@@ -6,12 +6,14 @@ surprising anyone, maintainer included.
 
 ## Proposing a change
 
-A new feature or behavior change starts as an OpenSpec change proposal
-under `openspec/changes/`, not as a PR straight to code. See
-[`CLAUDE.md`](CLAUDE.md) for the full process — the short version:
+A new feature or behavior change starts as a design doc, not as a PR
+straight to code. See [`CLAUDE.md`](CLAUDE.md) for the full process — the
+short version:
 
-- Every feature/behavior change needs a spec delta and `tasks.md` under
-  `openspec/changes/<id>/` before implementation starts.
+- Every feature/behavior change gets a design doc in
+  `docs/superpowers/specs/` and an implementation plan in
+  `docs/superpowers/plans/` before implementation starts, and updates the
+  affected `docs/specs/*/spec.md` in the same PR.
 - A **bug fix with no spec/requirement impact** can skip this and go
   straight to a PR — no proposal needed for fixing something that's
   supposed to work one way and doesn't.
@@ -20,9 +22,9 @@ under `openspec/changes/`, not as a PR straight to code. See
   before proposing something that might already be planned, or already
   rejected, elsewhere.
 
-If you're not sure whether your change needs a proposal, open an issue
-first and ask — cheaper than writing a proposal for something that turns
-out to be five lines.
+If you're not sure whether your change needs a design doc, open an issue
+first and ask — cheaper than writing one for something that turns out to
+be five lines.
 
 ## Local dev setup
 
@@ -39,9 +41,9 @@ No build step, no install beyond test dependencies. See the README's
   Guidelines](https://github.com/vercel-labs/web-interface-guidelines) the
   same way the rest of the UI does — not a formal requirement for outside
   contributors, but worth a look before submitting.
-- Reference the OpenSpec change your PR implements (if any) in the PR
-  description, so a reviewer can check the diff against `tasks.md` rather
-  than reverse-engineering intent from the code.
+- Link the design doc and plan your PR implements (if any) in the PR
+  description, so a reviewer can check the diff against them rather than
+  reverse-engineering intent from the code.
 
 ## Reporting bugs / requesting features
 

@@ -20,8 +20,8 @@ planned. If this is already there, link the phase instead of duplicating
 the request.
 
 **Proposed behavior**
-What it should do, concretely enough that someone could write an OpenSpec
-proposal from it. Sketches, mockups, or references to similar tools in
+What it should do, concretely enough that someone could write a design
+doc from it. Sketches, mockups, or references to similar tools in
 other apps are welcome.
 
 **Additional context**

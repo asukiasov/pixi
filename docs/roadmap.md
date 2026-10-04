@@ -1,10 +1,12 @@
 # Pixi Roadmap
 
-Phase-level plan for the project. Each phase becomes one or more numbered
-OpenSpec changes under `openspec/changes/` (e.g. `1-scaffold-drawing-engine`
+Phase-level plan for the project. Each phase becomes one or more changes,
+each with a design doc in `docs/superpowers/specs/` and a plan in
+`docs/superpowers/plans/` (changes up to 2026-10-03 were OpenSpec proposals,
+now kept in `docs/history/`, e.g. `2026-08-14-1-scaffold-drawing-engine`
 for Phase 1). This file tracks intent, ordering, and which screens belong to
-each phase; the changes themselves are the source of truth for scope and
-requirements once written. Work through phases in order — each should be a
+each phase; the design docs, and `docs/specs/` once shipped, are the source
+of truth for scope and requirements. Work through phases in order — each should be a
 working, testable slice before the next starts; ask before jumping ahead.
 
 ## Phase 1 — Scaffold + core drawing engine

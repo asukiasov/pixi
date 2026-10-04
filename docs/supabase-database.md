@@ -4,8 +4,9 @@ Status: **reference only** — nothing in this document is implemented yet.
 Auth/sync (and Stripe entitlements, community feed) are explicitly out of
 scope for Phase 1 (see `docs/roadmap.md`). Per `CLAUDE.md`, any change
 that actually wires this in — auth, Postgres reads/writes, Storage, Stripe
-webhook — needs an OpenSpec proposal (`/opsx:propose`) before code is written.
-This doc exists so that proposal has the schema and config to work from.
+webhook — needs a design doc (`superpowers:brainstorming`) before code is
+written. This doc exists so that design has the schema and config to work
+from.
 
 Supersedes the earlier Firebase-based design — the project switched database
 providers on 2026-08-14, before any Firebase code was written. Nothing to
@@ -54,8 +55,8 @@ release, so bump deliberately if a breaking v3 ever ships.
 
 Tables reflect Pixi's actual domain (canvases/artwork/community), not a
 generic placeholder. Column lists are the intended shape for planning
-purposes — the OpenSpec proposal that implements each capability is the
-place to finalize types/constraints/RLS policies.
+purposes — the design doc that implements each capability is the place
+to finalize types/constraints/RLS policies.
 
 Auth itself is handled by Supabase's built-in `auth.users` table (Google
 OAuth provider) — no custom `users` table is needed for login. A `profiles`

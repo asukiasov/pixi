@@ -56,7 +56,7 @@ on screen.
 | Gallery | "your projects," "dashboard" |
 | Layers | "levels" |
 | Export | "download," "save as image" |
-| OpenSpec change | "feature ticket," "proposal doc" (unless quoting OpenSpec's own docs) |
+| Design doc | "feature ticket," "RFC" |
 
 ## What we won't do
 

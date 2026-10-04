@@ -362,6 +362,16 @@ and can ship at any time.
   used. The embed template was not extended, so embeds stay a reduced
   editor. Verified headless: the embed example mounts docked and draws
   with no console errors, and the standalone app is unchanged.
+- **Home screen redesign** — done 2026-10-04 (branch `home-screen`,
+  design in `docs/superpowers/specs/2026-10-04-home-screen-design.md`).
+  The Gallery follows Pixelmator Pro for iPad's file picker: full-bleed
+  artwork (`assets/home-bg.webp`) under a radial scrim, a glass hero card
+  with the "Pixi" wordmark and New Canvas, and saved projects in a glass
+  Recents sheet across the bottom with size and last-edited. Tiles are now
+  keyboard-reachable buttons. New Canvas moved into a glass card over the
+  same backdrop. Reuses the 5a `.glass` card, light and dark. No secondary
+  hero action: the app has no "open an image as a project" flow. Verified
+  headless in Chromium and WebKit at 1180×820, 768×1024 and 390×844.
 - **5i — Palette merge** (independent): the fixed 16-swatch `#palette-row`
   becomes Color Library's default palette, and the row is removed. Its
   Rainbow swatch (Brush-only, mutually exclusive with the Color Library
@@ -371,15 +381,15 @@ Follow-ups after 5h:
 
 - **Phone layout** (was 5b, raised 2026-08-22): re-places the same floating
   parts below tablet width (rail at the bottom, cards as sheets). The
-  logical-positioning rule exists for this. Gallery and New Canvas still
-  need their own phone treatment decided.
+  logical-positioning rule exists for this. Gallery and New Canvas got
+  theirs in the home screen redesign.
 - **Brush picker** (was 5a, raised 2026-08-21): wanted a less heavyweight
   brush-picking interface. 5d/5e move spacing/rotation into the options bar
   and the grid into its own card; revisit whether anything is still wanted
   after 5h.
 
-Status: in progress - 5a–5f, the 5h switch-on and the embed mount fix
-done.
+Status: in progress - 5a–5f, the 5h switch-on, the embed mount fix and
+the home screen redesign done.
 Next: 5g (Prefs), then the rest of 5h (docked deletion).
 Visual direction for all floating work: Pixelmator's airy, frosted-glass
 look (references in `docs/Screenshots of other apps/`), keeping Pixi's

@@ -61,3 +61,13 @@ NOT require confirmation — there is nothing to lose.
 - **THEN** the Workspace behaves identically to the first project (drawing,
   undo/redo, palette, layers, and export all work correctly, with no
   leftover state or duplicated event handling from the previous project)
+
+### Requirement: New Canvas presentation
+The New Canvas screen SHALL show the same decorative artwork and scrim as
+the Gallery, with its form in a centred frosted-glass card that falls
+back to an opaque card when the user prefers reduced transparency.
+
+#### Scenario: Moving from the Gallery to New Canvas
+- **WHEN** the user taps "New Canvas" in the Gallery
+- **THEN** the New Canvas form appears in a glass card over the same
+  artwork the Gallery showed

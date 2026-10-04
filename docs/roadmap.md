@@ -348,6 +348,19 @@ and can ship at any time.
   - **"How cards open" deferred**: edge tabs and contextual auto-open are
     each a new interaction model, not a pref row; the mini-rail stays
     the only mode. Listed under "On demand" below.
+- ~~**Customize Tools**~~ — **done** 2026-10-04 (design
+  `docs/superpowers/specs/2026-10-04-customize-tools-design.md`, plan
+  `docs/superpowers/plans/2026-10-04-customize-tools.md`). After
+  Pixelmator Pro for iPad: a full-window Customize Tools sheet (Reset,
+  ✓ Done, favorites row, "Drag your favorite tools into the list
+  above…", grid of the rest) where tools are dragged (mouse, touch,
+  Pencil) to add, reorder or remove, with tap-to-move and Alt+arrow
+  reorder as the non-drag path. The rail shows only the favorites
+  (default: all ten), a ⋯ button at its foot lists the rest plus
+  Customize Tools…, and shows as active when the current tool is off the
+  rail. Shortcuts work for every tool. Opened from ⋯ and from a new
+  Tools row in Prefs; saved as `railTools` in `pixi-prefs`. Standalone
+  only.
 - **5h — Switch on**: make the floating layout the default, delete the old
   docked-layout CSS/markup, sync specs and `docs/ui-reference.md`.
   - Decided 2026-10-03: the switch-on itself (floating becomes the
@@ -412,8 +425,8 @@ Follow-ups after 5h:
   and the grid into its own card; revisit whether anything is still wanted
   after 5h.
 
-Status: in progress - 5a–5g, the 5h switch-on, the embed mount fix and
-the home screen redesign done.
+Status: in progress - 5a–5g, Customize Tools, the 5h switch-on, the
+embed mount fix and the home screen redesign done.
 Next: the rest of 5h (docked deletion).
 Visual direction for all floating work: Pixelmator's airy, frosted-glass
 look (references in `docs/Screenshots of other apps/`), keeping Pixi's

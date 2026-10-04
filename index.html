@@ -42,6 +42,28 @@
     <div class="home-backdrop" aria-hidden="true">
       <img src="assets/home-bg.webp" alt="" width="1376" height="768" decoding="async" />
     </div>
+    <!-- Theme setting (home-theme-setting): the same light/dark/system
+         preference as the Workspace's #theme-toggle and More menu, wired
+         by js/theme.js's bindThemeRadios(). Native radios, so it's one
+         tab stop with arrow keys between the choices. -->
+    <fieldset id="home-theme" class="home-theme glass">
+      <legend class="visually-hidden">Theme</legend>
+      <label class="home-theme-option">
+        <input type="radio" name="home-theme" value="light" />
+        <span class="material-symbols-outlined" aria-hidden="true">light_mode</span>
+        <span class="home-theme-label">Light</span>
+      </label>
+      <label class="home-theme-option">
+        <input type="radio" name="home-theme" value="dark" />
+        <span class="material-symbols-outlined" aria-hidden="true">dark_mode</span>
+        <span class="home-theme-label">Dark</span>
+      </label>
+      <label class="home-theme-option">
+        <input type="radio" name="home-theme" value="system" />
+        <span class="material-symbols-outlined" aria-hidden="true">brightness_auto</span>
+        <span class="home-theme-label">Auto</span>
+      </label>
+    </fieldset>
     <div class="home-hero-wrap">
       <div class="home-hero glass">
         <h1 class="home-wordmark" translate="no">Pixi</h1>

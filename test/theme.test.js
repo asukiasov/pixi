@@ -1,6 +1,6 @@
 import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveTheme, nextThemePreference, normalizeThemePreference, initThemeToggle } from '../js/theme.js';
+import { resolveTheme, nextThemePreference, normalizeThemePreference, initThemeToggle, bindThemeRadios } from '../js/theme.js';
 
 describe('resolveTheme', () => {
   test('"light" preference always resolves to light, regardless of OS', () => {
@@ -266,5 +266,64 @@ describe('initThemeToggle', () => {
     // Clicking still cycles/persists even without a live media query.
     button.click(); // system -> light
     assert.equal(storage.getItem('pixi-theme-preference'), 'light');
+  });
+  test('subscribe listeners hear every change, from setPreference or a click', () => {
+    const { button } = setUp({ storedPreference: 'light' });
+    const theme = initThemeToggle(button);
+    const heard = [];
+    theme.subscribe((p) => heard.push(p));
+    theme.setPreference('system');
+    button.click(); // system -> light
+    assert.deepEqual(heard, ['system', 'light']);
+  });
+});
+
+// The home screen's Light/Dark/Auto radios. DOM-free like the rest of
+// this file: fake radios with `value`/`checked` and a change listener,
+// and a fake theme object with the same shape initThemeToggle returns.
+describe('bindThemeRadios', () => {
+  function fakeRadio(value) {
+    const listeners = {};
+    return {
+      value,
+      checked: false,
+      addEventListener: (type, cb) => { listeners[type] = cb; },
+      choose() { this.checked = true; listeners.change?.(); },
+    };
+  }
+
+  function fakeTheme(initial) {
+    let preference = initial;
+    const subscribers = [];
+    return {
+      getPreference: () => preference,
+      setPreference(p) { preference = p; for (const fn of subscribers) fn(p); },
+      subscribe: (fn) => { subscribers.push(fn); },
+    };
+  }
+
+  const radios = () => ['light', 'dark', 'system'].map(fakeRadio);
+  const checkedValue = (rs) => rs.filter((r) => r.checked).map((r) => r.value);
+
+  test('checks the radio for the current preference', () => {
+    const rs = radios();
+    bindThemeRadios(rs, fakeTheme('dark'));
+    assert.deepEqual(checkedValue(rs), ['dark']);
+  });
+
+  test('choosing a radio sets that preference', () => {
+    const rs = radios();
+    const theme = fakeTheme('system');
+    bindThemeRadios(rs, theme);
+    rs[0].choose();
+    assert.equal(theme.getPreference(), 'light');
+  });
+
+  test('follows a preference changed somewhere else', () => {
+    const rs = radios();
+    const theme = fakeTheme('light');
+    bindThemeRadios(rs, theme);
+    theme.setPreference('system');
+    assert.deepEqual(checkedValue(rs), ['system']);
   });
 });

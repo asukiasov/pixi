@@ -71,3 +71,18 @@ describe('home screen glass surfaces', () => {
     assert.match(screen('screen-gallery'), /<ul id="gallery-grid" class="gallery-grid"/);
   });
 });
+
+describe('home screen theme setting', () => {
+  test('a glass Light/Dark/Auto radio group sits on the Gallery', () => {
+    const gallery = screen('screen-gallery');
+    assert.match(gallery, /<fieldset id="home-theme" class="home-theme glass">/);
+    assert.match(gallery, /<legend class="visually-hidden">Theme<\/legend>/);
+    for (const value of ['light', 'dark', 'system']) {
+      assert.match(gallery, new RegExp(`<input type="radio" name="home-theme" value="${value}"`), value);
+    }
+  });
+
+  test('the group is positioned (the .glass blur layer is an absolute ::before)', () => {
+    assert.match(block('.home-theme'), /position:\s*absolute/);
+  });
+});

@@ -68,6 +68,28 @@ openable from the keyboard.
 - **WHEN** the user tabs to a project and presses Enter
 - **THEN** that project opens in the Workspace
 
+### Requirement: Theme setting on the Gallery
+The Gallery SHALL offer a Light / Dark / Auto theme setting. It SHALL
+edit the same saved preference as the Workspace's theme controls, apply
+the choice immediately, and keep it across reloads. Auto SHALL follow
+the operating system's light/dark setting, live. The setting SHALL be a
+single keyboard tab stop with the arrow keys moving between choices.
+
+#### Scenario: Choosing a theme on the Gallery
+- **WHEN** the user picks Light on the Gallery
+- **THEN** the app switches to the light theme and stays light after a
+  reload, and the Workspace's theme controls show Light
+
+#### Scenario: Theme changed in the Workspace
+- **WHEN** the user changes the theme from the Workspace and goes back
+  to the Gallery
+- **THEN** the Gallery's setting shows that choice
+
+#### Scenario: Phone width
+- **WHEN** the Gallery is shown at 390px wide
+- **THEN** the setting shows icons only (each still named for screen
+  readers) and causes no horizontal scrolling
+
 ### Requirement: Start a new canvas from the Gallery
 The Gallery SHALL offer a "New Canvas" control that opens the New Canvas
 screen.

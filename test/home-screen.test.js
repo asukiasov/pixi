@@ -43,7 +43,10 @@ describe('home screen backdrop', () => {
   });
 
   test('scrim tokens are defined for both themes', () => {
-    for (const theme of [block(':root'), block(':root[data-theme="light"]')]) {
+    const tokens = read('forma-ui/tokens.css').toString('utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const selector of [':root', ':root[data-theme="light"]']) {
+      const start = tokens.indexOf(`${selector} {`);
+      const theme = tokens.slice(start, tokens.indexOf('}', start));
       assert.match(theme, /--home-scrim-inner:/);
       assert.match(theme, /--home-scrim-outer:/);
     }

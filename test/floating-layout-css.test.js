@@ -78,12 +78,19 @@ describe('glass card (5a)', () => {
   });
 
   test('glass tokens exist for both themes', () => {
-    const root = all.find((r) => r.selector === ':root');
-    const light = all.find((r) => r.selector === ':root[data-theme="light"]');
+    const tokens = readFileSync(new URL('../forma-ui/tokens.css', import.meta.url), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    const block = (selector) => {
+      const start = tokens.indexOf(`${selector} {`);
+      assert.notEqual(start, -1, `${selector} not found`);
+      return tokens.slice(start, tokens.indexOf('}', start));
+    };
+    const root = block(':root');
+    const light = block(':root[data-theme="light"]');
     for (const token of ['--float-radius', '--float-gap', '--float-edge', '--glass-tint', '--glass-border', '--glass-blur', '--float-shadow']) {
-      assert.match(root.body, new RegExp(`${token}:`), token);
+      assert.match(root, new RegExp(`${token}:`), token);
     }
-    assert.match(light.body, /--glass-tint:/);
+    assert.match(light, /--glass-tint:/);
   });
 });
 

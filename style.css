@@ -20,105 +20,14 @@
      unstyled native chrome doesn't stay dark-styled after switching to
      the light theme (or vice versa). Kept next to the tokens it tracks. */
   color-scheme: dark;
-  --color-bg: #1c1c1e;
-  --color-surface: #2c2c2e;
-  --color-surface-alt: #232325;
-  --color-track: #3a3a3d;
-  --color-border: #48484a;
-  --color-text: #f2f2f2;
-  --color-text-secondary: #a0a0a5;
-  --color-text-tertiary: #9a9a9e;
-  --color-text-muted: #6e6e73;
-  --color-text-subtle: #d0d0d5;
-  --color-text-subtle-2: #c0c0c5;
-  --color-accent: #0a84ff;
-  --color-accent-strong: #0a5cad;
-  --color-accent-soft: rgba(10, 132, 255, 0.15);
-  --color-danger: #ff453a;
-  --color-success: #34c759;
-  --color-overlay: rgba(28, 28, 30, 0.92);
-  --color-overlay-soft: rgba(28, 28, 30, 0.75);
-
-  /* Icon-button size scale (icon-button-size-system) - every icon-only
-     button's width/height is meant to read from one of these five steps
-     instead of a one-off literal. Values are the five distinct sizes
-     already in ad hoc use across the app before this change (Layers
-     panel row buttons, color picker popover header, Color Library
-     header actions [now reassigned to XS - see .color-library-header-
-     actions .icon-button], zoom controls, and the base .icon-button/tool
-     rail/bottom-bar undo-redo), so adopting them as named steps changes
-     no existing rendered size except where a selector below explicitly
-     switches steps. XS is also this scale's accessibility floor - see
-     that selector's own comment for why it doesn't go smaller. */
-  --icon-size-xs: 1.4rem;
-  --icon-size-s: 1.6rem;
-  --icon-size-m: 1.8rem;
-  --icon-size-l: 2.2rem;
-  --icon-size-xl: 2.6rem;
-
-  /* Floating workspace (5a-floating-shell, Pixelmator visual pass):
-     shared card shape/spacing and the frosted-glass tint. The tint is
-     see-through (62%) so the blur reads as glass; the floating backdrop
-     is dark in the dark theme (--workspace-backdrop), so secondary text
-     keeps its contrast. --glass-border is a hairline that keeps a card's
-     edge visible over artwork of the same colour; --glass-highlight is
-     the faint inner top edge. --ghost-* are the borderless buttons on
-     glass: hover fill, and the pressed/open disk (white on dark,
-     inverted in the light theme). See .glass and .ghost-button below. */
-  --float-radius: 22px;
-  --float-gap: 0.5rem;
-  --float-edge: 0.75rem;
-  --glass-tint: rgba(44, 44, 48, 0.62);
-  --glass-tint-hover: rgba(72, 72, 78, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  --glass-blur: 28px;
-  --float-shadow: 0 12px 40px rgba(0, 0, 0, 0.32), 0 2px 8px rgba(0, 0, 0, 0.18);
-  --ghost-hover: rgba(255, 255, 255, 0.12);
-  --ghost-on-bg: #ffffff;
-  --ghost-on-fg: #1c1c1e;
   --title-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
   --workspace-backdrop: radial-gradient(120% 80% at 20% 0%, #3a3a46 0%, transparent 60%), linear-gradient(160deg, #26262d 0%, #121216 100%);
-
-  /* Home screen (Gallery + New Canvas) artwork scrim - a radial
-     vignette over assets/home-bg.webp so the glass cards stay readable
-     over the busy centre. Dark darkens, light washes toward --color-bg. */
-  --home-scrim-inner: rgba(0, 0, 0, 0.42);
-  --home-scrim-outer: rgba(0, 0, 0, 0.82);
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --color-bg: #ececf0;
-  --color-surface: #ffffff;
-  --color-surface-alt: #e4e4e9;
-  --color-track: #c6c6cc;
-  --color-border: #a3a3a9;
-  --color-text: #1c1c1e;
-  --color-text-secondary: #6c6c70;
-  --color-text-tertiary: #707074;
-  --color-text-muted: #75757a;
-  --color-text-subtle: #3c3c43;
-  --color-text-subtle-2: #48484a;
-  --color-accent: #007aff;
-  --color-accent-strong: #0a5cad;
-  --color-accent-soft: rgba(0, 122, 255, 0.12);
-  --color-danger: #ff3b30;
-  --color-success: #0f7a30;
-  --color-overlay: rgba(255, 255, 255, 0.94);
-  --color-overlay-soft: rgba(255, 255, 255, 0.8);
-  --glass-tint: rgba(255, 255, 255, 0.62);
-  --glass-tint-hover: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  --float-shadow: 0 12px 40px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08);
-  --ghost-hover: rgba(0, 0, 0, 0.07);
-  --ghost-on-bg: #1c1c1e;
-  --ghost-on-fg: #ffffff;
   --title-shadow: 0 0 4px rgba(255, 255, 255, 0.9);
   --workspace-backdrop: radial-gradient(120% 80% at 20% 0%, #ffffff 0%, transparent 60%), linear-gradient(160deg, #ececf1 0%, #d4d4dc 100%);
-  --home-scrim-inner: rgba(236, 236, 240, 0.3);
-  --home-scrim-outer: rgba(236, 236, 240, 0.78);
 }
 
 * {

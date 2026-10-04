@@ -53,9 +53,9 @@ No new features. Behavior is unchanged apart from the richer project tiles
   be unit-tested without a DOM:
   - `formatCanvasSize({ width, height })` → `"32×32"`, or `""` if missing.
   - `formatEdited(timestamp, now, locale)` → `"Just now"` (< 1 min),
-    relative minutes/hours via `Intl.RelativeTimeFormat` (< 24 h),
-    `"Yesterday"` (< 48 h), else a short date (`"Sep 12"`, with the year
-    when it differs from `now`'s).
+    relative minutes (< 1 h) or hours (same calendar day) via
+    `Intl.RelativeTimeFormat`, `"Yesterday"` (previous calendar day), else
+    a short date (`"Sep 12"`, with the year when it differs from `now`'s).
 - **Empty state:** kept inside the sheet with the same copy, updated to
   match the button label ("tap New Canvas").
 - **Version badge** moves to the top-right corner (the sheet now covers the

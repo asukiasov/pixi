@@ -42,9 +42,10 @@ the browser can't blur, in both the light and dark themes.
 The Gallery SHALL display every saved project as a thumbnail with its
 name, canvas size (width×height) and when it was last edited, ordered by
 most-recently-updated first. Last edited SHALL read "Just now" under a
-minute, relative minutes or hours under a day, "Yesterday" under two
-days, and a short date after that (with the year only when it isn't the
-current year).
+minute, relative minutes under an hour, relative hours for the rest of
+the same calendar day, "Yesterday" for the previous calendar day, and a
+short date after that (with the year only when it isn't the current
+year).
 
 #### Scenario: Multiple projects listed
 - **WHEN** the user has edited project B more recently than project A

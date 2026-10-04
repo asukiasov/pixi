@@ -4,7 +4,6 @@
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
 
 /** "32×16", or '' for a record without dimensions. */
 export function formatCanvasSize({ width, height } = {}) {
@@ -14,8 +13,10 @@ export function formatCanvasSize({ width, height } = {}) {
 /**
  * Last-edited label: "Just now" under a minute (or for a timestamp
  * slightly in the future - clock skew between devices once sync exists),
- * relative minutes/hours under a day, "Yesterday" under two days, then a
- * short date, with the year only when it isn't `now`'s year. `locale` is
+ * relative minutes under an hour, relative hours for the rest of today,
+ * "Yesterday" for the previous calendar day, then a short date, with the
+ * year only when it isn't `now`'s year. Days are local calendar days, so
+ * 23:00 two days ago is a date even if it's under 48 hours. `locale` is
  * the browser default unless given (tests pin it).
  */
 export function formatEdited(timestamp, now = Date.now(), locale = undefined) {
@@ -24,12 +25,18 @@ export function formatEdited(timestamp, now = Date.now(), locale = undefined) {
   if (age < MINUTE) return 'Just now';
   const relative = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
   if (age < HOUR) return relative.format(-Math.floor(age / MINUTE), 'minute');
-  if (age < DAY) return relative.format(-Math.floor(age / HOUR), 'hour');
-  if (age < 2 * DAY) return capitalize(relative.format(-1, 'day'));
   const date = new Date(timestamp);
+  const today = new Date(now);
+  if (sameDay(date, today)) return relative.format(-Math.floor(age / HOUR), 'hour');
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  if (sameDay(date, yesterday)) return capitalize(relative.format(-1, 'day'));
   const options = { month: 'short', day: 'numeric' };
-  if (date.getFullYear() !== new Date(now).getFullYear()) options.year = 'numeric';
+  if (date.getFullYear() !== today.getFullYear()) options.year = 'numeric';
   return date.toLocaleDateString(locale, options);
+}
+
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
 function capitalize(text) {

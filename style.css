@@ -328,6 +328,9 @@ textarea,
    transparent project reads as transparent rather than as grey. */
 .gallery-thumbnail {
   width: 100%;
+  /* Overrides the height attribute js/gallery.js sets (the project's
+     pixel size, for intrinsic sizing) so aspect-ratio keeps it square. */
+  height: auto;
   aspect-ratio: 1;
   margin-bottom: 0.35rem;
   object-fit: contain;

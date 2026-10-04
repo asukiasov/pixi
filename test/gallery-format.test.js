@@ -39,6 +39,17 @@ describe('formatEdited', () => {
     assert.equal(formatEdited(NOW - 30 * HOUR, NOW, 'en'), 'Yesterday');
   });
 
+  test('"Yesterday" means the previous calendar day, not 24-48 hours', () => {
+    const earlyOct4 = new Date(2026, 9, 4, 1, 0).getTime();
+    assert.equal(formatEdited(new Date(2026, 9, 2, 23, 0).getTime(), earlyOct4, 'en'), 'Oct 2');
+    assert.equal(formatEdited(new Date(2026, 9, 3, 22, 0).getTime(), earlyOct4, 'en'), 'Yesterday');
+  });
+
+  test('hours only within the same calendar day', () => {
+    const earlyOct4 = new Date(2026, 9, 4, 2, 0).getTime();
+    assert.equal(formatEdited(new Date(2026, 9, 4, 0, 30).getTime(), earlyOct4, 'en'), '1 hour ago');
+  });
+
   test('older, same year: short date', () => {
     assert.equal(formatEdited(NOW - 10 * DAY, NOW, 'en'), 'Sep 24');
   });

@@ -221,7 +221,9 @@ textarea,
   flex: 1 0 auto;
   display: grid;
   place-items: center;
-  padding: 1.5rem 0;
+  /* Extra top room keeps the hero clear of the theme pill (.home-theme)
+     on short screens, e.g. a landscape phone. */
+  padding: 3.5rem 0 1.5rem;
 }
 
 .home-hero {
@@ -279,17 +281,93 @@ textarea,
   text-align: center;
 }
 
-/* Top-right: the Recents sheet now covers the bottom. Deliberately tiny
-   and low-contrast - a diagnostic, not UI chrome (see index.html). */
+/* Top-left (the theme setting has the top-right): the Recents sheet
+   covers the bottom. Deliberately tiny and low-contrast - a diagnostic,
+   not UI chrome (see index.html). */
 .version-badge {
   position: absolute;
   top: max(0.4rem, env(safe-area-inset-top));
-  right: max(0.6rem, env(safe-area-inset-right));
+  left: max(0.6rem, env(safe-area-inset-left));
   margin: 0;
   font-family: ui-monospace, monospace;
   font-size: 0.65rem;
   color: rgba(255, 255, 255, 0.4);
   pointer-events: none;
+}
+
+/* Theme setting: a glass pill of three segments, the checked one drawn
+   as the same solid disk as a pressed .ghost-button. Each segment is a
+   44px-tall label around a native radio (visually hidden, still focusable). */
+.home-theme {
+  position: absolute;
+  top: max(var(--float-edge), env(safe-area-inset-top));
+  right: max(var(--float-edge), env(safe-area-inset-right));
+  z-index: 1;
+  display: flex;
+  gap: 2px;
+  margin: 0;
+  padding: 3px;
+  border-radius: 999px;
+}
+
+.home-theme-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2.75rem;
+  padding: 0 0.85rem 0 0.7rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-theme-option .material-symbols-outlined {
+  font-size: 1.15rem;
+}
+
+.home-theme-option input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.home-theme-option:hover {
+  background: var(--ghost-hover);
+}
+
+.home-theme-option:has(input:checked) {
+  background: var(--ghost-on-bg);
+  color: var(--ghost-on-fg);
+}
+
+.home-theme-option:has(input:focus-visible) {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Phone width: icons only, so the pill stays clear of the hero card.
+   The text stays in the accessibility tree as each radio's label, and
+   stays visible if the icon font failed (js/icon-font-fallback.js hides
+   the glyphs then, which would leave the segments blank). */
+@media (max-width: 480px) {
+  :root:not(.icon-font-failed) .home-theme-option {
+    padding: 0 0.7rem;
+  }
+
+  :root:not(.icon-font-failed) .home-theme-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
 }
 
 .gallery-grid {

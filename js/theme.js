@@ -109,7 +109,8 @@ function safeMatchMedia(query) {
  * Wires the theme toggle button: applies the persisted/system-resolved
  * theme immediately, keeps it live if `preference === 'system'` and the
  * OS scheme changes, and cycles+persists the preference on click.
- * Returns `{ getPreference, setPreference }` for other theme controls.
+ * Returns `{ getPreference, setPreference, subscribe }` for other theme
+ * controls; `subscribe(fn)` calls `fn(preference)` after every change.
  *
  * Called once at boot (js/app.js), not per Workspace open - the button is
  * a static element present for the whole page lifetime, unlike Workspace-
@@ -117,6 +118,7 @@ function safeMatchMedia(query) {
  */
 export function initThemeToggle(button) {
   let preference = readStoredPreference();
+  const subscribers = [];
   const media = safeMatchMedia('(prefers-color-scheme: dark)');
 
   function apply() {
@@ -139,6 +141,7 @@ export function initThemeToggle(button) {
     preference = normalizeThemePreference(value);
     writeStoredPreference(preference);
     apply();
+    for (const fn of subscribers) fn(preference);
   }
 
   button.addEventListener('click', () => setPreference(nextThemePreference(preference)));
@@ -147,5 +150,28 @@ export function initThemeToggle(button) {
 
   // For the floating layout's More menu (5b-top-bar-more), which picks a
   // specific theme rather than cycling; this button stays in sync.
-  return { getPreference: () => preference, setPreference };
+  return {
+    getPreference: () => preference,
+    setPreference,
+    subscribe: (fn) => { subscribers.push(fn); },
+  };
+}
+
+/**
+ * Wires a Light/Dark/Auto radio group (the home screen's #home-theme) to
+ * the theme returned by initThemeToggle(): each radio's `value` is a
+ * preference. Checks the current one, sets the preference on change, and
+ * follows changes made by the other theme controls.
+ */
+export function bindThemeRadios(radios, theme) {
+  function sync(preference) {
+    for (const radio of radios) radio.checked = radio.value === preference;
+  }
+  for (const radio of radios) {
+    radio.addEventListener('change', () => {
+      if (radio.checked) theme.setPreference(radio.value);
+    });
+  }
+  theme.subscribe(sync);
+  sync(theme.getPreference());
 }

@@ -35,6 +35,12 @@ and New Canvas carry `.home-screen`.
 - `.home-backdrop` — decorative full-bleed artwork (`assets/home-bg.webp`,
   `object-fit: cover`, slight blur) under a radial scrim
   (`--home-scrim-inner`/`--home-scrim-outer`, per theme). `aria-hidden`.
+- `#home-theme.home-theme.glass` — top-right glass pill, a `<fieldset>`
+  of three native radios: Light (`light_mode`), Dark (`dark_mode`), Auto
+  (`brightness_auto`, the `system` preference). Same preference as
+  `#theme-toggle`; wired by `bindThemeRadios()` in `js/theme.js`. Icons
+  only under 480px wide (text kept for screen readers, and shown if the
+  icon font failed).
 - `.home-hero.glass` — centred glass card:
   - `h1.home-wordmark` — "Pixi". Clicking it 7 times in 2 seconds
     starts the Paw Parade easter egg.
@@ -50,7 +56,7 @@ and New Canvas carry `.home-screen`.
     inside the sheet. Under 560px tall the whole screen scrolls instead.
   - `#gallery-empty-state` — shown instead of the grid when no projects
     exist yet ("No projects yet — tap New Canvas to start one.").
-- `#version-badge` — small build/version stamp, top-right; cache sanity
+- `#version-badge` — small build/version stamp, top-left; cache sanity
   check only, not a feature (`js/version.js`, `scripts/stamp-version.sh`).
 
 Spec: `gallery`. Implementation: `js/gallery.js`, `js/gallery-format.js`.

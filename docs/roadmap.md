@@ -425,8 +425,13 @@ Follow-ups after 5h:
   and the grid into its own card; revisit whether anything is still wanted
   after 5h.
 
+- ~~**Home screen theme setting**~~ — **done** 2026-10-04: a Light /
+  Dark / Auto pill in the Gallery's top-right corner, sharing the
+  Workspace's theme preference. Design:
+  `docs/superpowers/specs/2026-10-04-home-theme-setting-design.md`.
+
 Status: in progress - 5a–5g, Customize Tools, the 5h switch-on, the
-embed mount fix and the home screen redesign done.
+embed mount fix, the home screen redesign and its theme setting done.
 Next: the rest of 5h (docked deletion).
 Visual direction for all floating work: Pixelmator's airy, frosted-glass
 look (references in `docs/Screenshots of other apps/`), keeping Pixi's

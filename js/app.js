@@ -7,7 +7,7 @@ import { LayerStack } from '../lib/pixel-engine/layers.js';
 import { parseRoute, navigate, onRouteChange } from './router.js';
 import { VERSION } from './version.js';
 import { initMagneticHover } from './magnetic-hover.js';
-import { initThemeToggle } from './theme.js';
+import { initThemeToggle, bindThemeRadios } from './theme.js';
 import { initIconFontFallback } from './icon-font-fallback.js';
 import { initColorLibrary } from './color-library-ui.js';
 import { initLayers, closeLayersOpacityPopover } from './layers-ui.js';
@@ -121,6 +121,8 @@ initMagneticHover([
 // style.css's tokens keying off `data-theme` on <html>), not just inside
 // the Workspace screen where the button happens to live. See js/theme.js.
 const theme = initThemeToggle(document.getElementById('theme-toggle'));
+// The Gallery's Light/Dark/Auto setting edits the same preference.
+bindThemeRadios([...document.querySelectorAll('#home-theme input')], theme);
 
 // Floating layout's zoom pill and More menu (5b-top-bar-more). Once, like
 // the theme toggle above: every item forwards to a control that exists

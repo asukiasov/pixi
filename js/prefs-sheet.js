@@ -33,7 +33,9 @@ export function initPrefsSheet({ getPrefs, setPrefs, root = document }) {
   function read() {
     const pinned = {};
     for (const pin of pins) pinned[pin.dataset.pin] = pin.checked;
-    return { toolsSide: toolsSide.value, panelsSide: panelsSide.value, pinned, autoHide: autoHide.checked };
+    // Over the current prefs, so fields this sheet doesn't show
+    // (railTools, edited by Customize Tools) are kept.
+    return { ...getPrefs(), toolsSide: toolsSide.value, panelsSide: panelsSide.value, pinned, autoHide: autoHide.checked };
   }
 
   sheet.addEventListener('change', () => setPrefs(read()));

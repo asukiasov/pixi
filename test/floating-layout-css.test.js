@@ -4,6 +4,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { FORMA_CLASSES } from '../js/layout.js';
 
 const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8')
   .replace(/\/\*[\s\S]*?\*\//g, '');
@@ -34,56 +35,31 @@ function rules(source) {
   return out;
 }
 
-// Component classes (.glass, .ghost-button, .slider, .swatch-pair - see
-// components.html) share rule lists with the floating selectors that give
-// the floating workspace the same look. They're for the components page,
-// not the docked layout, so they're dropped here before the scoping checks.
-const COMPONENT = /^\.(glass|ghost-button|slider|swatch-pair)\b/;
-const all = rules(css).flatMap((r) => {
-  const sels = r.selector.split(/,(?![^(]*\))/).map((x) => x.trim()).filter((x) => !COMPONENT.test(x));
-  return sels.length ? [{ ...r, selector: sels.join(',\n') }] : [];
-});
-const GLASS = '.slot-tools, .panel-rail, .options-card, .tool-options-bar';
-const GLASS_CARDS = '.right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel)';
+// The glass, ghost button, slider and swatch pair looks are Forma UI
+// components (forma-ui/components.css); js/layout.js's FORMA_CLASSES puts
+// their classes on the floating workspace's elements.
+const all = rules(css);
+const formaSelector = (cls) => FORMA_CLASSES.filter(([, classes]) => classes.includes(cls)).map(([selector]) => selector).join(', ');
 
 describe('glass card (5a)', () => {
-  test('the opaque base sits outside any at-rule and has no blur', () => {
-    const base = all.filter((r) => r.context === '' && r.selector.includes(GLASS));
-    assert.equal(base.length, 1);
-    assert.match(base[0].body, /background:\s*var\(--color-surface\)/);
-    assert.doesNotMatch(base[0].body, /backdrop-filter/);
-  });
-
-  test('blur is only applied inside @supports, with the -webkit- prefix', () => {
-    const blurred = all.filter((r) => /(^|[\s;])backdrop-filter:\s*blur/.test(r.body));
-    assert.ok(blurred.length > 0);
-    for (const r of blurred) {
-      assert.match(r.context, /^@supports/);
-      assert.match(r.body, /-webkit-backdrop-filter:\s*blur/);
-    }
-  });
-
-  test('the blur is on ::before, not on the card (fixed popovers live inside cards)', () => {
-    const blurred = all.filter((r) => /(^|[\s;])backdrop-filter:\s*blur/.test(r.body));
-    for (const r of blurred) {
-      for (const sel of r.selector.split(/,(?![^(]*\))/)) assert.match(sel.trim(), /::before$/);
-    }
-  });
-
-  test('reduced transparency is a positive query that turns the blur off', () => {
-    assert.doesNotMatch(css, /not\s*\(\s*prefers-reduced-transparency/);
-    const reduced = all.filter((r) => /^@media\s*\(prefers-reduced-transparency:\s*reduce\)/.test(r.context));
-    assert.ok(reduced.some((r) => r.selector.includes('::before') && /display:\s*none/.test(r.body)));
-    assert.ok(reduced.some((r) => !r.selector.includes('::before') && /background:\s*var\(--color-surface\)/.test(r.body)));
+  test('style.css has no backdrop-filter: the blur lives in Forma UI', () => {
+    assert.doesNotMatch(css, /backdrop-filter/);
   });
 
   test('glass tokens exist for both themes', () => {
-    const root = all.find((r) => r.selector === ':root');
-    const light = all.find((r) => r.selector === ':root[data-theme="light"]');
+    const tokens = readFileSync(new URL('../forma-ui/tokens.css', import.meta.url), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    const block = (selector) => {
+      const start = tokens.indexOf(`${selector} {`);
+      assert.notEqual(start, -1, `${selector} not found`);
+      return tokens.slice(start, tokens.indexOf('}', start));
+    };
+    const root = block(':root');
+    const light = block(':root[data-theme="light"]');
     for (const token of ['--float-radius', '--float-gap', '--float-edge', '--glass-tint', '--glass-border', '--glass-blur', '--float-shadow']) {
-      assert.match(root.body, new RegExp(`${token}:`), token);
+      assert.match(root, new RegExp(`${token}:`), token);
     }
-    assert.match(light.body, /--glass-tint:/);
+    assert.match(light, /--glass-tint:/);
   });
 });
 
@@ -203,7 +179,6 @@ describe('floating tool-options bar (5d)', () => {
     const barRules = all.filter((r) => BAR.some((s) => r.selector.includes(s)) && !r.selector.includes('.tool-options-symmetry'));
     assert.ok(barRules.length >= 8);
     for (const r of barRules) {
-      if (r.selector.includes(GLASS)) continue; // the shared glass list (5a)
       for (const sel of r.selector.split(/,(?![^(]*\))/)) assert.ok(sel.trim().startsWith(FLOATING), sel.trim());
     }
   });
@@ -219,7 +194,7 @@ describe('floating tool-options bar (5d)', () => {
   });
 
   test('outside the floating layout the only .options-card rule is display: contents', () => {
-    const docked = all.filter((r) => r.selector.includes('.options-card') && !r.selector.startsWith(FLOATING) && !r.selector.includes(GLASS));
+    const docked = all.filter((r) => r.selector.includes('.options-card') && !r.selector.startsWith(FLOATING));
     assert.equal(docked.length, 1);
     assert.equal(docked[0].selector, '.options-card');
     assert.match(docked[0].body, /^\s*display:\s*contents;\s*$/);
@@ -273,10 +248,8 @@ describe('floating tool-options bar (5d)', () => {
 describe('floating panel cards + mini-rail (5e)', () => {
   const FLOATING = '.workspace-screen[data-layout="floating"]';
   const NEW = ['.panel-rail', '.panel-close', '--slot-cards-', '--panel-card-min-height'];
-  const isGlass = (r) => r.selector.includes(GLASS);
-
   test('every new rail, card, close and column rule is scoped to the floating layout', () => {
-    const newRules = all.filter((r) => !isGlass(r) && (NEW.some((s) => r.selector.includes(s) || r.body.includes(s))
+    const newRules = all.filter((r) => (NEW.some((s) => r.selector.includes(s) || r.body.includes(s))
       || r.selector.includes('.right-sidebar >') || /\.right-sidebar\s*>\s*\.collapsed/.test(r.selector)));
     assert.ok(newRules.length >= 8);
     for (const r of newRules) {
@@ -285,16 +258,18 @@ describe('floating panel cards + mini-rail (5e)', () => {
   });
 
   test('outside the floating layout nothing styles .panel-rail, .panel-close or a closed Brushes card', () => {
-    const docked = all.filter((r) => !r.selector.startsWith(FLOATING) && !isGlass(r)
+    const docked = all.filter((r) => !r.selector.startsWith(FLOATING)
       && /\.panel-rail|\.panel-close|\.brushes-panel\.collapsed/.test(r.selector));
     assert.deepEqual(docked.map((r) => r.selector), []);
   });
 
   test('the glass lists name the rail and the three cards, not the whole sidebar', () => {
     assert.doesNotMatch(css, /:is\([^)]*\.slot-panels[^)]*\)/);
-    const glass = all.filter(isGlass);
-    assert.ok(glass.length >= 5);
-    for (const r of glass) assert.ok(r.selector.includes(GLASS_CARDS), r.selector);
+    const glass = formaSelector('glass');
+    for (const part of ['.panel-rail', '.right-sidebar > .color-library-panel', '.right-sidebar > .brushes-panel', '.right-sidebar > .layers-panel']) {
+      assert.ok(glass.includes(part), part);
+    }
+    assert.ok(!glass.includes('.right-sidebar,'), glass);
   });
 
   test('the card column is a see-through, pass-through flex column', () => {
@@ -338,11 +313,10 @@ describe('floating panel cards + mini-rail (5e)', () => {
 describe('floating selection action bar (5f)', () => {
   const FLOATING = '.workspace-screen[data-layout="floating"]';
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  const isGlass = (r) => r.selector.includes(GLASS);
   const selectors = (r) => r.selector.split(/,(?![^(]*\))/).map((s) => s.trim());
 
   test('every #selection-bar rule and the #selection-controls hide are scoped to the floating layout', () => {
-    const barRules = all.filter((r) => !isGlass(r) && /#selection-bar|\.selection-bar/.test(r.selector));
+    const barRules = all.filter((r) => /#selection-bar|\.selection-bar/.test(r.selector));
     assert.ok(barRules.length >= 4);
     for (const r of barRules) for (const sel of selectors(r)) assert.ok(sel.startsWith(FLOATING), sel);
     const hide = all.filter((r) => r.selector.includes('#selection-controls') && /display:\s*none/.test(r.body));
@@ -351,7 +325,7 @@ describe('floating selection action bar (5f)', () => {
   });
 
   test('outside the floating layout nothing styles the bar but .floating-only', () => {
-    const docked = all.filter((r) => !isGlass(r) && !r.selector.startsWith(FLOATING) && /selection-bar/.test(r.selector));
+    const docked = all.filter((r) => !r.selector.startsWith(FLOATING) && /selection-bar/.test(r.selector));
     assert.deepEqual(docked.map((r) => r.selector), []);
     assert.match(html, /id="selection-bar" class="selection-bar floating-only"/);
   });
@@ -379,9 +353,7 @@ describe('floating selection action bar (5f)', () => {
   });
 
   test('the glass lists name #selection-bar', () => {
-    const glass = all.filter(isGlass);
-    assert.ok(glass.length >= 5);
-    for (const r of glass) assert.ok(r.selector.includes('#selection-bar'), r.selector);
+    assert.ok(formaSelector('glass').includes('#selection-bar'));
   });
 
   test('the docked .selection-controls rules are unchanged', () => {
@@ -460,11 +432,7 @@ describe('Pixelmator visual pass', () => {
     const top = all.find((r) => r.selector === `${FLOATING} .slot-top` && /pointer-events/.test(r.body));
     assert.match(top.body, /pointer-events:\s*none/);
     assert.match(top.body, /background:\s*transparent/);
-    const glass = all.filter((r) => r.selector.includes(GLASS));
-    for (const r of glass) {
-      assert.doesNotMatch(r.selector, /\.slot-top/);
-      for (const id of ['#back-to-gallery-button', '#zoom-pill', '.topbar-group', '#more-button']) assert.ok(r.selector.includes(id), id);
-    }
+    assert.ok(formaSelector('glass-pill').includes('.topbar-group'));
   });
 
   test('the old accent fills for pressed/open floating buttons are gone', () => {

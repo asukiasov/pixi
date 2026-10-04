@@ -10,3 +10,6 @@ node_modules/
 
 # Local git worktrees
 .worktrees/
+
+# Computed-style snapshots (scripts/style-snapshot.mjs)
+test-output/

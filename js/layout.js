@@ -3,10 +3,34 @@
 // no query parameter changes that. Embeds (lib/pixi.js) never call
 // applyLayout, so they stay docked.
 
-/** Sets or clears `data-layout` on the workspace screen. */
+/**
+ * Forma UI classes (forma-ui/components.css) the floating layout puts on
+ * Pixi's own elements, so the shared CSS targets plain classes and the
+ * docked embed layout stays flat. Every element matched here is static
+ * markup in index.html; code that later creates an element inside one of
+ * these containers must add its Forma classes itself. .tool-options-slider
+ * isn't listed: it carries .slider in the markup already.
+ */
+export const FORMA_CLASSES = [
+  ['.slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar, #back-to-gallery-button, #zoom-pill, .topbar-group, #more-button, .right-sidebar > .color-library-panel, .right-sidebar > .brushes-panel, .right-sidebar > .layers-panel', ['glass']],
+  ['.slot-tools, .panel-rail, .options-card, #selection-bar, #zoom-pill, .topbar-group', ['glass-pill']],
+  ['#back-to-gallery-button, #more-button', ['glass-circle']],
+  [':is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group) .tool-button', ['ghost-button']],
+  ['#selection-bar .tool-button', ['ghost-text']],
+  ['.fg-bg-swatch-stack', ['swatch-pair']],
+];
+
+/** Sets or clears `data-layout` on the workspace screen, with its Forma classes. */
 export function applyLayout(screenEl, layout) {
-  if (layout === 'floating') screenEl.dataset.layout = 'floating';
+  const floating = layout === 'floating';
+  if (floating) screenEl.dataset.layout = 'floating';
   else delete screenEl.dataset.layout;
+  for (const [selector, classes] of FORMA_CLASSES) {
+    for (const el of screenEl.querySelectorAll(selector)) {
+      if (floating) el.classList.add(...classes);
+      else el.classList.remove(...classes);
+    }
+  }
 }
 
 /**

@@ -2,7 +2,8 @@
 // canvas fits into, and the anchor/side helpers.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { clearInsets, clearArea, visibleAnchor, canvasSide } from '../js/layout.js';
+import { clearInsets, clearArea, visibleAnchor, canvasSide, applyLayout, FORMA_CLASSES } from '../js/layout.js';
+import { readFileSync } from 'node:fs';
 
 describe('clearInsets', () => {
   const container = { left: 0, top: 0, right: 1000, bottom: 800, width: 1000, height: 800 };
@@ -126,6 +127,61 @@ describe('visibleAnchor', () => {
   test('a missing fallback still returns the element', () => {
     const toggle = el(0);
     assert.equal(visibleAnchor(toggle, null), toggle);
+  });
+});
+
+// A screen whose querySelectorAll returns one fake element per table
+// selector: enough to check applyLayout without a DOM library.
+function fakeElement() {
+  const classes = new Set();
+  return {
+    classes,
+    classList: {
+      add: (...c) => c.forEach((x) => classes.add(x)),
+      remove: (...c) => c.forEach((x) => classes.delete(x)),
+    },
+  };
+}
+
+function fakeScreen() {
+  const bySelector = new Map(FORMA_CLASSES.map(([selector]) => [selector, [fakeElement()]]));
+  return { dataset: {}, bySelector, querySelectorAll: (selector) => bySelector.get(selector) ?? [] };
+}
+
+describe('applyLayout and Forma UI classes', () => {
+  test('floating sets data-layout and adds each mapped class', () => {
+    const screen = fakeScreen();
+    applyLayout(screen, 'floating');
+    assert.equal(screen.dataset.layout, 'floating');
+    for (const [selector, classes] of FORMA_CLASSES) {
+      for (const c of classes) assert.ok(screen.bySelector.get(selector)[0].classes.has(c), `${selector} -> ${c}`);
+    }
+  });
+
+  test('docked clears data-layout and removes the classes again', () => {
+    const screen = fakeScreen();
+    applyLayout(screen, 'floating');
+    applyLayout(screen, 'docked');
+    assert.equal(screen.dataset.layout, undefined);
+    for (const [selector] of FORMA_CLASSES) assert.equal(screen.bySelector.get(selector)[0].classes.size, 0, selector);
+  });
+
+  test('every id and class the table names exists in index.html', () => {
+    const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    for (const [selector] of FORMA_CLASSES) {
+      for (const [, id] of selector.matchAll(/#([\w-]+)/g)) assert.match(html, new RegExp(`id="${id}"`), `#${id}`);
+      for (const [, cls] of selector.matchAll(/\.([\w-]+)/g)) {
+        assert.match(html, new RegExp(`class="([^"]* )?${cls}( [^"]*)?"`), `.${cls}`);
+      }
+    }
+  });
+
+  test('the table never maps a class the markup already carries statically', () => {
+    const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const workspace = html.slice(html.indexOf('id="screen-workspace"'));
+    for (const [, classes] of FORMA_CLASSES) {
+      for (const c of classes) assert.doesNotMatch(workspace, new RegExp(`class="([^"]* )?${c}( [^"]*)?"`), c);
+    }
   });
 });
 

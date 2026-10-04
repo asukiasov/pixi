@@ -35,15 +35,26 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check,check_box,check_box_outline_blank,close,colorize,crop_free,dark_mode,delete,dock_to_right,download,edit,error,expand_more,fiber_manual_record,flip,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,layers,light_mode,lock,more_horiz,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,settings,swap_horiz,tune,undo,unfold_more,visibility,visibility_off" />
 </head>
 <body>
-  <main id="screen-gallery" class="screen">
-    <div class="gallery-header">
-      <h1>Pixi</h1>
-      <button type="button" id="gallery-new-canvas-button" class="primary-button">+ New Canvas</button>
+  <main id="screen-gallery" class="screen home-screen">
+    <!-- Decorative artwork behind the home screen's glass cards (see
+         .home-backdrop in style.css). Repeated in #screen-new-canvas;
+         same URL, so the second one is a cache hit. -->
+    <div class="home-backdrop" aria-hidden="true">
+      <img src="assets/home-bg.webp" alt="" width="1376" height="768" decoding="async" />
     </div>
-    <div id="gallery-grid" class="gallery-grid"></div>
-    <p id="gallery-empty-state" class="gallery-empty-state hidden">
-      No projects yet — tap "+ New Canvas" to start one.
-    </p>
+    <div class="home-hero-wrap">
+      <div class="home-hero glass">
+        <h1 class="home-wordmark" translate="no">Pixi</h1>
+        <button type="button" id="gallery-new-canvas-button" class="primary-button">New Canvas</button>
+      </div>
+    </div>
+    <section class="home-recents glass" aria-labelledby="home-recents-title">
+      <h2 id="home-recents-title" class="home-recents-title">Recents</h2>
+      <ul id="gallery-grid" class="gallery-grid"></ul>
+      <p id="gallery-empty-state" class="gallery-empty-state hidden">
+        No projects yet — tap New Canvas to start one.
+      </p>
+    </section>
     <!-- Cache sanity check, not a feature - lets you tell a stale cached
          copy apart from the real latest deploy. Populated from
          js/version.js (see app.js), which scripts/stamp-version.sh keeps
@@ -51,32 +62,37 @@
     <p id="version-badge" class="version-badge"></p>
   </main>
 
-  <main id="screen-new-canvas" class="screen hidden">
-    <h1>New Canvas</h1>
+  <main id="screen-new-canvas" class="screen home-screen hidden">
+    <div class="home-backdrop" aria-hidden="true">
+      <img src="assets/home-bg.webp" alt="" width="1376" height="768" decoding="async" />
+    </div>
+    <div class="new-canvas-card glass">
+      <h1>New Canvas</h1>
 
-    <section class="field-group">
-      <h2>Size</h2>
-      <div class="preset-row" id="size-presets">
-        <button type="button" class="preset-button" data-size="16">16×16</button>
-        <button type="button" class="preset-button" data-size="32">32×32</button>
-        <button type="button" class="preset-button" data-size="64">64×64</button>
-        <button type="button" class="preset-button" data-size="128">128×128</button>
-      </div>
-      <div class="custom-size-row">
-        <label>W <input type="number" id="custom-width" min="1" max="256" placeholder="e.g. 24…" /></label>
-        <label>H <input type="number" id="custom-height" min="1" max="256" placeholder="e.g. 96…" /></label>
-      </div>
-    </section>
+      <section class="field-group">
+        <h2>Size</h2>
+        <div class="preset-row" id="size-presets">
+          <button type="button" class="preset-button" data-size="16">16×16</button>
+          <button type="button" class="preset-button" data-size="32">32×32</button>
+          <button type="button" class="preset-button" data-size="64">64×64</button>
+          <button type="button" class="preset-button" data-size="128">128×128</button>
+        </div>
+        <div class="custom-size-row">
+          <label>W <input type="number" id="custom-width" name="custom-width" autocomplete="off" min="1" max="256" placeholder="e.g. 24…" /></label>
+          <label>H <input type="number" id="custom-height" name="custom-height" autocomplete="off" min="1" max="256" placeholder="e.g. 96…" /></label>
+        </div>
+      </section>
 
-    <section class="field-group">
-      <h2>Background</h2>
-      <div class="preset-row" id="background-choice">
-        <label><input type="radio" name="background" value="transparent" checked /> Transparent</label>
-        <label><input type="radio" name="background" value="white" /> White</label>
-      </div>
-    </section>
+      <section class="field-group">
+        <h2>Background</h2>
+        <div class="preset-row" id="background-choice">
+          <label><input type="radio" name="background" value="transparent" checked /> Transparent</label>
+          <label><input type="radio" name="background" value="white" /> White</label>
+        </div>
+      </section>
 
-    <button type="button" id="create-canvas-button" class="primary-button">Create</button>
+      <button type="button" id="create-canvas-button" class="primary-button">Create</button>
+    </div>
   </main>
 
   <main id="screen-workspace" class="screen workspace-screen hidden">

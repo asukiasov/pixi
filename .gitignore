@@ -7,3 +7,6 @@ node_modules/
 .agents/
 .mcp.json
 .playwright-mcp/
+
+# Computed-style snapshots (scripts/style-snapshot.mjs)
+test-output/

@@ -140,7 +140,11 @@ export function initSelectionBar({ root = document, onCanvasViewChange, currentS
   // so focus still sits in the bar here if it was there.
   new MutationObserver(() => {
     if (source.classList.contains('hidden') && bar.contains(document.activeElement)) {
-      root.querySelector('.tools-sidebar [data-tool][aria-pressed="true"]')?.focus();
+      // To the selected tool's rail button, or ⋯ when that tool is off
+      // the rail (Customize Tools) and its button is hidden.
+      const pressed = root.querySelector('.tools-sidebar [data-tool][aria-pressed="true"]');
+      const target = pressed?.classList.contains('off-rail') ? root.querySelector('#tool-overflow-button') : pressed;
+      target?.focus();
     }
     schedule();
   }).observe(source, { attributes: true, attributeFilter: ['class'] });

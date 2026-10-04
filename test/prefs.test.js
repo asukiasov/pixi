@@ -33,7 +33,14 @@ describe('normalizePrefs', () => {
       panelsSide: 'right',
       pinned: { colors: true, brushes: true, layers: true },
       autoHide: false,
+      railTools: ['move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'selection', 'hand', 'eyedropper'],
     });
+  });
+
+  test('railTools keeps known tools in order and falls back to every tool', () => {
+    assert.deepEqual(normalizePrefs({ railTools: ['hand', 'nope', 'hand', 'move'] }).railTools, ['hand', 'move']);
+    assert.deepEqual(normalizePrefs({ railTools: 'hand' }).railTools, [...DEFAULT_PREFS.railTools]);
+    assert.deepEqual(normalizePrefs({ railTools: [] }).railTools, []);
   });
 
   test('each field falls back on its own', () => {
@@ -78,7 +85,7 @@ describe('loadPrefs / savePrefs', () => {
 
   test('round trip', () => {
     const storage = fakeStorage();
-    const prefs = { toolsSide: 'right', panelsSide: 'left', pinned: { colors: false, brushes: true, layers: false }, autoHide: true };
+    const prefs = { toolsSide: 'right', panelsSide: 'left', pinned: { colors: false, brushes: true, layers: false }, autoHide: true, railTools: ['pencil', 'move'] };
     savePrefs(storage, prefs);
     assert.equal(PREFS_STORAGE_KEY, 'pixi-prefs');
     assert.deepEqual(loadPrefs(storage), prefs);

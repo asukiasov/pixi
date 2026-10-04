@@ -7,3 +7,6 @@ node_modules/
 .agents/
 .mcp.json
 .playwright-mcp/
+
+# Local git worktrees
+.worktrees/

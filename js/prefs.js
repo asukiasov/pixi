@@ -1,6 +1,7 @@
 // Workspace preferences (5g-prefs): which side the tool rail and the
-// panels sit on, which panel cards a project opens with, and whether the
-// interface hides while drawing. Kept DOM-free so it's unit-testable (see
+// panels sit on, which panel cards a project opens with, whether the
+// interface hides while drawing, and which tools the rail shows
+// (Customize Tools, js/rail-tools.js). Kept DOM-free so it's unit-testable (see
 // test/prefs.test.js); js/prefs-sheet.js is the Prefs sheet that edits
 // them. Standalone app only: wired from js/app.js, which Pixi.mount()
 // embeds never load.
@@ -10,12 +11,15 @@
 // failed read or write is silent: the defaults, or the change for this
 // session only.
 
+import { DEFAULT_RAIL_TOOLS, normalizeRailTools } from './rail-tools.js';
+
 /**
  * @typedef {{
  *   toolsSide: 'left' | 'right',
  *   panelsSide: 'left' | 'right',
  *   pinned: { colors: boolean, brushes: boolean, layers: boolean },
  *   autoHide: boolean,
+ *   railTools: string[],
  * }} Prefs
  */
 
@@ -34,6 +38,7 @@ export const DEFAULT_PREFS = Object.freeze({
   panelsSide: 'right',
   pinned: Object.freeze({ colors: true, brushes: true, layers: true }),
   autoHide: false,
+  railTools: DEFAULT_RAIL_TOOLS,
 });
 
 /** A complete, valid prefs object from anything; each field falls back on its own. */
@@ -49,6 +54,7 @@ export function normalizePrefs(raw) {
     panelsSide: SIDES.includes(source.panelsSide) ? source.panelsSide : DEFAULT_PREFS.panelsSide,
     pinned,
     autoHide: typeof source.autoHide === 'boolean' ? source.autoHide : DEFAULT_PREFS.autoHide,
+    railTools: normalizeRailTools(source.railTools),
   };
 }
 

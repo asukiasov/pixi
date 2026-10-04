@@ -348,7 +348,9 @@ top bar buttons.
 In the floating layout the tool rail SHALL start just below the top bar
 and SHALL be only as tall as its contents, up to the space left above
 the bottom screen edge. From top to bottom it SHALL hold:
-- the tool buttons, in their existing order
+- the tool buttons on the rail (see Customizable tool rail), in their
+  chosen order
+- the More tools (⋯) button
 - the foreground/background swatches with Swap and Reset, at the foot
 
 The rail SHALL NOT hold any tool-scoped toggles; those SHALL be reached
@@ -934,6 +936,9 @@ In the standalone app, choosing Prefs in the More menu SHALL open the
 Prefs sheet: a modal sheet centred over the Workspace, with the title
 "Prefs" and a Done button (a ✓) at the end of its header. Its controls
 SHALL be grouped under headings, in this order:
+- Tools: Customize Tools…, which opens the Customize Tools sheet on top
+  of the Prefs sheet; closing it returns to the Prefs sheet with focus
+  on that row
 - Layout: Tools Side (Left or Right) and Panels Side (Left or Right)
 - Open When a Project Opens: Colors, Brushes and Layers, each an on/off
   switch
@@ -1011,3 +1016,109 @@ default), nothing SHALL fade while drawing.
 - **WHEN** the preference is on and the user drags with the Hand tool
 - **THEN** nothing fades
 
+### Requirement: Customizable tool rail
+In the standalone app the tool rail SHALL show only the tools chosen as
+favorites, in the chosen order. By default, and after Reset to default,
+every tool SHALL be a favorite, in the order Move, Pencil, Eraser,
+Bucket, Brush, Line, Rectangle, Select, Hand, Eyedropper. Any number of
+favorites, including none, SHALL be allowed. Every tool's keyboard
+shortcut SHALL keep working whether or not the tool is on the rail. The
+favorites and their order SHALL be kept with the other preferences
+across page reloads; when they cannot be read, the default SHALL apply.
+An editor embedded through `Pixi.mount()` SHALL keep its full tool rail
+(less any tools its options restrict) and SHALL have no More tools
+button or Customize Tools sheet.
+
+#### Scenario: Shortcut for a tool not on the rail
+- **WHEN** Eyedropper is not a favorite and the user presses I
+- **THEN** the Eyedropper tool is selected
+
+#### Scenario: Kept across reloads
+- **WHEN** the user reorders the favorites and reloads the page
+- **THEN** the rail shows the favorites in the new order
+
+### Requirement: More tools menu
+The More tools (⋯) button at the foot of the rail's tools SHALL open a
+menu beside the rail, fully on screen, listing every tool that is not on
+the rail (with its shortcut, the current tool marked as chosen), then a
+separator and Customize Tools…. With every tool on the rail the menu
+SHALL hold only Customize Tools…. Choosing a tool SHALL select it
+exactly as its rail button would and close the menu; choosing Customize
+Tools… SHALL open the Customize Tools sheet. The menu SHALL follow the
+keyboard and accessibility behaviour of the top bar menus. While the
+current tool is not on the rail, the More tools button SHALL show as
+active and its accessible name SHALL include that tool's name.
+
+#### Scenario: Choosing a tool from the menu
+- **WHEN** Rectangle is not a favorite and the user opens More tools and
+  chooses Rectangle
+- **THEN** the menu closes, the Rectangle tool is selected, and the More
+  tools button shows as active
+
+#### Scenario: Back to a rail tool
+- **WHEN** the More tools button shows as active and the user selects
+  Pencil, which is on the rail
+- **THEN** the More tools button no longer shows as active
+
+### Requirement: Customize Tools sheet
+Customize Tools… (in the More tools menu and in Prefs) SHALL open a
+modal sheet covering the whole window, titled "Customize Tools", with a
+Reset control at the start of its header and a Done button (a ✓) at the
+end. Its top row SHALL show the favorites in order. Below it SHALL be
+the hint "Drag your favorite tools into the list above…", then every
+other tool, each shown with its icon and name. Reset SHALL make every
+tool a favorite in the default order, and SHALL be unavailable while the
+favorites already are the default. Every change SHALL apply to the rail
+and be saved at once. Done or Escape SHALL close the sheet and return
+focus to where it was opened from. While the sheet is open the
+Workspace SHALL NOT respond to pointer or keyboard input, including tool
+shortcuts.
+
+Tools SHALL be movable by dragging with a mouse, touch or a stylus:
+- within the top row, to reorder;
+- from the other tools into the top row, to add a favorite where it is
+  dropped;
+- from the top row anywhere outside it, to remove a favorite.
+While dragging, the tool SHALL follow the pointer and the place it would
+land in the top row SHALL be shown. A drag SHALL NOT scroll the sheet.
+
+#### Scenario: Reorder by dragging
+- **WHEN** the user drags Hand in the top row to before Pencil
+- **THEN** Hand is placed before Pencil in the top row and on the rail
+
+#### Scenario: Add by dragging
+- **WHEN** the user drags Line from the other tools to the start of the
+  top row
+- **THEN** Line becomes the first favorite and the first tool on the rail
+
+#### Scenario: Remove by dragging
+- **WHEN** the user drags Bucket out of the top row onto the other tools
+- **THEN** Bucket is no longer on the rail and appears with the other
+  tools, and is listed in the More tools menu
+
+#### Scenario: Reset
+- **WHEN** the favorites are customized and the user chooses Reset
+- **THEN** every tool is back on the rail in the default order and Reset
+  becomes unavailable
+
+### Requirement: Customize Tools is accessible
+Every action in the Customize Tools sheet SHALL be possible without
+dragging. Activating a favorite (tap, click, Enter or Space) SHALL
+remove it from the rail; activating another tool SHALL add it at the end
+of the rail. Focus SHALL stay on the moved tool. With a favorite
+focused, Alt+Left Arrow and Alt+Right Arrow SHALL move it one place
+earlier or later. Each tool SHALL be described to assistive technology
+with how to activate and move it, and every change SHALL be announced
+politely with the tool's name and new position, or that it was added or
+removed. Every tile, Reset and Done SHALL be at least 44×44 CSS pixels.
+
+#### Scenario: Keyboard reorder
+- **WHEN** Hand is the 7th favorite, focused, and the user presses
+  Alt+Left Arrow
+- **THEN** Hand becomes the 6th favorite, keeps focus, and "Hand,
+  position 6 of N" is announced
+
+#### Scenario: Tap to add
+- **WHEN** the user taps Eyedropper among the other tools
+- **THEN** Eyedropper is added as the last favorite and is announced as
+  added

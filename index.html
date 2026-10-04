@@ -32,7 +32,7 @@
        keep it sorted alphabetically — the Google Fonts API 400s the whole
        request (breaking every icon on the page, not just an unsorted one)
        if icon_names isn't in alphabetical order. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check,check_box,check_box_outline_blank,close,colorize,crop_free,dark_mode,delete,dock_to_right,download,edit,error,expand_more,fiber_manual_record,flip,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,layers,light_mode,lock,more_horiz,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,settings,swap_horiz,tune,undo,unfold_more,visibility,visibility_off" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check,check_box,check_box_outline_blank,chevron_right,close,colorize,crop_free,dark_mode,delete,dock_to_right,download,edit,error,expand_more,fiber_manual_record,flip,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,handyman,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,layers,light_mode,lock,more_horiz,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,settings,swap_horiz,tune,undo,unfold_more,visibility,visibility_off" />
 </head>
 <body>
   <main id="screen-gallery" class="screen home-screen">
@@ -269,6 +269,15 @@
           </button>
         </header>
         <div class="prefs-body">
+          <section class="prefs-section" aria-labelledby="prefs-tools-heading">
+            <h3 id="prefs-tools-heading" class="prefs-section-heading">Tools</h3>
+            <div class="prefs-group">
+              <button type="button" id="prefs-customize-tools" class="prefs-row prefs-row-button" aria-haspopup="dialog">
+                <span class="prefs-row-label">Customize Tools…</span>
+                <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+              </button>
+            </div>
+          </section>
           <section class="prefs-section" aria-labelledby="prefs-layout-heading">
             <h3 id="prefs-layout-heading" class="prefs-section-heading">Layout</h3>
             <div class="prefs-group">
@@ -327,6 +336,37 @@
       </div>
     </dialog>
 
+    <!-- Customize Tools sheet, opened from the rail's ⋯ menu and from
+         Prefs (on top of it). Full screen, after Pixelmator Pro for
+         iPad's Customize Tools. js/customize-tools-sheet.js renders the
+         two lists from the railTools pref and saves every change. -->
+    <dialog id="customize-tools-sheet" class="customize-tools-sheet" aria-labelledby="customize-tools-title">
+      <div class="customize-tools-inner">
+        <header class="prefs-header customize-tools-header">
+          <button type="button" id="customize-tools-reset" class="customize-tools-reset">Reset</button>
+          <h2 id="customize-tools-title" class="prefs-title">Customize Tools</h2>
+          <button type="button" id="customize-tools-done" class="prefs-done" aria-label="Done">
+            <span class="material-symbols-outlined" aria-hidden="true">check</span>
+          </button>
+        </header>
+        <div class="customize-tools-body">
+          <section class="customize-tools-zone customize-tools-rail-zone" aria-labelledby="customize-tools-rail-label">
+            <h3 id="customize-tools-rail-label" class="visually-hidden">On the tool rail</h3>
+            <ul id="customize-tools-rail" class="customize-tools-list" role="list"></ul>
+            <p id="customize-tools-empty" class="customize-tools-empty" hidden>No tools on the rail. Every tool is in the ⋯ menu.</p>
+          </section>
+          <p class="customize-tools-hint">Drag your favorite tools into the list above…</p>
+          <section class="customize-tools-zone customize-tools-grid-zone" aria-labelledby="customize-tools-grid-label">
+            <h3 id="customize-tools-grid-label" class="visually-hidden">Other tools</h3>
+            <ul id="customize-tools-grid" class="customize-tools-list customize-tools-grid" role="list"></ul>
+          </section>
+          <p id="customize-tools-rail-help" class="visually-hidden">Press to take it off the tool rail. Alt with the Left or Right Arrow key moves it.</p>
+          <p id="customize-tools-grid-help" class="visually-hidden">Press to add it to the end of the tool rail.</p>
+          <p id="customize-tools-status" class="visually-hidden" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </dialog>
+
     <div class="workspace-body">
     <!-- 1. Tools: vertical icon rail, Photoshop-style. -->
     <aside id="tools-sidebar" class="tools-sidebar slot-tools">
@@ -363,6 +403,13 @@
         </button>
         <button type="button" class="tool-button magnetic-hover" aria-pressed="false" data-tool="eyedropper" aria-label="Eyedropper" data-tooltip="Eyedropper" data-shortcut="I">
           <span class="material-symbols-outlined">colorize</span>
+        </button>
+        <!-- Customize Tools: the rest of the tools and Customize Tools…
+             (js/tool-overflow.js). Tools that aren't favorites stay in
+             this wrapper with .off-rail (js/tool-rail.js's
+             applyRailTools), so their shortcuts keep working. -->
+        <button type="button" id="tool-overflow-button" class="tool-button magnetic-hover" aria-label="More tools" data-tooltip="More tools">
+          <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
         </button>
       </div>
 
@@ -456,6 +503,10 @@
         </button>
       </div>
     </aside>
+    <!-- The ⋯ menu, outside the rail: the rail's glass blur would make
+         it the containing block of this fixed-position popover. Items
+         are built on open by js/tool-overflow.js. -->
+    <div id="tool-overflow-menu" class="topbar-menu tool-overflow-menu hidden" role="menu" aria-label="More tools"></div>
 
     <div class="workspace-main">
       <div id="workspace-canvas-container" class="canvas-container">

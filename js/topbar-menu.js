@@ -44,13 +44,36 @@ function enabledItems(menu) {
 }
 
 /**
- * Below the button, flipping above if it would overflow the bottom.
+ * Beside the button (the tool rail's ⋯), past the end edge when the menu
+ * fits there or there's more room that way, otherwise toward the start;
+ * top-aligned with the button and kept on screen.
+ */
+export function sideMenuPosition(rect, size, viewport, margin = MARGIN) {
+  const roomAfter = viewport.width - rect.right;
+  let left = roomAfter >= size.width + 2 * margin || roomAfter >= rect.left
+    ? rect.right + margin
+    : rect.left - size.width - margin;
+  left = Math.max(margin, Math.min(left, viewport.width - size.width - margin));
+  const top = Math.max(margin, Math.min(rect.top, viewport.height - size.height - margin));
+  return { left, top };
+}
+
+/**
+ * `placement: 'side'` opens beside the button (sideMenuPosition).
+ * Otherwise below the button, flipping above if it would overflow the bottom.
  * Aligned to whichever edge of the button is nearer the middle of the
  * screen, so a menu from a button at the inline end opens inward.
  */
-function positionMenu(menu, button) {
+function positionMenu(menu, button, placement) {
   const rect = button.getBoundingClientRect();
   const menuRect = menu.getBoundingClientRect();
+
+  if (placement === 'side') {
+    const { left, top } = sideMenuPosition(rect, menuRect, { width: window.innerWidth, height: window.innerHeight });
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+    return;
+  }
 
   let top = rect.bottom + MARGIN;
   if (top + menuRect.height > window.innerHeight - MARGIN) {
@@ -71,8 +94,9 @@ function positionMenu(menu, button) {
  * the .hidden class while closed). `onOpen()` runs just before the menu
  * shows, to refresh item states. Activating an item closes the menu unless
  * `keepOpen(item)` returns true. Items run their own click listeners.
+ * `placement` is 'below' (top bar menus) or 'side' (the tool rail's ⋯).
  */
-export function initMenuButton(button, menu, { onOpen = () => {}, keepOpen = () => false } = {}) {
+export function initMenuButton(button, menu, { onOpen = () => {}, keepOpen = () => false, placement = 'below' } = {}) {
   bindOutsidePressOnce();
   button.setAttribute('aria-haspopup', 'menu');
   button.setAttribute('aria-expanded', 'false');
@@ -91,7 +115,7 @@ export function initMenuButton(button, menu, { onOpen = () => {}, keepOpen = () 
     onOpen();
     // Unhide before measuring - .hidden is display:none.
     menu.classList.remove('hidden');
-    positionMenu(menu, button);
+    positionMenu(menu, button, placement);
     button.setAttribute('aria-expanded', 'true');
     openMenu = controller;
     const items = enabledItems(menu);

@@ -152,7 +152,9 @@ accent ✓ (Done) at the end, and grouped rows with a muted heading per
 group (rows are `<label>`s, 48px tall; switches are
 `input[type=checkbox][role=switch]`, selects are native `<select>`s
 drawn as value plus `unfold_more` chevrons; labels in Title Case).
-Groups: **Layout** - Tools Side and Panels Side (Left/Right each,
+Groups: **Tools** - Customize Tools… (a `<button>` drawn as a row,
+`chevron_right` at the end; opens the Customize Tools sheet on top of
+Prefs); **Layout** - Tools Side and Panels Side (Left/Right each,
 independent; this replaces the roadmap's single handedness flag);
 **Open When a Project Opens** - Colors, Brushes, Layers (the pinned
 cards); **Drawing** - Hide Interface While Drawing. Every change applies at once and is saved; Done, Escape or
@@ -181,9 +183,41 @@ the sheet. Standalone app only (wired from `js/app.js`).
   fades out after 0.25s and passes input through, and is back at once on
   release or cancel.
 
+**Customize Tools.** The rail shows only the favorites
+(`prefs.railTools`, default all ten in the original order, any number
+including none). `applyRailTools` (`js/tool-rail.js`) moves the tool
+buttons into that order before `#tool-overflow-button` and gives the
+rest `.off-rail` (`display: none !important`); they stay in the DOM, so
+the bare-letter shortcuts still `.click()` them. `.hidden`/`disabled`
+remain the embed's `enabledTools`. **⋯ More tools** (`#tool-overflow-button`,
+a rail `.tool-button` with `more_horiz`, after the tools) opens
+`#tool-overflow-menu` beside the rail (`initMenuButton`'s
+`placement: 'side'`, `sideMenuPosition` in `js/topbar-menu.js`): one
+`menuitemradio` per off-rail tool (icon, name, shortcut `<kbd>`,
+forwarding a click to the hidden button), a separator, then
+**Customize Tools…** (`handyman`). The menu sits outside `#tools-sidebar`
+so the rail's blur isn't its containing block. While the current tool is
+off the rail ⋯ has `.active` and is named "More tools, Bucket selected"
+(`js/tool-overflow.js`, following `data-current-tool`).
+**Customize Tools sheet** (`#customize-tools-sheet`, `js/customize-tools-sheet.js`):
+a full-window opaque modal `<dialog>` after Pixelmator Pro for iPad -
+**Reset** pill at the start of the header (disabled while the set is the
+default), centred "Customize Tools" title, accent ✓ Done at the end. Top
+row: favorites as 80px tiles (52px icon circle over a 0.8rem label);
+the hint "Drag your favorite tools into the list above…"; then the other
+tools in a narrower centred grid. Drag with pointer events (6px
+threshold, pointer capture, `touch-action: none`): a ghost copy follows
+the pointer, the top row tints and a 3px accent marker shows the landing
+spot (`dropIndex` in `js/rail-tools.js`); dropping outside the row
+removes a favorite (the grid tints). Tap/Enter/Space moves a tile to the
+other list; Alt+←/→ moves a favorite one place; a polite status region
+announces each change. Keydown is stopped at the sheet so Workspace
+shortcuts don't fire under it. Every change saves at once through the
+same `setPrefs` as Prefs. Standalone only.
+
 **Floating tool rail (5c-floating-tool-rail).** In the floating layout
-`#tools-sidebar` starts below the top bar and hugs its contents. The ten
-tool buttons (44px, `--rail-button-size`) sit in `.tool-rail-tools`, the
+`#tools-sidebar` starts below the top bar and hugs its contents. The
+favorite tool buttons (all ten by default) and ⋯ (44px, `--rail-button-size`) sit in `.tool-rail-tools`, the
 only part that scrolls (scrollbar hidden), so on a short screen the
 FG/BG swatches at the foot stay visible below it. The tool-scoped
 toggles are not in the floating rail (5d moved them to the tool-options

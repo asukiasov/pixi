@@ -2,7 +2,7 @@
 // js/topbar-menu.js. The DOM wiring is checked by hand in the browser.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { menuKeyTarget } from '../js/topbar-menu.js';
+import { menuKeyTarget, sideMenuPosition } from '../js/topbar-menu.js';
 
 describe('menuKeyTarget', () => {
   test('ArrowDown steps forward and wraps to the first item', () => {
@@ -33,5 +33,24 @@ describe('menuKeyTarget', () => {
   test('an empty menu stays at -1', () => {
     assert.equal(menuKeyTarget('ArrowDown', -1, 0), -1);
     assert.equal(menuKeyTarget('End', -1, 0), -1);
+  });
+});
+
+// Customize Tools: the tool rail's ⋯ menu opens beside the rail.
+describe('sideMenuPosition', () => {
+  const viewport = { width: 1000, height: 800 };
+  const size = { width: 200, height: 300 };
+
+  test('past the end edge when there is room, top-aligned with the button', () => {
+    assert.deepEqual(sideMenuPosition({ left: 10, right: 54, top: 100, bottom: 144 }, size, viewport), { left: 62, top: 100 });
+  });
+
+  test('toward the start from a rail on the end side', () => {
+    assert.deepEqual(sideMenuPosition({ left: 946, right: 990, top: 100, bottom: 144 }, size, viewport), { left: 738, top: 100 });
+  });
+
+  test('kept above the bottom edge and inside a narrow viewport', () => {
+    assert.equal(sideMenuPosition({ left: 10, right: 54, top: 700, bottom: 744 }, size, viewport).top, 492);
+    assert.equal(sideMenuPosition({ left: 10, right: 54, top: 100, bottom: 144 }, size, { width: 150, height: 800 }).left, 8);
   });
 });

@@ -13,8 +13,11 @@ export function applyLayout(screenEl, layout) {
  * How far floating cards reach into the container from each edge, plus
  * `gap`, so the canvas can be fitted into the clear area between them.
  * Edges come from the slot: top/options are horizontal bars against the
- * top/bottom edge; tools/panels are columns against whichever side they
- * actually sit on (so a mirrored layout needs no special case).
+ * top/bottom edge; tools/panels are columns against their `side`
+ * ('left'|'right', from the 5g-prefs side preferences). Without a side,
+ * the card's centre decides, which is only safe when the card is narrower
+ * than half the container (both slots on one side can push the card
+ * column past the middle of a narrow window, hence the explicit side).
  * Zero-size rects are hidden cards and are skipped.
  */
 export function clearInsets(containerRect, cards, gap) {
@@ -23,11 +26,11 @@ export function clearInsets(containerRect, cards, gap) {
     insets[side] = Math.max(insets[side], Math.max(0, value) + gap);
   };
   const midX = containerRect.left + containerRect.width / 2;
-  for (const { slot, rect } of cards) {
+  for (const { slot, rect, side } of cards) {
     if (rect.width === 0 || rect.height === 0) continue;
     if (slot === 'top') reach('top', rect.bottom - containerRect.top);
     else if (slot === 'options') reach('bottom', containerRect.bottom - rect.top);
-    else if (rect.left + rect.width / 2 < midX) reach('left', rect.right - containerRect.left);
+    else if ((side ?? (rect.left + rect.width / 2 < midX ? 'left' : 'right')) === 'left') reach('left', rect.right - containerRect.left);
     else reach('right', containerRect.right - rect.left);
   }
   return insets;
@@ -55,15 +58,18 @@ const SLOTS = ['top', 'tools', 'panels', 'options'];
  * gives a zero rect, and a card that keeps its box while hidden (the
  * collapsed right sidebar) must use visibility:hidden or opacity:0 - any
  * other way of hiding a card would reserve dead space beside the canvas.
- * The gap is the --float-gap token, resolved to px.
+ * The gap is the --float-gap token, resolved to px. The tools/panels
+ * sides come from the screen's data-tools-side/data-panels-side
+ * (js/prefs.js); unset, clearInsets falls back to each card's position.
  */
 export function measureClearInsets(screenEl, containerEl) {
   const cards = [];
+  const sides = { tools: screenEl.dataset.toolsSide, panels: screenEl.dataset.panelsSide };
   for (const slot of SLOTS) {
     for (const el of screenEl.querySelectorAll(`.slot-${slot}`)) {
       const style = getComputedStyle(el);
       const hidden = style.visibility === 'hidden' || style.opacity === '0';
-      cards.push({ slot, rect: hidden ? { width: 0, height: 0 } : el.getBoundingClientRect() });
+      cards.push({ slot, side: sides[slot], rect: hidden ? { width: 0, height: 0 } : el.getBoundingClientRect() });
     }
   }
   const probe = document.createElement('div');
@@ -89,7 +95,7 @@ export function visibleAnchor(el, fallback) {
  * Which inline side of `anchorRect` faces the canvas (5c-floating-tool-rail):
  * 'end' when the anchor's centre is in the left half of the viewport,
  * otherwise 'start'. Worked out from where the anchor actually is, not
- * from the slot variables, so a rail mirrored by handedness (5g) or
+ * from the slot variables, so a rail moved by the side prefs (5g) or
  * re-placed by the phone layout opens its tooltips and popovers inward
  * with no other change.
  */

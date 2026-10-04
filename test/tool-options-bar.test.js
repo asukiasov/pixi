@@ -2,7 +2,7 @@
 // floating layout's bar. The DOM wiring is checked by hand in the browser.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { toolsShowing, forwardValue, mirrorToggle } from '../js/tool-options-bar.js';
+import { toolsShowing, forwardValue, mirrorToggle, sliderFraction } from '../js/tool-options-bar.js';
 
 describe('toolsShowing', () => {
   test('one tool', () => {
@@ -118,5 +118,22 @@ describe('mirrorToggle', () => {
     mirrorToggle(source, proxy);
     assert.equal(proxy.hasAttribute('data-symmetry-mode'), false);
     assert.equal(proxy.getAttribute('aria-label'), '1:1 proportion');
+  });
+});
+
+describe('sliderFraction', () => {
+  test('maps the value onto 0..1 of min..max', () => {
+    assert.equal(sliderFraction({ min: '1', max: '21', value: '11' }), 0.5);
+    assert.equal(sliderFraction({ min: '1', max: '100', value: '1' }), 0);
+    assert.equal(sliderFraction({ min: '0', max: '360', value: '360' }), 1);
+  });
+
+  test('defaults to 0..100 and clamps out-of-range values', () => {
+    assert.equal(sliderFraction({ min: '', max: '', value: '25' }), 0.25);
+    assert.equal(sliderFraction({ min: '0', max: '10', value: '15' }), 1);
+  });
+
+  test('is 0 for an empty range', () => {
+    assert.equal(sliderFraction({ min: '5', max: '5', value: '5' }), 0);
   });
 });

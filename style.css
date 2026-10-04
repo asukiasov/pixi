@@ -56,21 +56,29 @@
   --icon-size-l: 2.2rem;
   --icon-size-xl: 2.6rem;
 
-  /* Floating workspace (5a-floating-shell): shared card shape/spacing and
-     the frosted-glass tint. Dark tint is --color-bg at 88%: the canvas
-     backdrop behind the cards is light in both themes (#e2e2e2), and at
-     the ~72% first tried, dark cards blended to mid-grey and secondary
-     text dropped to ~2.4:1 - 88% keeps it at ~4.8:1. Light tint is white
-     at 72% (already high-contrast). --glass-border is a hairline that
-     keeps a card's edge visible over artwork of the same colour. See
-     .glass below. */
-  --float-radius: 16px;
+  /* Floating workspace (5a-floating-shell, Pixelmator visual pass):
+     shared card shape/spacing and the frosted-glass tint. The tint is
+     see-through (62%) so the blur reads as glass; the floating backdrop
+     is dark in the dark theme (--workspace-backdrop), so secondary text
+     keeps its contrast. --glass-border is a hairline that keeps a card's
+     edge visible over artwork of the same colour; --glass-highlight is
+     the faint inner top edge. --ghost-* are the borderless buttons on
+     glass: hover fill, and the pressed/open disk (white on dark,
+     inverted in the light theme). See .glass and .ghost-button below. */
+  --float-radius: 22px;
   --float-gap: 0.5rem;
   --float-edge: 0.75rem;
-  --glass-tint: rgba(28, 28, 30, 0.88);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-blur: 20px;
-  --float-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
+  --glass-tint: rgba(44, 44, 48, 0.62);
+  --glass-tint-hover: rgba(72, 72, 78, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --glass-blur: 28px;
+  --float-shadow: 0 12px 40px rgba(0, 0, 0, 0.32), 0 2px 8px rgba(0, 0, 0, 0.18);
+  --ghost-hover: rgba(255, 255, 255, 0.12);
+  --ghost-on-bg: #ffffff;
+  --ghost-on-fg: #1c1c1e;
+  --title-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  --workspace-backdrop: radial-gradient(120% 80% at 20% 0%, #3a3a46 0%, transparent 60%), linear-gradient(160deg, #26262d 0%, #121216 100%);
 
   /* Home screen (Gallery + New Canvas) artwork scrim - a radial
      vignette over assets/home-bg.webp so the glass cards stay readable
@@ -99,9 +107,16 @@
   --color-success: #0f7a30;
   --color-overlay: rgba(255, 255, 255, 0.94);
   --color-overlay-soft: rgba(255, 255, 255, 0.8);
-  --glass-tint: rgba(255, 255, 255, 0.72);
+  --glass-tint: rgba(255, 255, 255, 0.62);
+  --glass-tint-hover: rgba(255, 255, 255, 0.85);
   --glass-border: rgba(0, 0, 0, 0.08);
-  --float-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --float-shadow: 0 12px 40px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08);
+  --ghost-hover: rgba(0, 0, 0, 0.07);
+  --ghost-on-bg: #1c1c1e;
+  --ghost-on-fg: #ffffff;
+  --title-shadow: 0 0 4px rgba(255, 255, 255, 0.9);
+  --workspace-backdrop: radial-gradient(120% 80% at 20% 0%, #ffffff 0%, transparent 60%), linear-gradient(160deg, #ececf1 0%, #d4d4dc 100%);
   --home-scrim-inner: rgba(236, 236, 240, 0.3);
   --home-scrim-outer: rgba(236, 236, 240, 0.78);
 }
@@ -565,7 +580,7 @@ textarea,
 /* Workspace screen */
 
 .material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
   font-size: 1.4rem;
   line-height: 1;
 }
@@ -3050,7 +3065,7 @@ span.layer-lock-icon {
    index.html, so the shared markup stays unchanged in the docked
    layout. */
 .glass,
-.workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar),
+.workspace-screen[data-layout="floating"] :is(.slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar, #back-to-gallery-button, #zoom-pill, .topbar-group, #more-button),
 .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel) {
   isolation: isolate;
   background: var(--color-surface);
@@ -3059,15 +3074,36 @@ span.layer-lock-icon {
   box-shadow: var(--float-shadow);
 }
 
+/* Shapes: a pill (rail, bars, zoom, undo/redo) or a 44px circle (Home,
+   More). The tool-options bar wraps on a narrow window, so it rounds by
+   its one-row height, not 999px. */
+.glass-pill,
+.workspace-screen[data-layout="floating"] :is(.slot-tools, .panel-rail, .options-card, #selection-bar, #zoom-pill, .topbar-group) {
+  border-radius: 999px;
+}
+
+.workspace-screen[data-layout="floating"] .tool-options-bar {
+  border-radius: 26px;
+}
+
+.glass-circle,
+.workspace-screen[data-layout="floating"] :is(#back-to-gallery-button, #more-button) {
+  position: relative;
+  width: var(--rail-button-size, 2.75rem);
+  height: var(--rail-button-size, 2.75rem);
+  padding: 0;
+  border-radius: 50%;
+}
+
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   .glass,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar),
+  .workspace-screen[data-layout="floating"] :is(.slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar, #back-to-gallery-button, #zoom-pill, .topbar-group, #more-button),
   .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel) {
     background: transparent;
   }
 
   .glass::before,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar)::before,
+  .workspace-screen[data-layout="floating"] :is(.slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar, #back-to-gallery-button, #zoom-pill, .topbar-group, #more-button)::before,
   .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel)::before {
     content: '';
     position: absolute;
@@ -3075,21 +3111,43 @@ span.layer-lock-icon {
     z-index: -1;
     border-radius: inherit;
     background: var(--glass-tint);
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
-    backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+    box-shadow: var(--glass-highlight);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.8);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.8);
     pointer-events: none;
   }
+
+  /* A glass element's own background paints below its ::before tint, so
+     clickable glass (circles, the zoom pill) lights up on the tint. */
+  .glass-circle:hover::before,
+  .glass-pill:is(button, a):hover::before,
+  .workspace-screen[data-layout="floating"] :is(#back-to-gallery-button, #zoom-pill, #more-button):hover::before {
+    background: var(--glass-tint-hover);
+  }
+
+  .glass-circle[aria-expanded="true"]::before,
+  .workspace-screen[data-layout="floating"] :is(#zoom-pill, #more-button)[aria-expanded="true"]::before {
+    background: var(--ghost-on-bg);
+  }
+}
+
+/* Outside @supports too, so the open disk also shows where the tint
+   isn't drawn (no backdrop-filter, reduced transparency). */
+.glass-circle[aria-expanded="true"],
+.workspace-screen[data-layout="floating"] :is(#zoom-pill, #more-button)[aria-expanded="true"] {
+  background: var(--ghost-on-bg);
+  color: var(--ghost-on-fg);
 }
 
 @media (prefers-reduced-transparency: reduce) {
   .glass,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar),
+  .workspace-screen[data-layout="floating"] :is(.slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar, #back-to-gallery-button, #zoom-pill, .topbar-group, #more-button),
   .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel) {
     background: var(--color-surface);
   }
 
   .glass::before,
-  .workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar)::before,
+  .workspace-screen[data-layout="floating"] :is(.slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar, #back-to-gallery-button, #zoom-pill, .topbar-group, #more-button)::before,
   .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel)::before {
     display: none;
   }
@@ -3154,6 +3212,7 @@ span.layer-lock-icon {
   position: absolute;
   inset: 0;
   z-index: 0;
+  background: var(--workspace-backdrop);
 }
 
 .workspace-screen[data-layout="floating"] .slot-top,
@@ -3169,6 +3228,28 @@ span.layer-lock-icon {
   inset-inline-start: var(--float-edge-start);
   inset-inline-end: var(--float-edge-end);
   height: var(--slot-top-height);
+  /* No card of its own (Pixelmator visual pass): Home, the zoom pill,
+     undo/redo and More are each their own glass; the gaps between them
+     pass pointer input through to the canvas. */
+  gap: var(--float-gap);
+  padding: 0;
+  background: transparent;
+  border: none;
+  pointer-events: none;
+}
+
+.workspace-screen[data-layout="floating"] .slot-top > :not(.workspace-topbar-spacer) {
+  pointer-events: auto;
+}
+
+/* Undo + Redo share one glass pill. Box-less in the docked layout. */
+.topbar-group {
+  display: contents;
+}
+
+.workspace-screen[data-layout="floating"] .topbar-group {
+  position: relative;
+  display: flex;
 }
 
 .workspace-screen[data-layout="floating"] .slot-tools {
@@ -3291,6 +3372,7 @@ span.layer-lock-icon {
    absorbing the free space, so the title only shrinks when it has to. */
 .topbar-title {
   flex: 0 1 auto;
+  text-shadow: var(--title-shadow);
   min-width: 0;
   max-width: 18rem;
   padding-inline: 0.3rem;
@@ -3321,6 +3403,10 @@ span.layer-lock-icon {
 .zoom-pill:hover,
 .zoom-pill[aria-expanded="true"] {
   background: var(--color-surface-alt);
+}
+
+.workspace-screen[data-layout="floating"] #zoom-pill {
+  position: relative;
 }
 
 .zoom-pill:focus-visible,
@@ -3496,14 +3582,13 @@ span.layer-lock-icon {
   height: 1.75rem;
 }
 
-/* Swap/Reset: the button becomes a transparent 24px hit area that covers
+/* Swap/Reset: the button is a transparent 24px hit area that covers
    the free corner square and reaches out into the rail's padding, never
-   over a swatch face. Its inner edges sit 1px clear of the faces:
-   flush, Chrome's hit testing gave the faces' outermost pixel row to
-   the corner button. The outer 1px lands on the card's border. The
-   visible 1.05rem circle is drawn by ::before, centred in it, so the
-   corner icons look as before. 24px, not 44px: two 44px areas can't
-   fit beside the faces in a 44px stack (see the change's design.md). */
+   over a swatch face; its icon is plain (no chip). Its inner edges sit
+   1px clear of the faces: flush, Chrome's hit testing gave the faces'
+   outermost pixel row to the corner button. 24px, not 44px: two 44px
+   areas can't fit beside the faces in a 44px stack. */
+.swatch-pair .fg-bg-corner-button,
 .workspace-screen[data-layout="floating"] .fg-bg-corner-button {
   width: 1.5rem;
   height: 1.5rem;
@@ -3512,28 +3597,13 @@ span.layer-lock-icon {
   background: transparent;
 }
 
-.workspace-screen[data-layout="floating"] .fg-bg-corner-button::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: 1.05rem;
-  height: 1.05rem;
-  z-index: -1;
-  border: 1px solid var(--color-border);
-  border-radius: 50%;
-  background: var(--color-bg);
-}
-
-.workspace-screen[data-layout="floating"] .fg-bg-corner-button:hover::before {
-  background: var(--color-surface-alt);
-}
-
+.swatch-pair .swap-corner,
 .workspace-screen[data-layout="floating"] .swap-corner {
   top: calc(-1 * var(--rail-padding) - 1px);
   inset-inline-end: calc(-1 * var(--rail-padding) - 1px);
 }
 
+.swatch-pair .reset-corner,
 .workspace-screen[data-layout="floating"] .reset-corner {
   bottom: calc(-1 * var(--rail-padding) - 1px);
   inset-inline-start: calc(-1 * var(--rail-padding) - 1px);
@@ -3609,76 +3679,21 @@ span.layer-lock-icon {
   display: flex;
 }
 
+/* Sliders (Pixelmator visual pass): see .slider in "Components" at the
+   end of this file - the bar's sliders are .slider components. */
 .workspace-screen[data-layout="floating"] .tool-options-slider {
-  display: flex;
   flex: 1 1 auto;
-  align-items: center;
-  gap: 0.4rem;
   min-width: 0;
 }
 
-.workspace-screen[data-layout="floating"] .tool-options-label {
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
-}
-
-.workspace-screen[data-layout="floating"] .tool-options-readout {
-  width: 2.6rem;
-  font-size: 0.85rem;
-  font-variant-numeric: tabular-nums;
-}
-
-/* A 44px-tall hit box around a thin track. */
+/* 7rem when there's room, down to 4rem on a narrow window. The width
+   keeps the max-content size at 7rem: without it Chromium sizes the bar
+   from the range input's wider native width. */
 .workspace-screen[data-layout="floating"] .tool-options-slider input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  /* 7rem when there's room, down to 4rem on a narrow window. The width
-     keeps the max-content size at 7rem: without it Chromium sizes the
-     bar from the range input's wider native width. */
   width: 7rem;
   flex: 1 1 7rem;
   min-width: 4rem;
   height: 44px;
-  margin: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
-.workspace-screen[data-layout="floating"] .tool-options-slider input[type="range"]::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--color-border);
-}
-
-.workspace-screen[data-layout="floating"] .tool-options-slider input[type="range"]::-moz-range-track {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--color-border);
-}
-
-.workspace-screen[data-layout="floating"] .tool-options-slider input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 1rem;
-  height: 1rem;
-  margin-top: calc(2px - 0.5rem);
-  border: none;
-  border-radius: 50%;
-  background: var(--color-accent);
-}
-
-.workspace-screen[data-layout="floating"] .tool-options-slider input[type="range"]::-moz-range-thumb {
-  width: 1rem;
-  height: 1rem;
-  border: none;
-  border-radius: 50%;
-  background: var(--color-accent);
-}
-
-.workspace-screen[data-layout="floating"] .tool-options-slider input[type="range"]:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
-  border-radius: 0.4rem;
 }
 
 .workspace-screen[data-layout="floating"] .tool-options-bar .tool-button {
@@ -3689,17 +3704,6 @@ span.layer-lock-icon {
   height: var(--rail-button-size);
   padding: 0;
   flex: none;
-}
-
-/* Pressed = the sources' .tool-button.active look. */
-.workspace-screen[data-layout="floating"] .tool-options-bar .tool-button[aria-pressed="true"] {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-}
-
-.workspace-screen[data-layout="floating"] .tool-options-bar .tool-button[aria-pressed="true"]:not(:disabled):hover {
-  background: var(--color-accent-strong);
-  border-color: var(--color-accent-strong);
 }
 
 .workspace-screen[data-layout="floating"] .tool-options-filled[aria-pressed="true"] .tool-options-filled-off,
@@ -3744,17 +3748,6 @@ span.layer-lock-icon {
   height: var(--rail-button-size);
   padding: 0;
   flex: none;
-}
-
-/* Open = an active tool's look. */
-.workspace-screen[data-layout="floating"] .panel-rail .tool-button[aria-expanded="true"] {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-}
-
-.workspace-screen[data-layout="floating"] .panel-rail .tool-button[aria-expanded="true"]:hover {
-  background: var(--color-accent-strong);
-  border-color: var(--color-accent-strong);
 }
 
 /* Unavailable (Brushes outside the Brush tool): dimmed but focusable,
@@ -3901,7 +3894,292 @@ span.layer-lock-icon {
   white-space: nowrap;
 }
 
-/* A Pixelmator-style pill: borderless buttons that light up on hover. */
-.workspace-screen[data-layout="floating"] #selection-bar .tool-button:not(:disabled):hover {
-  background: var(--color-surface-alt);
+
+/* ------------------------------------------------------------------
+   Components (Pixelmator visual pass)
+
+   Small shared pieces, shown in every state on components.html:
+   .glass / .glass-pill / .glass-circle (with the frosted-glass rules
+   near the top of the floating section), .ghost-button, .slider and
+   .swatch-pair. The floating workspace's controls get the same look by
+   selector, so the shared markup stays unchanged in the docked layout.
+   ------------------------------------------------------------------ */
+
+/* Ghost button: no border or fill at rest, a subtle fill on hover, and a
+   solid disk (white on dark, inverted in the light theme) while pressed,
+   active or open. Circular for icons, a pill for text. */
+.ghost-button,
+.workspace-screen[data-layout="floating"] :is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group) .tool-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--rail-button-size, 2.75rem);
+  min-height: var(--rail-button-size, 2.75rem);
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ghost-button:not(:disabled):hover,
+.workspace-screen[data-layout="floating"] :is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group) .tool-button:not(:disabled):hover {
+  background: var(--ghost-hover);
+}
+
+.ghost-button:is(.active, [aria-pressed="true"], [aria-expanded="true"]),
+.ghost-button:is(.active, [aria-pressed="true"], [aria-expanded="true"]):not(:disabled):hover,
+.workspace-screen[data-layout="floating"] :is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group) .tool-button:is(.active, [aria-pressed="true"], [aria-expanded="true"]),
+.workspace-screen[data-layout="floating"] :is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group) .tool-button:is(.active, [aria-pressed="true"], [aria-expanded="true"]):not(:disabled):hover {
+  background: var(--ghost-on-bg);
+  color: var(--ghost-on-fg);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.ghost-button:is(:disabled, [aria-disabled="true"]),
+.workspace-screen[data-layout="floating"] :is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group) .tool-button:is(:disabled, [aria-disabled="true"]) {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ghost-button:focus-visible,
+.workspace-screen[data-layout="floating"] :is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group) .tool-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* Text buttons in a ghost row get pill padding. */
+.ghost-button.ghost-text,
+.workspace-screen[data-layout="floating"] #selection-bar .tool-button {
+  padding: 0 1.1rem;
+}
+
+/* Slider: a 6px track filled up to the thumb, a large white pill thumb,
+   an icon at each end instead of a label (the label stays, visually
+   hidden) and a value bubble over the thumb while adjusting. --f (0..1,
+   the value's fraction) and .is-adjusting are set by
+   js/tool-options-bar.js's showReadout(). */
+.slider,
+.workspace-screen[data-layout="floating"] .tool-options-slider {
+  --slider-thumb-w: 34px;
+  --slider-fill: var(--color-text);
+  --slider-track: rgba(127, 127, 135, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.slider-input {
+  position: relative;
+  display: flex;
+  flex: 1 1 7rem;
+  min-width: 4rem;
+}
+
+.slider input[type="range"],
+.workspace-screen[data-layout="floating"] .tool-options-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1 1 7rem;
+  width: 7rem;
+  min-width: 4rem;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--slider-fill) 0 calc(var(--slider-thumb-w) / 2 + var(--f, 0) * (100% - var(--slider-thumb-w))), var(--slider-track) 0);
+}
+
+.slider input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--slider-fill) 0 calc(var(--slider-thumb-w) / 2 + var(--f, 0) * (100% - var(--slider-thumb-w))), var(--slider-track) 0);
+}
+
+.slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--slider-thumb-w);
+  height: 22px;
+  margin-top: -8px;
+  border: none;
+  border-radius: 11px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+}
+
+.slider input[type="range"]::-moz-range-thumb {
+  width: var(--slider-thumb-w);
+  height: 22px;
+  border: none;
+  border-radius: 11px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+}
+
+.slider input[type="range"]:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -4px;
+  border-radius: 999px;
+}
+
+/* The value bubble: centred over the thumb, shown only while adjusting
+   (the input's aria-valuetext carries the value for assistive tech). */
+.slider-bubble {
+  position: absolute;
+  bottom: calc(100% - 6px);
+  inset-inline-start: calc(var(--slider-thumb-w) / 2 + var(--f, 0) * (100% - var(--slider-thumb-w)));
+  translate: -50% 0;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: var(--ghost-on-bg);
+  color: var(--ghost-on-fg);
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.slider:is(.is-adjusting, :has(input:active)) .slider-bubble {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .slider-bubble {
+    transition: opacity 0.15s ease;
+  }
+}
+
+/* End icons, drawn in CSS so the icon font subset needn't grow:
+   Size (small dot / big ring), Opacity (faint / solid), Spacing (close /
+   far dots). Rotation uses the rotate_left/right glyphs. */
+.slider-icon {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--color-text-secondary);
+}
+
+.slider-icon .material-symbols-outlined {
+  font-size: 1.15rem;
+}
+
+.slider-icon::before {
+  content: '';
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.slider-icon:has(.material-symbols-outlined)::before {
+  content: none;
+}
+
+.slider-icon-dot::before { width: 4px; height: 4px; }
+.slider-icon-ring::before { width: 16px; height: 16px; background: none; border: 2px solid currentColor; }
+.slider-icon-faint::before { width: 14px; height: 14px; opacity: 0.3; }
+.slider-icon-solid::before { width: 14px; height: 14px; }
+.slider-icon-near::before { width: 4px; height: 4px; translate: -3px 0; box-shadow: 6px 0 currentColor; }
+.slider-icon-far::before { width: 4px; height: 4px; translate: -6px 0; box-shadow: 12px 0 currentColor; }
+
+/* Swatch pair: foreground and background as overlapping 28px circles
+   with a white ring, inside the rail's 44px stack, so their curves
+   follow the pill rail's round end. Swap and Reset are plain icons in
+   the two free corners. */
+.swatch-pair,
+.workspace-screen[data-layout="floating"] .fg-bg-swatch-stack {
+  position: relative;
+  --rail-padding: 0.5rem;
+  width: var(--rail-button-size, 2.75rem);
+  height: var(--rail-button-size, 2.75rem);
+}
+
+.swatch-pair .fg-bg-swatch,
+.workspace-screen[data-layout="floating"] .fg-bg-swatch {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.swatch-pair .fg-bg-swatch:hover,
+.workspace-screen[data-layout="floating"] .fg-bg-swatch:hover {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px var(--color-text-secondary), 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.swatch-pair .fg-bg-corner-button,
+.workspace-screen[data-layout="floating"] .fg-bg-corner-button {
+  color: var(--color-text-secondary);
+}
+
+.swatch-pair .fg-bg-corner-button:hover,
+.workspace-screen[data-layout="floating"] .fg-bg-corner-button:hover {
+  background: transparent;
+  color: var(--color-text);
+}
+
+.swatch-pair .fg-bg-corner-button .material-symbols-outlined,
+.workspace-screen[data-layout="floating"] .fg-bg-corner-button .material-symbols-outlined {
+  font-size: 0.9rem;
+}
+
+/* No separator line above the swatches. */
+.workspace-screen[data-layout="floating"] .fg-bg-swatches {
+  margin-top: 0.25rem;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* Palette row: round swatches on the pill palette card. */
+.workspace-screen[data-layout="floating"] .palette-row {
+  padding-inline: 0.75rem;
+}
+
+.workspace-screen[data-layout="floating"] .palette-swatch {
+  border-radius: 50%;
+}
+
+/* Panel card titles: Title Case semibold, not small caps. */
+.workspace-screen[data-layout="floating"] .right-sidebar :is(.panel-header h2, .layers-panel-header h2, .brushes-panel-header h2) {
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--color-text);
+}
+
+/* Color Library swatches match the palette row: round. */
+.workspace-screen[data-layout="floating"] .color-library-swatch {
+  border-radius: 50%;
+}
+
+/* Icons on glass: a step larger than the docked 1.4rem (the font is the
+   light 300 weight everywhere, see .material-symbols-outlined). */
+.workspace-screen[data-layout="floating"] :is(.slot-top, .slot-tools, .panel-rail, .tool-options-bar) .tool-button .material-symbols-outlined {
+  font-size: 1.6rem;
+}
+
+/* The colour picker is a fixed popover inside the tool rail, so it paints
+   in the rail's stacking context (z-index 20) - under the bottom cards,
+   which come later in the DOM at the same z-index. Lift the rail above
+   them (still under the top bar's menus) while the picker is open. */
+.workspace-screen[data-layout="floating"] .slot-tools:has(#color-picker-popover:not(.hidden)) {
+  z-index: 25;
+}
+
+.workspace-screen[data-layout="floating"] .color-picker-popover-header .icon-button {
+  border-radius: 50%;
 }

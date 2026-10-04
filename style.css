@@ -2952,8 +2952,10 @@ span.layer-lock-icon {
 
 /* Slots: only these variables decide which edge a region sits against.
    Regions use inset-inline-start/end from them and never set left/right
-   themselves, so 5g's handedness preference swaps the -start/-end pairs
-   and nothing else. Edges include the device safe areas. */
+   themselves, so the 5g side prefs (data-tools-side / data-panels-side,
+   set by js/prefs.js) only swap these variables - see the side
+   combinations just below. Edges include the device safe areas. The app
+   is LTR, so left is start. */
 .workspace-screen[data-layout="floating"] {
   --slot-top-height: 3.4rem;
   /* 44px tool buttons (5c); the rail is that plus its padding and the
@@ -2961,26 +2963,73 @@ span.layer-lock-icon {
   --rail-button-size: 2.75rem;
   --rail-padding: 0.5rem;
   --slot-rail-width: calc(var(--rail-button-size) + 2 * var(--rail-padding) + 2px);
+  /* One rail plus the gap after it: how far the next thing on the same
+     side starts from the previous one. */
+  --slot-step: calc(var(--slot-rail-width) + var(--float-gap));
   --float-edge-top: calc(env(safe-area-inset-top, 0px) + var(--float-edge));
   --float-edge-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--float-edge));
   --float-edge-start: calc(env(safe-area-inset-left, 0px) + var(--float-edge));
   --float-edge-end: calc(env(safe-area-inset-right, 0px) + var(--float-edge));
   --float-below-top: calc(var(--float-edge-top) + var(--slot-top-height) + var(--float-gap));
+  /* Default sides: tools left, panels right. */
   --slot-tools-start: var(--float-edge-start);
   --slot-tools-end: auto;
   --slot-panels-start: auto;
   --slot-panels-end: var(--float-edge-end);
   /* The panel cards sit beside the mini-rail, toward the canvas
-     (5e-cards-mini-rail). 5g's handedness flip swaps this pair too. */
+     (5e-cards-mini-rail), --slot-cards-offset from their own edge. */
   --slot-cards-start: auto;
-  --slot-cards-end: calc(var(--float-edge-end) + var(--slot-rail-width) + var(--float-gap));
-  /* The room between the tool rail (plus a gap) and the card column's end
-     edge (5h-switch-on-floating): on a narrow window the column shrinks
-     to this instead of covering the rail. Built from the same start/end
-     variables, so 5g's handedness swap keeps it right. */
-  --slot-cards-room: calc(100% - (var(--slot-tools-start) + var(--slot-rail-width) + var(--float-gap)) - var(--slot-cards-end) - var(--float-gap));
+  --slot-cards-end: var(--slot-cards-offset);
+  --slot-cards-offset: calc(var(--float-edge-end) + var(--slot-step));
+  /* What the far edge keeps clear of the card column: the tool rail when
+     it is on the other side, else just the edge. */
+  --slot-cards-far: calc(var(--float-edge-start) + var(--slot-step));
+  /* The room the card column has (5h-switch-on-floating): on a narrow
+     window it shrinks to this instead of covering a rail. */
+  --slot-cards-room: calc(100% - var(--slot-cards-far) - var(--slot-cards-offset) - var(--float-gap));
+  /* How far the rails reach in from the fuller side; the centred bottom
+     slot keeps this clear on both sides. */
+  --slot-side-reserve: calc(var(--float-edge-start) + var(--slot-step));
   position: relative;
   overflow: hidden;
+}
+
+/* The other three side combinations (5g-prefs). On the same side they
+   stack from the edge inward: tool rail, mini-rail, cards. */
+.workspace-screen[data-layout="floating"][data-tools-side="right"][data-panels-side="left"] {
+  --slot-tools-start: auto;
+  --slot-tools-end: var(--float-edge-end);
+  --slot-panels-start: var(--float-edge-start);
+  --slot-panels-end: auto;
+  --slot-cards-start: var(--slot-cards-offset);
+  --slot-cards-end: auto;
+  --slot-cards-offset: calc(var(--float-edge-start) + var(--slot-step));
+  --slot-cards-far: calc(var(--float-edge-end) + var(--slot-step));
+  --slot-side-reserve: calc(var(--float-edge-start) + var(--slot-step));
+}
+
+.workspace-screen[data-layout="floating"][data-tools-side="left"][data-panels-side="left"] {
+  --slot-tools-start: var(--float-edge-start);
+  --slot-tools-end: auto;
+  --slot-panels-start: calc(var(--float-edge-start) + var(--slot-step));
+  --slot-panels-end: auto;
+  --slot-cards-start: var(--slot-cards-offset);
+  --slot-cards-end: auto;
+  --slot-cards-offset: calc(var(--float-edge-start) + 2 * var(--slot-step));
+  --slot-cards-far: var(--float-edge-end);
+  --slot-side-reserve: calc(var(--float-edge-start) + 2 * var(--slot-step));
+}
+
+.workspace-screen[data-layout="floating"][data-tools-side="right"][data-panels-side="right"] {
+  --slot-tools-start: auto;
+  --slot-tools-end: var(--float-edge-end);
+  --slot-panels-start: auto;
+  --slot-panels-end: calc(var(--float-edge-end) + var(--slot-step));
+  --slot-cards-start: auto;
+  --slot-cards-end: var(--slot-cards-offset);
+  --slot-cards-offset: calc(var(--float-edge-end) + 2 * var(--slot-step));
+  --slot-cards-far: var(--float-edge-start);
+  --slot-side-reserve: calc(var(--float-edge-end) + 2 * var(--slot-step));
 }
 
 /* The wrappers stop being boxes, so their children can be placed against
@@ -3080,7 +3129,7 @@ span.layer-lock-icon {
   inset-inline: 0;
   margin-inline: auto;
   width: max-content;
-  max-width: calc(100% - 2 * (var(--float-edge-start) + var(--slot-rail-width) + var(--float-gap)));
+  max-width: calc(100% - 2 * var(--slot-side-reserve));
   display: flex;
   flex-direction: column;
   align-items: center;

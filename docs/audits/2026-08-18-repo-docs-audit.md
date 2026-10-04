@@ -7,7 +7,7 @@ public-facing docs: `README.md` and reader-facing files under `docs/`
 `docs/superpowers/*` excluded per the skill (internal-only). Checked
 against `docs/repo-voice.md` (voice), `writing-repo-docs`'s on-page-SEO
 section (SEO), and this skill's GEO checklist, cross-referenced against
-`openspec/roadmap.md` and `openspec/specs/` for staleness.
+`docs/roadmap.md` and `docs/specs/` for staleness.
 
 **No live GitHub API/network access in this pass** — the GitHub
 About-blurb/topics check (RDOC-5) could not be fetched live. Per the
@@ -143,7 +143,7 @@ skill's checklist:
 - **Voice**: no second-person benefit copy, intensifier adjectives, or
   unearned claims found in README.md or the docs/*.md files audited.
 - **Status staleness vs. roadmap**: README's Phase 3/4 "not yet built"
-  language for Supabase/Stripe matches `openspec/roadmap.md`'s current
+  language for Supabase/Stripe matches `docs/roadmap.md`'s current
   Phase 3 ("deliberately not started yet") and Phase 4 ("not started")
   status. No stale claims found.
 - **llms.txt**: not present, and per the skill this is a suggestion, not

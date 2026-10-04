@@ -15,7 +15,7 @@ Standard and Pro have a defined split (see the README's
 fits Standard's scope rather than being a Pro-tier addition.
 
 **Have you checked the roadmap?**
-[`openspec/roadmap.md`](../../openspec/roadmap.md) lists what's already
+[`docs/roadmap.md`](../../docs/roadmap.md) lists what's already
 planned. If this is already there, link the phase instead of duplicating
 the request.
 

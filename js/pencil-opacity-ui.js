@@ -2,9 +2,9 @@
 // inside #pencil-options) to lib/pixel-engine/engine.js's
 // setPixelBlended/erasePixelBlended methods, via workspace.js's
 // paintPixel/erasePixel (see getPencilOpacity below). Restored from the
-// Standard/Pro split (openspec/changes/archive/2026-08-21-split-pixi-pro-
+// Standard/Pro split (docs/history/2026-08-21-split-pixi-pro-
 // repo) - merged back wired directly (no extension-hook indirection) per
-// openspec/changes/merge-pixi-pro-into-standard/design.md.
+// docs/history/2026-08-24-merge-pixi-pro-into-standard/design.md.
 //
 // Same known gap as the other restored toggles (see symmetry-ui.js's
 // comment): opacity is a session-level variable here rather than reset per

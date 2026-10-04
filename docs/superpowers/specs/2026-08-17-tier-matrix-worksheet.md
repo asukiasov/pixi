@@ -3,10 +3,10 @@
 > **Legacy — superseded, and the split it describes has been reversed.**
 > This worksheet predates the OpenSpec process (see CLAUDE.md's "Process:
 > OpenSpec vs. Superpowers skills") and was the input to
-> `openspec/changes/archive/2026-08-21-split-pixi-pro-repo/`, which
+> `docs/history/2026-08-21-split-pixi-pro-repo/`, which
 > implemented the split it worked out. That split's own spec,
-> `openspec/specs/pixi-pro-distribution/`, was then retired by
-> `openspec/changes/merge-pixi-pro-into-standard/` (2026-08-24), which
+> `docs/specs/pixi-pro-distribution/`, was then retired by
+> `docs/history/2026-08-24-merge-pixi-pro-into-standard/` (2026-08-24), which
 > reversed the split entirely — all Pro-only features moved back into this
 > single public repo, free. This file is kept only as historical context
 > for a tier model that no longer exists.
@@ -70,7 +70,7 @@ oversight.
 | Square-constraint ("1:1") toggle | ✅ | ✅ | tied to Rectangle/Selection |
 | Hand / pan | ✅ | ✅ | bundled with zoom/pan |
 | Eyedropper | ✅ | ✅ | |
-| Symmetry / mirror drawing mode | ❌ | ✅ | new capability (shipped 2026-08-18, `openspec/changes/archive/2026-08-18-5-add-symmetry-drawing-mode`); not yet discussed for tier split |
+| Symmetry / mirror drawing mode | ❌ | ✅ | new capability (shipped 2026-08-18, `docs/history/2026-08-18-5-add-symmetry-drawing-mode`); not yet discussed for tier split |
 
 ## Brush
 
@@ -102,7 +102,7 @@ oversight.
 | Import palette from image             | ❌ | ✅ | |
 | Delete palette                        | ❌ | ✅ | |
 | Multiple palettes + select dropdown   | ❌ | ✅ | |
-| Palette-aware color ramp generator    | ❌ | ✅ | new capability (shipped 2026-08-18, `openspec/changes/archive/2026-08-18-7-add-palette-color-ramp-generator`); not yet discussed for tier split |
+| Palette-aware color ramp generator    | ❌ | ✅ | new capability (shipped 2026-08-18, `docs/history/2026-08-18-7-add-palette-color-ramp-generator`); not yet discussed for tier split |
 
 ## Layers
 
@@ -114,8 +114,8 @@ oversight.
 | Blend mode select             | ❌ | ✅ | tied to Layers |
 | Layer opacity control         | ❌ | ✅ | tied to Layers |
 | Background layer (locked, from canvas creation) | ❌ | ✅ | tied to Layers — Standard's canvas background (transparent/white) is still set at creation, just isn't a lockable layer without Layers itself |
-| Reference image layer (trace-over, locked, excluded from export) | ❌ | ✅ | new capability, shipped 2026-08-18, `openspec/changes/reference-image-layer/`; depends on Layers, so Pro-only by the same logic as Background layer — tier-gating itself not yet implemented, see that change's proposal.md |
-| Merge layers (multi-select + Cmd/Ctrl+E, incl. merge-down) | ❌ | ✅ | new capability, shipped 2026-08-18, `openspec/changes/merge-layers/`; depends on Layers — tier-gating itself not yet implemented, same reasoning as reference-image-layer above |
+| Reference image layer (trace-over, locked, excluded from export) | ❌ | ✅ | new capability, shipped 2026-08-18, `docs/history/2026-08-23-reference-image-layer/`; depends on Layers, so Pro-only by the same logic as Background layer — tier-gating itself not yet implemented, see that change's proposal.md |
+| Merge layers (multi-select + Cmd/Ctrl+E, incl. merge-down) | ❌ | ✅ | new capability, shipped 2026-08-18, `docs/history/2026-08-23-merge-layers/`; depends on Layers — tier-gating itself not yet implemented, same reasoning as reference-image-layer above |
 
 ## Canvas / navigation
 

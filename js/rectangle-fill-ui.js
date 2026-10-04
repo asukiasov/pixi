@@ -2,9 +2,9 @@
 // (index.html) to shape-tools.js's setRectangleFilled directly, and owns
 // the whole "#rectangle-options" panel's show/hide-on-tool-change behavior,
 // since that panel exists only to house this toggle. Restored from the
-// Standard/Pro split (openspec/changes/archive/2026-08-21-split-pixi-pro-
+// Standard/Pro split (docs/history/2026-08-21-split-pixi-pro-
 // repo) - merged back wired directly (no extension-hook indirection) per
-// openspec/changes/merge-pixi-pro-into-standard/design.md.
+// docs/history/2026-08-24-merge-pixi-pro-into-standard/design.md.
 //
 // Panel visibility: adds its own click listener to every tool-rail button
 // (the same DOM elements workspace.js's own bindDomOnce listens on) rather

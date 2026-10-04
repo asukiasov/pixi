@@ -1,7 +1,7 @@
 // iOS 26 / Apple Pencil-style "magnetic hover" for the top bar and tool
 // rail buttons - trialed first with a plain mouse enabled on desktop
 // (to evaluate without an iPad on hand), then restricted to iOS/iPadOS
-// only once approved (openspec/changes/restrict-magnetic-hover-to-ios)
+// only once approved (docs/history/2026-08-17-restrict-magnetic-hover-to-ios)
 // - a desktop mouse produces no effect at all now.
 //
 // Mechanics: while the pointer is within ACTIVATION_RADIUS px of a

@@ -1,5 +1,5 @@
 // Symmetry/mirror drawing mode. Pure, DOM-free, and directly unit-testable
-// (see openspec/changes/5-add-symmetry-drawing-mode, pre-split history, for
+// (see docs/history/2026-08-18-5-add-symmetry-drawing-mode, pre-split history, for
 // the wrap-applyPixel-don't-fork-the-stroke-tracer rationale and
 // test/symmetry.test.js for coverage).
 

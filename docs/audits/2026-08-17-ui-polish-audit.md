@@ -3,7 +3,7 @@
 Findings from a full `.claude/skills/auditing-tool-improvements/` pass over
 every screen and tool, cross-referenced against
 [`docs/ui-reference.md`](../ui-reference.md) (control locations) and
-`openspec/roadmap.md`'s "Still open" list (already-known items, not
+`docs/roadmap.md`'s "Still open" list (already-known items, not
 re-listed as new). Live-screenshotted via Playwright; some readings were
 degraded by a sandboxed test environment blocking Google Fonts (see
 AUD-4/AUD-5/AUD-9/AUD-10 notes) and re-checked against source where
@@ -133,7 +133,7 @@ picked up.
   slide, and that reduced-motion users get an effectively instant
   toggle. This was a real behavior change — normally an `/opsx:propose`
   candidate — implemented directly at the user's explicit request
-  instead; `openspec/specs/canvas-navigation` has not been updated to
+  instead; `docs/specs/canvas-navigation` has not been updated to
   reflect it yet.
 - **AUD-12**: **done** — replaced the two duplicated DOM instances
   (`#pencil-library-toggle`, `#brush-library-toggle`) with one shared
@@ -142,7 +142,7 @@ picked up.
   DOM instance, tool-scoped visibility toggle). Verified that shared
   state (on/off) persists correctly across Pencil↔Brush tool switches.
   Also a real behavior change implemented directly at the user's
-  request; `openspec/specs/brushes` has not been updated yet.
+  request; `docs/specs/brushes` has not been updated yet.
 - **AUD-13**: **done** — see Batch 1 below; landed from a separate
   parallel effort, not implemented as part of either batch here.
 
@@ -177,9 +177,9 @@ by guarding the reference (`typeof window !== 'undefined'`) rather than
 reworking either branch's approach. Full suite: 177/177 passing on
 `main` post-merge. Worktrees and branches cleaned up after landing.
 
-`docs/ui-reference.md` and `openspec/roadmap.md`'s "Still open" list
+`docs/ui-reference.md` and `docs/roadmap.md`'s "Still open" list
 updated to match (AUD-11/12/13 moved out of roadmap's open list into
-"Resolved so far"; a note added there that `openspec/specs/
+"Resolved so far"; a note added there that `docs/specs/
 canvas-navigation` and `brushes` still need a sync pass to reflect
 AUD-11/AUD-12's actual behavior changes, since they skipped
 `/opsx:propose`).

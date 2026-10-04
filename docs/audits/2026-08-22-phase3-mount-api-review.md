@@ -2,7 +2,7 @@
 
 **Range reviewed:** `7f46d04` (last commit before 3.1) → `9313910` (HEAD at
 review time). All 3.1–3.11 confirmed checked off in
-`openspec/changes/embeddable-integration-api/tasks.md`; every listed commit
+`docs/history/2026-08-23-embeddable-integration-api/tasks.md`; every listed commit
 present in `git log`.
 
 This is a whole-phase pass, distinct from each task's own per-task code
@@ -294,7 +294,7 @@ independent and both apply cleanly against the same base.
   inspection and `node --check`.
 - **I-2**: recorded, not removed — this is a deliberate design decision.
   Added a new Decision to
-  `openspec/changes/embeddable-integration-api/design.md` explaining why
+  `docs/history/2026-08-23-embeddable-integration-api/design.md` explaining why
   `lib/pixi.js`'s public API and `LayerStack.loadImage()` throw instead of
   following the repo's return-based convention (host-facing API boundary,
   not the editor's internal call graph — a thrown error surfaces a host's

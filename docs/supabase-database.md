@@ -2,7 +2,7 @@
 
 Status: **reference only** — nothing in this document is implemented yet.
 Auth/sync (and Stripe entitlements, community feed) are explicitly out of
-scope for Phase 1 (see `openspec/roadmap.md`). Per `CLAUDE.md`, any change
+scope for Phase 1 (see `docs/roadmap.md`). Per `CLAUDE.md`, any change
 that actually wires this in — auth, Postgres reads/writes, Storage, Stripe
 webhook — needs an OpenSpec proposal (`/opsx:propose`) before code is written.
 This doc exists so that proposal has the schema and config to work from.
@@ -37,7 +37,7 @@ database — no GitHub Actions or repo secrets involved in that path.
 
 **Chosen approach: CDN ES modules**, matching the no-build-step scaffold
 (`index.html`, `style.css`, ES modules under `js/`, see
-`openspec/changes/archive/2026-08-14-1-scaffold-drawing-engine/`). Unlike
+`docs/history/2026-08-14-1-scaffold-drawing-engine/`). Unlike
 Firebase, Supabase doesn't publish a first-party CDN build of `supabase-js`,
 so import it from an ESM CDN wrapper such as esm.sh:
 
@@ -175,7 +175,7 @@ the actual access-control layer, not the URL/anon-key secrecy.
 ## 6. Offline-first sync sketch (Dexie ↔ Supabase)
 
 Not decided yet — sketch only, to be firmed up when Phase 3 gets proposed.
-See `openspec/roadmap.md` Phase 2/3.
+See `docs/roadmap.md` Phase 2/3.
 
 - Dexie/IndexedDB is the primary store the UI reads/writes; Postgres is a
   sync target, not the source of truth for a signed-out or offline user.
@@ -208,7 +208,7 @@ infrastructure with its own deployment path:
   client and cannot live on GitHub Pages (static hosting only). That code
   runs as a **Supabase Edge Function** (Deno runtime), using Supabase's own
   secret storage (`supabase secrets set`), not GitHub Actions secrets. This
-  only becomes relevant at Phase 4 (see `openspec/roadmap.md`).
+  only becomes relevant at Phase 4 (see `docs/roadmap.md`).
 
 ## Open items for whoever proposes the sync/auth change
 

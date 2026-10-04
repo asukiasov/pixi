@@ -144,7 +144,7 @@ All three merged cleanly, full test suite still passes.
 
 ## Not re-flagged (already tracked elsewhere)
 
-Per `docs/ui-reference.md` and `openspec/roadmap.md`'s "Still open" list:
+Per `docs/ui-reference.md` and `docs/roadmap.md`'s "Still open" list:
 `#right-sidebar-toggle`'s instant (non-animated) toggle, the duplicated
 Color Library sequence toggle
 (`#pencil-library-toggle`/`#brush-library-toggle`), and the missing

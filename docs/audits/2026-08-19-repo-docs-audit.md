@@ -4,7 +4,7 @@ Content/voice + SEO/GEO pass over `README.md` (the doc GitHub renders on the
 repo's public landing page), triggered by user feedback that it reads as
 "dull, not interesting, not informative," and specifically asking for a
 "Pro version" mention, the word "demo," and a feature matrix. Checked
-against `docs/repo-voice.md`, `writing-repo-docs`, `openspec/roadmap.md`,
+against `docs/repo-voice.md`, `writing-repo-docs`, `docs/roadmap.md`,
 and `docs/repo-docs-plan.md`.
 
 **No live network access this pass** — the GitHub About blurb/topics/
@@ -31,7 +31,7 @@ existing project rule — needs a decision, not a fix).
 
 ## Notes per finding
 
-- **RDOC-1** — **not-an-issue.** `openspec/roadmap.md`'s "Not yet
+- **RDOC-1** — **not-an-issue.** `docs/roadmap.md`'s "Not yet
   scheduled" section lists "Standard/Pro tier split" as **raised
   2026-08-18, not yet proposed via `/opsx:propose`, no phase assigned** —
   it's a design doc (`docs/superpowers/specs/2026-08-18-pixi-tiers-design.md`),
@@ -60,8 +60,8 @@ existing project rule — needs a decision, not a fix).
   glance. This is the credible half of "not informative": a stranger
   can't tell in 3 seconds what tools exist (brushes? shapes? symmetry?
   color library?) without reading prose or clicking through to
-  `openspec/roadmap.md`. A compact table of **currently shipped**
-  capabilities (cross-referencing `openspec/specs/` — canvas-creation,
+  `docs/roadmap.md`. A compact table of **currently shipped**
+  capabilities (cross-referencing `docs/specs/` — canvas-creation,
   pixel-drawing-engine, layers, local-persistence, gallery, brushes,
   shape-tools, color-library, canvas-navigation, canvas-settings, export,
   url-routing, symmetry-drawing) would satisfy both:
@@ -71,7 +71,7 @@ existing project rule — needs a decision, not a fix).
     exactly the structured-list requirement in the GEO pass.
   This does **not** conflict with `repo-voice.md`'s "link instead of
   restate" rule as long as the table stays a *summary* (tool names +
-  one clause each) and keeps pointing to `openspec/roadmap.md`/`specs/`
+  one clause each) and keeps pointing to `docs/roadmap.md`/`specs/`
   for detail, the way the current prose paragraph already does — it's a
   format change to existing scope claims, not new content. Recommend
   routing this through `writing-repo-docs` as a structural edit, not an
@@ -79,7 +79,7 @@ existing project rule — needs a decision, not a fix).
 
   **Done 2026-08-19** via `writing-repo-docs`: a 13-row "## Features"
   table added to `README.md` between the opening paragraph and `##
-  Stack`, one row per `openspec/specs/` area, each linking to its spec.
+  Stack`, one row per `docs/specs/` area, each linking to its spec.
   Scoped explicitly to "shipped and usable today (Phase 2, complete)" —
   no Pro/planned rows, keeping RDOC-1's constraint intact. Re-checked
   against SEO/GEO: rows are self-contained facts (no dangling pronouns),

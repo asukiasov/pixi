@@ -86,7 +86,7 @@ export function computeLayerMarkState({ marked, lastClickedId, clickedId, layers
  * different DOM elements, and iOS Safari's tap-synthesized `dblclick` is
  * unreliable anyway. Keyed by layer id so it survives that re-render.
  * `click` fires for mouse, touch and Apple Pencil alike, so one path
- * covers all three (see openspec/changes/4b-layer-rename-explicit).
+ * covers all three (see docs/history/2026-10-02-4b-layer-rename-explicit).
  */
 export function isDoubleTap(prev, next, { maxDelay = 400, maxDistance = 10 } = {}) {
   if (!prev || prev.layerId !== next.layerId) return false;

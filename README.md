@@ -17,8 +17,8 @@ can mount into another page's container element).
 **Live demo:** https://asukiasov.github.io/pixi/ — no install, try it now.
 
 For the full feature set, current phase, and what's built vs. planned, see
-[`openspec/roadmap.md`](openspec/roadmap.md). For exactly what each shipped
-feature does, [`openspec/specs/`](openspec/specs/) is the source of truth —
+[`docs/roadmap.md`](docs/roadmap.md). For exactly what each shipped
+feature does, [`docs/specs/`](docs/specs/) is the source of truth —
 this README stays high-level on purpose rather than duplicating that.
 
 ## Key Capabilities
@@ -37,23 +37,23 @@ this README stays high-level on purpose rather than duplicating that.
 ## Features
 
 Everything below is shipped and usable today, free, in this one repo — see
-[`openspec/specs/`](openspec/specs/) for the full behavior of each.
+[`docs/specs/`](docs/specs/) for the full behavior of each.
 
 | Area | What it does |
 |---|---|
-| [Canvas creation](openspec/specs/canvas-creation/spec.md) | Fixed size presets (16/32/64/128px) or custom up to 256px, transparent or white background |
-| [Drawing engine](openspec/specs/pixel-drawing-engine/spec.md) | Pencil, eraser, bucket fill, undo/redo, pixel-perfect drawing toggle |
-| [Brushes](openspec/specs/brushes/spec.md) | Predefined and custom pixel-pattern stamps (including import from image), click or drag to place |
-| [Shape tools](openspec/specs/shape-tools/spec.md) | Line, rectangle (fill/outline toggle), and a rectangular selection tool (move/copy/delete a region) |
-| [Symmetry drawing](openspec/specs/symmetry-drawing/spec.md) | Mirror drawing mode across a horizontal/vertical/both axis |
-| [Layers](openspec/specs/layers/spec.md) | Add/delete/reorder layers, visibility, blend mode, opacity, background layer, reference image layer, merge layers |
-| [Color Library](openspec/specs/color-library/spec.md) | Named/persisted color palettes, add-to-palette, import from image, ramp generator |
-| [Canvas settings](openspec/specs/canvas-settings/spec.md) | Rename, resize, and rotate an existing project |
-| [Canvas navigation](openspec/specs/canvas-navigation/spec.md) | Zoom in/out, Fit/Fill Screen presets, pan (Hand tool) |
-| [Local persistence](openspec/specs/local-persistence/spec.md) | Projects save to IndexedDB automatically — usable fully offline, no account required |
-| [Gallery](openspec/specs/gallery/spec.md) | Home screen listing saved projects with thumbnails |
-| [Export](openspec/specs/export/spec.md) | PNG export at native or scaled resolution, with a transparent-background toggle |
-| [URL routing](openspec/specs/url-routing/spec.md) | Hash-based routes per screen — reload or Back/Forward preserves the open project |
+| [Canvas creation](docs/specs/canvas-creation/spec.md) | Fixed size presets (16/32/64/128px) or custom up to 256px, transparent or white background |
+| [Drawing engine](docs/specs/pixel-drawing-engine/spec.md) | Pencil, eraser, bucket fill, undo/redo, pixel-perfect drawing toggle |
+| [Brushes](docs/specs/brushes/spec.md) | Predefined and custom pixel-pattern stamps (including import from image), click or drag to place |
+| [Shape tools](docs/specs/shape-tools/spec.md) | Line, rectangle (fill/outline toggle), and a rectangular selection tool (move/copy/delete a region) |
+| [Symmetry drawing](docs/specs/symmetry-drawing/spec.md) | Mirror drawing mode across a horizontal/vertical/both axis |
+| [Layers](docs/specs/layers/spec.md) | Add/delete/reorder layers, visibility, blend mode, opacity, background layer, reference image layer, merge layers |
+| [Color Library](docs/specs/color-library/spec.md) | Named/persisted color palettes, add-to-palette, import from image, ramp generator |
+| [Canvas settings](docs/specs/canvas-settings/spec.md) | Rename, resize, and rotate an existing project |
+| [Canvas navigation](docs/specs/canvas-navigation/spec.md) | Zoom in/out, Fit/Fill Screen presets, pan (Hand tool) |
+| [Local persistence](docs/specs/local-persistence/spec.md) | Projects save to IndexedDB automatically — usable fully offline, no account required |
+| [Gallery](docs/specs/gallery/spec.md) | Home screen listing saved projects with thumbnails |
+| [Export](docs/specs/export/spec.md) | PNG export at native or scaled resolution, with a transparent-background toggle |
+| [URL routing](docs/specs/url-routing/spec.md) | Hash-based routes per screen — reload or Back/Forward preserves the open project |
 
 ## Stack
 
@@ -93,17 +93,17 @@ opened as a `file://` URL, since ES module imports require it.
 - **New pixel art sprite:** Gallery → New Canvas, pick a size preset
   (16/32/64/128px) or a custom size up to 256px, then draw with Pencil,
   Bucket fill, and the Shape tools. See
-  [Canvas creation](openspec/specs/canvas-creation/spec.md).
+  [Canvas creation](docs/specs/canvas-creation/spec.md).
 - **Reusable stamps:** build a custom brush from a repeated pixel pattern
   and place it with click or drag, instead of redrawing it by hand each
-  time. See [Brushes](openspec/specs/brushes/spec.md).
+  time. See [Brushes](docs/specs/brushes/spec.md).
 - **Copy/move part of a sprite:** use the rectangular selection tool to
   move, copy, or delete a region without affecting the rest of the
-  canvas. See [Shape tools](openspec/specs/shape-tools/spec.md).
+  canvas. See [Shape tools](docs/specs/shape-tools/spec.md).
 - **Multi-layer illustration:** add Layers, draw each part (background,
   outline, shading) on its own layer, adjust per-layer opacity and blend
   mode, then Export a single flattened PNG. See
-  [Layers](openspec/specs/layers/spec.md).
+  [Layers](docs/specs/layers/spec.md).
 
 For the full control-by-control reference, see
 [`docs/ui-reference.md`](docs/ui-reference.md).
@@ -120,7 +120,7 @@ routing, brushes, shape tools, symmetry, color library — see `test/` for
 the full, current list) directly under Node. Anything requiring a real
 `<canvas>`/DOM (compositing, rendering) is verified with a Playwright
 smoke pass instead — see individual OpenSpec changes'
-`tasks.md` under `openspec/changes/archive/` for what was checked.
+`tasks.md` under `docs/history/` for what was checked.
 
 ## Project structure
 

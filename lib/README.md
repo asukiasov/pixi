@@ -419,7 +419,7 @@ portion you redistribute.
 repo under a paid, one-time-access model: $5 via PayPal, then a GitHub
 username emailed to the maintainer for private-repo collaborator access, or
 a release archive handed over instead for a buyer who doesn't want ongoing
-GitHub access (see `openspec/changes/split-pixi-pro-repo/runbook.md`,
+GitHub access (see `docs/history/2026-08-21-split-pixi-pro-repo/runbook.md`,
 sections 4.1–4.2, for the exact process). That access grant is not a
 redistribution license — it does not carry MIT's right to copy, sublicense,
 or resell Pro's source the way this README's confirmation above does for

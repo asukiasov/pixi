@@ -163,7 +163,7 @@ hooks and `moved to pixi-pro` breadcrumb comments for them. On
 features back and removed the hook layer, so there is one public Pixi
 and none of those comments remain in the code. Don't add new ones. If a
 real third-party plugin need ever appears, it should get its own
-design pass (see `openspec/roadmap.md`'s closed "Plugin/powerup system"
+design pass (see `docs/roadmap.md`'s closed "Plugin/powerup system"
 entry).
 
 ## Constraint: no build step, ever

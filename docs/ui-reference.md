@@ -3,7 +3,7 @@
 A catalog of every screen and control in Pixi's UI, kept as a reference for
 UX audits (see `.claude/skills/auditing-tool-improvements/` and
 `.claude/skills/web-design-guidelines/`) and onboarding.
-Source of truth for behavior is `openspec/specs/`; this doc is a map of
+Source of truth for behavior is `docs/specs/`; this doc is a map of
 *where things live in the DOM/UI*, not a restatement of requirements — when
 the two disagree, the spec wins and this doc should be corrected.
 

@@ -1,7 +1,7 @@
 // Canvas Settings popover (rename/resize/rotate) - the DOM/UI half.
-// Restored from the Standard/Pro split (openspec/changes/archive/2026-08-
+// Restored from the Standard/Pro split (docs/history/2026-08-
 // 21-split-pixi-pro-repo) - wired directly from js/workspace.js's
-// bindDomOnce() per openspec/changes/merge-pixi-pro-into-standard/
+// bindDomOnce() per docs/history/2026-08-24-merge-pixi-pro-into-standard/
 // design.md (no extension-hook indirection).
 
 import { visibleAnchor } from './layout.js';

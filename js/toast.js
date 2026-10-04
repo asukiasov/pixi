@@ -5,7 +5,7 @@
 // without threading anything through index.html. Lives outside
 // #screen-workspace, so hide-all-UI (4d) never hides it.
 //
-// When to call it (see openspec/specs/status-messages and
+// When to call it (see docs/specs/status-messages and
 // docs/code-standards.md): an action the user directly started failed ->
 // error toast; a background operation failed -> stay silent, unless the
 // user's work may be lost (e.g. autosave); never alert().

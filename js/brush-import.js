@@ -1,6 +1,6 @@
 // Thresholding step of the brush image-import feature (js/image-import.js
 // holds the shared decode/downsample step this builds on; see
-// openspec/changes/2m-brush-image-import/design.md for why alpha-vs-
+// docs/history/2026-08-16-2m-brush-image-import/design.md for why alpha-vs-
 // brightness and the luminance formula were chosen the way they are).
 // Pure and DOM-free, unlike image-import.js's canvas-dependent half - it
 // takes an already-downsampled ImageData (or anything shaped like one),

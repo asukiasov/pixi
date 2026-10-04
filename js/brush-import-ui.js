@@ -1,9 +1,9 @@
 // Brush editor "Import from image": wires the #brush-editor-import button
 // (index.html, inside #brush-editor-panel) to js/brush-import.js's
 // thresholdToGrid via workspace.js's setBrushEditorGrid/getBrushEditorSize.
-// Restored from the Standard/Pro split (openspec/changes/archive/2026-08-
+// Restored from the Standard/Pro split (docs/history/2026-08-
 // 21-split-pixi-pro-repo) - merged back wired directly (no extension-hook
-// indirection) per openspec/changes/merge-pixi-pro-into-standard/
+// indirection) per docs/history/2026-08-24-merge-pixi-pro-into-standard/
 // design.md.
 //
 // Reset points: since this module owns sourceImage privately (workspace.js

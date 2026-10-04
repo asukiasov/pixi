@@ -41,7 +41,7 @@ don't front-load them.
 | Doc | Trigger to add it |
 |---|---|
 | SECURITY.md | Once the app handles anything sensitive worth a private disclosure channel (relevant once Supabase auth/data ships — Phase 3+); keep under 15 lines, point to GitHub private vulnerability reporting |
-| CHANGELOG.md or a "removed/deprecated" note | Once a shipped feature gets cut or replaced — right now `openspec/changes/archive/` covers this for anyone willing to dig, a summary doc isn't needed yet |
+| CHANGELOG.md or a "removed/deprecated" note | Once a shipped feature gets cut or replaced — right now `docs/history/` covers this for anyone willing to dig, a summary doc isn't needed yet |
 | A short values/position file (Pixi's `MANIFESTO.md` equivalent) | Once there's a stable public spot to link it from (About page, README badge) — content already drafted in `repo-voice.md`'s "What we won't do" section, just needs promoting to its own file if it grows |
 | Badges (license, deploy status) | Once LICENSE exists (license badge needs something to point to) and/or CI is added; skip community-count badges (Discord/stars) — no community channel exists yet, and a badge for zero members reads worse than no badge |
 

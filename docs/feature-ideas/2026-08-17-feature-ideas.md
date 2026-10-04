@@ -1,7 +1,7 @@
 # Feature ideas — 2026-08-17
 
 Scan basis: `docs/ui-reference.md` (full current screen/control catalog) +
-`openspec/roadmap.md`'s non-goals, "Not yet scheduled", and "Still open"
+`docs/roadmap.md`'s non-goals, "Not yet scheduled", and "Still open"
 lists (checked so nothing here duplicates an already-known item without
 saying so). Produced by `proposing-feature-improvements`. These are
 candidate capabilities, not vetted designs — next step for anything picked
@@ -21,7 +21,7 @@ change later.
 ## Drawing / shape tools
 
 ### Symmetry / mirror drawing mode — ✅ approved, proposed as
-[`openspec/changes/5-add-symmetry-drawing-mode`](../../openspec/changes/5-add-symmetry-drawing-mode/)
+[`docs/history/2026-08-18-5-add-symmetry-drawing-mode`](../../docs/history/2026-08-18-5-add-symmetry-drawing-mode/)
 - **Why**: Pixel art of characters, icons, and tiles is very often
   symmetric; today every stroke on `pencil`/`brush`/`eraser` must be drawn
   and matched by hand on both halves. A horizontal/vertical (and
@@ -36,7 +36,7 @@ change later.
 - **Next step**: `superpowers:brainstorming` then `/opsx:propose`.
 
 ### Tile-seamless preview — ✅ approved, proposed as
-[`openspec/changes/6-add-tile-seamless-preview`](../../openspec/changes/6-add-tile-seamless-preview/)
+[`docs/history/2026-08-23-6-add-tile-seamless-preview`](../../docs/history/2026-08-23-6-add-tile-seamless-preview/)
 - **Why**: Pixi's fixed small canvas sizes (16–128px) are exactly the
   sizes used for tileable game/UI assets, but there's no way to check a
   tile repeats cleanly without exporting and testing elsewhere. A toggle
@@ -50,7 +50,7 @@ change later.
 ## Color
 
 ### Palette-aware color ramp generator — ✅ approved, proposed as
-[`openspec/changes/7-add-palette-color-ramp-generator`](../../openspec/changes/7-add-palette-color-ramp-generator/)
+[`docs/history/2026-08-18-7-add-palette-color-ramp-generator`](../../docs/history/2026-08-18-7-add-palette-color-ramp-generator/)
 - **Why**: Color Library today only stores flat swatch lists
   (`#color-library-grid`) built manually or via image import
   (`#import-palette-button`). Pixel art shading conventions lean on
@@ -112,7 +112,7 @@ change later.
 ## Recording
 
 ### Drawing-process timelapse recording — ✅ approved, proposed as
-[`openspec/changes/8-add-drawing-timelapse-recording`](../../openspec/changes/8-add-drawing-timelapse-recording/)
+[`docs/history/2026-08-23-8-add-drawing-timelapse-recording`](../../docs/history/2026-08-23-8-add-drawing-timelapse-recording/)
 - **Why**: Procreate's signature export is a replayable video of the whole
   drawing process, not just the final image — widely used for tutorials,
   social sharing, and process proof. Pixi has no equivalent today.

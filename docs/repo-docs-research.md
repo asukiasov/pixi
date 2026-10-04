@@ -91,7 +91,7 @@ section for the concrete rules this implies.
    this maps to noting scope that was proposed and then deliberately
    dropped (OpenSpec already half-covers this via archived changes, but
    nothing summarizes it for a reader who won't dig through
-   `openspec/changes/archive/`).
+   `docs/history/`).
 
 4. **SECURITY.md's minimum viable shape**, from appsmith and taipy: one
    sentence on how to report (GitHub private vulnerability reporting),

@@ -1,0 +1,361 @@
+/* Forma UI components, each shown in every state on index.html:
+   .glass / .glass-pill / .glass-circle, .ghost-button (+ .ghost-text),
+   .primary-button, .slider and .swatch-pair. Plain classes only; an app
+   puts them on its own elements. Sizes that depend on the app's density
+   read --rail-button-size with a 2.75rem fallback. */
+
+/* ------------------------------------------------------------------
+   Glass
+   ------------------------------------------------------------------ */
+
+/* Frosted-glass card. The opaque surface is the base, so a browser that
+   can't blur keeps a readable card with no extra query; blur is layered
+   on only where supported (Safari/iPad needs the -webkit- prefix).
+
+   The blur lives on a ::before layer, not the card itself: an element
+   with backdrop-filter becomes the containing block for position:fixed
+   descendants, so a fixed popover nested inside a card (a colour picker,
+   a preview) would be positioned against, and clipped by, the card.
+   A .glass element must be positioned (relative/absolute/fixed).
+
+   The reduce-transparency opt-out is a *positive* query on purpose:
+   Safari doesn't know prefers-reduced-transparency, and `not (unknown)`
+   would evaluate false there and switch glass off on every iPad. */
+.glass {
+  isolation: isolate;
+  background: var(--color-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--float-radius);
+  box-shadow: var(--float-shadow);
+}
+
+/* Shapes: a pill (bars, button groups, a pill-shaped button) or a
+   circle the size of a ghost button (a lone icon button). */
+.glass-pill {
+  border-radius: 999px;
+}
+
+.glass-circle {
+  position: relative;
+  width: var(--rail-button-size, 2.75rem);
+  height: var(--rail-button-size, 2.75rem);
+  padding: 0;
+  border-radius: 50%;
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass {
+    background: transparent;
+  }
+
+  .glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--glass-tint);
+    box-shadow: var(--glass-highlight);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.8);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.8);
+    pointer-events: none;
+  }
+
+  /* A glass element's own background paints below its ::before tint, so
+     clickable glass (circles, a pill-shaped button) lights up on the
+     tint. */
+  .glass-circle:hover::before,
+  .glass-pill:is(button, a):hover::before {
+    background: var(--glass-tint-hover);
+  }
+
+  :is(.glass-circle, .glass-pill:is(button, a))[aria-expanded="true"]::before {
+    background: var(--ghost-on-bg);
+  }
+}
+
+/* Outside @supports too, so the open disk also shows where the tint
+   isn't drawn (no backdrop-filter, reduced transparency). */
+:is(.glass-circle, .glass-pill:is(button, a))[aria-expanded="true"] {
+  background: var(--ghost-on-bg);
+  color: var(--ghost-on-fg);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--color-surface);
+  }
+
+  .glass::before {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Primary button
+   ------------------------------------------------------------------ */
+
+.primary-button {
+  margin-top: auto;
+  padding: 0.9rem;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 0.6rem;
+  background: var(--color-accent);
+  color: white;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.primary-button:hover {
+  background: var(--color-accent-strong);
+}
+
+/* ------------------------------------------------------------------
+   Ghost button
+   ------------------------------------------------------------------ */
+
+/* Ghost button: no border or fill at rest, a subtle fill on hover, and a
+   solid disk (white on dark, inverted in the light theme) while pressed,
+   active or open. Circular for icons, a pill for text. */
+.ghost-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--rail-button-size, 2.75rem);
+  min-height: var(--rail-button-size, 2.75rem);
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ghost-button:not(:disabled):hover {
+  background: var(--ghost-hover);
+}
+
+.ghost-button:is(.active, [aria-pressed="true"], [aria-expanded="true"]),
+.ghost-button:is(.active, [aria-pressed="true"], [aria-expanded="true"]):not(:disabled):hover {
+  background: var(--ghost-on-bg);
+  color: var(--ghost-on-fg);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.ghost-button:is(:disabled, [aria-disabled="true"]) {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ghost-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* Text buttons in a ghost row get pill padding. */
+.ghost-button.ghost-text {
+  padding: 0 1.1rem;
+}
+
+/* ------------------------------------------------------------------
+   Slider
+   ------------------------------------------------------------------ */
+
+/* Slider: a 6px track filled up to the thumb, a large white pill thumb,
+   an icon at each end instead of a label (the label stays, visually
+   hidden) and a value bubble over the thumb while adjusting. The app's
+   script sets --f (0..1, the value's fraction) on the slider, and
+   .is-adjusting while the value is being changed. */
+.slider {
+  --slider-thumb-w: 34px;
+  --slider-fill: var(--color-text);
+  --slider-track: rgba(127, 127, 135, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.slider-input {
+  position: relative;
+  display: flex;
+  flex: 1 1 7rem;
+  min-width: 4rem;
+}
+
+.slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1 1 7rem;
+  width: 7rem;
+  min-width: 4rem;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--slider-fill) 0 calc(var(--slider-thumb-w) / 2 + var(--f, 0) * (100% - var(--slider-thumb-w))), var(--slider-track) 0);
+}
+
+.slider input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--slider-fill) 0 calc(var(--slider-thumb-w) / 2 + var(--f, 0) * (100% - var(--slider-thumb-w))), var(--slider-track) 0);
+}
+
+.slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--slider-thumb-w);
+  height: 22px;
+  margin-top: -8px;
+  border: none;
+  border-radius: 11px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+}
+
+.slider input[type="range"]::-moz-range-thumb {
+  width: var(--slider-thumb-w);
+  height: 22px;
+  border: none;
+  border-radius: 11px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+}
+
+.slider input[type="range"]:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -4px;
+  border-radius: 999px;
+}
+
+/* The value bubble: centred over the thumb, shown only while adjusting
+   (the input's aria-valuetext carries the value for assistive tech). */
+.slider-bubble {
+  position: absolute;
+  bottom: calc(100% - 6px);
+  inset-inline-start: calc(var(--slider-thumb-w) / 2 + var(--f, 0) * (100% - var(--slider-thumb-w)));
+  translate: -50% 0;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: var(--ghost-on-bg);
+  color: var(--ghost-on-fg);
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.slider:is(.is-adjusting, :has(input:active)) .slider-bubble {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .slider-bubble {
+    transition: opacity 0.15s ease;
+  }
+}
+
+/* End icons, drawn in CSS so an icon font subset needn't grow:
+   Size (small dot / big ring), Opacity (faint / solid), Spacing (close /
+   far dots). Rotation uses the rotate_left/right glyphs. */
+.slider-icon {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--color-text-secondary);
+}
+
+.slider-icon .material-symbols-outlined {
+  font-size: 1.15rem;
+}
+
+.slider-icon::before {
+  content: '';
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.slider-icon:has(.material-symbols-outlined)::before {
+  content: none;
+}
+
+.slider-icon-dot::before { width: 4px; height: 4px; }
+.slider-icon-ring::before { width: 16px; height: 16px; background: none; border: 2px solid currentColor; }
+.slider-icon-faint::before { width: 14px; height: 14px; opacity: 0.3; }
+.slider-icon-solid::before { width: 14px; height: 14px; }
+.slider-icon-near::before { width: 4px; height: 4px; translate: -3px 0; box-shadow: 6px 0 currentColor; }
+.slider-icon-far::before { width: 4px; height: 4px; translate: -6px 0; box-shadow: 12px 0 currentColor; }
+
+/* ------------------------------------------------------------------
+   Swatch pair
+   ------------------------------------------------------------------ */
+
+/* Swatch pair: foreground and background as overlapping 28px circles
+   with a white ring, inside a 44px square stack, so their curves follow
+   a pill's round end. Swap and Reset are plain icons in the two free
+   corners. */
+.swatch-pair {
+  position: relative;
+  --rail-padding: 0.5rem;
+  width: var(--rail-button-size, 2.75rem);
+  height: var(--rail-button-size, 2.75rem);
+}
+
+.swatch-pair .fg-bg-swatch {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.swatch-pair .fg-bg-swatch:hover {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px var(--color-text-secondary), 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Swap/Reset: the button is a transparent 24px hit area that covers
+   the free corner square and reaches out into the surrounding padding,
+   never over a swatch face; its icon is plain (no chip). Its inner edges
+   sit 1px clear of the faces: flush, Chrome's hit testing gave the
+   faces' outermost pixel row to the corner button. 24px, not 44px: two
+   44px areas can't fit beside the faces in a 44px stack. */
+.swatch-pair .fg-bg-corner-button {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.swatch-pair .swap-corner {
+  top: calc(-1 * var(--rail-padding) - 1px);
+  inset-inline-end: calc(-1 * var(--rail-padding) - 1px);
+}
+
+.swatch-pair .reset-corner {
+  bottom: calc(-1 * var(--rail-padding) - 1px);
+  inset-inline-start: calc(-1 * var(--rail-padding) - 1px);
+}
+
+.swatch-pair .fg-bg-corner-button:hover {
+  background: transparent;
+  color: var(--color-text);
+}
+
+.swatch-pair .fg-bg-corner-button .material-symbols-outlined {
+  font-size: 0.9rem;
+}

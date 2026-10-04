@@ -138,12 +138,16 @@ textarea,
   --glass-blur: 28px;
   width: min(100%, 34rem);
   padding: clamp(1.75rem, 5vw, 3rem) clamp(1.25rem, 5vw, 3rem);
-  border-radius: 28px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1.5rem;
   text-align: center;
+}
+
+/* Kept for a non-glass hero; Forma .glass's radius wins on the glass one. */
+.home-hero:not(:where(.glass)) {
+  border-radius: 28px;
 }
 
 .home-wordmark {
@@ -177,6 +181,11 @@ textarea,
   flex-direction: column;
   margin: 0 calc(var(--float-edge) - max(1rem, env(safe-area-inset-right))) 0 calc(var(--float-edge) - max(1rem, env(safe-area-inset-left)));
   padding: 1rem 1.25rem max(1rem, env(safe-area-inset-bottom));
+}
+
+/* Kept for a non-glass panel; Forma .glass's border and radius win on
+   the glass one. */
+.home-recents:not(:where(.glass)) {
   border-bottom: none;
   border-radius: 24px 24px 0 0;
 }
@@ -382,10 +391,14 @@ textarea,
   width: min(100%, 30rem);
   margin: auto 0;
   padding: 1.5rem;
-  border-radius: 24px;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+/* Kept for a non-glass card; Forma .glass's radius wins on the glass one. */
+.new-canvas-card:not(:where(.glass)) {
+  border-radius: 24px;
 }
 
 .new-canvas-card h1 {
@@ -414,11 +427,17 @@ textarea,
 }
 
 .preset-button,
-.tool-button {
+.tool-button:not(:where(.ghost-button, .glass)) {
   padding: 0.6rem 1rem;
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   background: var(--color-surface);
+}
+
+/* Not for a Forma .ghost-button, whose own font and colour win; a .glass
+   button (Home, More) keeps these. */
+.preset-button,
+.tool-button:not(:where(.ghost-button)) {
   color: inherit;
   font-size: 1rem;
   /* Real <button>s default to cursor: default (not pointer) in the UA
@@ -430,7 +449,7 @@ textarea,
 }
 
 .preset-button.active,
-.tool-button.active {
+.tool-button.active:not(:where(.ghost-button, .glass)) {
   background: var(--color-accent);
   border-color: var(--color-accent);
 }
@@ -445,12 +464,12 @@ textarea,
    elsewhere) instead of the plain surface shift, so the accent fill
    doesn't just look like it turned back to unselected. */
 .preset-button:not(:disabled):hover,
-.tool-button:not(:disabled):hover {
+.tool-button:not(:disabled):hover:not(:where(.ghost-button, .glass)) {
   background: var(--color-surface-alt);
 }
 
 .preset-button.active:not(:disabled):hover,
-.tool-button.active:not(:disabled):hover {
+.tool-button.active:not(:disabled):hover:not(:where(.ghost-button, .glass)) {
   background: var(--color-accent-strong);
   border-color: var(--color-accent-strong);
 }
@@ -470,21 +489,7 @@ textarea,
   border-radius: 0.4rem;
 }
 
-.primary-button {
-  margin-top: auto;
-  padding: 0.9rem;
-  font-size: 1.1rem;
-  border: none;
-  border-radius: 0.6rem;
-  background: var(--color-accent);
-  color: white;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.primary-button:hover {
-  background: var(--color-accent-strong);
-}
+/* .primary-button now in forma-ui/components.css */
 
 /* Workspace screen */
 
@@ -630,10 +635,14 @@ textarea,
   flex-direction: column;
   gap: 0.4rem;
   padding: 0.5rem;
-  background: var(--color-bg);
-  border-right: 1px solid var(--color-surface);
   overflow-y: auto;
   flex: none;
+}
+
+/* The docked column's box; the floating rail is Forma .glass instead. */
+.tools-sidebar:not(:where(.glass)) {
+  background: var(--color-bg);
+  border-right: 1px solid var(--color-surface);
 }
 
 /* Wraps the ten tool buttons so the floating rail can scroll them on
@@ -656,7 +665,7 @@ textarea,
 /* "1:1" proportion toggle - a plain text label (like the zoom preset
    buttons), not an icon - clearer than any icon at communicating "1:1"
    specifically, per feedback. */
-.square-constraint-button {
+.square-constraint-button:not(:where(.ghost-button)) {
   font-size: 0.8rem;
   font-weight: 600;
 }
@@ -876,8 +885,6 @@ textarea,
      header, color-library-header-actions, zoom-controls, layer row
      buttons) override this to a smaller scale step where the surrounding
      UI is more compact. */
-  width: var(--icon-size-xl);
-  height: var(--icon-size-xl);
   padding: 0;
   cursor: pointer;
   /* AUD-5: if the Material Symbols icon font fails to load (blocked
@@ -894,6 +901,12 @@ textarea,
   overflow: hidden;
 }
 
+/* A Forma .glass-circle (Home, More) takes its size from Forma UI. */
+.icon-button:not(:where(.glass-circle)) {
+  width: var(--icon-size-xl);
+  height: var(--icon-size-xl);
+}
+
 /* Hover feedback (button-hover-states) - covers every icon-only button
    carrying this class, boxed or bare: bare ones (add-layer-button, the
    panel-header-actions row, the Layers panel's per-row buttons, close
@@ -903,7 +916,7 @@ textarea,
    - the border-radius here just applies the same corner treatment
    bare buttons get, in case it differs momentarily from .tool-button's
    own 0.5rem at rest. */
-.icon-button:not(:disabled):hover {
+.icon-button:not(:disabled):hover:not(:where(.ghost-button, .glass)) {
   background: var(--color-surface-alt);
   border-radius: 0.3rem;
 }
@@ -1297,9 +1310,12 @@ textarea,
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  border-top: 1px solid var(--color-surface);
   display: flex;
   flex-direction: column;
+}
+
+.layers-panel:not(:where(.glass)) {
+  border-top: 1px solid var(--color-surface);
 }
 
 /* Collapsed: only the header's name/chevron row stays visible (see
@@ -2154,9 +2170,12 @@ span.layer-lock-icon {
   flex: none;
   max-height: clamp(200px, 30vh, 250px);
   overflow-y: auto;
-  border-bottom: 1px solid var(--color-surface);
   display: flex;
   flex-direction: column;
+}
+
+.color-library-panel:not(:where(.glass)) {
+  border-bottom: 1px solid var(--color-surface);
 }
 
 .color-library-header {
@@ -2608,7 +2627,7 @@ span.layer-lock-icon {
   height: var(--icon-size-xl);
 }
 
-.tool-button:disabled {
+.tool-button:disabled:not(:where(.ghost-button)) {
   opacity: 0.4;
 }
 
@@ -2952,114 +2971,17 @@ span.layer-lock-icon {
    sets data-layout="floating" on #screen-workspace at boot, whatever the
    query string. Pixi.mount() embeds never set it, so they stay docked.
    Everything below is scoped to that attribute (or is the inert
-   .glass/.slot-options base), so the docked embed layout is untouched.
+   .slot-options base), so the docked embed layout is untouched. The glass
+   and ghost looks are Forma UI classes (forma-ui/components.css) that
+   js/layout.js adds only in this layout.
    ------------------------------------------------------------------ */
 
-/* Frosted-glass card. The opaque surface is the base, so a browser that
-   can't blur keeps a readable card with no extra query; blur is layered
-   on only where supported (Safari/iPad needs the -webkit- prefix).
+/* .glass, .glass-pill and .glass-circle now in forma-ui/components.css */
 
-   The blur lives on a ::before layer, not the card itself: an element
-   with backdrop-filter becomes the containing block for position:fixed
-   descendants, and the colour picker (in the rail) and the palette
-   import/ramp previews (in the right sidebar) are fixed popovers nested
-   inside cards - they'd be positioned against, and clipped by, the card.
-   A .glass element must be positioned (relative/absolute/fixed).
-
-   The reduce-transparency opt-out is a *positive* query on purpose:
-   Safari doesn't know prefers-reduced-transparency, and `not (unknown)`
-   would evaluate false there and switch glass off on every iPad.
-
-   The floating slots get the look by selector rather than a class in
-   index.html, so the shared markup stays unchanged in the docked
-   layout. */
-.glass,
-.workspace-screen[data-layout="floating"] :is(.slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar, #back-to-gallery-button, #zoom-pill, .topbar-group, #more-button),
-.workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel) {
-  isolation: isolate;
-  background: var(--color-surface);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--float-radius);
-  box-shadow: var(--float-shadow);
-}
-
-/* Shapes: a pill (rail, bars, zoom, undo/redo) or a 44px circle (Home,
-   More). The tool-options bar wraps on a narrow window, so it rounds by
-   its one-row height, not 999px. */
-.glass-pill,
-.workspace-screen[data-layout="floating"] :is(.slot-tools, .panel-rail, .options-card, #selection-bar, #zoom-pill, .topbar-group) {
-  border-radius: 999px;
-}
-
-.workspace-screen[data-layout="floating"] .tool-options-bar {
+/* The tool-options bar wraps on a narrow window, so it rounds by its
+   one-row height, not 999px. */
+.workspace-screen[data-layout="floating"] .tool-options-bar:not(:where(.glass)) {
   border-radius: 26px;
-}
-
-.glass-circle,
-.workspace-screen[data-layout="floating"] :is(#back-to-gallery-button, #more-button) {
-  position: relative;
-  width: var(--rail-button-size, 2.75rem);
-  height: var(--rail-button-size, 2.75rem);
-  padding: 0;
-  border-radius: 50%;
-}
-
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .glass,
-  .workspace-screen[data-layout="floating"] :is(.slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar, #back-to-gallery-button, #zoom-pill, .topbar-group, #more-button),
-  .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel) {
-    background: transparent;
-  }
-
-  .glass::before,
-  .workspace-screen[data-layout="floating"] :is(.slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar, #back-to-gallery-button, #zoom-pill, .topbar-group, #more-button)::before,
-  .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel)::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    border-radius: inherit;
-    background: var(--glass-tint);
-    box-shadow: var(--glass-highlight);
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.8);
-    backdrop-filter: blur(var(--glass-blur)) saturate(1.8);
-    pointer-events: none;
-  }
-
-  /* A glass element's own background paints below its ::before tint, so
-     clickable glass (circles, the zoom pill) lights up on the tint. */
-  .glass-circle:hover::before,
-  .glass-pill:is(button, a):hover::before,
-  .workspace-screen[data-layout="floating"] :is(#back-to-gallery-button, #zoom-pill, #more-button):hover::before {
-    background: var(--glass-tint-hover);
-  }
-
-  .glass-circle[aria-expanded="true"]::before,
-  .workspace-screen[data-layout="floating"] :is(#zoom-pill, #more-button)[aria-expanded="true"]::before {
-    background: var(--ghost-on-bg);
-  }
-}
-
-/* Outside @supports too, so the open disk also shows where the tint
-   isn't drawn (no backdrop-filter, reduced transparency). */
-.glass-circle[aria-expanded="true"],
-.workspace-screen[data-layout="floating"] :is(#zoom-pill, #more-button)[aria-expanded="true"] {
-  background: var(--ghost-on-bg);
-  color: var(--ghost-on-fg);
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .glass,
-  .workspace-screen[data-layout="floating"] :is(.slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar, #back-to-gallery-button, #zoom-pill, .topbar-group, #more-button),
-  .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel) {
-    background: var(--color-surface);
-  }
-
-  .glass::before,
-  .workspace-screen[data-layout="floating"] :is(.slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar, #back-to-gallery-button, #zoom-pill, .topbar-group, #more-button)::before,
-  .workspace-screen[data-layout="floating"] .right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel)::before {
-    display: none;
-  }
 }
 
 /* Groups the palette row, selection controls and zoom bar into the
@@ -3354,9 +3276,7 @@ span.layer-lock-icon {
   min-width: 4.2rem;
   min-height: 44px;
   padding: 0 0.8rem;
-  border: 1px solid var(--color-border);
   border-radius: 999px;
-  background: var(--color-surface);
   color: inherit;
   font: inherit;
   font-size: 0.9rem;
@@ -3364,7 +3284,13 @@ span.layer-lock-icon {
   cursor: pointer;
 }
 
-.zoom-pill:hover,
+/* Box for a pill that isn't Forma .glass. */
+.zoom-pill:not(:where(.glass)) {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.zoom-pill:hover:not(:where(.glass)),
 .zoom-pill[aria-expanded="true"] {
   background: var(--color-surface-alt);
 }
@@ -3552,7 +3478,6 @@ span.layer-lock-icon {
    1px clear of the faces: flush, Chrome's hit testing gave the faces'
    outermost pixel row to the corner button. 24px, not 44px: two 44px
    areas can't fit beside the faces in a 44px stack. */
-.swatch-pair .fg-bg-corner-button,
 .workspace-screen[data-layout="floating"] .fg-bg-corner-button {
   width: 1.5rem;
   height: 1.5rem;
@@ -3561,13 +3486,11 @@ span.layer-lock-icon {
   background: transparent;
 }
 
-.swatch-pair .swap-corner,
 .workspace-screen[data-layout="floating"] .swap-corner {
   top: calc(-1 * var(--rail-padding) - 1px);
   inset-inline-end: calc(-1 * var(--rail-padding) - 1px);
 }
 
-.swatch-pair .reset-corner,
 .workspace-screen[data-layout="floating"] .reset-corner {
   bottom: calc(-1 * var(--rail-padding) - 1px);
   inset-inline-start: calc(-1 * var(--rail-padding) - 1px);
@@ -3643,8 +3566,8 @@ span.layer-lock-icon {
   display: flex;
 }
 
-/* Sliders (Pixelmator visual pass): see .slider in "Components" at the
-   end of this file - the bar's sliders are .slider components. */
+/* Sliders (Pixelmator visual pass): the bar's sliders are .slider
+   components (forma-ui/components.css). */
 .workspace-screen[data-layout="floating"] .tool-options-slider {
   flex: 1 1 auto;
   min-width: 0;
@@ -3716,7 +3639,7 @@ span.layer-lock-icon {
 
 /* Unavailable (Brushes outside the Brush tool): dimmed but focusable,
    so its tooltip can explain why. */
-.workspace-screen[data-layout="floating"] .panel-rail .tool-button[aria-disabled="true"] {
+.workspace-screen[data-layout="floating"] .panel-rail .tool-button[aria-disabled="true"]:not(:where(.ghost-button)) {
   opacity: 0.4;
   cursor: not-allowed;
 }
@@ -3853,252 +3776,23 @@ span.layer-lock-icon {
   padding: 0 1.1rem;
   flex: none;
   border-radius: 999px;
+  white-space: nowrap;
+}
+
+.workspace-screen[data-layout="floating"] #selection-bar .tool-button:not(:where(.ghost-button)) {
   background: transparent;
   border-color: transparent;
-  white-space: nowrap;
 }
 
 
 /* ------------------------------------------------------------------
    Components (Pixelmator visual pass)
 
-   Small shared pieces, shown in every state on components.html:
-   .glass / .glass-pill / .glass-circle (with the frosted-glass rules
-   near the top of the floating section), .ghost-button, .slider and
-   .swatch-pair. The floating workspace's controls get the same look by
-   selector, so the shared markup stays unchanged in the docked layout.
+   .ghost-button (+ .ghost-text), .slider and .swatch-pair now in
+   forma-ui/components.css; js/layout.js's FORMA_CLASSES puts them on the
+   floating workspace's controls. The rules below are Pixi's own floating
+   tweaks around them.
    ------------------------------------------------------------------ */
-
-/* Ghost button: no border or fill at rest, a subtle fill on hover, and a
-   solid disk (white on dark, inverted in the light theme) while pressed,
-   active or open. Circular for icons, a pill for text. */
-.ghost-button,
-.workspace-screen[data-layout="floating"] :is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group) .tool-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: var(--rail-button-size, 2.75rem);
-  min-height: var(--rail-button-size, 2.75rem);
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-.ghost-button:not(:disabled):hover,
-.workspace-screen[data-layout="floating"] :is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group) .tool-button:not(:disabled):hover {
-  background: var(--ghost-hover);
-}
-
-.ghost-button:is(.active, [aria-pressed="true"], [aria-expanded="true"]),
-.ghost-button:is(.active, [aria-pressed="true"], [aria-expanded="true"]):not(:disabled):hover,
-.workspace-screen[data-layout="floating"] :is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group) .tool-button:is(.active, [aria-pressed="true"], [aria-expanded="true"]),
-.workspace-screen[data-layout="floating"] :is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group) .tool-button:is(.active, [aria-pressed="true"], [aria-expanded="true"]):not(:disabled):hover {
-  background: var(--ghost-on-bg);
-  color: var(--ghost-on-fg);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-}
-
-.ghost-button:is(:disabled, [aria-disabled="true"]),
-.workspace-screen[data-layout="floating"] :is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group) .tool-button:is(:disabled, [aria-disabled="true"]) {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.ghost-button:focus-visible,
-.workspace-screen[data-layout="floating"] :is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group) .tool-button:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 1px;
-}
-
-/* Text buttons in a ghost row get pill padding. */
-.ghost-button.ghost-text,
-.workspace-screen[data-layout="floating"] #selection-bar .tool-button {
-  padding: 0 1.1rem;
-}
-
-/* Slider: a 6px track filled up to the thumb, a large white pill thumb,
-   an icon at each end instead of a label (the label stays, visually
-   hidden) and a value bubble over the thumb while adjusting. --f (0..1,
-   the value's fraction) and .is-adjusting are set by
-   js/tool-options-bar.js's showReadout(). */
-.slider,
-.workspace-screen[data-layout="floating"] .tool-options-slider {
-  --slider-thumb-w: 34px;
-  --slider-fill: var(--color-text);
-  --slider-track: rgba(127, 127, 135, 0.4);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.slider-input {
-  position: relative;
-  display: flex;
-  flex: 1 1 7rem;
-  min-width: 4rem;
-}
-
-.slider input[type="range"],
-.workspace-screen[data-layout="floating"] .tool-options-slider input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  flex: 1 1 7rem;
-  width: 7rem;
-  min-width: 4rem;
-  height: 44px;
-  margin: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
-.slider input[type="range"]::-webkit-slider-runnable-track {
-  height: 6px;
-  border-radius: 3px;
-  background: linear-gradient(to right, var(--slider-fill) 0 calc(var(--slider-thumb-w) / 2 + var(--f, 0) * (100% - var(--slider-thumb-w))), var(--slider-track) 0);
-}
-
-.slider input[type="range"]::-moz-range-track {
-  height: 6px;
-  border-radius: 3px;
-  background: linear-gradient(to right, var(--slider-fill) 0 calc(var(--slider-thumb-w) / 2 + var(--f, 0) * (100% - var(--slider-thumb-w))), var(--slider-track) 0);
-}
-
-.slider input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: var(--slider-thumb-w);
-  height: 22px;
-  margin-top: -8px;
-  border: none;
-  border-radius: 11px;
-  background: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0 0 0.5px rgba(0, 0, 0, 0.12);
-}
-
-.slider input[type="range"]::-moz-range-thumb {
-  width: var(--slider-thumb-w);
-  height: 22px;
-  border: none;
-  border-radius: 11px;
-  background: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0 0 0.5px rgba(0, 0, 0, 0.12);
-}
-
-.slider input[type="range"]:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -4px;
-  border-radius: 999px;
-}
-
-/* The value bubble: centred over the thumb, shown only while adjusting
-   (the input's aria-valuetext carries the value for assistive tech). */
-.slider-bubble {
-  position: absolute;
-  bottom: calc(100% - 6px);
-  inset-inline-start: calc(var(--slider-thumb-w) / 2 + var(--f, 0) * (100% - var(--slider-thumb-w)));
-  translate: -50% 0;
-  padding: 0.2rem 0.5rem;
-  border-radius: 999px;
-  background: var(--ghost-on-bg);
-  color: var(--ghost-on-fg);
-  font-size: 0.8rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.slider:is(.is-adjusting, :has(input:active)) .slider-bubble {
-  opacity: 1;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .slider-bubble {
-    transition: opacity 0.15s ease;
-  }
-}
-
-/* End icons, drawn in CSS so the icon font subset needn't grow:
-   Size (small dot / big ring), Opacity (faint / solid), Spacing (close /
-   far dots). Rotation uses the rotate_left/right glyphs. */
-.slider-icon {
-  flex: none;
-  display: inline-grid;
-  place-items: center;
-  width: 1.25rem;
-  height: 1.25rem;
-  color: var(--color-text-secondary);
-}
-
-.slider-icon .material-symbols-outlined {
-  font-size: 1.15rem;
-}
-
-.slider-icon::before {
-  content: '';
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.slider-icon:has(.material-symbols-outlined)::before {
-  content: none;
-}
-
-.slider-icon-dot::before { width: 4px; height: 4px; }
-.slider-icon-ring::before { width: 16px; height: 16px; background: none; border: 2px solid currentColor; }
-.slider-icon-faint::before { width: 14px; height: 14px; opacity: 0.3; }
-.slider-icon-solid::before { width: 14px; height: 14px; }
-.slider-icon-near::before { width: 4px; height: 4px; translate: -3px 0; box-shadow: 6px 0 currentColor; }
-.slider-icon-far::before { width: 4px; height: 4px; translate: -6px 0; box-shadow: 12px 0 currentColor; }
-
-/* Swatch pair: foreground and background as overlapping 28px circles
-   with a white ring, inside the rail's 44px stack, so their curves
-   follow the pill rail's round end. Swap and Reset are plain icons in
-   the two free corners. */
-.swatch-pair,
-.workspace-screen[data-layout="floating"] .fg-bg-swatch-stack {
-  position: relative;
-  --rail-padding: 0.5rem;
-  width: var(--rail-button-size, 2.75rem);
-  height: var(--rail-button-size, 2.75rem);
-}
-
-.swatch-pair .fg-bg-swatch,
-.workspace-screen[data-layout="floating"] .fg-bg-swatch {
-  width: 1.75rem;
-  height: 1.75rem;
-  border: 2px solid #ffffff;
-  border-radius: 50%;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-}
-
-.swatch-pair .fg-bg-swatch:hover,
-.workspace-screen[data-layout="floating"] .fg-bg-swatch:hover {
-  border-color: #ffffff;
-  box-shadow: 0 0 0 2px var(--color-text-secondary), 0 1px 4px rgba(0, 0, 0, 0.4);
-}
-
-.swatch-pair .fg-bg-corner-button,
-.workspace-screen[data-layout="floating"] .fg-bg-corner-button {
-  color: var(--color-text-secondary);
-}
-
-.swatch-pair .fg-bg-corner-button:hover,
-.workspace-screen[data-layout="floating"] .fg-bg-corner-button:hover {
-  background: transparent;
-  color: var(--color-text);
-}
-
-.swatch-pair .fg-bg-corner-button .material-symbols-outlined,
-.workspace-screen[data-layout="floating"] .fg-bg-corner-button .material-symbols-outlined {
-  font-size: 0.9rem;
-}
 
 /* No separator line above the swatches. */
 .workspace-screen[data-layout="floating"] .fg-bg-swatches {

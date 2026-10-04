@@ -4,7 +4,7 @@
 // with scripts/style-snapshot.mjs.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const strip = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -73,8 +73,8 @@ describe('Forma UI tokens', () => {
 
 describe('Forma UI is linked before style.css', () => {
   const PAGES = [
-    ['index.html', 'forma-ui/', ['tokens.css']],
-    ['lib/pixi-embed-example.html', '../forma-ui/', ['tokens.css']],
+    ['index.html', 'forma-ui/', ['tokens.css', 'components.css']],
+    ['lib/pixi-embed-example.html', '../forma-ui/', ['tokens.css', 'components.css']],
   ];
   for (const [page, prefix, files] of PAGES) {
     test(page, () => {
@@ -91,4 +91,48 @@ describe('Forma UI is linked before style.css', () => {
       }
     });
   }
+});
+
+describe('Forma UI stands alone', () => {
+  const ids = [...read('index.html').matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
+  const files = readdirSync(new URL('../forma-ui/', import.meta.url)).filter((f) => /\.(css|html|md)$/.test(f));
+
+  for (const file of files) {
+    test(`${file} never references Pixi`, () => {
+      const src = read(`forma-ui/${file}`);
+      assert.doesNotMatch(src, /\.\.\//, 'no paths outside the folder');
+      assert.doesNotMatch(src, /workspace-screen|data-layout|style\.css|\bjs\//);
+      for (const id of ids) assert.ok(!new RegExp(`#${id}(?![\\w-])`).test(src), `#${id}`);
+    });
+  }
+});
+
+describe('Forma UI components', () => {
+  const components = strip(read('forma-ui/components.css'));
+
+  for (const selector of ['.glass', '.glass-pill', '.glass-circle', '.ghost-button', '.primary-button', '.slider', '.swatch-pair']) {
+    test(`defines ${selector}`, () => {
+      assert.match(components, new RegExp(`(^|[\\s,}])${selector.replace('.', '\\.')}[\\s,{:.]`));
+    });
+  }
+
+  test('glass blurs only inside @supports, on ::before, with the -webkit- prefix', () => {
+    const supports = components.slice(components.indexOf('@supports'));
+    assert.match(supports, /\.glass::before[\s\S]*?-webkit-backdrop-filter:\s*blur\(var\(--glass-blur\)\)/);
+    const outside = components.slice(0, components.indexOf('@supports'));
+    assert.doesNotMatch(outside, /backdrop-filter/);
+  });
+
+  test('reduced transparency is a positive query', () => {
+    assert.match(components, /@media \(prefers-reduced-transparency: reduce\)/);
+  });
+
+  test("style.css no longer defines the components", () => {
+    const css = strip(read('style.css'));
+    for (const selector of ['.glass', '.glass-pill', '.glass-circle', '.ghost-button', '.primary-button', '.slider', '.swatch-pair']) {
+      // A rule *starting* with the component class (descendant uses such
+      // as `.new-canvas-card .primary-button` stay in Pixi legitimately).
+      assert.doesNotMatch(css, new RegExp(`^${selector.replace('.', '\\.')}(:[\\w-]+)?\\s*[,{]`, 'm'), selector);
+    }
+  });
 });

@@ -117,6 +117,17 @@ describe('openCardDefaults', () => {
     assert.deepEqual(openCardDefaults(390), allClosed);
   });
 
+  // 5g-prefs: pinned cards.
+  test('wide windows open exactly the pinned cards', () => {
+    assert.deepEqual(openCardDefaults(1180, { colors: false, brushes: true, layers: true }),
+      { colors: false, brushes: true, layers: true });
+    assert.deepEqual(openCardDefaults(1180, allClosed), allClosed);
+  });
+
+  test('narrow windows close every card whatever is pinned', () => {
+    assert.deepEqual(openCardDefaults(390, allOpen), allClosed);
+  });
+
   test('the threshold is the exported constant', () => {
     assert.equal(NARROW_MAX_WIDTH, 600);
   });

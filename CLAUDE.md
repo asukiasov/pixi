@@ -21,6 +21,11 @@ already GitHub-integrated with this repo for database migrations — see that
 doc. Phase-by-phase build order and screen list are in
 `docs/roadmap.md`.
 
+**Brand**: Pixi is made by **Forma**, which also makes Lines (a vector
+editor). Company description, positioning, audience, and voice are in
+`docs/brand.md`. Use it for any user-facing copy and for shared naming
+across Forma's apps.
+
 ## Process: Superpowers skills
 
 There is no OpenSpec any more. Superpowers skills drive the whole workflow,

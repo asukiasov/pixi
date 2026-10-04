@@ -431,6 +431,40 @@ own panel arrangement.
 
 Status: not started, not detailed yet.
 
+## Forma UI — shared design system (cross-app)
+
+Pixi and Lines (Forma's vector editor, a separate repo) share one visual
+language: Pixi's Pixelmator-style frosted-glass look, in the home screen
+and the editor alike. Forma UI is that look as plain CSS (tokens, glass,
+ghost/primary buttons, slider, swatch pair, home screen pattern) plus a
+style guide page. Only the accent colour, the wordmark and the home
+artwork differ between apps. Brand: `docs/brand.md`. Decided 2026-10-04.
+
+1. **Extract Forma UI inside Pixi** into `forma-ui/`, which never
+   references Pixi, with zero visual change. Spec:
+   `docs/superpowers/specs/2026-10-04-forma-ui-design.md`; plan:
+   `docs/superpowers/plans/2026-10-04-forma-ui.md`.
+2. **Move it to its own repo** (`asukiasov/forma-ui`, via
+   `git subtree split` to keep history) once the owner calls it finished.
+   Tag `v1.0.0`. Pixi switches to a pinned copy in `vendor/forma-ui/` with
+   a `VERSIONS.md` line (Lines vendors everything and must work offline,
+   so no CDN links).
+3. **Lines adopts Forma UI** (in the Lines repo): its spec moves from
+   "Figma-style" to Forma UI and from Material Symbols Rounded to
+   Outlined (weight 300). It vendors the files, adds a theme boot script
+   (Forma UI has no `prefers-color-scheme` query), and builds its home
+   screen with its own wordmark, artwork and accent.
+4. **Grow Forma UI for Lines**: menu bar with dropdowns, layers tree,
+   labelled number fields (X/Y/W/H), tabs, tool flyouts. Each is built in
+   Forma UI and shown on its style guide before Lines uses it; Pixi can
+   adopt them later.
+
+Note for 5h's docked deletion: once the docked layout is gone, the
+`FORMA_CLASSES` table in `js/layout.js` can become static classes in
+`index.html`.
+
+Status: step 1 planned, not started.
+
 ## On demand — revisit when a real need shows up
 
 Not scheduled into a phase on purpose: each is real work with no

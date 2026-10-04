@@ -19,6 +19,9 @@ import { initPanelRail, applyOpenCardDefaults } from './panel-rail.js';
 import { initSelectionBar } from './selection-bar.js';
 import { loadPrefs, savePrefs, applyPrefsToScreen } from './prefs.js';
 import { initPrefsSheet } from './prefs-sheet.js';
+import { applyRailTools } from './tool-rail.js';
+import { initToolOverflow } from './tool-overflow.js';
+import { initCustomizeToolsSheet } from './customize-tools-sheet.js';
 
 const screens = {
   gallery: document.getElementById('screen-gallery'),
@@ -44,6 +47,13 @@ const prefsStorage = (() => {
 })();
 let prefs = loadPrefs(prefsStorage);
 applyPrefsToScreen(screens.workspace, prefs);
+
+// Customize Tools: the rail shows prefs.railTools, in order, before its
+// ⋯ button; the other tools stay in the rail, hidden, so their
+// shortcuts keep working (js/tool-rail.js).
+const railToolsEl = document.querySelector('#tools-sidebar .tool-rail-tools');
+const toolOverflowButton = document.getElementById('tool-overflow-button');
+applyRailTools(railToolsEl, prefs.railTools, toolOverflowButton);
 
 // AUD-5: detect whether the Material Symbols icon font (index.html's
 // fonts.googleapis.com <link>) actually loaded, and fall back to hiding
@@ -100,6 +110,7 @@ if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'Mac
 initMagneticHover([
   ...document.querySelectorAll('.workspace-topbar button'),
   ...document.querySelectorAll('.tools-sidebar [data-tool]'),
+  toolOverflowButton,
 ]);
 
 // Light/dark/system theme toggle - applies the persisted/system-resolved
@@ -128,16 +139,27 @@ initPanelRail({ setBrushesCardOpen, closeLayersOpacityPopover });
 // workspace.js's onCanvasViewChange, which outlives each project's view
 // handlers.
 initSelectionBar({ onCanvasViewChange, currentSelectionClientRect });
-// The Prefs sheet, opened from More (5g-prefs). Changes apply at once and
-// never re-fit the canvas; pins take effect on the next project open.
-initPrefsSheet({
-  getPrefs: () => prefs,
-  setPrefs(next) {
-    prefs = next;
-    savePrefs(prefsStorage, prefs);
-    applyPrefsToScreen(screens.workspace, prefs);
-  },
+// The Prefs sheet, opened from More (5g-prefs), and the Customize Tools
+// sheet, opened from the rail's ⋯ menu and from Prefs. Both hand every
+// change to setPrefs: it applies at once and never re-fits the canvas;
+// pins take effect on the next project open.
+let toolOverflow = null;
+function setPrefs(next) {
+  prefs = next;
+  savePrefs(prefsStorage, prefs);
+  applyPrefsToScreen(screens.workspace, prefs);
+  applyRailTools(railToolsEl, prefs.railTools, toolOverflowButton);
+  toolOverflow?.refresh();
+}
+const getPrefs = () => prefs;
+initPrefsSheet({ getPrefs, setPrefs });
+const customizeTools = initCustomizeToolsSheet({ getPrefs, setPrefs });
+toolOverflow = initToolOverflow({
+  getRailTools: () => prefs.railTools,
+  onCustomize: () => customizeTools?.open(toolOverflowButton),
 });
+const prefsCustomizeRow = document.getElementById('prefs-customize-tools');
+prefsCustomizeRow?.addEventListener('click', () => customizeTools?.open(prefsCustomizeRow));
 
 // Color Library and Layers panels - wired once here, like every other
 // init* call in this file; their own onWorkspaceReset registrations

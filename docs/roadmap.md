@@ -266,7 +266,9 @@ Target layout:
 - **Selection actions** float next to the active selection.
 - **Prefs** (from More): which cards are pinned, how cards open (mini-rail /
   edge tabs / contextual auto-open), handedness (mirrors the whole layout),
-  and auto-hide while drawing. This pulls part of 6a forward.
+  and auto-hide while drawing. This pulls part of 6a forward. (As built in
+  5g: handedness became two independent Tools side / Panels side
+  settings, and "how cards open" was deferred.)
 - **Positioning rule**: every floating part is positioned by logical
   start/end, never hard-coded left/right. Handedness mirroring is then one
   flag, and the later phone layout only re-places existing parts.
@@ -323,7 +325,27 @@ and can ship at any time.
   selection is drawn or moved, following pan and zoom live. The palette
   card loses its selection controls. Done 2026-10-03, styled as a
   Pixelmator-like pill (fast-pan lag still to check on a real iPad).
-- **5g — Prefs**: the Prefs screen with the four settings above.
+- ~~**5g — Prefs**~~ — **done** 2026-10-04 (design
+  `docs/superpowers/specs/2026-10-04-5g-prefs-design.md`, plan
+  `docs/superpowers/plans/2026-10-04-5g-prefs.md`). More → Prefs opens a
+  Pixelmator-style modal sheet (title, ✓ Done, grouped rows with
+  switches/selects). Settings apply at once and persist in localStorage
+  (`pixi-prefs`); standalone app only.
+  - **Changed from the plan above: no handedness flag.** Instead two
+    independent settings, **Tools side** (tool rail + swatches) and
+    **Panels side** (mini-rail + cards), each Left/Right. On the same
+    side they stack from the edge: tool rail, mini-rail, cards; the
+    bottom cards centre between the rails. Built on the logical-inset
+    slot variables; Fit, the selection bar's clear area and the
+    toward-the-canvas tooltips/picker follow the sides. Changing a side
+    never re-fits the canvas.
+  - **Pinned cards**: which of Colors/Brushes/Layers a project opens
+    with (≥600px; narrower still opens with none).
+  - **Hide interface while drawing** (off by default): every floating
+    region fades during Pencil/Eraser/Brush/Line/Rectangle strokes.
+  - **"How cards open" deferred**: edge tabs and contextual auto-open are
+    each a new interaction model, not a pref row; the mini-rail stays
+    the only mode. Listed under "On demand" below.
 - **5h — Switch on**: make the floating layout the default, delete the old
   docked-layout CSS/markup, sync specs and `docs/ui-reference.md`.
   - Decided 2026-10-03: the switch-on itself (floating becomes the
@@ -378,9 +400,9 @@ Follow-ups after 5h:
   and the grid into its own card; revisit whether anything is still wanted
   after 5h.
 
-Status: in progress - 5a–5f, the 5h switch-on and the embed mount fix
+Status: in progress - 5a–5g, the 5h switch-on and the embed mount fix
 done.
-Next: 5g (Prefs), then the rest of 5h (docked deletion).
+Next: the rest of 5h (docked deletion).
 Visual direction for all floating work: Pixelmator's airy, frosted-glass
 look (references in `docs/Screenshots of other apps/`), keeping Pixi's
 own panel arrangement.
@@ -389,9 +411,9 @@ own panel arrangement.
 
 - **6a — Settings** screen (stylus calibration, gesture remapping). The
   original "account" item is moot now that auth is dropped (Phase 3).
-  Layout prefs (pinned cards, card-open style, handedness, auto-hide) are
-  covered earlier by 5g; 6a should extend that Prefs screen rather than add
-  a second one.
+  Layout prefs (pinned cards, tools/panels sides, auto-hide) are covered
+  earlier by 5g; 6a should extend that Prefs sheet (`js/prefs.js`,
+  `#prefs-sheet`) rather than add a second one.
 - **6b — Import** screen (.aseprite, palette files). Reference images are
   already covered by the reference image layer (see "Closed / history").
 
@@ -438,6 +460,11 @@ concrete consumer driving it yet.
   swappable icon font/sprite instead of the hardcoded Material Symbols
   subset, an `options.theme` mount() option — needs its own design pass
   before scoping. Raised 2026-08-22.
+- **How cards open** (deferred from 5g, 2026-10-04) — alternatives to the
+  panel mini-rail: edge tabs, or cards that open contextually (e.g. Layers
+  when a layer action happens). Each is its own interaction model with
+  focus handling and spec work, so it waits for a real need; when it
+  comes, it becomes a Layout row in the Prefs sheet.
 - Animation timeline / onion skinning — explicitly out of scope for now, see
   CLAUDE.md non-goals; would need its own roadmap discussion if ever revisited
 

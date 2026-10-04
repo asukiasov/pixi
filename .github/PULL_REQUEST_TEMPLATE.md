@@ -2,13 +2,13 @@
 
 One or two sentences on what changed and why.
 
-## OpenSpec change
+## Design
 
-Link the change under `openspec/changes/` this PR implements, if any
-(e.g. `openspec/changes/<id>/`). If this is a bug fix with no
-spec/requirement impact, say so instead — see
+Link the design doc (`docs/superpowers/specs/`) and plan
+(`docs/superpowers/plans/`) this PR implements, if any. If this is a bug
+fix with no spec/requirement impact, say so instead — see
 [CONTRIBUTING.md](../CONTRIBUTING.md#proposing-a-change) for when a
-proposal is/isn't needed.
+design doc is/isn't needed.
 
 ## Testing
 
@@ -18,8 +18,8 @@ proposal is/isn't needed.
 
 ## Checklist
 
-- [ ] Changes match the linked OpenSpec change's `tasks.md` (if
-      applicable)
+- [ ] Changes match the linked design doc and plan, and the affected
+      `docs/specs/*/spec.md` are updated (if applicable)
 - [ ] No unrelated files touched
 - [ ] If this touches `index.html`, `style.css`, or a tool's DOM/
       interaction code, it's been checked against the

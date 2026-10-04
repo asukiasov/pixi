@@ -119,8 +119,8 @@ Tests cover DOM-free logic (e.g. engine, layers, undo, persistence,
 routing, brushes, shape tools, symmetry, color library — see `test/` for
 the full, current list) directly under Node. Anything requiring a real
 `<canvas>`/DOM (compositing, rendering) is verified with a Playwright
-smoke pass instead — see individual OpenSpec changes'
-`tasks.md` under `docs/history/` for what was checked.
+smoke pass instead — see the `tasks.md` files of past changes under
+`docs/history/` for what was checked.
 
 ## Project structure
 
@@ -133,9 +133,10 @@ lib/         Embeddable library: pixel-engine/ (pixel data model),
              storage-adapter.js and pixi.js (Pixi.mount()), and a worked
              example (pixi-embed-example.html) - see lib/README.md and
              lib/pixel-engine/README.md
-openspec/    Requirements (specs/), in-flight change proposals (changes/),
-             and the phase-by-phase roadmap.md - see CLAUDE.md for the process
-docs/        Reference docs that don't belong in openspec/
+docs/        specs/ (requirements for what's shipped), roadmap.md (phase
+             order), superpowers/ (design docs and plans), history/ (past
+             change proposals), plus reference docs - see CLAUDE.md for the
+             process
 scripts/     One-off maintenance scripts (version stamping)
 ```
 
@@ -152,8 +153,8 @@ https://paypal.me/asukiasov. Appreciated, never required.
 ## Contributing
 
 Bug reports and pull requests are welcome. See
-[`CONTRIBUTING.md`](CONTRIBUTING.md) for the process (OpenSpec proposals
-for feature/behavior changes, direct PRs for bug fixes) and
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for the process (a design doc for
+feature/behavior changes, direct PRs for bug fixes) and
 [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 
 ## License

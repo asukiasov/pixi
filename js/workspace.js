@@ -2272,6 +2272,9 @@ export function initWorkspace({
   canvasView.setSelectionRect(null);
   updateSelectionControls();
   setSelectionDrag(false);
+  // No stroke carries over either, so hide-while-drawing (5g-prefs) can
+  // never leave the interface faded on the next project.
+  setStroking(false);
 
   // Baseline snapshot so the very first stroke can be undone back to
   // whatever state the project was in when opened.

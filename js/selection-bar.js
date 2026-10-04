@@ -131,6 +131,8 @@ export function initSelectionBar({ root = document, onCanvasViewChange, currentS
   }
   const classes = new MutationObserver(remeasure);
   for (const slot of slots) classes.observe(slot, { attributes: true, attributeFilter: ['class'] });
+  // A side pref change (5g-prefs) moves cards without resizing them.
+  classes.observe(screen, { attributes: true, attributeFilter: ['data-tools-side', 'data-panels-side'] });
 
   // Shown/hidden (the source's .hidden) or a drag ending: place it on the
   // first frame it's displayed, at its real size. The mutation callback is

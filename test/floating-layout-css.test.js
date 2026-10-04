@@ -400,7 +400,9 @@ describe('narrow windows (5h)', () => {
     const decl = /--slot-cards-room:\s*([^;]+);/.exec(css);
     assert.ok(decl);
     const vars = decl[1].match(/--[\w-]+/g);
-    assert.deepEqual([...new Set(vars)].sort(), ['--float-gap', '--slot-cards-end', '--slot-rail-width', '--slot-tools-start']);
+    // 5g-prefs: built from the column's offset and the far side's reserve,
+    // which each side combination sets.
+    assert.deepEqual([...new Set(vars)].sort(), ['--float-gap', '--slot-cards-far', '--slot-cards-offset']);
   });
 
   test('the card column (open and collapsed) is capped by --slot-cards-room', () => {
@@ -475,5 +477,98 @@ describe('Pixelmator visual pass', () => {
     const canvas = all.find((r) => r.selector === `${FLOATING} .canvas-container`);
     assert.match(canvas.body, /background:\s*var\(--workspace-backdrop\)/);
     assert.match(all.find((r) => r.selector === ':root[data-theme="light"]').body, /--workspace-backdrop:/);
+  });
+});
+
+describe('side prefs (5g)', () => {
+  const FLOATING = '.workspace-screen[data-layout="floating"]';
+  const VARS = ['--slot-tools-start', '--slot-tools-end', '--slot-panels-start', '--slot-panels-end',
+    '--slot-cards-start', '--slot-cards-end', '--slot-cards-offset', '--slot-cards-far', '--slot-reserve-start', '--slot-reserve-end'];
+  const declared = (body) => new Map([...body.matchAll(/(--slot-[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
+  const sideRule = (tools, panels) => all.find((r) => r.selector === `${FLOATING}[data-tools-side="${tools}"][data-panels-side="${panels}"]`);
+
+  test('the base block declares every side variable (tools left, panels right)', () => {
+    const base = all.find((r) => r.selector === FLOATING && /--slot-tools-start/.test(r.body));
+    const vars = declared(base.body);
+    for (const v of VARS) assert.ok(vars.has(v), v);
+    assert.equal(vars.get('--slot-tools-end'), 'auto');
+    assert.equal(vars.get('--slot-panels-start'), 'auto');
+    assert.equal(vars.get('--slot-cards-start'), 'auto');
+    assert.equal(vars.get('--slot-cards-end'), 'var(--slot-cards-offset)');
+  });
+
+  for (const [tools, panels] of [['right', 'left'], ['left', 'left'], ['right', 'right']]) {
+    test(`tools ${tools}, panels ${panels} sets every side variable`, () => {
+      const rule = sideRule(tools, panels);
+      assert.ok(rule, `${tools}/${panels}`);
+      const vars = declared(rule.body);
+      for (const v of VARS) assert.ok(vars.has(v), v);
+      // The tool rail is always on the outer edge of its side.
+      const [toolsIn, toolsOut] = tools === 'left' ? ['start', 'end'] : ['end', 'start'];
+      assert.match(vars.get(`--slot-tools-${toolsIn}`), new RegExp(`^var\\(--float-edge-${toolsIn}\\)$`));
+      assert.equal(vars.get(`--slot-tools-${toolsOut}`), 'auto');
+      // The cards sit beside the mini-rail, inward.
+      const cardsIn = panels === 'left' ? 'start' : 'end';
+      assert.equal(vars.get(`--slot-cards-${cardsIn}`), 'var(--slot-cards-offset)');
+    });
+  }
+
+  test('on the same side the mini-rail and cards step past the tool rail', () => {
+    for (const [side, edge] of [['left', 'start'], ['right', 'end']]) {
+      const vars = declared(sideRule(side, side).body);
+      assert.match(vars.get(`--slot-panels-${edge}`), /var\(--slot-step\)/);
+      assert.match(vars.get('--slot-cards-offset'), /2 \* var\(--slot-step\)/);
+    }
+  });
+
+  test('the bottom slot is centred between the rails, each side keeping its own reserve clear', () => {
+    const options = all.find((r) => r.selector === `${FLOATING} .slot-options` && /max-width/.test(r.body));
+    assert.match(options.body, /inset-inline:\s*var\(--slot-reserve-start\) var\(--slot-reserve-end\)/);
+    assert.match(options.body, /margin-inline:\s*auto/);
+    assert.match(options.body, /max-width:\s*calc\(100% - var\(--slot-reserve-start\) - var\(--slot-reserve-end\)\)/);
+  });
+
+  test('on the same side the far reserve is just the edge', () => {
+    assert.equal(declared(sideRule('left', 'left').body).get('--slot-reserve-end'), 'var(--float-edge-end)');
+    assert.equal(declared(sideRule('right', 'right').body).get('--slot-reserve-start'), 'var(--float-edge-start)');
+  });
+});
+
+describe('hide while drawing (5g)', () => {
+  const STROKING = '.workspace-screen[data-layout="floating"][data-auto-hide="on"][data-stroking]';
+  const hiding = all.filter((r) => r.selector.includes(STROKING) && /opacity:\s*0\b/.test(r.body));
+
+  test('every floating region fades and stops taking input mid-stroke', () => {
+    assert.ok(hiding.length > 0);
+    const selectors = hiding.map((r) => r.selector).join('\n');
+    for (const part of ['.slot-top', '.slot-tools', '.panel-rail', '.right-sidebar', '.slot-options', '#selection-bar']) {
+      assert.ok(selectors.includes(part), part);
+    }
+    for (const r of hiding) assert.match(r.body, /pointer-events:\s*none/);
+  });
+
+  test('the fade waits a moment, so a tap does not flicker, with or without motion', () => {
+    const delays = all.filter((r) => r.selector.includes(STROKING) && /transition:/.test(r.body));
+    assert.ok(delays.length >= 2);
+    for (const r of delays) assert.match(r.body, /transition:\s*opacity\s+\S+\s+\S+\s+0\.25s/);
+    assert.ok(delays.some((r) => r.context.includes('prefers-reduced-motion: no-preference')));
+    assert.ok(delays.some((r) => r.context === '' && /opacity\s+0s/.test(r.body)));
+  });
+});
+
+describe('Prefs sheet (5g)', () => {
+  test('rows, the Done button and the selects are at least 44px tall', () => {
+    const px = (r, prop) => Number(new RegExp(`(?:^|[\\s;])${prop}:\\s*(\\d+)px`).exec(r.body)?.[1]);
+    assert.ok(px(all.find((r) => r.selector === '.prefs-row'), 'min-height') >= 44);
+    assert.ok(px(all.find((r) => r.selector === '.prefs-done'), 'height') >= 44);
+    assert.ok(px(all.find((r) => r.selector === '.prefs-select select'), 'min-height') >= 44);
+  });
+
+  test('the sheet is opaque, over a dimmed backdrop', () => {
+    assert.ok(all.some((r) => r.selector === '.prefs-sheet::backdrop'));
+    const sheet = all.filter((r) => r.selector === '.prefs-sheet');
+    assert.equal(sheet.length, 1);
+    assert.match(sheet[0].body, /background:\s*var\(--color-surface\)/);
+    assert.doesNotMatch(sheet[0].body, /backdrop-filter/);
   });
 });

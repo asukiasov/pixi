@@ -23,6 +23,7 @@ import { renderLayersPanel, clearLayerMarksAndRefresh, mergeMarkedOrActiveDown }
 import { isHideUiShortcut } from './hide-ui.js';
 import { showToast } from './toast.js';
 import { visibleAnchor, canvasSide } from './layout.js';
+import { isAutoHideTool } from './prefs.js';
 import { syncToolButtons } from './tool-rail.js';
 import { getColorSequenceColor, setLibrarySequenceEnabled, syncColorLibraryActiveSwatch } from './color-library-ui.js';
 
@@ -908,6 +909,11 @@ function bindTooltips() {
       const floatingRail = isTopbar ? null : target.closest('.workspace-screen[data-layout="floating"] :is(.tools-sidebar, .panel-rail)');
       const railRect = floatingRail?.getBoundingClientRect();
       const railOpensStart = floatingRail !== null && canvasSide(railRect, window.innerWidth) === 'start';
+      // The card column opens toward the canvas too, so with Panels on the
+      // left (5g-prefs) its tooltips open to the right. Docked, the column
+      // is always on the right, so this stays true there.
+      const sidebarOpensStart = isRightSidebar && canvasSide(target.closest('.right-sidebar').getBoundingClientRect(), window.innerWidth) === 'start';
+      const opensStart = railOpensStart || sidebarOpensStart;
       // Floating tool-options bar (5d-tool-options-bar): it sits at the
       // bottom edge, so tooltips open above it, kept inside the viewport.
       // Measured from the bar's top edge, so a control on a wrapped second
@@ -916,7 +922,7 @@ function bindTooltips() {
       const isOptionsBar = optionsBar !== null;
       tooltipEl.classList.toggle('below', isTopbar);
       tooltipEl.classList.toggle('above', isOptionsBar);
-      tooltipEl.classList.toggle('left-side', !isOptionsBar && (isRightSidebar || railOpensStart));
+      tooltipEl.classList.toggle('left-side', !isOptionsBar && opensStart);
       if (isOptionsBar) {
         const tooltipRect = tooltipEl.getBoundingClientRect();
         const margin = 8;
@@ -931,7 +937,7 @@ function bindTooltips() {
         tooltipEl.style.left = `${rect.left + rect.width / 2}px`;
         tooltipEl.style.top = `${rect.bottom + 10}px`;
         tooltipEl.style.transform = 'translateX(-50%)';
-      } else if (isRightSidebar || railOpensStart) {
+      } else if (opensStart) {
         // Measured after the content above is set (width depends on the
         // text), so the tooltip's own width is known before positioning.
         const tooltipRect = tooltipEl.getBoundingClientRect();
@@ -1980,6 +1986,18 @@ function setSelectionDrag(on) {
 }
 
 /**
+ * Marks a stroke in progress (5g-prefs hide-while-drawing) as
+ * data-stroking on the screen. Set for every stroke tool regardless of the
+ * pref: only the CSS checks data-auto-hide, and embeds never set it.
+ */
+function setStroking(on) {
+  const screen = root.querySelector('.workspace-screen');
+  if (!screen) return;
+  if (on) screen.dataset.stroking = '';
+  else delete screen.dataset.stroking;
+}
+
+/**
  * Redraws the current line/rectangle preview (or committed shape) from the
  * pre-drag backup, applying the selection clip if one is active. Shared by
  * onDrawMove (live preview) and onDrawEnd (final commit) so both look and
@@ -2254,6 +2272,9 @@ export function initWorkspace({
   canvasView.setSelectionRect(null);
   updateSelectionControls();
   setSelectionDrag(false);
+  // No stroke carries over either, so hide-while-drawing (5g-prefs) can
+  // never leave the interface faded on the next project.
+  setStroking(false);
 
   // Baseline snapshot so the very first stroke can be undone back to
   // whatever state the project was in when opened.
@@ -2280,6 +2301,7 @@ export function initWorkspace({
     onDrawStart(point) {
       const tool = state.currentTool;
       if (tool === 'selection' || (tool === 'move' && state.selection)) setSelectionDrag(true);
+      if (isAutoHideTool(tool)) setStroking(true);
 
       if (tool === 'selection') {
         state.dragStart = point;
@@ -2445,6 +2467,7 @@ export function initWorkspace({
     onDrawEnd() {
       const tool = state.currentTool;
       setSelectionDrag(false);
+      setStroking(false);
 
       if (tool === 'selection') {
         if (!state.dragStart) return;
@@ -2502,6 +2525,7 @@ export function initWorkspace({
     onDrawCancel() {
       const tool = state.currentTool;
       setSelectionDrag(false);
+      setStroking(false);
 
       if (tool === 'selection') {
         state.dragStart = null;

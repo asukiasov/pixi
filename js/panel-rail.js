@@ -50,15 +50,18 @@ export function optionsReach(optionsRect, columnRect, screenRect) {
 /** Windows narrower than this (CSS px) open projects with every card closed. */
 export const NARROW_MAX_WIDTH = 600;
 
+const ALL_PINNED = { colors: true, brushes: true, layers: true };
+
 /**
- * Which cards a project opens with (5h-switch-on-floating): all three at
- * NARROW_MAX_WIDTH and wider, none below it, so a phone-width window
- * fits the canvas between the tool rail and the mini-rail. Decided from
- * the width at open only; resizing never opens or closes a card.
+ * Which cards a project opens with (5h-switch-on-floating): the pinned
+ * ones (5g-prefs; all three by default) at NARROW_MAX_WIDTH and wider,
+ * none below it, so a phone-width window fits the canvas between the
+ * tool rail and the mini-rail. Decided from the width at open only;
+ * resizing never opens or closes a card.
  */
-export function openCardDefaults(viewportWidth) {
-  const open = viewportWidth >= NARROW_MAX_WIDTH;
-  return { colors: open, brushes: open, layers: open };
+export function openCardDefaults(viewportWidth, pinned = ALL_PINNED) {
+  const wide = viewportWidth >= NARROW_MAX_WIDTH;
+  return { colors: wide && pinned.colors, brushes: wide && pinned.brushes, layers: wide && pinned.layers };
 }
 
 // Kept from initPanelRail for applyOpenCardDefaults.
@@ -67,10 +70,11 @@ let brushesSetter = null;
 /**
  * Closes the cards openCardDefaults says should start closed, through the
  * same paths the rail uses. Called right after initWorkspace() has reset
- * all three to open, so it never opens anything.
+ * all three to open, so it never opens anything. `pinned` is the 5g-prefs
+ * pinned cards.
  */
-export function applyOpenCardDefaults(root = document) {
-  const defaults = openCardDefaults(window.innerWidth);
+export function applyOpenCardDefaults(pinned = ALL_PINNED, root = document) {
+  const defaults = openCardDefaults(window.innerWidth, pinned);
   const isOpen = (id) => {
     const card = root.querySelector(`#${id}`);
     return card && !card.classList.contains('collapsed');
@@ -163,6 +167,8 @@ export function initPanelRail({ root = document, setBrushesCardOpen, closeLayers
     const observer = new ResizeObserver(reserve);
     observer.observe(options);
     observer.observe(screen);
+    // A side pref change (5g-prefs) moves the column without resizing it.
+    new MutationObserver(reserve).observe(screen, { attributes: true, attributeFilter: ['data-tools-side', 'data-panels-side'] });
     reserve();
   }
 

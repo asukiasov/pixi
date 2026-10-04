@@ -17,6 +17,8 @@ import { initFloatingTopbar } from './floating-topbar.js';
 import { initToolOptionsBar } from './tool-options-bar.js';
 import { initPanelRail, applyOpenCardDefaults } from './panel-rail.js';
 import { initSelectionBar } from './selection-bar.js';
+import { loadPrefs, savePrefs, applyPrefsToScreen } from './prefs.js';
+import { initPrefsSheet } from './prefs-sheet.js';
 
 const screens = {
   gallery: document.getElementById('screen-gallery'),
@@ -28,6 +30,20 @@ const screens = {
 // layout since 5h-switch-on-floating. Any ?layout= parameter is ignored.
 // Embeds (lib/pixi.js) never load this file, so they stay docked.
 applyLayout(screens.workspace, 'floating');
+
+// Workspace preferences (5g-prefs): tool rail / panels sides and
+// hide-while-drawing apply as data attributes on the screen; the pinned
+// cards are read on each project open (openWorkspace below). Reading
+// localStorage itself can throw (blocked storage), hence the guard.
+const prefsStorage = (() => {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+})();
+let prefs = loadPrefs(prefsStorage);
+applyPrefsToScreen(screens.workspace, prefs);
 
 // AUD-5: detect whether the Material Symbols icon font (index.html's
 // fonts.googleapis.com <link>) actually loaded, and fall back to hiding
@@ -112,6 +128,16 @@ initPanelRail({ setBrushesCardOpen, closeLayersOpacityPopover });
 // workspace.js's onCanvasViewChange, which outlives each project's view
 // handlers.
 initSelectionBar({ onCanvasViewChange, currentSelectionClientRect });
+// The Prefs sheet, opened from More (5g-prefs). Changes apply at once and
+// never re-fit the canvas; pins take effect on the next project open.
+initPrefsSheet({
+  getPrefs: () => prefs,
+  setPrefs(next) {
+    prefs = next;
+    savePrefs(prefsStorage, prefs);
+    applyPrefsToScreen(screens.workspace, prefs);
+  },
+});
 
 // Color Library and Layers panels - wired once here, like every other
 // init* call in this file; their own onWorkspaceReset registrations
@@ -183,10 +209,10 @@ function openWorkspace({ layerStack, projectId, projectName }) {
     },
   });
   // initWorkspace() has just reset every card to open; close the ones a
-  // narrow window starts without, then fit again. This is what makes Fit
+  // narrow window starts without or that aren't pinned, then fit again. This is what makes Fit
   // see the cards that are actually open on every open, not only the
   // first (setLayerStack() above fitted beside the previous project's).
-  applyOpenCardDefaults();
+  applyOpenCardDefaults(prefs.pinned);
   canvasView.resetView();
   canvasView.render();
 }

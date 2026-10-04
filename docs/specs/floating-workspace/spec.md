@@ -87,10 +87,17 @@ named slot: `top` (top bar), `tools` (tool rail), `panels` (panel
 mini-rail and panel cards), or `options` (tool-options bar and palette
 row), except the selection action bar, which SHALL belong to no slot and
 SHALL be placed by the selection instead. Only the slots SHALL determine
-which screen edge a region sits against. By default `tools` sits against
-the left edge and `panels` against the right edge. Within the `panels`
-slot the mini-rail SHALL sit against the edge and the panel cards SHALL
-sit beside it, toward the canvas.
+which screen edge a region sits against. The `tools` slot SHALL sit
+against the side chosen by the Tools side preference and the `panels`
+slot against the side chosen by the Panels side preference (see Prefs
+sheet); by default `tools` sits against the left edge and `panels`
+against the right edge. Within the `panels` slot the mini-rail SHALL sit
+nearest its edge and the panel cards SHALL sit beside it, toward the
+canvas. When both slots are on the same side, they SHALL stack from that
+edge inward in this order: tool rail, panel mini-rail, panel cards, with
+the usual gap between them, and none SHALL overlap another. The
+tool-options bar and palette card SHALL be centred in the room between
+the outermost rails on each side.
 
 #### Scenario: Default sides
 - **WHEN** the floating layout is active
@@ -98,6 +105,20 @@ sit beside it, toward the canvas.
   mini-rail against the right edge with the panel cards just to its
   left, the top bar along the top, and the palette row and tool-options
   bar along the bottom
+
+#### Scenario: Tools right, panels left
+- **WHEN** the Tools side preference is Right and the Panels side
+  preference is Left
+- **THEN** the tool rail floats against the right edge, and the panel
+  mini-rail against the left edge with the panel cards just to its right
+
+#### Scenario: Both on the same side
+- **WHEN** both side preferences are Left and the Colors and Layers
+  cards are open
+- **THEN** the tool rail is against the left edge, the mini-rail just to
+  its right, and the cards just to the right of the mini-rail, none
+  overlapping, and the tool-options bar and palette card do not overlap
+  any of them
 
 #### Scenario: Selection action bar is not in a slot
 - **WHEN** the floating layout is active and a selection exists
@@ -242,7 +263,7 @@ shortcuts, pinch zoom and wheel zoom SHALL keep working unchanged.
 ### Requirement: More menu
 In the floating layout the More button SHALL open a menu with these
 items, in this order: Canvas settings, Export, Record timelapse, Tile
-preview, Theme, and Hide interface.
+preview, Prefs, Theme, and Hide interface.
 - Canvas settings and Export SHALL open their existing popovers,
   positioned against the More button, with unchanged contents and
   behaviour.
@@ -253,6 +274,7 @@ preview, Theme, and Hide interface.
 - Theme SHALL offer Light, Dark and System as a single-choice group
   showing the current preference. Choosing one SHALL apply and save
   that preference the same way the existing theme control does.
+- Prefs SHALL open the Prefs sheet.
 - Hide interface SHALL hide the interface exactly like the existing
   control. The existing way back and the Tab shortcut SHALL be
   unchanged.
@@ -669,15 +691,18 @@ NOT hold Spacing or Rotation, which are in the tool-options bar.
 
 ### Requirement: Panel cards on project open
 In the floating layout, whenever a project is opened in a window at least
-600 CSS pixels wide, the Colors and Layers cards SHALL be open and the
-Brushes card SHALL be open (and so shown while the Brush tool is active).
+600 CSS pixels wide, exactly the cards pinned in the Prefs sheet SHALL be
+open; by default all three are pinned, so the Colors and Layers cards
+are open and the Brushes card is open (and so shown while the Brush tool
+is active). Changing which cards are pinned SHALL NOT open or close cards
+in the project already open.
 Whenever a project is opened in a narrower window, all three cards SHALL
 be closed, and the user SHALL open them from the panel mini-rail. The
 window's width when the project opens decides this. Resizing the window
 afterwards SHALL NOT open or close cards. The initial view SHALL be
 fitted after these defaults are applied, beside the cards that are then
 open. Which cards are open SHALL NOT be remembered across project opens
-or page reloads.
+or page reloads; only the pins are.
 
 #### Scenario: Defaults on open
 - **WHEN** the user closes the Colors and Layers cards in a 1180×820
@@ -715,9 +740,9 @@ staying reachable by keyboard, so its explanation can be read. Each
 card's close button SHALL have an accessible name that names its panel.
 When a card is closed from its own close button, focus SHALL move to that
 card's mini-rail button. Every mini-rail button and close button SHALL be
-at least 44×44 CSS pixels. Tooltips for mini-rail buttons SHALL open on
-the side of the rail that faces the canvas, and SHALL stay fully on
-screen.
+at least 44×44 CSS pixels. Tooltips for mini-rail buttons and for
+controls inside the panel cards SHALL open on the side of the rail or
+card column that faces the canvas, and SHALL stay fully on screen.
 
 #### Scenario: Expanded state announced
 - **WHEN** a screen reader user moves focus to the Layers button while
@@ -903,3 +928,86 @@ when its swatches do not fit.
   card at 390×844
 - **THEN** the palette row scrolls sideways inside its card, and no
   swatch is drawn past the card's edge
+
+### Requirement: Prefs sheet
+In the standalone app, choosing Prefs in the More menu SHALL open the
+Prefs sheet: a modal sheet centred over the Workspace, with the title
+"Prefs" and a Done button (a ✓) at the end of its header. Its controls
+SHALL be grouped under headings, in this order:
+- Layout: Tools Side (Left or Right) and Panels Side (Left or Right)
+- Open When a Project Opens: Colors, Brushes and Layers, each an on/off
+  switch
+- Drawing: Hide Interface While Drawing, an on/off switch
+
+Each control SHALL show the current preference when the sheet opens, and
+a change SHALL take effect immediately, with no separate save step.
+Done, Escape, or a press outside the sheet SHALL close it, and focus
+SHALL return to the More button. While the sheet is open, the rest of
+the Workspace SHALL NOT respond to pointer or keyboard input. Every
+preference SHALL be kept across page reloads in the browser's local
+storage; when it cannot be read, the defaults SHALL apply (Tools Left,
+Panels Right, all three cards on, Hide interface while drawing off), and
+when it cannot be written, the change SHALL still apply until the page
+is reloaded. An editor embedded through `Pixi.mount()` SHALL have no
+Prefs sheet and SHALL NOT be affected by these preferences.
+
+#### Scenario: Opening Prefs
+- **WHEN** the user opens More and chooses Prefs
+- **THEN** the menu closes and the Prefs sheet opens, showing the
+  current side, pinned card and auto-hide preferences
+
+#### Scenario: Change applies at once
+- **WHEN** the user sets Tools side to Right in the open sheet
+- **THEN** the tool rail moves to the right edge before the sheet is
+  closed, and the artwork stays at the same position and zoom on screen
+
+#### Scenario: Kept across reloads
+- **WHEN** the user turns Hide interface while drawing on and reloads
+  the page
+- **THEN** the preference is still on
+
+#### Scenario: Closing
+- **WHEN** the sheet is open and the user presses Escape
+- **THEN** the sheet closes and focus is on the More button
+
+### Requirement: Side preferences
+The Tools side and Panels side preferences SHALL be independent: each
+SHALL be Left or Right whatever the other is. Changing either SHALL move
+the floating regions as described in Placement slots without moving or
+re-fitting the canvas. Afterwards, Fit, the initial view when a project
+opens, and the selection action bar's clear area SHALL use the regions
+in their new places. Tooltips and the colour picker that open toward the
+canvas SHALL follow the regions to their new side.
+
+#### Scenario: Fit after moving the panels
+- **WHEN** the user sets Panels side to Left and then chooses Fit
+- **THEN** the canvas is fitted into the area between the panel cards on
+  the left and the tool rail
+
+#### Scenario: Card tooltip with panels on the left
+- **WHEN** the Panels side is Left and the user hovers a button in the
+  Layers card
+- **THEN** its tooltip opens to the right, fully on screen
+
+### Requirement: Hide interface while drawing
+When Hide interface while drawing is on, the top bar, tool rail, panel
+mini-rail, panel cards, tool-options bar, palette card and selection
+action bar SHALL fade out while a stroke with the Pencil, Eraser, Brush,
+Line or Rectangle tool is in progress on the canvas, and SHALL NOT take
+pointer input while faded. The fade SHALL start only after a short delay,
+so a tap does not make the interface flicker, and SHALL be instant
+rather than animated when the user prefers reduced motion. When the
+stroke ends or is cancelled, everything SHALL be back at once. Strokes
+with other tools, panning and pinch zoom SHALL NOT hide anything. The
+canvas SHALL NOT move or re-fit. When the preference is off (the
+default), nothing SHALL fade while drawing.
+
+#### Scenario: Long stroke
+- **WHEN** the preference is on and the user draws a long Pencil stroke
+- **THEN** the floating cards fade out shortly after the stroke starts,
+  and are back as soon as the pen lifts
+
+#### Scenario: Hand tool
+- **WHEN** the preference is on and the user drags with the Hand tool
+- **THEN** nothing fades
+

@@ -133,7 +133,7 @@ and the Undo/Redo `.topbar-group` are glass pills) and is slim: Back, `#topbar-t
 full name in `title`), `#zoom-pill` (current %, opens `#zoom-menu`:
 100%/Fit/Fill/Zoom out/Zoom in), Undo, Redo, and
 `#more-button` (opens `#more-menu`: Canvas settings, Export, Record
-timelapse, Tile preview, Theme Light/Dark/System, Hide interface). The
+timelapse, Tile preview, Prefs, Theme Light/Dark/System, Hide interface). The
 buttons those menus replace, and `.bottom-bar`, stay in the DOM but are
 `display: none`; menu items forward clicks to them (`data-forward`), so
 each feature keeps one code path. Popovers from More anchor to the More
@@ -144,6 +144,42 @@ absent from `Pixi.mount()` embeds. Wiring: `js/floating-topbar.js` (once,
 from `js/app.js`), menu behaviour in `js/topbar-menu.js`. The Layers
 and right-sidebar toggles are hidden too (5e): the panel mini-rail
 replaces them.
+
+**Prefs (5g-prefs).** More → Prefs opens `#prefs-sheet`, a native modal
+`<dialog>` styled after Pixelmator Pro for iPad's Settings sheet: an
+opaque rounded sheet over a dimmed page, a centred "Prefs" title, a round
+accent ✓ (Done) at the end, and grouped rows with a muted heading per
+group (rows are `<label>`s, 48px tall; switches are
+`input[type=checkbox][role=switch]`, selects are native `<select>`s
+drawn as value plus `unfold_more` chevrons; labels in Title Case).
+Groups: **Layout** - Tools Side and Panels Side (Left/Right each,
+independent; this replaces the roadmap's single handedness flag);
+**Open When a Project Opens** - Colors, Brushes, Layers (the pinned
+cards); **Drawing** - Hide Interface While Drawing. Every change applies at once and is saved; Done, Escape or
+a press on the backdrop closes the sheet and focus returns to More.
+Values live in `js/prefs.js` (defaults: tools left, panels right, all
+pinned, auto-hide off), stored as JSON under the `pixi-prefs`
+localStorage key and applied as `data-tools-side`, `data-panels-side`
+and `data-auto-hide` on `#screen-workspace`; `js/prefs-sheet.js` wires
+the sheet. Standalone app only (wired from `js/app.js`).
+
+- *Sides*: style.css maps the two attributes onto the slot variables
+  (`--slot-tools-*`, `--slot-panels-*`, `--slot-cards-*`, plus
+  `--slot-cards-offset/-far` and `--slot-reserve-start/-end`), logical
+  insets only. On the same side the order from the edge is tool rail,
+  mini-rail, cards; the bottom cards centre between the rails. Changing
+  a side never re-fits the canvas; Fit and the next project open use the
+  new sides (`measureClearInsets` passes each slot's side to
+  `clearInsets`). Rail, mini-rail and card tooltips and the colour
+  picker open toward the canvas (`canvasSide`).
+- *Pinned cards*: `applyOpenCardDefaults(prefs.pinned)` on each project
+  open; below 600px every card still starts closed. Changing a pin
+  doesn't open or close cards in the current project.
+- *Hide while drawing*: `js/workspace.js` sets `data-stroking` on the
+  screen for Pencil, Eraser, Brush, Line and Rectangle strokes
+  (`isAutoHideTool`); with `data-auto-hide="on"` every floating region
+  fades out after 0.25s and passes input through, and is back at once on
+  release or cancel.
 
 **Floating tool rail (5c-floating-tool-rail).** In the floating layout
 `#tools-sidebar` starts below the top bar and hugs its contents. The ten

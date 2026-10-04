@@ -62,6 +62,29 @@ describe('clearInsets', () => {
     assert.equal(insets.right, 80);
   });
 
+  // 5g-prefs: the sides come from the prefs, so a card wider than half
+  // the window still counts against the edge it is actually on.
+  test('an explicit side wins over where the card centre is', () => {
+    const narrow = { left: 0, top: 0, right: 390, bottom: 844, width: 390, height: 844 };
+    const insets = clearInsets(narrow, [
+      { slot: 'tools', side: 'left', rect: rect(12, 70, 62, 400) },
+      { slot: 'panels', side: 'left', rect: rect(82, 70, 62, 160) },
+      { slot: 'panels', side: 'left', rect: rect(152, 70, 226, 400) },
+    ], 8);
+    assert.equal(insets.left, 386);
+    assert.equal(insets.right, 0);
+  });
+
+  test('both slots on the right with explicit sides', () => {
+    const insets = clearInsets(container, [
+      { slot: 'tools', side: 'right', rect: rect(928, 70, 62, 400) },
+      { slot: 'panels', side: 'right', rect: rect(858, 70, 62, 160) },
+      { slot: 'panels', side: 'right', rect: rect(370, 70, 480, 400) },
+    ], 0);
+    assert.equal(insets.right, 630);
+    assert.equal(insets.left, 0);
+  });
+
   test('works with a container not at the page origin', () => {
     const offset = { left: 100, top: 50, right: 1100, bottom: 850, width: 1000, height: 800 };
     const insets = clearInsets(offset, [{ slot: 'top', rect: rect(110, 60, 980, 50) }], 0);

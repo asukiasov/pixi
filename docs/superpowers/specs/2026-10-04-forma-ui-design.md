@@ -65,10 +65,12 @@ Rules:
   (`--workspace-backdrop`, `--title-shadow`, `--rail-button-size` and the
   like). Among Forma tokens it may override only the allowed ones.
 - **Themes:** dark is the default; `data-theme="light"` / `"dark"` on
-  `<html>` forces a theme. Forma UI also follows `prefers-color-scheme`
-  when `data-theme` is unset (Lines already works this way). Pixi's
-  `js/theme-boot.js` always sets `data-theme`, so Pixi's behavior is
-  unchanged.
+  `<html>` picks a theme. Forma UI has **no** `prefers-color-scheme`
+  query: the app resolves the user's preference (including "system") and
+  sets `data-theme`, as Pixi's `js/theme-boot.js` already does. Following
+  the system inside Forma UI would silently turn docked embeds (which have
+  no theme script) light on a light-mode OS, a behavior change. Lines adds
+  a small boot script of its own in project 2.
 
 ## Tokens
 
@@ -140,7 +142,7 @@ New approach:
     ['.slot-tools, .panel-rail, .options-card, #selection-bar, #zoom-pill, .topbar-group', 'glass glass-pill'],
     ['.tool-options-bar', 'glass'],
     ['#back-to-gallery-button, #more-button', 'glass glass-circle'],
-    ['.right-sidebar > :is(.color-library-panel, .brushes-panel, .layers-panel)', 'glass'],
+    ['.right-sidebar > .color-library-panel, .right-sidebar > .brushes-panel, .right-sidebar > .layers-panel', 'glass'],
     [':is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group) .tool-button', 'ghost-button'],
   ];
   ```
@@ -149,10 +151,13 @@ New approach:
 - `applyLayout(screenEl, 'floating')` adds those classes within
   `screenEl`; `applyLayout(screenEl, 'docked')` (or any non-floating value)
   removes them. Embeds never call it, so they stay flat as today.
-- **Elements created after boot** (any button added later by JS inside a
-  mapped container) get their class from the code that creates them, using
-  a small exported helper (`formaClassesFor(el)` or similar) so the table
-  stays the single source.
+- **Elements created after boot:** none today. Every mapped element is
+  static markup in `index.html` (checked: no JS creates or clones
+  `.tool-button`s, the swatch stack, or the cards). No helper is built
+  (YAGNI); code that later creates an element inside a mapped container
+  must add its Forma classes itself, and the table's comment says so.
+- `.tool-options-slider` already carries `.slider` in the markup, so it is
+  not in the table (removing it on docked would strip the static class).
 - `style.css` keeps the floating selectors only for *positioning and
   Pixi-specific sizing* (where each card sits, `.tool-options-bar`'s 26px
   radius, `--rail-button-size`); the *look* comes from Forma classes.
@@ -197,8 +202,10 @@ links).
   stub (the file has no DOM tests today; no new dependency).
 - `test/floating-layout-css.test.js` and `test/home-screen.test.js` move
   to the new structure and class names.
-- Visual check: Playwright screenshots before (on `main`) and after,
-  compared pixel by pixel: Gallery empty and populated, New Canvas,
+- Visual check: computed-style snapshots (every element plus
+  `::before`/`::after`, via a zero-dependency headless-Chrome script,
+  `scripts/style-snapshot.mjs`) and screenshots, before (on `main`) and
+  after, diffed exactly: Gallery empty and populated, New Canvas,
   Workspace with a popover open, the embed example; dark and light;
   1180×820 and 390×844. Any difference is a bug unless explained in the
   review.

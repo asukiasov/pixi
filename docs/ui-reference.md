@@ -134,11 +134,11 @@ opaque rounded sheet over a dimmed page, a centred "Prefs" title, a round
 accent ✓ (Done) at the end, and grouped rows with a muted heading per
 group (rows are `<label>`s, 48px tall; switches are
 `input[type=checkbox][role=switch]`, selects are native `<select>`s
-drawn as value plus `unfold_more` chevrons). Groups: **Layout** - Tools
-side and Panels side (Left/Right each, independent; this replaces the
-roadmap's single handedness flag); **Open when a project opens** -
-Colors, Brushes, Layers (the pinned cards); **Drawing** - Hide interface
-while drawing. Every change applies at once and is saved; Done, Escape or
+drawn as value plus `unfold_more` chevrons; labels in Title Case).
+Groups: **Layout** - Tools Side and Panels Side (Left/Right each,
+independent; this replaces the roadmap's single handedness flag);
+**Open When a Project Opens** - Colors, Brushes, Layers (the pinned
+cards); **Drawing** - Hide Interface While Drawing. Every change applies at once and is saved; Done, Escape or
 a press on the backdrop closes the sheet and focus returns to More.
 Values live in `js/prefs.js` (defaults: tools left, panels right, all
 pinned, auto-hide off), stored as JSON under the `pixi-prefs`

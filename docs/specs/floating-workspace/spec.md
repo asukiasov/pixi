@@ -934,10 +934,10 @@ In the standalone app, choosing Prefs in the More menu SHALL open the
 Prefs sheet: a modal sheet centred over the Workspace, with the title
 "Prefs" and a Done button (a ✓) at the end of its header. Its controls
 SHALL be grouped under headings, in this order:
-- Layout: Tools side (Left or Right) and Panels side (Left or Right)
-- Open when a project opens: Colors, Brushes and Layers, each an on/off
+- Layout: Tools Side (Left or Right) and Panels Side (Left or Right)
+- Open When a Project Opens: Colors, Brushes and Layers, each an on/off
   switch
-- Drawing: Hide interface while drawing, an on/off switch
+- Drawing: Hide Interface While Drawing, an on/off switch
 
 Each control SHALL show the current preference when the sheet opens, and
 a change SHALL take effect immediately, with no separate save step.

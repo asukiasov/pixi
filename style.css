@@ -4107,6 +4107,10 @@ span.layer-lock-icon {
   cursor: pointer;
 }
 
+.prefs-done:hover {
+  background: color-mix(in srgb, var(--color-accent) 85%, #ffffff);
+}
+
 .prefs-done .material-symbols-outlined {
   font-size: 1.6rem;
 }
@@ -4192,13 +4196,13 @@ span.layer-lock-icon {
 }
 
 .prefs-switch:checked::before {
-  inset-inline-start: 22px;
+  transform: translateX(20px);
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .prefs-switch,
   .prefs-switch::before {
-    transition: background-color 0.2s ease, inset-inline-start 0.2s ease;
+    transition: background-color 0.2s ease, transform 0.2s ease;
   }
 }
 
@@ -4229,6 +4233,13 @@ span.layer-lock-icon {
   font-size: 0.95rem;
   text-align: end;
   cursor: pointer;
+}
+
+/* The open list is native; explicit colours keep it readable where the
+   OS draws it in its own theme (Windows dark mode). */
+.prefs-select option {
+  background-color: var(--color-surface);
+  color: var(--color-text);
 }
 
 .prefs-select .material-symbols-outlined {

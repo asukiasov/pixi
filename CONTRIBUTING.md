@@ -15,8 +15,8 @@ under `openspec/changes/`, not as a PR straight to code. See
 - A **bug fix with no spec/requirement impact** can skip this and go
   straight to a PR — no proposal needed for fixing something that's
   supposed to work one way and doesn't.
-- `openspec/specs/` is the source of truth for what's already shipped;
-  `openspec/roadmap.md` is the phase-by-phase build order. Check both
+- `docs/specs/` is the source of truth for what's already shipped;
+  `docs/roadmap.md` is the phase-by-phase build order. Check both
   before proposing something that might already be planned, or already
   rejected, elsewhere.
 

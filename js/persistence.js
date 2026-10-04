@@ -264,7 +264,7 @@ export async function deleteProject(id) {
 /**
  * Creates a custom brush (from the Brush editor's grid) and writes it
  * immediately. `userId` is always null today - no auth exists yet (Phase 3
- * adds Supabase Auth, per openspec/roadmap.md); reserving the field now
+ * adds Supabase Auth, per docs/roadmap.md); reserving the field now
  * means "owned by the signed-in user" later is a matter of setting it, not
  * a schema change.
  */

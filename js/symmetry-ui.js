@@ -1,8 +1,8 @@
 // Symmetry/mirror drawing: wires the #symmetry-toggle button (index.html)
 // to symmetry.js's mirrorApplyPixel. Restored from the Standard/Pro split
-// (openspec/changes/archive/2026-08-21-split-pixi-pro-repo) - merged back
+// (docs/history/2026-08-21-split-pixi-pro-repo) - merged back
 // in wired directly (no extension-hook indirection) per
-// openspec/changes/merge-pixi-pro-into-standard/design.md.
+// docs/history/2026-08-24-merge-pixi-pro-into-standard/design.md.
 //
 // Known gap carried over from the split's own pixi-pro module: pre-split,
 // symmetryMode lived on workspace.js's `state` object, recreated fresh per

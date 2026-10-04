@@ -177,7 +177,7 @@ oversight: `lib/pixi.js` and `LayerStack.loadImage()` are the boundary a
 immediately at the call site (naming exactly what's wrong) serves a host
 developer debugging their own integration code better than a silent
 `null`/`false` return would — see
-`openspec/changes/embeddable-integration-api/design.md`'s Decisions
+`docs/history/2026-08-23-embeddable-integration-api/design.md`'s Decisions
 section for the full reasoning. Everything else in `js/`/`lib/`, including
 every other method on `LayerStack` itself, still follows the
 return-based convention above without exception.
@@ -198,7 +198,7 @@ time) in an environment lacking `matchMedia`.
 
 ### User-facing failures go through a toast, never `alert()`; background failures stay silent unless the user's work is at risk
 
-Added with `4e-toast-system` (spec: `openspec/specs/status-messages`).
+Added with `4e-toast-system` (spec: `docs/specs/status-messages`).
 `showToast(message, { type, action })` from `js/toast.js` is the one way
 to tell the user something happened.
 

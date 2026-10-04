@@ -71,7 +71,7 @@ README's feature list:
   the Gallery is a cache sanity check, not analytics — see the README's
   Deployment section. Anything that phones home gets called out
   explicitly, in the doc that introduces it, not buried in a privacy page.
-- **No feature claimed before it ships.** `openspec/roadmap.md` is the
+- **No feature claimed before it ships.** `docs/roadmap.md` is the
   only place "planned" work is described as planned — READMEs and doc
   pages describe what exists now, not what's coming, so a reader can't be
   misled by aspirational copy going stale.

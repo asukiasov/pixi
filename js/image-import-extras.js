@@ -1,5 +1,5 @@
 // hasTransparency, restored from the Standard/Pro split
-// (openspec/changes/archive/2026-08-21-split-pixi-pro-repo) - its only
+// (docs/history/2026-08-21-split-pixi-pro-repo) - its only
 // caller is the Brush editor's Import (js/brush-import-ui.js). Kept as its
 // own small module rather than folded into js/image-import.js, matching
 // how it was split out originally (that file's own decode/downsample

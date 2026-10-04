@@ -768,7 +768,7 @@ textarea,
 }
 
 /* iOS 26 / Apple Pencil-style "magnetic hover" for the top bar
-   (openspec/changes/adopt-magnetic-hover-topbar) - see
+   (docs/history/2026-08-17-adopt-magnetic-hover-topbar) - see
    js/magnetic-hover.js. Position/scale and transition live in CSS;
    magnetic-hover.js only ever sets the --pull-x/--pull-y/--pull-scale
    custom properties and toggles the .magnetic-active class (on at most

@@ -3,10 +3,10 @@
 > **Legacy — superseded, and the split it describes has been reversed.**
 > This doc predates the OpenSpec process (see CLAUDE.md's "Process:
 > OpenSpec vs. Superpowers skills") and was the input to
-> `openspec/changes/archive/2026-08-21-split-pixi-pro-repo/`, which
+> `docs/history/2026-08-21-split-pixi-pro-repo/`, which
 > implemented the split this doc designed. That split's own spec,
-> `openspec/specs/pixi-pro-distribution/`, was then retired by
-> `openspec/changes/merge-pixi-pro-into-standard/` (2026-08-24), which
+> `docs/specs/pixi-pro-distribution/`, was then retired by
+> `docs/history/2026-08-24-merge-pixi-pro-into-standard/` (2026-08-24), which
 > reversed the split entirely — all Pro-only features moved back into this
 > single public repo, free, with a voluntary donation ask replacing the
 > paid tier. This file is kept only as historical design context for a
@@ -37,7 +37,7 @@ Input to this doc: `docs/superpowers/specs/2026-08-17-tier-matrix-worksheet.md`
 - Not building a hosted/SaaS version of Pixi.
 - Not building a `<script>`-tag embeddable widget for third-party sites.
 - Not building automated license validation (Stripe/Supabase entitlements) —
-  this supersedes `openspec/roadmap.md` Phase 4's original sketch of that,
+  this supersedes `docs/roadmap.md` Phase 4's original sketch of that,
   for this tier split specifically. Phase 4 as originally scoped may still
   apply to a different, future monetization path (e.g. hosted-app
   purchases); revisit that phase's description when this ships.

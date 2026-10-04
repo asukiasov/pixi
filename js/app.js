@@ -79,8 +79,8 @@ if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'Mac
 // together, in one call, not two separate ones - exclusivity ("only the
 // nearest button reacts") is computed across whatever set a single call
 // receives, so this is what makes a top bar button and a tool rail
-// button mutually exclusive (see openspec/specs/topbar-magnetic-hover
-// and openspec/changes/extend-magnetic-hover-tool-rail).
+// button mutually exclusive (see docs/specs/topbar-magnetic-hover
+// and docs/history/2026-08-17-extend-magnetic-hover-tool-rail).
 initMagneticHover([
   ...document.querySelectorAll('.workspace-topbar button'),
   ...document.querySelectorAll('.tools-sidebar [data-tool]'),

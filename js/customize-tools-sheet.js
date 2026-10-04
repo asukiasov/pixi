@@ -196,7 +196,7 @@ export function initCustomizeToolsSheet({ getPrefs, setPrefs, root = document })
     ghost.removeAttribute('data-tile-tool');
     ghost.removeAttribute('aria-describedby');
     ghost.setAttribute('aria-hidden', 'true');
-    ghost.tabIndex = -1;
+    ghost.inert = true;
     Object.assign(ghost.style, { left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px`, height: `${rect.height}px` });
     sheet.append(ghost);
     press.ghost = ghost;
@@ -206,10 +206,12 @@ export function initCustomizeToolsSheet({ getPrefs, setPrefs, root = document })
   }
 
   function moveDrag(point) {
-    press.ghost.style.transform = `translate(${point.x - press.x}px, ${point.y - press.y}px)`;
+    // Every layout read (dropTarget, and showMarker's own) before any
+    // write, so a move costs one layout rather than several.
     const target = dropTarget(point);
     press.target = target;
     showMarker(target);
+    press.ghost.style.transform = `translate(${point.x - press.x}px, ${point.y - press.y}px)`;
     gridZone.classList.toggle('is-drop-target', !target && press.fromRail);
   }
 

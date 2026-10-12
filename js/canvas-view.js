@@ -20,6 +20,7 @@ const TILE_OFFSETS = [
 ];
 
 import { pointerDownAction } from './pointer-policy.js';
+import { containerToLocal, transformAround, snapAngle, angleDelta, rotatedSize, centredPan } from './view-transform.js';
 
 export class CanvasView {
   #canvasEl;
@@ -30,6 +31,11 @@ export class CanvasView {
 
   #baseScale = 1;
   #scale = 1;
+  // View rotation in degrees, clockwise (js/view-transform.js). View
+  // state like zoom: not saved, back to 0 whenever resetView() refits.
+  #rotation = 0;
+  #pinchAngle = 0;
+  #gestureRotation = 0;
   #panX = 0;
   #panY = 0;
 
@@ -165,6 +171,24 @@ export class CanvasView {
     }
     this.#wrapperEl.appendChild(this.#cursorEl);
     canvasEl.addEventListener('pointerleave', this.#onPointerLeave);
+
+    // Mac trackpad twist (Safari's WebKit-only gesture events; js/app.js
+    // already stops their native page zoom). Rotation only. On iPad a
+    // touch pinch fires these alongside pointer events, which already
+    // turn the view - so they're skipped while any pointer is down.
+    containerEl.addEventListener('gesturestart', () => {
+      this.#gestureRotation = 0;
+    });
+    containerEl.addEventListener('gesturechange', (e) => {
+      if (this.#pointers.size || !this.#layerStack) return;
+      const delta = e.rotation - this.#gestureRotation;
+      this.#gestureRotation = e.rotation;
+      this.#zoomAroundPoint(e.clientX, e.clientY, e.clientX, e.clientY, 1, false, delta);
+    });
+    containerEl.addEventListener('gestureend', (e) => {
+      if (this.#pointers.size || !this.#layerStack) return;
+      this.#snapRotation({ x: e.clientX, y: e.clientY });
+    });
   }
 
   setHandlers(handlers) {
@@ -215,8 +239,13 @@ export class CanvasView {
     if (enabled) this.render();
   }
 
-  /** Fits the canvas to the container and centers it at 1x zoom ("Fit Screen"). */
-  resetView() {
+  /**
+   * Fits the canvas to the container and centers it at 1x zoom ("Fit
+   * Screen"). Also straightens the view, unless `keepRotation` (the Fit
+   * preset), which fits the turned canvas's bounding box instead.
+   */
+  resetView({ keepRotation = false } = {}) {
+    if (!keepRotation) this.#rotation = 0;
     const { width, height } = this.#layerStack;
     this.#canvasEl.width = width;
     this.#canvasEl.height = height;
@@ -232,9 +261,10 @@ export class CanvasView {
     this.#aboveCanvasEl.height = height;
 
     const area = this.#clearArea();
+    const turned = rotatedSize(width, height, this.#rotation);
     const fitScale = Math.max(
       1,
-      Math.floor(Math.min(area.width / width, area.height / height))
+      Math.floor(Math.min(area.width / turned.width, area.height / turned.height))
     );
     this.#baseScale = fitScale;
     this.#canvasEl.style.width = `${width * fitScale}px`;
@@ -277,10 +307,54 @@ export class CanvasView {
     });
 
     this.#scale = 1;
-    this.#panX = area.x + (area.width - width * fitScale) / 2;
-    this.#panY = area.y + (area.height - height * fitScale) / 2;
+    this.#centre(area);
     this.#applyTransform();
     this.#emitZoomChange();
+  }
+
+  /** Pans so the canvas's centre sits on the middle of `area`, at the current zoom and rotation. */
+  #centre(area) {
+    const { width, height } = this.#layerStack;
+    const pan = centredPan(area, width * this.#baseScale, height * this.#baseScale, this.#scale, this.#rotation);
+    this.#panX = pan.panX;
+    this.#panY = pan.panY;
+  }
+
+  #view() {
+    return { panX: this.#panX, panY: this.#panY, scale: this.#scale, rotation: this.#rotation };
+  }
+
+  #setView(view) {
+    this.#panX = view.panX;
+    this.#panY = view.panY;
+    this.#scale = view.scale;
+    this.#rotation = view.rotation;
+    this.#applyTransform();
+    this.#emitZoomChange();
+  }
+
+  /** The view rotation in degrees, [0, 360). */
+  getRotation() {
+    return ((Math.round(this.#rotation) % 360) + 360) % 360;
+  }
+
+  /**
+   * Turns the view by `degrees` around the middle of the clear area (the
+   * Zoom menu's Rotate View Left/Right), landing on a right angle when
+   * close to one.
+   */
+  rotateBy(degrees) {
+    const containerRect = this.#containerEl.getBoundingClientRect();
+    const area = clearArea(containerRect, this.#getClearInsets());
+    const centre = { x: area.x + area.width / 2, y: area.y + area.height / 2 };
+    const target = snapAngle(this.#rotation + degrees);
+    this.#setView(transformAround(this.#view(), centre, centre, this.#scale, angleDelta(this.#rotation, target)));
+  }
+
+  /** Straightens the view and refits (the Zoom menu's Reset Rotation). */
+  resetRotation() {
+    this.resetView();
+    this.render(); // resetView() clears the canvas buffer - see setZoomPreset('fit')
   }
 
   /** The container area left clear by floating cards (see #getClearInsets). */
@@ -333,7 +407,7 @@ export class CanvasView {
       // with a render() to repaint from the layer data; this one must
       // too, or the artwork visibly vanishes until something else
       // (e.g. the next stroke) happens to trigger a render.
-      this.resetView();
+      this.resetView({ keepRotation: true });
       this.render();
       return;
     }
@@ -344,14 +418,14 @@ export class CanvasView {
     if (preset === '100') {
       this.#scale = 1 / this.#baseScale;
     } else if (preset === 'fill') {
-      const coverRatio = Math.max(area.width / width, area.height / height);
+      const turned = rotatedSize(width, height, this.#rotation);
+      const coverRatio = Math.max(area.width / turned.width, area.height / turned.height);
       this.#scale = coverRatio / this.#baseScale;
     } else {
       return;
     }
 
-    this.#panX = area.x + (area.width - width * this.#baseScale * this.#scale) / 2;
-    this.#panY = area.y + (area.height - height * this.#baseScale * this.#scale) / 2;
+    this.#centre(area);
     this.#applyTransform();
     this.#emitZoomChange();
   }
@@ -535,23 +609,21 @@ export class CanvasView {
     // and its own layout position is left:0;top:0 (style.css), identical
     // to what #canvasEl's used to be - so this reproduces the exact same
     // on-screen position/scale math #canvasEl computed for itself alone,
-    // just applied to the whole group. No change to how #canvasEl's own
-    // coordinate mapping (#toGridPoint()) works, since
-    // getBoundingClientRect() already accounts for however many ancestor
-    // transforms are stacked above an element.
-    this.#wrapperEl.style.transform = `translate(${this.#panX}px, ${this.#panY}px) scale(${this.#scale})`;
+    // just applied to the whole group. The rotate() (view rotation) is why
+    // #toGridPoint() maps through js/view-transform.js rather than
+    // getBoundingClientRect(), whose box is axis-aligned.
+    this.#wrapperEl.style.transform = `translate(${this.#panX}px, ${this.#panY}px) rotate(${this.#rotation}deg) scale(${this.#scale})`;
     this.#handlers.onViewChange?.();
   }
 
   #emitZoomChange() {
-    this.#handlers.onZoomChange?.(this.getZoomPercent());
+    this.#handlers.onZoomChange?.(this.getZoomPercent(), this.getRotation());
   }
 
   #toGridPoint(clientX, clientY) {
-    const rect = this.#canvasEl.getBoundingClientRect();
-    const x = Math.floor(((clientX - rect.left) / rect.width) * this.#layerStack.width);
-    const y = Math.floor(((clientY - rect.top) / rect.height) * this.#layerStack.height);
-    return { x, y };
+    const containerRect = this.#containerEl.getBoundingClientRect();
+    const local = containerToLocal({ x: clientX - containerRect.left, y: clientY - containerRect.top }, this.#view());
+    return { x: Math.floor(local.x / this.#baseScale), y: Math.floor(local.y / this.#baseScale) };
   }
 
   /** Draw Only With Apple Pencil (Prefs). Off restores the plain rules. */
@@ -669,8 +741,8 @@ export class CanvasView {
     // A lifted Pencil leaves nothing under the cursor (a hover-capable
     // iPad reports the next hover move and shows it again); a mouse
     // released off the canvas got no pointerleave while captured.
-    const rect = this.#canvasEl.getBoundingClientRect();
-    const outside = e.clientX < rect.left || e.clientX >= rect.right || e.clientY < rect.top || e.clientY >= rect.bottom;
+    const { x, y } = this.#toGridPoint(e.clientX, e.clientY);
+    const outside = x < 0 || y < 0 || x >= this.#layerStack.width || y >= this.#layerStack.height;
     if (e.pointerType === 'pen' || outside || e.type === 'pointercancel') this.#handlers.onHover?.(null);
 
     if (this.#drawing && this.#pointers.size === 0) {
@@ -681,8 +753,10 @@ export class CanvasView {
       this.#panning = false;
       this.#canvasEl.classList.remove('panning');
     }
-    if (this.#pointers.size < 2) {
+    if (this.#pointers.size < 2 && this.#pinchMidpoint) {
+      const around = this.#pinchMidpoint;
       this.#pinchMidpoint = null;
+      this.#snapRotation(around);
     }
     if (this.#pointers.size === 0) {
       this.#multiTouchActive = false;
@@ -697,18 +771,35 @@ export class CanvasView {
     const [a, b] = this.#activePointerPositions();
     this.#pinchMidpoint = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     this.#pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+    this.#pinchAngle = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
   }
 
+  /** Two fingers: zoom by their spread, turn by their twist, pan by their midpoint - all at once. */
   #updatePinch() {
     const [a, b] = this.#activePointerPositions();
     const midpoint = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     const dist = Math.hypot(a.x - b.x, a.y - b.y);
     const ratio = this.#pinchDist > 0 ? dist / this.#pinchDist : 1;
+    const angle = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
 
-    this.#zoomAroundPoint(this.#pinchMidpoint.x, this.#pinchMidpoint.y, midpoint.x, midpoint.y, ratio, true);
+    this.#zoomAroundPoint(this.#pinchMidpoint.x, this.#pinchMidpoint.y, midpoint.x, midpoint.y, ratio, true, angleDelta(this.#pinchAngle, angle));
 
     this.#pinchMidpoint = midpoint;
     this.#pinchDist = dist;
+    this.#pinchAngle = angle;
+  }
+
+  /** After a twist: settle on a right angle if within a few degrees of one, around the last pinch midpoint. */
+  #snapRotation(around) {
+    const target = snapAngle(this.#rotation);
+    const delta = angleDelta(this.#rotation, target);
+    if (Math.abs(delta) < 1e-6) {
+      this.#rotation = target; // just normalise
+      return;
+    }
+    const containerRect = this.#containerEl.getBoundingClientRect();
+    const p = { x: around.x - containerRect.left, y: around.y - containerRect.top };
+    this.#setView(transformAround(this.#view(), p, p, this.#scale, delta));
   }
 
   /**
@@ -719,17 +810,12 @@ export class CanvasView {
    * pinch passes the old and new pinch midpoints (so a two-finger drag
    * pans and zooms in the same gesture, as it always has).
    */
-  #zoomAroundPoint(oldClientX, oldClientY, newClientX, newClientY, ratio, clampToStepRange) {
+  #zoomAroundPoint(oldClientX, oldClientY, newClientX, newClientY, ratio, clampToStepRange, deltaDegrees = 0) {
     const containerRect = this.#containerEl.getBoundingClientRect();
-    const anchorX = (oldClientX - containerRect.left - this.#panX) / this.#scale;
-    const anchorY = (oldClientY - containerRect.top - this.#panY) / this.#scale;
-
-    this.#scale = clampToStepRange ? clamp(this.#scale * ratio, MIN_SCALE, MAX_SCALE) : this.#scale * ratio;
-
-    this.#panX = newClientX - containerRect.left - anchorX * this.#scale;
-    this.#panY = newClientY - containerRect.top - anchorY * this.#scale;
-    this.#applyTransform();
-    this.#emitZoomChange();
+    const scale = clampToStepRange ? clamp(this.#scale * ratio, MIN_SCALE, MAX_SCALE) : this.#scale * ratio;
+    const from = { x: oldClientX - containerRect.left, y: oldClientY - containerRect.top };
+    const to = { x: newClientX - containerRect.left, y: newClientY - containerRect.top };
+    this.#setView(transformAround(this.#view(), from, to, scale, deltaDegrees));
   }
 }
 

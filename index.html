@@ -145,6 +145,14 @@
         <button type="button" class="topbar-menu-item" role="menuitem" data-forward="zoom-in-button" data-keep-open>
           <span class="material-symbols-outlined" aria-hidden="true">add</span>Zoom in
         </button>
+        <div class="topbar-menu-separator" role="separator"></div>
+        <button type="button" class="topbar-menu-item" role="menuitem" data-forward="rotate-view-left" data-keep-open>
+          <span class="material-symbols-outlined" aria-hidden="true">rotate_left</span>Rotate View Left
+        </button>
+        <button type="button" class="topbar-menu-item" role="menuitem" data-forward="rotate-view-right" data-keep-open>
+          <span class="material-symbols-outlined" aria-hidden="true">rotate_right</span>Rotate View Right
+        </button>
+        <button type="button" class="topbar-menu-item" role="menuitem" data-forward="rotate-view-reset">Reset Rotation</button>
       </div>
       <!-- Pixel-perfect drawing (Aseprite-style corner removal) - see
            js/pixel-perfect-ui.js/lib/pixel-engine/engine.js. -->
@@ -861,6 +869,15 @@
             <button type="button" id="zoom-preset-100" class="tool-button" title="Actual size">100%</button>
             <button type="button" id="zoom-preset-fit" class="tool-button" title="Fit the canvas to the screen">Fit</button>
             <button type="button" id="zoom-preset-fill" class="tool-button" title="Fill the screen with the canvas">Fill</button>
+            <!-- View rotation (js/canvas-view.js rotateBy/resetRotation);
+                 the floating Zoom menu forwards to these. -->
+            <button type="button" id="rotate-view-left" class="tool-button icon-button" aria-label="Rotate view left" title="Rotate view left">
+              <span class="material-symbols-outlined" aria-hidden="true">rotate_left</span>
+            </button>
+            <button type="button" id="rotate-view-right" class="tool-button icon-button" aria-label="Rotate view right" title="Rotate view right">
+              <span class="material-symbols-outlined" aria-hidden="true">rotate_right</span>
+            </button>
+            <button type="button" id="rotate-view-reset" class="tool-button" title="Straighten the view and fit it">Reset rotation</button>
           </div>
         </nav>
       </div>

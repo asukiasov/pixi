@@ -136,8 +136,10 @@ scrolls sideways inside it.
 bar is no card of its own (pass-through; each group is its own glass:
 Home and More are glass circles, the title is bare text, the zoom pill
 and the Undo/Redo `.topbar-group` are glass pills) and is slim: Back, `#topbar-title` (read-only project name, truncated,
-full name in `title`), `#zoom-pill` (current %, opens `#zoom-menu`:
-100%/Fit/Fill/Zoom out/Zoom in), Undo, Redo, and
+full name in `title`), `#zoom-pill` (current %, plus the view angle when turned, e.g.
+"2100% · 90°"; opens `#zoom-menu`: 100%/Fit/Fill/Zoom out/Zoom in/Rotate
+View Left/Rotate View Right/Reset Rotation), `#transform-toggle`, Undo,
+Redo, and
 `#more-button` (opens `#more-menu`: Canvas settings, Export, Record
 timelapse, Tile preview, Prefs, Theme Light/Dark/System, Hide interface). The
 buttons those menus replace, and `.bottom-bar`, stay in the DOM but are
@@ -505,7 +507,9 @@ Spec: `color-library` (FG/BG model), `canvas-creation`/`layers`
 - `.bottom-bar` (bottom-left) — `#zoom-out-button`/`#zoom-in-button`
   (remove/add icons, also Ctrl/Cmd +/-), `#zoom-readout` (percentage),
   `#zoom-preset-100`/`#zoom-preset-fit`/`#zoom-preset-fill` ("100%" /
-  "Fit" / "Fill"). Spec: `canvas-navigation`.
+  "Fit" / "Fill"), `#rotate-view-left`/`#rotate-view-right`/
+  `#rotate-view-reset` (view rotation; the Zoom menu forwards to them).
+  Spec: `canvas-navigation`.
 
 ### Right sidebar (`#right-sidebar`)
 

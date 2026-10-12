@@ -1684,6 +1684,9 @@ function bindDomOnce() {
   root.querySelector('#zoom-preset-100').addEventListener('click', () => state.canvasView.setZoomPreset('100'));
   root.querySelector('#zoom-preset-fit').addEventListener('click', () => state.canvasView.setZoomPreset('fit'));
   root.querySelector('#zoom-preset-fill').addEventListener('click', () => state.canvasView.setZoomPreset('fill'));
+  root.querySelector('#rotate-view-left')?.addEventListener('click', () => state.canvasView.rotateBy(-90));
+  root.querySelector('#rotate-view-right')?.addEventListener('click', () => state.canvasView.rotateBy(90));
+  root.querySelector('#rotate-view-reset')?.addEventListener('click', () => state.canvasView.resetRotation());
 
   state.undoButton.addEventListener('click', performUndo);
   state.redoButton.addEventListener('click', performRedo);
@@ -1927,13 +1930,15 @@ function renameCurrentProject(name) {
   syncTopbarTitle();
 }
 
-function setZoomReadout(percent) {
-  zoomReadout.textContent = `${percent}%`;
+/** Zoom readouts; a turned view also shows its angle ("2100% · 90°"). */
+function setZoomReadout(percent, rotation = 0) {
+  const text = rotation ? `${percent}% · ${rotation}°` : `${percent}%`;
+  zoomReadout.textContent = text;
   if (zoomPillReadout) {
-    zoomPillReadout.textContent = `${percent}%`;
+    zoomPillReadout.textContent = text;
     // The label must contain the visible text, or speech users can't say
     // "click 2100%" and screen readers hide the zoom level.
-    zoomPillReadout.parentElement.setAttribute('aria-label', `Zoom, ${percent}%`);
+    zoomPillReadout.parentElement.setAttribute('aria-label', `Zoom, ${text}`);
   }
 }
 
@@ -2380,8 +2385,8 @@ export function initWorkspace({
   canvasView.setHandlers({
     // Fires on every zoom change (buttons, shortcuts, presets, touch
     // pinch, and the initial Fit Screen from resetView) — see design.md.
-    onZoomChange(percent) {
-      setZoomReadout(percent);
+    onZoomChange(percent, rotation) {
+      setZoomReadout(percent, rotation);
     },
 
     onViewChange() {

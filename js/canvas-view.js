@@ -41,6 +41,10 @@ export class CanvasView {
 
   #selectionOverlayEl;
   #selectionRect = null;
+  // Brush cursor (js/brush-cursor.js): an SVG in grid units laid over the
+  // canvas, its two paths (light under dark) holding the footprint outline.
+  #cursorEl;
+  #cursorPaths = [];
 
   // (reference-image-original-resolution) Two more siblings, appended
   // between #canvasEl and #selectionOverlayEl (so the selection marquee
@@ -138,6 +142,21 @@ export class CanvasView {
     this.#selectionOverlayEl = document.createElement('div');
     this.#selectionOverlayEl.className = 'selection-overlay hidden';
     this.#wrapperEl.appendChild(this.#selectionOverlayEl);
+
+    // Above the selection marquee. Hover is reported for mouse and pen
+    // only: a finger has no hover and covers whatever is under it.
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    this.#cursorEl = document.createElementNS(SVG_NS, 'svg');
+    this.#cursorEl.setAttribute('class', 'brush-cursor hidden');
+    this.#cursorEl.setAttribute('aria-hidden', 'true');
+    for (const tone of ['brush-cursor-light', 'brush-cursor-dark']) {
+      const path = document.createElementNS(SVG_NS, 'path');
+      path.setAttribute('class', tone);
+      this.#cursorEl.appendChild(path);
+      this.#cursorPaths.push(path);
+    }
+    this.#wrapperEl.appendChild(this.#cursorEl);
+    canvasEl.addEventListener('pointerleave', this.#onPointerLeave);
   }
 
   setHandlers(handlers) {
@@ -459,6 +478,30 @@ export class CanvasView {
   }
 
   /**
+   * Shows the brush cursor: `d` is a path in pixel units relative to the
+   * grid point `at` ({x, y}). Hidden by hideCursor() or an empty `d`.
+   */
+  setCursorPath(d, at) {
+    if (!d || !this.#layerStack) {
+      this.hideCursor();
+      return;
+    }
+    const { width, height } = this.#layerStack;
+    this.#cursorEl.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    this.#cursorEl.style.width = `${width * this.#baseScale}px`;
+    this.#cursorEl.style.height = `${height * this.#baseScale}px`;
+    for (const path of this.#cursorPaths) {
+      path.setAttribute('d', d);
+      path.setAttribute('transform', `translate(${at.x} ${at.y})`);
+    }
+    this.#cursorEl.classList.remove('hidden');
+  }
+
+  hideCursor() {
+    this.#cursorEl.classList.add('hidden');
+  }
+
+  /**
    * The selection overlay's on-screen box (client pixels, at the current
    * pan and zoom), or null while no selection is shown. Read by the
    * floating selection action bar (5f-selection-action-bar).
@@ -506,6 +549,7 @@ export class CanvasView {
   #onPointerDown = (e) => {
     this.#canvasEl.setPointerCapture(e.pointerId);
     this.#pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    this.#reportHover(e);
 
     if (this.#pointers.size === 1 && !this.#multiTouchActive) {
       if (this.#panMode) {
@@ -527,7 +571,19 @@ export class CanvasView {
     e.preventDefault();
   };
 
+  /** Hover (or press) position for the brush cursor - null hides it. */
+  #reportHover(e) {
+    const show = e.pointerType !== 'touch' && this.#pointers.size <= 1 && !this.#multiTouchActive;
+    this.#handlers.onHover?.(show ? this.#toGridPoint(e.clientX, e.clientY) : null);
+  }
+
+  #onPointerLeave = (e) => {
+    // A captured pointer (mid-stroke) keeps its cursor until release.
+    if (!this.#pointers.has(e.pointerId)) this.#handlers.onHover?.(null);
+  };
+
   #onPointerMove = (e) => {
+    this.#reportHover(e);
     if (!this.#pointers.has(e.pointerId)) return;
     const prev = this.#pointers.get(e.pointerId);
     this.#pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -550,6 +606,13 @@ export class CanvasView {
   #onPointerUp = (e) => {
     if (!this.#pointers.has(e.pointerId)) return;
     this.#pointers.delete(e.pointerId);
+
+    // A lifted Pencil leaves nothing under the cursor (a hover-capable
+    // iPad reports the next hover move and shows it again); a mouse
+    // released off the canvas got no pointerleave while captured.
+    const rect = this.#canvasEl.getBoundingClientRect();
+    const outside = e.clientX < rect.left || e.clientX >= rect.right || e.clientY < rect.top || e.clientY >= rect.bottom;
+    if (e.pointerType === 'pen' || outside || e.type === 'pointercancel') this.#handlers.onHover?.(null);
 
     if (this.#drawing && this.#pointers.size === 0) {
       this.#drawing = false;

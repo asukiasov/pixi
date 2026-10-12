@@ -253,6 +253,35 @@ intercepting these as native page gestures.
 - **WHEN** the user pinches with two fingers on the canvas
 - **THEN** the canvas view zooms in or out without drawing
 
+### Requirement: Brush cursor
+While a mouse or Apple Pencil hovers over the canvas or draws on it, the
+system SHALL outline exactly the pixels the next dab would paint, snapped
+to the pixel grid: the circular tip at the current Size for Pencil and
+Eraser, the current brush's pattern for Brush, and a single pixel for
+Line, Rectangle, Ellipse, Bucket and Eyedropper. Move, Select and Hand
+SHALL show no brush cursor. The outline SHALL stay legible over both
+light and dark pixels at every zoom. Finger (touch) input SHALL never
+show it. It SHALL be shown only while the Prefs' Show Brush Cursor switch
+is on (the default).
+
+#### Scenario: Hovering with the Pencil tool
+- **WHEN** Size is 8 and the user hovers the mouse over the canvas
+- **THEN** an outline of the 8px tip appears around the pixel under the
+  pointer, matching the pixels a click there would paint
+
+#### Scenario: Leaving the canvas
+- **WHEN** the pointer leaves the canvas, or an Apple Pencil is lifted
+- **THEN** the brush cursor disappears (a hover-capable Pencil shows it
+  again on its next hover)
+
+#### Scenario: Finger input
+- **WHEN** the user touches the canvas with a finger
+- **THEN** no brush cursor is shown
+
+#### Scenario: Turned off in Prefs
+- **WHEN** Show Brush Cursor is off and the user hovers over the canvas
+- **THEN** no brush cursor is shown
+
 ### Requirement: Undo and redo
 The system SHALL let the user undo and redo completed drawing actions (strokes
 and fills) via visible buttons or the Cmd/Ctrl+Z (undo) and Cmd/Ctrl+Shift+Z /

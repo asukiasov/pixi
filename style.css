@@ -4318,3 +4318,35 @@ span.layer-lock-icon {
 .customize-tools-marker[hidden] {
   display: none;
 }
+
+/* Brush cursor (js/brush-cursor.js, drawn by js/canvas-view.js): the
+   outline of the pixels the next dab paints, a dark line over a wider
+   light one so it reads on any colour. Strokes stay 1px/3px on screen at
+   every zoom. Prefs' Show Brush Cursor off hides it. */
+.brush-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.brush-cursor path {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: miter;
+}
+
+.brush-cursor .brush-cursor-light {
+  stroke: rgb(255 255 255 / 0.9);
+  stroke-width: 3px;
+}
+
+.brush-cursor .brush-cursor-dark {
+  stroke: rgb(0 0 0 / 0.85);
+  stroke-width: 1px;
+}
+
+.workspace-screen[data-brush-cursor="off"] .brush-cursor {
+  display: none;
+}

@@ -1,6 +1,6 @@
 // Workspace preferences (5g-prefs): which side the tool rail and the
 // panels sit on, which panel cards a project opens with, whether the
-// interface hides while drawing, and which tools the rail shows
+// interface hides while drawing, whether the brush cursor shows, and which tools the rail shows
 // (Customize Tools, js/rail-tools.js). Kept DOM-free so it's unit-testable (see
 // test/prefs.test.js); js/prefs-sheet.js is the Prefs sheet that edits
 // them. Standalone app only: wired from js/app.js, which Pixi.mount()
@@ -19,6 +19,7 @@ import { DEFAULT_RAIL_TOOLS, normalizeRailTools } from './rail-tools.js';
  *   panelsSide: 'left' | 'right',
  *   pinned: { colors: boolean, brushes: boolean, layers: boolean },
  *   autoHide: boolean,
+ *   brushCursor: boolean,
  *   railTools: string[],
  * }} Prefs
  */
@@ -38,6 +39,7 @@ export const DEFAULT_PREFS = Object.freeze({
   panelsSide: 'right',
   pinned: Object.freeze({ colors: true, brushes: true, layers: true }),
   autoHide: false,
+  brushCursor: true,
   railTools: DEFAULT_RAIL_TOOLS,
 });
 
@@ -54,6 +56,7 @@ export function normalizePrefs(raw) {
     panelsSide: SIDES.includes(source.panelsSide) ? source.panelsSide : DEFAULT_PREFS.panelsSide,
     pinned,
     autoHide: typeof source.autoHide === 'boolean' ? source.autoHide : DEFAULT_PREFS.autoHide,
+    brushCursor: typeof source.brushCursor === 'boolean' ? source.brushCursor : DEFAULT_PREFS.brushCursor,
     railTools: normalizeRailTools(source.railTools),
   };
 }
@@ -80,13 +83,15 @@ export function savePrefs(storage, prefs) {
 /**
  * Writes the prefs the CSS reads onto the Workspace screen:
  * data-tools-side, data-panels-side (style.css's slot variables) and
- * data-auto-hide (the hide-while-drawing rule). Pins are read on project
+ * data-auto-hide (the hide-while-drawing rule) and data-brush-cursor
+ * (whether the canvas's brush cursor overlay shows). Pins are read on project
  * open instead (js/panel-rail.js's applyOpenCardDefaults).
  */
 export function applyPrefsToScreen(screenEl, prefs) {
   screenEl.dataset.toolsSide = prefs.toolsSide;
   screenEl.dataset.panelsSide = prefs.panelsSide;
   screenEl.dataset.autoHide = prefs.autoHide ? 'on' : 'off';
+  screenEl.dataset.brushCursor = prefs.brushCursor ? 'on' : 'off';
 }
 
 /** Whether a stroke with `tool` hides the interface while auto-hide is on. */

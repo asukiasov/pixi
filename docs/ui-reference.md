@@ -163,7 +163,7 @@ Groups: **Tools** - Customize Tools… (a `<button>` drawn as a row,
 Prefs); **Layout** - Tools Side and Panels Side (Left/Right each,
 independent; this replaces the roadmap's single handedness flag);
 **Open When a Project Opens** - Colors, Brushes, Layers (the pinned
-cards); **Drawing** - Hide Interface While Drawing. Every change applies at once and is saved; Done, Escape or
+cards); **Drawing** - Hide Interface While Drawing, Show Brush Cursor (`#prefs-brush-cursor`, default on; `data-brush-cursor` on the Workspace screen, overlay `.brush-cursor` from `js/canvas-view.js`, footprint/outline in `js/brush-cursor.js`). Every change applies at once and is saved; Done, Escape or
 a press on the backdrop closes the sheet and focus returns to More.
 Values live in `js/prefs.js` (defaults: tools left, panels right, all
 pinned, auto-hide off), stored as JSON under the `pixi-prefs`

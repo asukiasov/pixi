@@ -4,6 +4,7 @@ import { initExport, sanitizeFilename } from './export.js';
 import { TimelapseRecorder, captureFrame, encodeTimelapseVideo, isTimelapseSupported } from './timelapse.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
 import { drawRectangle, drawEllipse, clipToSelection } from './shape-tools.js';
+import { cursorFootprint, footprintOutlinePath } from './brush-cursor.js';
 import { bresenhamLine, strokeFreehandThick } from '../lib/pixel-engine/engine.js';
 import { confirmDialog } from './confirm-dialog.js';
 import { initSymmetry, applySymmetryTransform } from './symmetry-ui.js';
@@ -519,6 +520,7 @@ function renderBrushesPanel() {
     swatch.appendChild(buildBrushPreviewCanvas(brush));
     swatch.addEventListener('click', () => {
       state.currentBrush = brush;
+      refreshBrushCursor();
       brushesPanelGrid.querySelectorAll('.brush-swatch').forEach((s) => s.classList.toggle('active', s === swatch));
       deleteBrushButton.disabled = !brush.isCustom;
     });
@@ -1235,6 +1237,7 @@ export function bindSliderWheel(slider) {
  * removes the chance of it recurring for a future tool-scoped panel.
  */
 function applyToolScopedUI() {
+  refreshBrushCursor();
   brushesPanel.classList.toggle('hidden', state.currentTool !== 'brush');
   // Leaving the Brush tool mid-edit closes the editor rather than
   // leaving it open behind a now-hidden panel.
@@ -1460,6 +1463,7 @@ function bindDomOnce() {
     const value = Number(pencilSizeSlider.value);
     state.pencilSize = value;
     pencilSizeReadout.textContent = `${value}px`;
+    refreshBrushCursor();
   });
 
   // Mouse wheel adjusts Size by one step per notch while hovering the
@@ -2014,6 +2018,22 @@ function setStroking(on) {
 }
 
 /**
+ * Shows the brush cursor (js/brush-cursor.js) for the current tool at the
+ * last hover point, or hides it with no point or a non-painting tool.
+ * Called on every hover move and whenever the tool, Size or brush changes.
+ * Whether it's visible at all is the Prefs' data-brush-cursor (CSS).
+ */
+function refreshBrushCursor() {
+  const point = state.hoverPoint;
+  const footprint = point && cursorFootprint(state.currentTool, { pencilSize: state.pencilSize, brush: state.currentBrush });
+  if (!footprint) {
+    state.canvasView.hideCursor();
+    return;
+  }
+  state.canvasView.setCursorPath(footprintOutlinePath(footprint), point);
+}
+
+/**
  * Redraws the current line/rectangle preview (or committed shape) from the
  * pre-drag backup, applying the selection clip if one is active. Shared by
  * onDrawMove (live preview) and onDrawEnd (final commit) so both look and
@@ -2174,6 +2194,7 @@ export function initWorkspace({
     timelapseRecorder: new TimelapseRecorder(),
     currentTool: initialTool,
     toolBeforeEyedropper: null,
+    hoverPoint: null,
     foregroundColor: hexToRgba(PALETTE[0]),
     backgroundColor: hexToRgba('#ffffff'),
     currentBrush: allBrushes[0],
@@ -2315,6 +2336,11 @@ export function initWorkspace({
 
     onViewChange() {
       for (const fn of canvasViewChangeListeners) fn();
+    },
+
+    onHover(point) {
+      state.hoverPoint = point;
+      refreshBrushCursor();
     },
 
     onDrawStart(point) {

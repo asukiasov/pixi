@@ -363,10 +363,6 @@
             <h3 id="prefs-pinned-heading" class="prefs-section-heading">Open When a Project Opens</h3>
             <div class="prefs-group">
               <label class="prefs-row">
-                <span class="prefs-row-label">Colors</span>
-                <input type="checkbox" role="switch" class="prefs-switch" name="pin-colors" data-pin="colors" aria-describedby="prefs-pinned-note">
-              </label>
-              <label class="prefs-row">
                 <span class="prefs-row-label">Brushes</span>
                 <input type="checkbox" role="switch" class="prefs-switch" name="pin-brushes" data-pin="brushes" aria-describedby="prefs-pinned-note">
               </label>
@@ -653,6 +649,103 @@
         </div>
       </div>
 
+      <!-- Palette menu (js/color-library-ui.js), opened from
+           #palette-menu-button: every palette (tap to switch), then the
+           Color Library actions. The action items keep the ids the old
+           Color Library card's buttons had. -->
+      <div id="palette-menu" class="topbar-menu palette-menu hidden" role="menu" aria-label="Palettes">
+        <div id="palette-menu-list" class="palette-menu-list" role="group" aria-label="Palettes"></div>
+        <div class="topbar-menu-separator" role="separator"></div>
+        <button type="button" id="add-palette-button" class="topbar-menu-item" role="menuitem">
+          <span class="material-symbols-outlined" aria-hidden="true">add</span>New Palette…
+        </button>
+        <button type="button" id="import-palette-button" class="topbar-menu-item" role="menuitem">
+          <span class="material-symbols-outlined" aria-hidden="true">image</span>Import from Image…
+        </button>
+        <button type="button" id="library-generate-ramp-button" class="topbar-menu-item" role="menuitem">
+          <span class="material-symbols-outlined" aria-hidden="true">gradient</span>Generate Ramp…
+        </button>
+        <button type="button" id="edit-palette-colors-button" class="topbar-menu-item" role="menuitemcheckbox" aria-checked="false">
+          <span class="material-symbols-outlined" aria-hidden="true">edit</span>Edit Colors
+        </button>
+        <button type="button" id="standard-libraries-button" class="topbar-menu-item" role="menuitem" aria-haspopup="dialog">
+          <span class="material-symbols-outlined" aria-hidden="true">library_add</span>Standard Libraries…
+        </button>
+        <div class="topbar-menu-separator" role="separator"></div>
+        <button type="button" id="delete-palette-button" class="topbar-menu-item topbar-menu-item-danger" role="menuitem">
+          <span class="material-symbols-outlined" aria-hidden="true">delete</span>Delete Palette
+        </button>
+      </div>
+      <input type="file" id="color-library-import-input" accept="image/*" class="hidden" />
+
+      <!-- New palette name (opened from the palette menu's New Palette…). -->
+      <div id="new-palette-row" class="canvas-settings-panel new-palette-panel hidden" role="dialog" aria-labelledby="new-palette-title">
+        <div class="canvas-settings-row canvas-settings-header-row">
+          <h2 id="new-palette-title">New Palette</h2>
+        </div>
+        <div class="canvas-settings-row">
+          <input type="text" id="new-palette-name" placeholder="Palette name" aria-label="Palette name" />
+        </div>
+        <div class="canvas-settings-row">
+          <button type="button" id="new-palette-save" class="tool-button">Save</button>
+          <button type="button" id="new-palette-cancel" class="tool-button">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Import-palette popover (2o-image-import-refinements) - out of
+           #color-library-panel's normal flow (position:fixed + JS, same
+           clamped-to-viewport pattern as #export-panel), anchored to
+           #palette-menu-button. Live swatch preview + adjustable color
+           count + name + Save/Cancel - a fixed-position surface so the
+           color-count control never shifts as the swatch grid above it
+           gains/loses rows (unlike the in-flow row this replaced). -->
+      <div id="import-preview-row" class="canvas-settings-panel import-preview-panel hidden">
+        <div class="canvas-settings-row canvas-settings-header-row">
+          <h2>Import Palette</h2>
+          <button type="button" id="import-preview-close" class="icon-button" aria-label="Close" data-tooltip="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div id="import-preview-grid" class="import-preview-grid"></div>
+        <div class="canvas-settings-row">
+          <label for="import-preview-count">Colors</label>
+          <input type="number" id="import-preview-count" min="2" max="32" value="8" />
+        </div>
+        <div class="canvas-settings-row">
+          <input type="text" id="import-preview-name" placeholder="Palette name" />
+        </div>
+        <div class="canvas-settings-row">
+          <button type="button" id="import-preview-save" class="tool-button">Save</button>
+          <button type="button" id="import-preview-cancel" class="tool-button">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Generate-ramp preview popover (7-add-palette-color-ramp-
+           generator) - opened by either #color-picker-generate-ramp (the
+           color-picker popover's own button, source = whichever swatch
+           is being edited) or #library-generate-ramp-button (the Color
+           Library header's button, source = current Foreground color).
+           Same "extract, preview, then save/cancel" shape and fixed-
+           position/clamped-to-viewport anchoring as #import-preview-row,
+           reusing addColorToPalette/loadColorPalettes on Confirm. -->
+      <div id="ramp-preview-row" class="canvas-settings-panel import-preview-panel hidden">
+        <div class="canvas-settings-row canvas-settings-header-row">
+          <h2>Generate Ramp</h2>
+          <button type="button" id="ramp-preview-close" class="icon-button" aria-label="Close" data-tooltip="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div id="ramp-preview-grid" class="import-preview-grid"></div>
+        <div class="canvas-settings-row">
+          <label for="ramp-preview-steps">Steps</label>
+          <input type="number" id="ramp-preview-steps" min="3" max="9" value="5" />
+        </div>
+        <div class="canvas-settings-row">
+          <button type="button" id="ramp-preview-confirm" class="tool-button">Confirm</button>
+          <button type="button" id="ramp-preview-cancel" class="tool-button">Cancel</button>
+        </div>
+      </div>
+
       <!-- Transform popover, anchored below #transform-toggle
            (js/transform-ui.js). Acts on the selection if there is one,
            else the whole active layer; the title says which. -->
@@ -863,7 +956,23 @@
              #selection-controls is hidden there, and its buttons show in
              #selection-bar instead (5f-selection-action-bar). -->
         <div class="options-card">
-          <div id="palette-row" class="palette-row"></div>
+          <!-- Colour bar (js/color-library-ui.js): the active Color Library
+               palette on one scrolling row, with the palette menu first and
+               Rainbow and "add current colour" last. #palette-row holds
+               only Rainbow here (js/workspace.js); embeds, which have no
+               colour bar, still get the fixed colours in it. -->
+          <div id="color-bar" class="color-bar">
+            <button type="button" id="palette-menu-button" class="tool-button palette-menu-button" aria-label="Palette" data-tooltip="Palettes">
+              <span id="palette-menu-name" class="palette-menu-name">Palette</span>
+              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+            </button>
+            <div id="color-library-grid" class="color-library-grid" role="group" aria-label="Palette colours"></div>
+            <div id="palette-row" class="palette-row"></div>
+            <!-- Adds the current Foreground color to the active palette. -->
+            <button type="button" id="add-current-color-button" class="tool-button icon-button color-bar-add" aria-label="Add current color to palette" data-tooltip="Add current color">
+              <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            </button>
+          </div>
 
           <!-- Docked layout only; in the floating layout these are shown
                through #selection-bar's proxies (5f-selection-action-bar),
@@ -923,13 +1032,10 @@
          closed from its header's .panel-close. -->
     <!-- Panel mini-rail (5e-cards-mini-rail), floating layout only. Each
          button opens/closes one card; its state is mirrored back from the
-         card's class by js/panel-rail.js. Sources, for 5h: Colors forwards
-         to #color-library-header, Layers to #layers-panel-toggle, Brushes
-         calls setBrushesCardOpen (js/workspace.js). -->
+         card's class by js/panel-rail.js. Sources, for 5h: Layers forwards
+         to #layers-panel-toggle, Brushes calls setBrushesCardOpen
+         (js/workspace.js). Colours live in the bottom colour bar. -->
     <nav id="panel-rail" class="panel-rail slot-panels floating-only" aria-label="Panels">
-      <button type="button" class="tool-button icon-button" aria-controls="color-library-panel" aria-expanded="true" data-forward="color-library-header" aria-label="Colors" data-tooltip="Colors">
-        <span class="material-symbols-outlined" aria-hidden="true">palette</span>
-      </button>
       <button type="button" class="tool-button icon-button" aria-controls="brushes-panel" aria-expanded="false" aria-label="Brushes" data-tooltip="Brushes">
         <span class="material-symbols-outlined" aria-hidden="true">brush</span>
       </button>
@@ -938,124 +1044,6 @@
       </button>
     </nav>
     <aside id="right-sidebar" class="right-sidebar slot-panels">
-      <!-- Named, persisted palettes of user-added colors - global and
-           cross-session, unlike the fixed preset palette-row. Wired in
-           js/color-library-ui.js. -->
-      <div id="color-library-panel" class="color-library-panel">
-        <div id="color-library-header" class="color-library-header panel-header" role="button" tabindex="0" aria-expanded="true">
-          <div class="panel-header-top">
-            <h2>Color Library</h2>
-            <span class="material-symbols-outlined panel-collapse-chevron">expand_more</span>
-            <button type="button" class="tool-button icon-button panel-close floating-only" aria-label="Close Color Library" data-tooltip="Close">
-              <span class="material-symbols-outlined" aria-hidden="true">close</span>
-            </button>
-          </div>
-          <div class="panel-header-actions color-library-header-actions">
-            <!-- Adds the current Foreground color to the active palette
-                 - always available regardless of platform, unlike the
-                 color-picker popover's own "Add to palette" (that
-                 popover doesn't exist on iOS - see openColorPicker in
-                 js/workspace.js - so this is the only path there). -->
-            <button type="button" id="add-current-color-button" class="tool-button icon-button" aria-label="Add current color to palette" data-tooltip="Add current color">
-              <span class="material-symbols-outlined">playlist_add</span>
-            </button>
-            <button type="button" id="add-palette-button" class="tool-button icon-button" aria-label="Add palette" data-tooltip="New palette">
-              <span class="material-symbols-outlined">add</span>
-            </button>
-            <!-- Import a palette from an image (2n-color-library-image-import,
-                 popover per 2o-image-import-refinements) - opens the hidden
-                 file input below; the real UI is #import-preview-row, a
-                 popover anchored to this button once a file is picked. -->
-            <button type="button" id="import-palette-button" class="tool-button icon-button" aria-label="Import palette from image" data-tooltip="Import from image">
-              <span class="material-symbols-outlined">image</span>
-            </button>
-            <input type="file" id="color-library-import-input" accept="image/*" class="hidden" />
-            <!-- Generates a shading ramp from the current Foreground color
-                 (7-add-palette-color-ramp-generator) - opens
-                 #ramp-preview-row, the same popover the color-picker
-                 popover's own "Generate ramp" button opens. -->
-            <button type="button" id="library-generate-ramp-button" class="tool-button icon-button" aria-label="Generate ramp from current color" data-tooltip="Generate ramp">
-              <span class="material-symbols-outlined">gradient</span>
-            </button>
-            <!-- Edit-colors mode (4c-delete-palette-color) - while pressed,
-                 tapping a swatch removes that one color instead of
-                 picking it. A toggle, not long-press/right-click, so it
-                 works the same for mouse, finger, Pencil and keyboard. -->
-            <button type="button" id="edit-palette-colors-button" class="tool-button icon-button" aria-label="Edit colors" aria-pressed="false" data-tooltip="Edit colors">
-              <span class="material-symbols-outlined">edit</span>
-            </button>
-            <button type="button" id="standard-libraries-button" class="tool-button icon-button" aria-label="Standard libraries" data-tooltip="Standard libraries" aria-haspopup="dialog">
-              <span class="material-symbols-outlined" aria-hidden="true">library_add</span>
-            </button>
-            <button type="button" id="delete-palette-button" class="tool-button icon-button" aria-label="Delete palette" data-tooltip="Delete palette">
-              <span class="material-symbols-outlined">delete</span>
-            </button>
-          </div>
-        </div>
-        <div id="color-library-body" class="color-library-body">
-          <select id="color-library-select" class="color-library-select hidden"></select>
-          <div id="new-palette-row" class="new-palette-row hidden">
-            <input type="text" id="new-palette-name" placeholder="Palette name" />
-            <button type="button" id="new-palette-save" class="tool-button">Save</button>
-            <button type="button" id="new-palette-cancel" class="tool-button">Cancel</button>
-          </div>
-          <div id="color-library-grid" class="color-library-grid"></div>
-        </div>
-      </div>
-
-      <!-- Import-palette popover (2o-image-import-refinements) - out of
-           #color-library-panel's normal flow (position:fixed + JS, same
-           clamped-to-viewport pattern as #export-panel), anchored to
-           #import-palette-button. Live swatch preview + adjustable color
-           count + name + Save/Cancel - a fixed-position surface so the
-           color-count control never shifts as the swatch grid above it
-           gains/loses rows (unlike the in-flow row this replaced). -->
-      <div id="import-preview-row" class="canvas-settings-panel import-preview-panel hidden">
-        <div class="canvas-settings-row canvas-settings-header-row">
-          <h2>Import Palette</h2>
-          <button type="button" id="import-preview-close" class="icon-button" aria-label="Close" data-tooltip="Close">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-        <div id="import-preview-grid" class="import-preview-grid"></div>
-        <div class="canvas-settings-row">
-          <label for="import-preview-count">Colors</label>
-          <input type="number" id="import-preview-count" min="2" max="32" value="8" />
-        </div>
-        <div class="canvas-settings-row">
-          <input type="text" id="import-preview-name" placeholder="Palette name" />
-        </div>
-        <div class="canvas-settings-row">
-          <button type="button" id="import-preview-save" class="tool-button">Save</button>
-          <button type="button" id="import-preview-cancel" class="tool-button">Cancel</button>
-        </div>
-      </div>
-
-      <!-- Generate-ramp preview popover (7-add-palette-color-ramp-
-           generator) - opened by either #color-picker-generate-ramp (the
-           color-picker popover's own button, source = whichever swatch
-           is being edited) or #library-generate-ramp-button (the Color
-           Library header's button, source = current Foreground color).
-           Same "extract, preview, then save/cancel" shape and fixed-
-           position/clamped-to-viewport anchoring as #import-preview-row,
-           reusing addColorToPalette/loadColorPalettes on Confirm. -->
-      <div id="ramp-preview-row" class="canvas-settings-panel import-preview-panel hidden">
-        <div class="canvas-settings-row canvas-settings-header-row">
-          <h2>Generate Ramp</h2>
-          <button type="button" id="ramp-preview-close" class="icon-button" aria-label="Close" data-tooltip="Close">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-        <div id="ramp-preview-grid" class="import-preview-grid"></div>
-        <div class="canvas-settings-row">
-          <label for="ramp-preview-steps">Steps</label>
-          <input type="number" id="ramp-preview-steps" min="3" max="9" value="5" />
-        </div>
-        <div class="canvas-settings-row">
-          <button type="button" id="ramp-preview-confirm" class="tool-button">Confirm</button>
-          <button type="button" id="ramp-preview-cancel" class="tool-button">Cancel</button>
-        </div>
-      </div>
 
       <div id="brushes-panel" class="brushes-panel">
         <div class="brushes-panel-header">

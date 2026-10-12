@@ -994,13 +994,16 @@ function bindTooltips() {
 }
 
 /**
- * Rebuilds the palette row's swatches from the fixed PALETTE presets
- * plus the Rainbow swatch last. User-added colors live in the Color
- * Library panel (js/color-library-ui.js), not here.
+ * Rebuilds the palette row: the Rainbow swatch, after the fixed PALETTE
+ * presets only where there's no colour bar (Pixi.mount() embeds). In the
+ * app the colour bar shows the active Color Library palette instead
+ * (js/color-library-ui.js), and these presets live on as its "Pixi
+ * Basics" palette.
  */
 function renderPaletteRow() {
   paletteRow.innerHTML = '';
-  PALETTE.forEach((hex) => {
+  const presets = root.querySelector('#color-bar') ? [] : PALETTE;
+  presets.forEach((hex) => {
     const swatch = document.createElement('button');
     swatch.type = 'button';
     swatch.className = 'palette-swatch';

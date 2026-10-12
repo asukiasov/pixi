@@ -275,17 +275,17 @@ open above the bar. Markup is `.floating-only` and absent from
 `js/app.js`).
 
 **Floating panel cards + mini-rail (5e-cards-mini-rail).** In the
-floating layout `#panel-rail` (Colors, Brushes, Layers; 44px disclosure
+floating layout `#panel-rail` (Brushes, Layers; 44px disclosure
 buttons with `aria-expanded`/`aria-controls`) sits against the end edge
 below the top bar, and `#right-sidebar` becomes a see-through column
-beside it (`--slot-cards-start/end`) in which Color Library, Brushes and
-Layers are each their own glass card, in that order. A card is open or
+beside it (`--slot-cards-start/end`) in which Brushes and Layers are
+each their own glass card, in that order (colours are in the bottom
+colour bar). A card is open or
 closed - no collapse-to-header: the panels' existing `.collapsed` state
 means "not displayed", the chevron is hidden, and a `.panel-close`
 button in each header closes the card (focus moves to its rail button;
 a tap on the title does nothing, and the `role="button"` headers get
-`tabindex="-1"`). Colors forwards to `#color-library-header`, Layers to
-the hidden `#layers-panel-toggle`, Brushes calls `setBrushesCardOpen()`
+`tabindex="-1"`). Layers forwards to the hidden `#layers-panel-toggle`, Brushes calls `setBrushesCardOpen()`
 (`js/workspace.js`; `.collapsed` is the user's flag, `.hidden` stays the
 Brush-tool scoping, so a closed Brushes card stays closed across tool
 switches). Rail state is mirrored from each card's class by a
@@ -498,9 +498,26 @@ Spec: `color-library` (FG/BG model), `canvas-creation`/`layers`
   the 20-entry undo stack. Recording buffer and on/off state are
   session-only: a reload or navigating away from the Workspace discards
   an in-progress recording. Spec: `drawing-timelapse-recording`.
-- `#palette-row` — the fixed preset palette swatches (Phase 1's
-  original 16-swatch row, distinct from Color Library's persisted
-  palettes).
+- `#color-bar` — the colour bar (spec `color-library`,
+  `js/color-library-ui.js`): `#palette-menu-button` (palette name +
+  chevron; chevron only below 480px; opens `#palette-menu`),
+  `#color-library-grid` (the active palette, one row scrolling sideways,
+  active swatch marked and scrolled into view), `#palette-row` (Rainbow
+  only - embeds without a colour bar still get the 16 fixed presets here),
+  `#add-current-color-button` (+, adds the current colour to the active
+  palette).
+- `#palette-menu` (screen level, `js/topbar-menu.js`'s `initMenuButton`)
+  — `#palette-menu-list` (every palette, alphabetical, count, active one
+  checked), `#add-palette-button` (New Palette… → `#new-palette-row`
+  popover: `#new-palette-name`, Save/Cancel, Enter/Escape),
+  `#import-palette-button` (Import from Image… →
+  `#color-library-import-input` → `#import-preview-row`),
+  `#library-generate-ramp-button` (Generate Ramp… → `#ramp-preview-row`),
+  `#edit-palette-colors-button` (Edit Colors, menuitemcheckbox),
+  `#standard-libraries-button` (Standard Libraries… →
+  `#standard-libraries-sheet`), `#delete-palette-button`. The import,
+  ramp and new-palette popovers anchor to `#palette-menu-button` and sit
+  at the workspace screen's top level, outside every slot.
 - `#selection-controls` (Selection tool, active selection only) —
   `#selection-clear-button` ("Clear selection"), `#selection-delete-button`
   ("Delete").
@@ -513,48 +530,19 @@ Spec: `color-library` (FG/BG model), `canvas-creation`/`layers`
 
 ### Right sidebar (`#right-sidebar`)
 
-Order top→bottom: Color Library → Brushes → Layers (color selection
-used most often while drawing, per `2l`'s ordering rationale). Each
-panel has its own collapse-to-header state; the whole sidebar has its
-own show/hide (`#right-sidebar-toggle` in the top bar), independent of
-the per-panel states.
+Order top→bottom: Brushes → Layers (Colors moved to the bottom colour
+bar on 2026-10-12). Each panel has its own collapse-to-header state; the
+whole sidebar has its own show/hide (`#right-sidebar-toggle` in the top
+bar), independent of the per-panel states.
 
-**Color Library** (`#color-library-panel`, spec `color-library`):
-- `#color-library-header` (click to collapse/expand, chevron rotates) —
-  `#add-current-color-button` (playlist_add, add current FG to active
-  palette), `#add-palette-button` (add, new palette), `#import-palette-button`
-  (image icon, opens `#color-library-import-input` file picker →
-  `#import-preview-row` popover), `#library-generate-ramp-button`
-  (gradient icon, generates a shading ramp from the current Foreground
-  color → `#ramp-preview-row` popover, spec `color-library`,
-  `7-add-palette-color-ramp-generator`), `#delete-palette-button` (delete
-  current palette).
-- `#color-library-select` — dropdown to switch palette once more than
-  one exists (alphabetically sorted).
-- `#new-palette-row` — inline `#new-palette-name` + Save/Cancel, shown
-  when creating a palette.
-- `#color-library-grid` — swatches of the active palette. Bounded
-  height (doesn't fill all remaining sidebar space, per `2l`).
-- `#import-preview-row` — popover anchored to `#import-palette-button`
-  (fixed-position, not in-flow, so the color-count control below the
-  swatch grid can't shift as the grid's row count changes — `2o` fixed
-  an earlier version that still shifted). `#import-preview-grid` (live
-  swatch preview), `#import-preview-count` (2–32 colors, re-extracts via
-  median-cut on change), `#import-preview-name`, Save/Cancel.
-- `#ramp-preview-row` — popover anchored to whichever button opened it
-  (`#library-generate-ramp-button` in this header, or `#color-picker-
-  generate-ramp` in `#color-picker-popover` above), same fixed-position/
-  clamped-to-viewport pattern as `#import-preview-row`. Source color is
-  the current Foreground color (header button) or whichever swatch
-  `#color-picker-popover` is editing (popover button).
-  `#ramp-preview-grid` (live swatch preview, `js/color-ramp.js`'s
-  `generateColorRamp`, dark→light through the source hue with a hue/
-  saturation shift at the extremes), `#ramp-preview-steps` (3–9 steps,
-  default 5, regenerates live on change), Confirm/Cancel
-  (`#ramp-preview-confirm`/`#ramp-preview-cancel`) — Confirm adds every
-  previewed color to the active palette via `addColorToPalette` and
-  refreshes the panel; Cancel discards the preview with no palette
-  changes. Spec: `color-library` (`7-add-palette-color-ramp-generator`).
+`#import-preview-row` (import preview: `#import-preview-grid`,
+`#import-preview-count` 2–32 colors re-extracted by median-cut,
+`#import-preview-name`, Save/Cancel) and `#ramp-preview-row` (ramp
+preview: `#ramp-preview-grid` from `js/color-ramp.js`'s
+`generateColorRamp`, `#ramp-preview-steps` 3–9 default 5,
+`#ramp-preview-confirm`/`#ramp-preview-cancel`) are fixed popovers
+anchored to `#palette-menu-button`, or to `#color-picker-generate-ramp`
+when opened from the colour picker.
 
 **Brushes** (`#brushes-panel`, spec `brushes`, shown only while Brush
 tool is active):

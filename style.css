@@ -3848,14 +3848,6 @@ span.layer-lock-icon {
   z-index: 25;
 }
 
-/* Generate ramp opens from that picker too, but its popover lives in the
-   right sidebar. Lift the sidebar above the lifted rail while any of its
-   preview popovers is open, or the ramp's Steps/Confirm sit under the
-   picker. */
-.workspace-screen[data-layout="floating"] .slot-panels:has(.import-preview-panel:not(.hidden)) {
-  z-index: 26;
-}
-
 .workspace-screen[data-layout="floating"] .color-picker-popover-header .icon-button {
   border-radius: 50%;
 }
@@ -4421,4 +4413,157 @@ span.layer-lock-icon {
 .standard-library-add {
   min-width: 5rem;
   min-height: 44px;
+}
+
+/* ------------------------------------------------------------------
+   Colour bar (js/color-library-ui.js): the bottom card's one row - the
+   palette menu button, the active palette's swatches scrolling sideways,
+   Rainbow (#palette-row) and "add current colour". Replaced the fixed
+   16-colour strip and the right-side Color Library card.
+   ------------------------------------------------------------------ */
+.color-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.25rem 0.4rem;
+}
+
+.palette-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  /* Shrinks before the swatches do (down to the chevron and a little name). */
+  flex: 0 1 auto;
+  min-width: 4.5rem;
+  max-width: 9rem;
+  min-height: 44px;
+  padding: 0 0.4rem 0 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: var(--color-surface-alt);
+}
+
+.palette-menu-button .material-symbols-outlined {
+  flex: none;
+  width: 1.25rem;
+  overflow: hidden;
+  font-size: 1.25rem;
+}
+
+.palette-menu-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* One row that scrolls sideways - wheel, trackpad, touch - without a
+   visible scrollbar eating the bar's height. */
+.color-bar .color-library-grid {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 0.3rem;
+  /* At least four swatches, even on a phone. */
+  min-width: 8.5rem;
+  max-width: 38rem;
+  padding: 0.35rem 0.25rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.color-bar .color-library-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.color-bar .color-library-swatch {
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  aspect-ratio: auto;
+}
+
+.color-bar .color-library-empty {
+  align-self: center;
+  padding: 0 0.5rem;
+  white-space: nowrap;
+}
+
+/* #palette-row holds only Rainbow in the bar. */
+.color-bar .palette-row {
+  flex: none;
+  padding: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.color-bar-add {
+  flex: none;
+}
+
+/* Palette menu: the palette list scrolls on its own when it's long, so
+   the actions under it stay in reach. */
+.palette-menu-list {
+  max-height: min(45vh, 22rem);
+  overflow-y: auto;
+}
+
+.palette-menu-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-menu-item-count {
+  margin-inline-start: auto;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.palette-menu-item[aria-checked]::after {
+  margin-inline-start: 0.6rem;
+}
+
+.topbar-menu-item-danger {
+  color: var(--color-danger);
+}
+
+/* New-palette name popover (positioned like the import/ramp popovers). */
+.new-palette-panel input {
+  flex: 1;
+  min-height: 44px;
+}
+
+/* Phone width: the card sits between the two rails, so the palette button
+   drops to its chevron (the name stays in its label) and the row shows at
+   least two swatches, scrolling for the rest. */
+@media (max-width: 480px) {
+  .palette-menu-button {
+    min-width: 44px;
+    padding-inline: 0;
+    justify-content: center;
+  }
+
+  .palette-menu-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .color-bar {
+    gap: 0;
+    padding-inline: 0.15rem;
+  }
+
+  .color-bar .color-library-grid {
+    min-width: 4rem;
+    padding-inline: 0.15rem;
+  }
 }

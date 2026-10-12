@@ -1,7 +1,9 @@
-// Color Library panel - named, persisted palettes, add-to-palette, import
-// from image, ramp generator, and the Color Library sequence toggle
-// (Pencil/Brush). Reuses workspace.js's setForegroundColor/hexToRgba/
-// rgbaToHex/getColorPickerCurrentColor/bindPanelHeaderCollapse/
+// Color Library - named, persisted palettes shown in the bottom colour bar
+// (#color-bar: the active palette's swatches, with the palette menu for
+// switching palettes, add-to-palette, import from image, ramp generator,
+// edit colours, standard libraries), plus the Color Library sequence
+// toggle (Pencil/Brush). Reuses workspace.js's setForegroundColor/hexToRgba/
+// rgbaToHex/getColorPickerCurrentColor/
 // matrixRain/confettiBurst/disableRainbow exports rather than duplicating
 // any of that logic. workspace.js calls back into this module's
 // getColorSequenceColor/setLibrarySequenceEnabled/
@@ -17,7 +19,6 @@ import {
   hexToRgba,
   rgbaToHex,
   getColorPickerCurrentColor,
-  bindPanelHeaderCollapse,
   matrixRain,
   confettiBurst,
   disableRainbow,
@@ -38,6 +39,7 @@ import { extractPalette } from './color-extraction.js';
 import { generateColorRamp } from './color-ramp.js';
 import { DEFAULT_MATERIAL_COLORS, PREDEFINED_PALETTES } from './default-color-library.js';
 import { loadStandardLibraries, standardLibraryRows } from './standard-libraries.js';
+import { initMenuButton } from './topbar-menu.js';
 
 // Fixed internal sample grid for Color Library image import - purely a
 // color-reduction step before median-cut clustering, never shown to the
@@ -103,7 +105,6 @@ function positionPanelBelow(panel, anchorEl) {
 let colorPalettes = [];
 let activePaletteId = null;
 let sequenceEnabled = false;
-let collapsed = false;
 // Edit-colors mode (4c-delete-palette-color): while on, a swatch tap
 // removes that color instead of picking it. Holds the id of the palette
 // edit mode was turned on for, so any path that changes the active
@@ -113,10 +114,10 @@ let editingPaletteId = null;
 
 // DOM refs, assigned once in initColorLibrary() - single active
 // instance, same module-level-state pattern workspace.js itself uses.
-let colorLibraryPanel = null;
-let colorLibraryHeader = null;
 let colorLibraryGrid = null;
-let colorLibrarySelect = null;
+let paletteMenuButton = null;
+let paletteMenuName = null;
+let paletteMenuList = null;
 let deletePaletteButton = null;
 let editColorsButton = null;
 let addCurrentColorButton = null;
@@ -129,11 +130,6 @@ let librarySequencePanel = null;
 let librarySequenceToggle = null;
 let colorPickerAdd = null;
 let colorPickerGenerateRamp = null;
-
-function syncColorLibraryCollapse() {
-  colorLibraryPanel.classList.toggle('collapsed', collapsed);
-  colorLibraryHeader.setAttribute('aria-expanded', String(!collapsed));
-}
 
 /**
  * Fetches every palette from IndexedDB. Auto-creates one "Material"
@@ -252,23 +248,38 @@ async function openStandardLibraries() {
 function renderColorLibraryPanel() {
   const sorted = [...colorPalettes].sort((a, b) => a.name.localeCompare(b.name));
 
-  colorLibrarySelect.innerHTML = '';
+  // The palette menu's list: every palette, alphabetically, the active
+  // one checked. Picking one switches the bar to it.
+  paletteMenuList.innerHTML = '';
   sorted.forEach((palette) => {
-    const option = document.createElement('option');
-    option.value = palette.id;
-    option.textContent = palette.name;
-    if (palette.id === activePaletteId) option.selected = true;
-    colorLibrarySelect.appendChild(option);
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'topbar-menu-item palette-menu-item';
+    item.setAttribute('role', 'menuitemradio');
+    item.setAttribute('aria-checked', String(palette.id === activePaletteId));
+    const name = document.createElement('span');
+    name.className = 'palette-menu-item-name';
+    name.textContent = palette.name;
+    const count = document.createElement('span');
+    count.className = 'palette-menu-item-count';
+    count.textContent = String(palette.colors.length);
+    item.append(name, count);
+    item.addEventListener('click', () => {
+      activePaletteId = palette.id;
+      renderColorLibraryPanel();
+      colorLibraryGrid.scrollLeft = 0;
+    });
+    paletteMenuList.appendChild(item);
   });
-  colorLibrarySelect.classList.toggle('hidden', sorted.length <= 1);
 
   const active = colorPalettes.find((p) => p.id === activePaletteId);
+  paletteMenuName.textContent = active?.name ?? 'Palette';
+  paletteMenuButton.setAttribute('aria-label', `Palette: ${active?.name ?? 'none'}`);
   if (!active?.colors.length || editingPaletteId !== activePaletteId) editingPaletteId = null;
   const editingColors = editingPaletteId !== null;
   colorLibraryGrid.innerHTML = '';
   colorLibraryGrid.classList.toggle('editing', editingColors);
-  editColorsButton.classList.toggle('active', editingColors);
-  editColorsButton.setAttribute('aria-pressed', String(editingColors));
+  editColorsButton.setAttribute('aria-checked', String(editingColors));
   editColorsButton.disabled = !active?.colors.length;
   if (active && active.colors.length > 0) {
     // The built-in default palette can be trimmed but never emptied -
@@ -294,7 +305,7 @@ function renderColorLibraryPanel() {
   } else if (active) {
     const empty = document.createElement('p');
     empty.className = 'color-library-empty';
-    empty.textContent = 'No colors yet - add one from the color picker.';
+    empty.textContent = 'No colors yet - tap + to add the current color.';
     colorLibraryGrid.appendChild(empty);
   }
 
@@ -373,9 +384,27 @@ async function addCurrentColorToActivePalette(rgba) {
  */
 export function syncColorLibraryActiveSwatch(fgHex, isRainbow) {
   if (!colorLibraryGrid) return; // called before initColorLibrary() has run
+  let activeSwatch = null;
   colorLibraryGrid.querySelectorAll('.color-library-swatch').forEach((s) => {
-    s.classList.toggle('active', !isRainbow && s.dataset.hex === fgHex);
+    const isActive = !isRainbow && s.dataset.hex === fgHex;
+    s.classList.toggle('active', isActive);
+    s.setAttribute('aria-pressed', String(isActive));
+    if (isActive && !activeSwatch) activeSwatch = s;
   });
+  if (activeSwatch) scrollSwatchIntoView(activeSwatch);
+}
+
+/**
+ * Scrolls the bar sideways just enough to show `swatch` - by hand, not
+ * scrollIntoView, which would also scroll the page and the floating
+ * cards around it.
+ */
+function scrollSwatchIntoView(swatch) {
+  const grid = colorLibraryGrid;
+  const left = swatch.offsetLeft - grid.offsetLeft;
+  const right = left + swatch.offsetWidth;
+  if (left < grid.scrollLeft) grid.scrollLeft = left;
+  else if (right > grid.scrollLeft + grid.clientWidth) grid.scrollLeft = right - grid.clientWidth;
 }
 
 /**
@@ -407,10 +436,10 @@ export function setLibrarySequenceEnabled(enabled) {
 }
 
 export function initColorLibrary(root = document) {
-  colorLibraryPanel = root.querySelector('#color-library-panel');
-  colorLibraryHeader = root.querySelector('#color-library-header');
   colorLibraryGrid = root.querySelector('#color-library-grid');
-  colorLibrarySelect = root.querySelector('#color-library-select');
+  paletteMenuButton = root.querySelector('#palette-menu-button');
+  paletteMenuName = root.querySelector('#palette-menu-name');
+  paletteMenuList = root.querySelector('#palette-menu-list');
   deletePaletteButton = root.querySelector('#delete-palette-button');
   editColorsButton = root.querySelector('#edit-palette-colors-button');
   addCurrentColorButton = root.querySelector('#add-current-color-button');
@@ -424,16 +453,7 @@ export function initColorLibrary(root = document) {
   colorPickerAdd = root.querySelector('#color-picker-add');
   colorPickerGenerateRamp = root.querySelector('#color-picker-generate-ramp');
 
-  syncColorLibraryCollapse();
-  bindPanelHeaderCollapse(colorLibraryHeader, () => {
-    collapsed = !collapsed;
-    syncColorLibraryCollapse();
-  });
-
-  colorLibrarySelect.addEventListener('change', () => {
-    activePaletteId = colorLibrarySelect.value;
-    renderColorLibraryPanel();
-  });
+  initMenuButton(paletteMenuButton, root.querySelector('#palette-menu'));
 
   editColorsButton.addEventListener('click', () => setEditingColors(editingPaletteId === null));
 
@@ -459,7 +479,18 @@ export function initColorLibrary(root = document) {
     closeImportPreview(); // mutually exclusive with the import preview row
     newPaletteName.value = '';
     newPaletteRow.classList.remove('hidden');
-    newPaletteName.focus();
+    positionPanelBelow(newPaletteRow, paletteMenuButton);
+    // After the menu's own close, which returns focus to its button.
+    setTimeout(() => newPaletteName.focus());
+  });
+  newPaletteName.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') newPaletteSave.click();
+    if (e.key === 'Escape') newPaletteCancel.click();
+  });
+  document.addEventListener('pointerdown', (e) => {
+    if (newPaletteRow.classList.contains('hidden')) return;
+    if (newPaletteRow.contains(e.target) || paletteMenuButton.contains(e.target)) return;
+    newPaletteRow.classList.add('hidden');
   });
 
   newPaletteCancel.addEventListener('click', () => {
@@ -562,7 +593,7 @@ export function initColorLibrary(root = document) {
     importPreviewName.value = '';
     newPaletteRow.classList.add('hidden'); // mutually exclusive with the plain "+ New Palette" row
     importPreviewRow.classList.remove('hidden');
-    positionPanelBelow(importPreviewRow, importPaletteButton);
+    positionPanelBelow(importPreviewRow, paletteMenuButton);
     reExtractImportPreview();
   });
 
@@ -574,7 +605,7 @@ export function initColorLibrary(root = document) {
   document.addEventListener('pointerdown', (e) => {
     if (importPreviewRow.classList.contains('hidden')) return;
     if (importPreviewRow.contains(e.target)) return;
-    if (e.target === importPaletteButton || importPaletteButton.contains(e.target)) return;
+    if (paletteMenuButton.contains(e.target)) return;
     closeImportPreview();
   });
   document.addEventListener('keydown', (e) => {
@@ -653,7 +684,7 @@ export function initColorLibrary(root = document) {
   });
 
   libraryGenerateRampButton.addEventListener('click', () => {
-    openRampPreview(getColorPickerCurrentColor(), libraryGenerateRampButton);
+    openRampPreview(getColorPickerCurrentColor(), paletteMenuButton);
   });
 
   rampPreviewSteps.addEventListener('change', regenerateRampPreview);
@@ -668,9 +699,9 @@ export function initColorLibrary(root = document) {
     }
     closeRampPreview();
     await loadColorPalettes();
-    // The ramp lands at the end of the palette, often below the grid's
+    // The ramp lands at the end of the palette, often past the bar's
     // scrolled area - bring it into view so the Confirm visibly did something.
-    colorLibraryGrid.lastElementChild?.scrollIntoView({ block: 'nearest' });
+    colorLibraryGrid.scrollLeft = colorLibraryGrid.scrollWidth;
   });
 
   document.addEventListener('pointerdown', (e) => {
@@ -703,12 +734,6 @@ export function initColorLibrary(root = document) {
   let paletteLoaded = false;
 
   onWorkspaceReset(async () => {
-    // Before the await: the open/closed reset must land synchronously,
-    // so js/app.js's applyOpenCardDefaults() (run right after
-    // initWorkspace() returns) isn't undone once the first palette load
-    // resolves.
-    collapsed = false;
-    syncColorLibraryCollapse();
     if (!paletteLoaded) {
       paletteLoaded = true;
       await loadColorPalettes(); // async; renders the panel once palettes arrive

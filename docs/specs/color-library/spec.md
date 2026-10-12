@@ -3,26 +3,46 @@
 ## Purpose
 
 Lets a user build and reuse their own named collections of colors,
-persisted locally, beyond the fixed 16-swatch preset row and beyond a
-single session — the "saved palettes" half of custom color support that
-`2c2-color-panel` deferred.
+persisted locally, beyond a single session — the "saved palettes" half of
+custom color support that `2c2-color-panel` deferred. Since 2026-10-12 the
+active palette is shown in the colour bar at the bottom of the Workspace
+(it replaced both the fixed 16-swatch strip and the right-side Color
+Library card; those 16 colours live on as the "Pixi Basics" palette).
 
 ## Requirements
 
-### Requirement: Color Library panel
-The Workspace SHALL offer a "Color Library" panel in the right-sidebar,
-alongside Layers and Brushes, showing the active palette's colors as a
-scrollable swatch grid.
+### Requirement: Colour bar
+The Workspace SHALL show the active palette in a colour bar at the bottom,
+under the tool-options bar: a palette button (the palette's name and a
+chevron) first, then every colour of the active palette as a swatch on one
+row that scrolls sideways, then the Rainbow swatch and an "add current
+colour" (+) button. The swatch matching the current foreground colour SHALL
+be marked and scrolled into view. On a phone-width window the palette
+button SHALL show only its chevron (its name stays in its accessible
+label).
 
-#### Scenario: Panel shows the active palette's colors
-- **WHEN** the Color Library panel is open
-- **THEN** every color in the currently active palette is shown as a
-  swatch, scrollable if there are more than fit the visible area
+#### Scenario: Bar shows the active palette's colors
+- **WHEN** the Workspace is open
+- **THEN** every color in the currently active palette is a swatch in the
+  colour bar, scrolling sideways if there are more than fit
 
-#### Scenario: Clicking a library swatch sets the foreground color
-- **WHEN** the user taps a swatch in the Color Library panel
-- **THEN** that color becomes the current foreground draw color, the same
-  as tapping a preset palette swatch
+#### Scenario: Clicking a swatch sets the foreground color
+- **WHEN** the user taps a swatch in the colour bar
+- **THEN** that color becomes the current foreground draw color
+
+### Requirement: Palette menu
+The palette button SHALL open a menu listing every palette alphabetically
+with its colour count, the active one checked; choosing one makes it the
+active palette. Below the list the menu SHALL offer New Palette…, Import
+from Image…, Generate Ramp…, Edit Colors (checked while on), Standard
+Libraries… and Delete Palette. New Palette… asks for a name in a small
+popover by the palette button (Enter saves, Escape cancels); the import
+and ramp previews open there too.
+
+#### Scenario: Switching palettes
+- **WHEN** the user opens the palette menu and chooses Kit Kat
+- **THEN** the colour bar shows Kit Kat's colours and the button reads
+  "Kit Kat"
 
 ### Requirement: Named palettes
 Colors SHALL be organized into named palettes, not a single flat list.
@@ -42,7 +62,7 @@ requirement below), and naming/saving the result the same way.
   is seeded, not empty" requirement below
 
 ### Requirement: Import palette from image
-The Color Library panel SHALL offer an "Import" control that opens a
+The palette menu SHALL offer an "Import from Image" control that opens a
 file picker (`image/*`); choosing an image decodes it, downsamples it to
 a small fixed internal grid (a color-extraction step only, not shown to
 the user), and extracts a set of representative colors via clustering
@@ -183,7 +203,7 @@ click and no way to undo it.
 - **THEN** its delete control is disabled
 
 ### Requirement: Remove a single color from a palette
-The Color Library panel SHALL offer an "Edit colors" toggle that switches
+The palette menu SHALL offer an "Edit Colors" toggle that switches
 the swatch grid into an edit mode. In edit mode every swatch SHALL show a
 visible remove cue and SHALL be labelled as a remove action for assistive
 technology, and activating a swatch (click, tap, Apple Pencil tap, or
@@ -244,46 +264,14 @@ toast SHALL say so.
   restores that color to its exact position
 
 ### Requirement: Add the current color from anywhere
-The Color Library panel SHALL offer a button that adds the current
-Foreground color to the active palette, independent of the color-picker
-popover's own "Add to palette" button - a second, always-available path
-to the same action, on every platform, not gated behind opening the
-popover first.
+The colour bar SHALL end with a + button that adds the current Foreground
+color to the active palette, independent of the color-picker popover's own
+"Add to palette" button.
 
 #### Scenario: Adding the current color on any platform
-- **WHEN** the user clicks the Color Library panel's "add current color"
-  button
-- **THEN** the current Foreground color is added to the active palette,
-  the same as the popover's "Add to palette" button would do
-
-### Requirement: Color Library panel position in the right sidebar
-The Color Library panel SHALL be the topmost section of the right
-sidebar, above the Brushes panel (when shown) and the Layers panel.
-
-#### Scenario: Color Library renders above Brushes and Layers
-- **WHEN** the Workspace screen is open
-- **THEN** the Color Library panel appears above the Layers panel in the
-  right sidebar, and above the Brushes panel whenever Brushes is also
-  visible
-
-### Requirement: Color Library panel has a bounded height
-The Color Library panel's swatch grid area SHALL have a fixed maximum
-height, independent of the window's height, rather than stretching to
-fill all remaining vertical space in the sidebar. Swatches SHALL render
-small enough that multiple rows are visible within that bounded height.
-Content beyond the visible area SHALL scroll within the panel.
-
-#### Scenario: Panel height stays bounded on a tall window
-- **WHEN** the Workspace is open in a tall browser window with few
-  colors in the active palette
-- **THEN** the Color Library panel does not grow to fill the extra
-  vertical space; the Layers panel below it uses that space instead
-
-#### Scenario: Extra colors scroll within the panel
-- **WHEN** the active palette has more colors than fit within the
-  panel's bounded height
-- **THEN** the swatch grid scrolls independently to reveal them, without
-  growing the panel itself taller
+- **WHEN** the user taps the colour bar's + button
+- **THEN** the current Foreground color is added to the end of the active
+  palette
 
 ### Requirement: Generate color ramp
 The system SHALL offer a "Generate ramp" action that takes a source color
@@ -291,7 +279,7 @@ and a step count (3-9, default 5) and produces that many colors stepped
 from dark to light through the source hue, previewed before being added
 to the active palette. The action is available both from the color
 picker popover (for the color currently being edited) and from the
-Color Library panel header (for the current foreground color).
+palette menu (for the current foreground color).
 
 #### Scenario: Generating a ramp shows a preview before saving
 - **WHEN** the user picks a source color and step count and triggers
@@ -302,7 +290,7 @@ Color Library panel header (for the current foreground color).
 #### Scenario: Confirming adds all ramp colors to the active palette
 - **WHEN** the user confirms a generated ramp preview
 - **THEN** every color in the ramp is added to the active palette as an
-  ordinary swatch, and the Color Library panel refreshes to show them
+  ordinary swatch, and the colour bar scrolls to show them
 
 #### Scenario: Canceling discards the preview
 - **WHEN** the user cancels a generated ramp preview instead of confirming
@@ -318,23 +306,6 @@ Color Library panel header (for the current foreground color).
 - **THEN** the resulting colors are ordered from darkest to lightest, with
   the source color's hue recognizable across the sequence rather than the
   ramp desaturating to flat gray at either extreme
-
-### Requirement: Color Library panel collapse
-The user SHALL be able to collapse the Color Library panel down to just
-its header row (hiding the palette controls and swatch grid, but not the
-header itself) by clicking the panel header, and expand it again the
-same way.
-
-#### Scenario: Collapsing via the panel header
-- **WHEN** the user clicks the Color Library panel header
-- **THEN** the palette controls and swatch grid disappear, only the
-  header row remains, and the Layers panel below grows to use the freed
-  vertical space
-
-#### Scenario: Expanding via the panel header
-- **WHEN** the user clicks the header of a collapsed Color Library panel
-- **THEN** the palette controls and swatch grid reappear showing the
-  active palette, unaffected by having been collapsed
 
 ### Requirement: Standard libraries
 The user SHALL be able to open a Standard Libraries sheet listing the

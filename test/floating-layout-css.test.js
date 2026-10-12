@@ -263,10 +263,10 @@ describe('floating panel cards + mini-rail (5e)', () => {
     assert.deepEqual(docked.map((r) => r.selector), []);
   });
 
-  test('the glass lists name the rail and the three cards, not the whole sidebar', () => {
+  test('the glass lists name the rail and the cards, not the whole sidebar', () => {
     assert.doesNotMatch(css, /:is\([^)]*\.slot-panels[^)]*\)/);
     const glass = formaSelector('glass');
-    for (const part of ['.panel-rail', '.right-sidebar > .color-library-panel', '.right-sidebar > .brushes-panel', '.right-sidebar > .layers-panel']) {
+    for (const part of ['.panel-rail', '.right-sidebar > .brushes-panel', '.right-sidebar > .layers-panel']) {
       assert.ok(glass.includes(part), part);
     }
     assert.ok(!glass.includes('.right-sidebar,'), glass);
@@ -541,16 +541,30 @@ describe('Prefs sheet (5g)', () => {
   });
 });
 
-describe('Color Library popovers over the colour picker', () => {
-  // Generate ramp can be opened from the colour picker, which lifts the
-  // tool rail to z-index 25. The ramp popover lives in the right sidebar
-  // (z-index 20), so without its own lift it paints under the picker.
-  test('the right sidebar is lifted above the open picker while one of its popovers is open', () => {
-    const zOf = (r) => Number(/z-index:\s*(\d+)/.exec(r.body)?.[1]);
-    const picker = all.find((r) => r.selector.includes('.slot-tools:has(#color-picker-popover:not(.hidden))'));
-    const panels = all.find((r) => r.selector.includes('.slot-panels:has(.import-preview-panel:not(.hidden))'));
-    assert.ok(panels, 'missing .slot-panels lift rule');
-    assert.ok(zOf(panels) > zOf(picker));
-    assert.ok(zOf(panels) < 30, 'stays under the top bar (z-index 30)');
+describe('Color Library popovers', () => {
+  // Generate ramp opens from the colour picker too. The popovers sit at
+  // the workspace screen's top level, outside every slot, so no slot's
+  // stacking context can put them under the picker.
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+
+  // The class attributes of the elements enclosing `id`, outermost first.
+  function ancestorClasses(id) {
+    const stack = [];
+    const tag = /<(\/?)(div|aside|nav|section|main|header|dialog)\b([^>]*)>/g;
+    for (const m of html.matchAll(tag)) {
+      if (m[1]) { stack.pop(); continue; }
+      if (m[3].includes(`id="${id}"`)) return stack;
+      stack.push(/class="([^"]*)"/.exec(m[3])?.[1] ?? '');
+    }
+    return null;
+  }
+
+  test('the import, ramp and new-palette popovers and the palette menu are outside every slot', () => {
+    for (const id of ['import-preview-row', 'ramp-preview-row', 'new-palette-row', 'palette-menu']) {
+      const classes = ancestorClasses(id);
+      assert.ok(classes, `${id} found`);
+      assert.ok(classes.some((c) => c.includes('workspace-screen')), `${id} is on the workspace screen`);
+      assert.ok(!classes.some((c) => /\bslot-/.test(c)), `${id} is outside the slots: ${classes.join(' > ')}`);
+    }
   });
 });

@@ -3,9 +3,10 @@
 // always floating; embeds never load this).
 //
 // A card's open/closed state is the panel's existing collapsed state
-// (.collapsed on the card), never stored here: Colors forwards to its
-// header, Layers to the (hidden) top bar toggle, Brushes to
-// setBrushesCardOpen in js/workspace.js. Each rail button's state is read
+// (.collapsed on the card), never stored here: Layers forwards to the
+// (hidden) top bar toggle, Brushes to setBrushesCardOpen in
+// js/workspace.js. (Colours are no longer a card - they live in the
+// bottom colour bar, js/color-library-ui.js.) Each rail button's state is read
 // back from its card's class by a MutationObserver, so every path that
 // opens or closes a card shows up on the rail. Floating CSS turns
 // .collapsed into "not displayed".
@@ -79,21 +80,11 @@ export function applyOpenCardDefaults(pinned = ALL_PINNED, root = document) {
     const card = root.querySelector(`#${id}`);
     return card && !card.classList.contains('collapsed');
   };
-  if (!defaults.colors && isOpen('color-library-panel')) root.querySelector('#color-library-header')?.click();
   if (!defaults.layers && isOpen('layers-panel')) root.querySelector('#layers-panel-toggle')?.click();
   if (!defaults.brushes) brushesSetter?.(false);
 }
 
 const PANELS = [
-  {
-    card: 'color-library-panel',
-    label: 'Colors',
-    // Popovers that belong to this card; cancelled when it closes.
-    popovers: [
-      ['import-preview-row', 'import-preview-cancel'],
-      ['ramp-preview-row', 'ramp-preview-cancel'],
-    ],
-  },
   { card: 'brushes-panel', label: 'Brushes', unavailableLabel: 'Brushes (Brush tool)' },
   { card: 'layers-panel', label: 'Layers' },
 ];
@@ -175,16 +166,12 @@ export function initPanelRail({ root = document, setBrushesCardOpen, closeLayers
   // In the floating layout a card is open or closed, and the close button
   // is the one way to close it, so the role="button" headers stop being
   // tab stops (their pointer target is turned off in CSS).
-  for (const id of ['color-library-header', 'layers-panel-header']) {
+  for (const id of ['layers-panel-header']) {
     byId(id)?.setAttribute('tabindex', '-1');
   }
 
   function closeOwnedPopovers(panel) {
     if (panel.card === 'layers-panel') closeLayersOpacityPopover?.();
-    for (const [popoverId, cancelId] of panel.popovers ?? []) {
-      const popover = byId(popoverId);
-      if (popover && !popover.classList.contains('hidden')) byId(cancelId)?.click();
-    }
     // Brushes: setBrushesCardOpen(false) already closes the brush editor.
   }
 }

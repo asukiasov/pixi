@@ -456,9 +456,14 @@ Follow-ups after 5h:
   2026-10-12: Generate ramp fix, no hover/selected motion, Eyedropper
   returns to the previous tool, Ellipse tool, Duplicate layer + a Merge
   button, Brush cursor (Prefs). Design:
-  `docs/superpowers/specs/2026-10-12-small-tools-design.md`. The rest of
-  that feedback (palm rejection, view rotation, Layers/colour redesigns)
-  is triaged in `docs/feature-ideas/2026-10-12-ipad-feedback.md`.
+  `docs/superpowers/specs/2026-10-12-small-tools-design.md`.
+- ~~**Apple Pencil, Transform and view rotation**~~ — **done**
+  2026-10-12: palm rejection (Draw Only With Apple Pencil, Prefs), a
+  Transform popover (rotate/flip/align the layer or selection), and view
+  rotation (two-finger twist, trackpad, Zoom menu). Design:
+  `docs/superpowers/specs/2026-10-12-pencil-and-transform-design.md`. The
+  Layers/colour redesigns from the same feedback are still open in
+  `docs/feature-ideas/2026-10-12-ipad-feedback.md`.
 
 Status: in progress - 5a–5g, Customize Tools, the 5h switch-on, the
 embed mount fix, the home screen redesign and its theme setting done.

@@ -24,24 +24,15 @@ layer** (button, Cmd/Ctrl+J) plus a **Merge** button (merge was
 keyboard-only, so unreachable on iPad), and a **Brush cursor** with a
 Show Brush Cursor switch in Prefs.
 
-## Medium — Apple Pencil and canvas
+## Medium — Apple Pencil and canvas (done 2026-10-12)
 
-- **Palm rejection: ignore the hand while drawing with Pencil.** Today no
-  input filters on `pointerType`. Once a `pen` pointer has been seen,
-  ignore `touch` pointers for drawing (two-finger pinch/pan still works).
-  Procreate-style; probably on by default with a Prefs switch.
-- **Rotate the canvas while drawing** — two-finger rotate gesture (and a
-  reset), view-only: pixels don't rotate, only the view. Touches
-  `js/canvas-view.js`'s coordinate mapping, so pointer → pixel math must
-  invert the rotation. Different from Canvas Settings' existing
-  "rotate the image 90°".
-- **Rotate & flip panel** — rotate/flip the layer or selection
-  (90°/180°, horizontal/vertical). Canvas Settings already rotates the whole
-  canvas 90°; this is per layer/selection.
-- **Arrange & align panel** — align layer/selection content to the
-  canvas (left/centre/right, top/middle/bottom). Needs a decision on what
-  "object" means in a pixel editor (layer content bounds is the natural
-  answer).
+Built from `docs/superpowers/specs/2026-10-12-pencil-and-transform-design.md`:
+**palm rejection** (once the Pencil is used, only it draws; touches while
+it's down are ignored; two-finger zoom/pan still work; Prefs switch, on by
+default), a **Transform popover** in the top bar (rotate 90°/180°, flip,
+align to canvas - the selection if any, else the layer), and **view
+rotation** (two-finger twist, Safari trackpad, Zoom menu; snaps to right
+angles within 6°).
 
 ## Large — redesigns (need a brainstorm with references)
 

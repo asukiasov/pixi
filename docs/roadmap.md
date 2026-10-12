@@ -452,6 +452,13 @@ Follow-ups after 5h:
   Dark / Auto pill in the Gallery's top-right corner, sharing the
   Workspace's theme preference. Design:
   `docs/superpowers/specs/2026-10-04-home-theme-setting-design.md`.
+- ~~**iPad feedback, quick fixes and small tools**~~ — **done**
+  2026-10-12: Generate ramp fix, no hover/selected motion, Eyedropper
+  returns to the previous tool, Ellipse tool, Duplicate layer + a Merge
+  button, Brush cursor (Prefs). Design:
+  `docs/superpowers/specs/2026-10-12-small-tools-design.md`. The rest of
+  that feedback (palm rejection, view rotation, Layers/colour redesigns)
+  is triaged in `docs/feature-ideas/2026-10-12-ipad-feedback.md`.
 
 Status: in progress - 5a–5g, Customize Tools, the 5h switch-on, the
 embed mount fix, the home screen redesign and its theme setting done.

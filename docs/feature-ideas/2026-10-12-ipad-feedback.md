@@ -16,23 +16,13 @@ when it's picked up (CLAUDE.md's process).
 - **Colour picker → back to previous tool** — a successful Eyedropper pick
   re-selects the tool that was active before it.
 
-## Small — tools and layers
+## Small — tools and layers (done 2026-10-12)
 
-- **Circle / ellipse tool**, matching Rectangle (outline/fill toggle,
-  Shift for a perfect circle). The engine has filled-circle offsets for
-  the round brush tip (`lib/pixel-engine/engine.js` `circleOffsets`), but
-  no midpoint-ellipse outline yet. Add to the rail, shortcut (`O`?),
-  Customize Tools sheet.
-- **Duplicate layer** — not present. Engine method + a Layers panel action;
-  copies pixels, name ("Layer 1 copy"), opacity, blend mode, visibility.
-- **Layer merge** — *already exists*: mark layers in the Layers panel and
-  merge, or merge the active layer down (`js/layers-ui.js`). If it's hard
-  to find, that's a Layers panel redesign problem (below), not a missing
-  feature.
-- **Brush cursor in Prefs** — show the tool's footprint (pixel outline of
-  the current size) under the Pencil hover / mouse. A Prefs toggle
-  (`js/prefs.js`) plus a canvas-view overlay; on iPad it only shows while
-  the Pencil hovers (M2+ iPads).
+Built from `docs/superpowers/specs/2026-10-12-small-tools-design.md`:
+**Ellipse tool** (O, shares Rectangle's Filled and 1:1), **Duplicate
+layer** (button, Cmd/Ctrl+J) plus a **Merge** button (merge was
+keyboard-only, so unreachable on iPad), and a **Brush cursor** with a
+Show Brush Cursor switch in Prefs.
 
 ## Medium — Apple Pencil and canvas
 

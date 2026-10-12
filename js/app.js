@@ -123,6 +123,7 @@ function setPrefs(next) {
   applyPrefsToScreen(screens.workspace, prefs);
   applyRailTools(railToolsEl, prefs.railTools, toolOverflowButton);
   toolOverflow?.refresh();
+  canvasView?.setPencilOnly(prefs.pencilOnly);
 }
 const getPrefs = () => prefs;
 initPrefsSheet({ getPrefs, setPrefs });
@@ -174,6 +175,7 @@ function openWorkspace({ layerStack, projectId, projectName }) {
     canvasView = new CanvasView(canvasEl, containerEl, layerStack, {
       getClearInsets: () => measureClearInsets(screens.workspace, containerEl),
     });
+    canvasView.setPencilOnly(prefs.pencilOnly);
     canvasView.resetView();
     canvasView.render();
     // One-shot re-fit after the browser's first real paint: the very first

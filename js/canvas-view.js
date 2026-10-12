@@ -19,6 +19,8 @@ const TILE_OFFSETS = [
   [-1, 1], [0, 1], [1, 1],
 ];
 
+import { pointerDownAction } from './pointer-policy.js';
+
 export class CanvasView {
   #canvasEl;
   #containerEl;
@@ -31,7 +33,13 @@ export class CanvasView {
   #panX = 0;
   #panY = 0;
 
-  #pointers = new Map(); // pointerId -> { x, y }
+  #pointers = new Map(); // pointerId -> { x, y, type, gestureOnly }
+  // Palm rejection (js/pointer-policy.js): ignored pointers never enter
+  // #pointers, so they can't draw, pinch or cancel a stroke.
+  #pencilOnly = false;
+  #penSeen = false;
+  #penDownId = null;
+  #ignoredPointers = new Set();
   #drawing = false;
   #panMode = false; // Hand tool active - single-pointer drag pans instead of drawing
   #panning = false; // a pan drag is currently in progress
@@ -546,13 +554,42 @@ export class CanvasView {
     return { x, y };
   }
 
+  /** Draw Only With Apple Pencil (Prefs). Off restores the plain rules. */
+  setPencilOnly(enabled) {
+    this.#pencilOnly = enabled;
+  }
+
   #onPointerDown = (e) => {
+    this.#ignoredPointers.delete(e.pointerId); // ids can be reused
+    const action = pointerDownAction({
+      pointerType: e.pointerType,
+      pencilOnly: this.#pencilOnly,
+      penSeen: this.#penSeen,
+      penDown: this.#penDownId !== null,
+    });
+    if (action === 'ignore') {
+      // Captured too, so its pointerup arrives even off the canvas.
+      this.#canvasEl.setPointerCapture(e.pointerId);
+      this.#ignoredPointers.add(e.pointerId);
+      e.preventDefault();
+      return;
+    }
+    if (action === 'pen') {
+      this.#penSeen = true;
+      this.#penDownId = e.pointerId;
+      this.#dropTouchPointers();
+    }
+
     this.#canvasEl.setPointerCapture(e.pointerId);
-    this.#pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const gestureOnly = action === 'gesture';
+    this.#pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, type: e.pointerType, gestureOnly });
     this.#reportHover(e);
 
     if (this.#pointers.size === 1 && !this.#multiTouchActive) {
-      if (this.#panMode) {
+      // A finger in Pencil mode never draws; it can still pan with Hand.
+      if (gestureOnly && !this.#panMode) {
+        // waits for a second finger to pinch
+      } else if (this.#panMode) {
         this.#panning = true;
         this.#canvasEl.classList.add('panning');
       } else {
@@ -571,6 +608,26 @@ export class CanvasView {
     e.preventDefault();
   };
 
+  /**
+   * The Pencil just landed: any finger already down is a resting palm.
+   * It stops counting - mid-pinch or not - and stays ignored until lifted.
+   */
+  #dropTouchPointers() {
+    for (const [id, pointer] of this.#pointers) {
+      if (pointer.type !== 'touch') continue;
+      this.#pointers.delete(id);
+      this.#ignoredPointers.add(id);
+    }
+    if (this.#pointers.size === 0) {
+      this.#multiTouchActive = false;
+      this.#pinchMidpoint = null;
+      if (this.#panning) {
+        this.#panning = false;
+        this.#canvasEl.classList.remove('panning');
+      }
+    }
+  }
+
   /** Hover (or press) position for the brush cursor - null hides it. */
   #reportHover(e) {
     const show = e.pointerType !== 'touch' && this.#pointers.size <= 1 && !this.#multiTouchActive;
@@ -586,7 +643,7 @@ export class CanvasView {
     this.#reportHover(e);
     if (!this.#pointers.has(e.pointerId)) return;
     const prev = this.#pointers.get(e.pointerId);
-    this.#pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    this.#pointers.set(e.pointerId, { ...prev, x: e.clientX, y: e.clientY });
 
     if (this.#pointers.size === 1 && this.#panning) {
       // Hand tool: pan by the raw client-pixel delta, same math the
@@ -604,8 +661,10 @@ export class CanvasView {
   };
 
   #onPointerUp = (e) => {
+    if (this.#ignoredPointers.delete(e.pointerId)) return;
     if (!this.#pointers.has(e.pointerId)) return;
     this.#pointers.delete(e.pointerId);
+    if (e.pointerId === this.#penDownId) this.#penDownId = null;
 
     // A lifted Pencil leaves nothing under the cursor (a hover-capable
     // iPad reports the next hover move and shows it again); a mouse

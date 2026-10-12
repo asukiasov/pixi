@@ -943,9 +943,10 @@ SHALL be grouped under headings, in this order:
 - Layout: Tools Side (Left or Right) and Panels Side (Left or Right)
 - Open When a Project Opens: Colors, Brushes and Layers, each an on/off
   switch
-- Drawing: Hide Interface While Drawing and Show Brush Cursor, each an
-  on/off switch (Show Brush Cursor on by default; see the brush cursor
-  requirement in `pixel-drawing-engine`)
+- Drawing: Hide Interface While Drawing, Show Brush Cursor and Draw Only
+  With Apple Pencil, each an on/off switch (the last two on by default;
+  see the brush cursor and palm rejection requirements in
+  `pixel-drawing-engine`)
 
 Each control SHALL show the current preference when the sheet opens, and
 a change SHALL take effect immediately, with no separate save step.

@@ -1,6 +1,7 @@
 // Workspace preferences (5g-prefs): which side the tool rail and the
 // panels sit on, which panel cards a project opens with, whether the
-// interface hides while drawing, whether the brush cursor shows, and which tools the rail shows
+// interface hides while drawing, whether the brush cursor shows, whether only the Apple Pencil
+// draws (palm rejection, js/pointer-policy.js), and which tools the rail shows
 // (Customize Tools, js/rail-tools.js). Kept DOM-free so it's unit-testable (see
 // test/prefs.test.js); js/prefs-sheet.js is the Prefs sheet that edits
 // them. Standalone app only: wired from js/app.js, which Pixi.mount()
@@ -20,6 +21,7 @@ import { DEFAULT_RAIL_TOOLS, normalizeRailTools } from './rail-tools.js';
  *   pinned: { colors: boolean, brushes: boolean, layers: boolean },
  *   autoHide: boolean,
  *   brushCursor: boolean,
+ *   pencilOnly: boolean,
  *   railTools: string[],
  * }} Prefs
  */
@@ -40,6 +42,7 @@ export const DEFAULT_PREFS = Object.freeze({
   pinned: Object.freeze({ colors: true, brushes: true, layers: true }),
   autoHide: false,
   brushCursor: true,
+  pencilOnly: true,
   railTools: DEFAULT_RAIL_TOOLS,
 });
 
@@ -57,6 +60,7 @@ export function normalizePrefs(raw) {
     pinned,
     autoHide: typeof source.autoHide === 'boolean' ? source.autoHide : DEFAULT_PREFS.autoHide,
     brushCursor: typeof source.brushCursor === 'boolean' ? source.brushCursor : DEFAULT_PREFS.brushCursor,
+    pencilOnly: typeof source.pencilOnly === 'boolean' ? source.pencilOnly : DEFAULT_PREFS.pencilOnly,
     railTools: normalizeRailTools(source.railTools),
   };
 }

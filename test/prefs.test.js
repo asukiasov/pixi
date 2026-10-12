@@ -34,6 +34,7 @@ describe('normalizePrefs', () => {
       pinned: { colors: true, brushes: true, layers: true },
       autoHide: false,
       brushCursor: true,
+      pencilOnly: true,
       railTools: ['move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'hand', 'eyedropper'],
     });
   });
@@ -51,6 +52,8 @@ describe('normalizePrefs', () => {
     assert.equal(prefs.autoHide, false);
     assert.equal(normalizePrefs({ brushCursor: 'no' }).brushCursor, true);
     assert.equal(normalizePrefs({ brushCursor: false }).brushCursor, false);
+    assert.equal(normalizePrefs({ pencilOnly: 1 }).pencilOnly, true);
+    assert.equal(normalizePrefs({ pencilOnly: false }).pencilOnly, false);
   });
 
   test('both sides may be the same', () => {
@@ -88,7 +91,7 @@ describe('loadPrefs / savePrefs', () => {
 
   test('round trip', () => {
     const storage = fakeStorage();
-    const prefs = { toolsSide: 'right', panelsSide: 'left', pinned: { colors: false, brushes: true, layers: false }, autoHide: true, brushCursor: false, railTools: ['pencil', 'move'] };
+    const prefs = { toolsSide: 'right', panelsSide: 'left', pinned: { colors: false, brushes: true, layers: false }, autoHide: true, brushCursor: false, pencilOnly: false, railTools: ['pencil', 'move'] };
     savePrefs(storage, prefs);
     assert.equal(PREFS_STORAGE_KEY, 'pixi-prefs');
     assert.deepEqual(loadPrefs(storage), prefs);

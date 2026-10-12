@@ -253,6 +253,39 @@ intercepting these as native page gestures.
 - **WHEN** the user pinches with two fingers on the canvas
 - **THEN** the canvas view zooms in or out without drawing
 
+### Requirement: Draw only with Apple Pencil (palm rejection)
+While the Prefs' Draw Only With Apple Pencil switch is on (the default)
+and an Apple Pencil has touched the canvas in this session, only the
+Pencil SHALL draw. A touch that lands while the Pencil is down SHALL be
+ignored: it SHALL NOT draw, pan, zoom or cancel the stroke. Touches
+already down when the Pencil lands SHALL stop counting until lifted. A
+single finger SHALL NOT draw (it pans only with the Hand tool); two
+fingers SHALL still pinch-zoom and pan. Mouse input, devices that never
+use a Pencil, and the switch turned off SHALL keep the plain touch rules
+above.
+
+#### Scenario: Palm lands while drawing
+- **WHEN** the user draws with the Pencil and a palm touches the screen
+  mid-stroke
+- **THEN** the stroke continues and completes, and the view does not move
+
+#### Scenario: Palm was resting first
+- **WHEN** a palm is resting on the canvas and the Pencil then draws
+- **THEN** the Pencil draws normally and the palm has no effect
+
+#### Scenario: Finger after using the Pencil
+- **WHEN** the Pencil has been used and the user drags one finger on the
+  canvas
+- **THEN** nothing is drawn
+
+#### Scenario: Two-finger zoom still works
+- **WHEN** the Pencil has been used and the user pinches with two fingers
+- **THEN** the view zooms as before
+
+#### Scenario: No Pencil
+- **WHEN** no Apple Pencil has touched the canvas in this session
+- **THEN** a finger draws exactly as before
+
 ### Requirement: Brush cursor
 While a mouse or Apple Pencil hovers over the canvas or draws on it, the
 system SHALL outline exactly the pixels the next dab would paint, snapped

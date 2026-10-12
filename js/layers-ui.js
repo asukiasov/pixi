@@ -1,9 +1,10 @@
-// The Layers panel - add/delete/reorder/rename, visibility, blend mode,
-// layer opacity, background layer, reference image layer, merge layers.
-// LayerStack itself (lib/pixel-engine/layers.js) is untouched here -
-// add/delete/reorder/setVisibility/setOpacity/setBlendMode/mergeLayers/
-// mergeDown/addReferenceImageLayer/etc. are all already-public methods,
-// this module is purely the UI that calls them, via workspace.js's
+// The Layers panel, after Pixelmator Pro for iPad - rounded row cards
+// (thumbnail, name, detail line, visibility switch, ⋯ actions on the
+// active row), one level of groups with a disclosure chevron, drag to
+// reorder by each row's grip, Select mode for touch multi-select, and an
+// Opacity & Blend popover. Also the reference image layer's controls.
+// LayerStack (lib/pixel-engine/layers.js) does the work; this module is
+// purely the UI that calls it, via workspace.js's
 // getLayerStack/renderCanvas/commit/onWorkspaceReset/
 // bindPanelHeaderCollapse. workspace.js calls back into this module's
 // renderLayersPanel/clearLayerMarksAndRefresh/mergeMarkedOrActiveDown
@@ -17,6 +18,7 @@ import { BLEND_MODES, REFERENCE_MODES } from '../lib/pixel-engine/layers.js';
 import { decodeImageFile, fitImageToCanvas, UNREADABLE_IMAGE_MESSAGE } from './image-import.js';
 import { confirmDialog } from './confirm-dialog.js';
 import { showToast } from './toast.js';
+import { initMenuButton, menuKeyTarget } from './topbar-menu.js';
 
 /**
  * Pure state transition for Layers panel marking (multi-select) -
@@ -104,6 +106,29 @@ export function resolveLayerRename(raw, current) {
   return name && name !== current ? name : null;
 }
 
+/**
+ * Where a dragged layer lands, for LayerStack.moveLayerTo: `items` are
+ * the panel's rows top to bottom ({ kind: 'layer', id, groupId } or
+ * { kind: 'group', id, memberIds }), `gap` the drop position among them
+ * (0 = above the first), `stackIds` the layer ids bottom to top - all
+ * without the dragged layer. It goes just above the row under the gap;
+ * it joins a group when dropped under that group's header or between
+ * two of its members, and stays outside it above the header or under its
+ * last member. Null when there's nowhere to go (a group with no other
+ * members).
+ */
+export function dropTarget(items, gap, stackIds) {
+  const above = items[gap - 1];
+  const below = items[gap];
+  if (!below) return { toIndex: 0, groupId: null };
+  if (below.kind === 'group') {
+    const tops = below.memberIds.map((id) => stackIds.indexOf(id)).filter((i) => i !== -1);
+    return tops.length ? { toIndex: Math.max(...tops) + 1, groupId: null } : null;
+  }
+  const joins = below.groupId && ((above?.kind === 'group' && above.id === below.groupId) || (above?.kind === 'layer' && above.groupId === below.groupId));
+  return { toIndex: stackIds.indexOf(below.id) + 1, groupId: joins ? below.groupId : null };
+}
+
 // Last plain click on a layer name, for isDoubleTap - transient, and
 // deliberately not reset on re-render (that's the point).
 let lastNameTap = null;
@@ -134,6 +159,18 @@ let referenceImageSmoothing = true;
 
 let layersPanelVisible = true;
 
+// Select mode (header ⋯ > Select Layers): rows show checkboxes and a tap
+// marks instead of activating - the touch way to multi-select, alongside
+// Cmd/Ctrl- and Shift-click. Transient UI state.
+let selectMode = false;
+
+// What the Opacity & Blend popover is editing: { kind: 'layer' | 'group', id }.
+let propertiesTarget = null;
+
+// The rows as shown, top to bottom, rebuilt by every render - for drag
+// reorder (dropTarget) and focus restoring.
+let displayItems = [];
+
 // DOM refs, assigned once in initLayers() - single active instance, same
 // module-level-state pattern workspace.js itself uses (see that file's
 // own `root`/`state` comment).
@@ -142,14 +179,19 @@ let layersPanelHeader = null;
 let layersPanelToggle = null;
 let layersPanelList = null;
 let layersPanelBlendSelect = null;
-let layersPanelOpacityToggle = null;
-let layersPanelOpacityReadout = null;
 let layersPanelOpacitySlider = null;
 let layersPanelOpacityNumber = null;
 let layersPanelOpacityPopover = null;
 let addLayerButton = null;
 let addReferenceImageButton = null;
 let addReferenceImageInput = null;
+let selectBar = null;
+let selectCount = null;
+let selectGroupButton = null;
+let selectMergeButton = null;
+let layerMenu = null;
+
+const MAX_LAYERS = 8;
 
 function syncLayersCollapse() {
   const collapsed = !layersPanelVisible;
@@ -160,7 +202,7 @@ function syncLayersCollapse() {
 
 /**
  * Renders `layer`'s actual pixel content into a small canvas - a real
- * thumbnail preview, Photoshop-style, not a generic placeholder.
+ * thumbnail preview, not a generic placeholder.
  */
 function buildLayerThumbnailCanvas(layer) {
   const canvas = document.createElement('canvas');
@@ -176,19 +218,40 @@ function buildLayerThumbnailCanvas(layer) {
   return canvas;
 }
 
-/**
- * Syncs the panel-level Blend mode/Opacity toolbar to the currently
- * active layer - Photoshop-style, these controls edit whichever layer
- * is selected rather than living inline in every row.
- */
-function syncLayersPanelToolbar() {
-  const layer = getLayerStack().getActiveLayer();
-  if (!layer) return;
-  layersPanelBlendSelect.value = layer.blendMode;
-  const opacityPercent = Math.round(layer.opacity * 100);
-  layersPanelOpacitySlider.value = String(opacityPercent);
-  layersPanelOpacityNumber.value = String(opacityPercent);
-  layersPanelOpacityReadout.textContent = `${opacityPercent}%`;
+const blendLabel = (mode) => mode[0].toUpperCase() + mode.slice(1);
+
+/** The row's second line: what kind of layer, or its blend mode and opacity. */
+function layerDetail(layer) {
+  if (layer.isBackground) return 'Background';
+  if (layer.isReferenceImage) return layer.referenceMode === REFERENCE_MODES.ORIGINAL ? 'Reference · Original' : 'Reference · Pixelated';
+  return `${blendLabel(layer.blendMode)} · ${Math.round(layer.opacity * 100)}%`;
+}
+
+/** An on/off switch (a real checkbox with role="switch") for visibility. */
+function buildVisibilitySwitch(name, visible, onChange) {
+  const label = document.createElement('label');
+  label.className = 'layer-switch';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.setAttribute('role', 'switch');
+  input.checked = visible;
+  input.setAttribute('aria-label', `Show ${name}`);
+  input.addEventListener('change', () => onChange(input.checked));
+  const track = document.createElement('span');
+  track.className = 'layer-switch-track';
+  track.setAttribute('aria-hidden', 'true');
+  label.append(input, track);
+  return label;
+}
+
+function iconButton(className, icon, label) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `${className} icon-button`;
+  button.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">${icon}</span>`;
+  button.setAttribute('aria-label', label);
+  button.dataset.tooltip = label;
+  return button;
 }
 
 /**
@@ -206,21 +269,42 @@ export function renderLayersPanel() {
   const layers = layerStack.getLayers();
   const activeIndex = layerStack.getActiveIndex();
   layersPanelList.innerHTML = '';
+  layersPanelList.classList.toggle('selecting', selectMode);
+  displayItems = [];
 
-  // Topmost layer (end of the bottom-to-top array) listed first.
+  // Topmost layer (end of the bottom-to-top array) listed first; a group's
+  // row goes right above its topmost member, and its members are hidden
+  // while it's collapsed.
   for (let i = layers.length - 1; i >= 0; i--) {
     const layer = layers[i];
-    const isMarked = markedLayerIds.has(layer.id);
-    layersPanelList.appendChild(buildLayerRow(layer, i, i === activeIndex, isMarked, layers));
+    const group = layer.groupId ? layerStack.getGroup(layer.groupId) : null;
+    if (group && layers[i + 1]?.groupId !== group.id) {
+      const el = buildGroupRow(group, layerStack.groupMemberIndices(group.id));
+      layersPanelList.appendChild(el);
+      displayItems.push({ kind: 'group', id: group.id, memberIds: layerStack.groupMemberIndices(group.id).map((m) => layers[m].id), el });
+    }
+    if (group?.collapsed) continue;
+    const el = buildLayerRow(layer, i, i === activeIndex, markedLayerIds.has(layer.id), layers);
+    layersPanelList.appendChild(el);
+    displayItems.push({ kind: 'layer', id: layer.id, groupId: layer.groupId, el });
   }
 
-  addLayerButton.disabled = layers.length >= 8;
+  addLayerButton.disabled = layers.length >= MAX_LAYERS;
   // At most one reference image layer per canvas (also refused past the
-  // 8-layer cap, same as addLayerButton above) - LayerStack.
-  // addReferenceImageLayer enforces this too, this is just the
-  // matching disabled UI state.
-  addReferenceImageButton.disabled = layers.length >= 8 || layers.some((l) => l.isReferenceImage);
-  syncLayersPanelToolbar();
+  // 8-layer cap) - LayerStack.addReferenceImageLayer enforces this too,
+  // this is just the matching disabled UI state.
+  addReferenceImageButton.disabled = layers.length >= MAX_LAYERS || layers.some((l) => l.isReferenceImage);
+  syncSelectBar(layers);
+  if (propertiesTarget && !layersPanelOpacityPopover.classList.contains('hidden')) syncPropertiesPopover();
+}
+
+function syncSelectBar(layers) {
+  selectBar.classList.toggle('hidden', !selectMode);
+  if (!selectMode) return;
+  const marked = layers.filter((l) => markedLayerIds.has(l.id));
+  selectCount.textContent = `${marked.length} selected`;
+  selectGroupButton.disabled = !marked.length || marked.some((l) => l.groupId);
+  selectMergeButton.disabled = marked.length < 2;
 }
 
 /**
@@ -235,35 +319,55 @@ export function clearLayerMarksAndRefresh() {
   renderLayersPanel();
 }
 
+/** A rename or double-tap target on a row's name, shared by layers and groups. */
+function bindNameTaps(label, key, onRename) {
+  label.tabIndex = 0;
+  label.title = 'Double-click to rename';
+  label.setAttribute('aria-keyshortcuts', 'Enter F2');
+  label.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== 'F2') return;
+    e.preventDefault();
+    onRename({ restoreFocus: true });
+  });
+  return (e) => {
+    const tap = { layerId: key, time: e.timeStamp, x: e.clientX, y: e.clientY };
+    if (isDoubleTap(lastNameTap, tap)) {
+      lastNameTap = null;
+      onRename({});
+      return true;
+    }
+    lastNameTap = tap;
+    return false;
+  };
+}
+
 /**
- * A single compact row - thumbnail, visibility, name, and small
- * reorder/delete icons - Photoshop's own Layers panel row, adapted to
- * this app's tap-to-reorder and per-row delete icon. Blend mode/
- * Opacity are NOT here - see the panel-level toolbar/
- * syncLayersPanelToolbar. Every mutating handler here calls commit(),
- * which calls renderLayersPanel() directly - no separate
- * renderLayersPanel() call needed in most of them.
+ * One layer's row card: (Select mode's checkbox,) drag grip, thumbnail,
+ * name over a detail line, the reference image's own toggles, ⋯ on the
+ * active row, and the visibility switch. Every mutating handler calls
+ * commit(), which re-renders the panel.
  */
 function buildLayerRow(layer, index, isActive, isMarked, layers) {
   const layerStack = getLayerStack();
-  const layerCount = layers.length;
+  const locked = layer.isBackground || layer.isReferenceImage;
   const row = document.createElement('div');
-  row.className = 'layer-row' + (isActive ? ' active' : '') + (isMarked ? ' marked' : '');
+  row.className = 'layer-row' + (isActive ? ' active' : '') + (isMarked ? ' marked' : '') + (layer.groupId ? ' in-group' : '');
+  row.setAttribute('role', 'listitem');
   row.dataset.layerId = layer.id;
+
+  const nameLabel = document.createElement('span');
+  nameLabel.className = 'layer-name';
+  nameLabel.textContent = layer.name;
+  const nameTap = bindNameTaps(nameLabel, layer.id, (opts) => startRename(row, layer.name, (name) => {
+    const at = getLayerStack().getLayers().findIndex((l) => l.id === layer.id);
+    if (at !== -1) getLayerStack().renameLayer(at, name);
+  }, { ...opts, key: layer.id }));
+
   row.addEventListener('click', (e) => {
-    if (e.target.closest('button, input')) return;
+    if (e.target.closest('button, input, label')) return;
     const modified = e.metaKey || e.ctrlKey || e.shiftKey;
-    if (!modified && e.target.closest('.layer-name')) {
-      const tap = { layerId: layer.id, time: e.timeStamp, x: e.clientX, y: e.clientY };
-      if (isDoubleTap(lastNameTap, tap)) {
-        lastNameTap = null;
-        // This click already landed on the row the first click rendered
-        // (the layer is active), so rename in place - re-rendering here
-        // would destroy the input before it could take focus.
-        startLayerRename(row, layer);
-        return;
-      }
-      lastNameTap = tap;
+    if (!modified && !selectMode && e.target.closest('.layer-name')) {
+      if (nameTap(e)) return;
     } else {
       lastNameTap = null;
     }
@@ -272,229 +376,354 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
       lastClickedId: lastMarkClickedLayerId,
       clickedId: layer.id,
       layers,
-      metaOrCtrl: e.metaKey || e.ctrlKey,
+      // In Select mode a plain tap toggles, like Cmd/Ctrl-click.
+      metaOrCtrl: selectMode || e.metaKey || e.ctrlKey,
       shift: e.shiftKey,
     });
     markedLayerIds = marked;
     lastMarkClickedLayerId = lastClickedId;
-    if (!(e.metaKey || e.ctrlKey || e.shiftKey)) {
-      layerStack.setActiveLayer(index);
-    }
+    if (!selectMode && !modified) layerStack.setActiveLayer(index);
     renderLayersPanel(); // no commit - just a selection/mark change
   });
 
-  const visibilityButton = document.createElement('button');
-  visibilityButton.type = 'button';
-  visibilityButton.className = 'layer-visibility-toggle icon-button';
-  visibilityButton.innerHTML = `<span class="material-symbols-outlined">${layer.visible ? 'visibility' : 'visibility_off'}</span>`;
-  visibilityButton.dataset.tooltip = layer.visible ? 'Hide layer' : 'Show layer';
-  visibilityButton.setAttribute('aria-label', layer.visible ? 'Hide layer' : 'Show layer');
-  visibilityButton.addEventListener('click', () => {
-    layerStack.setVisibility(index, !layer.visible);
+  if (selectMode) {
+    const check = document.createElement('input');
+    check.type = 'checkbox';
+    check.className = 'layer-select-check';
+    check.checked = isMarked;
+    check.disabled = locked;
+    check.setAttribute('aria-label', `Select ${layer.name}`);
+    check.addEventListener('change', () => {
+      if (check.checked) markedLayerIds.add(layer.id);
+      else markedLayerIds.delete(layer.id);
+      renderLayersPanel();
+      layersPanelList.querySelector(`.layer-row[data-layer-id="${CSS.escape(String(layer.id))}"] .layer-select-check`)?.focus();
+    });
+    row.appendChild(check);
+  }
+
+  // Dots drawn in CSS, not an icon glyph: the grip must stay pressable
+  // even when the icon font fails to load (which hides glyphs).
+  const grip = document.createElement('span');
+  grip.className = 'layer-grip';
+  grip.setAttribute('aria-hidden', 'true');
+  if (layer.isBackground) grip.classList.add('disabled');
+  else grip.addEventListener('pointerdown', (e) => startDrag(e, layer, row));
+  row.appendChild(grip);
+
+  row.appendChild(buildLayerThumbnailCanvas(layer));
+
+  const text = document.createElement('div');
+  text.className = 'layer-text';
+  const detail = document.createElement('span');
+  detail.className = 'layer-detail';
+  detail.textContent = layerDetail(layer);
+  text.append(nameLabel, detail);
+  row.appendChild(text);
+
+  if (layer.isReferenceImage) row.append(...buildReferenceToggles(layer));
+
+  if (isActive && !selectMode) {
+    const more = iconButton('layer-more-button', 'more_horiz', `Actions for ${layer.name}`);
+    more.setAttribute('aria-haspopup', 'menu');
+    more.addEventListener('click', () => openContextMenu(more, layerMenuItems(layer, row)));
+    row.appendChild(more);
+  }
+
+  row.appendChild(buildVisibilitySwitch(layer.name, layer.visible, (visible) => {
+    const at = getLayerStack().getLayers().findIndex((l) => l.id === layer.id);
+    getLayerStack().setVisibility(at, visible);
     renderCanvas();
     commit();
+  }));
+  return row;
+}
+
+/** A group's row: chevron (collapse), folder, name over "N layers", ⋯ and its visibility switch. */
+function buildGroupRow(group, memberIndices) {
+  const layerStack = getLayerStack();
+  const row = document.createElement('div');
+  row.className = 'layer-group-row' + (group.collapsed ? ' collapsed' : '');
+  row.setAttribute('role', 'listitem');
+  row.dataset.groupId = group.id;
+
+  const chevron = iconButton('layer-group-chevron', 'chevron_right', `${group.collapsed ? 'Expand' : 'Collapse'} ${group.name}`);
+  chevron.setAttribute('aria-expanded', String(!group.collapsed));
+  chevron.addEventListener('click', () => {
+    // View state only - kept with the project, but not an undo step.
+    layerStack.setGroupCollapsed(group.id, !group.collapsed);
+    renderLayersPanel();
+    layersPanelList.querySelector(`.layer-group-row[data-group-id="${CSS.escape(group.id)}"] .layer-group-chevron`)?.focus();
   });
 
-  const thumbnail = buildLayerThumbnailCanvas(layer);
+  const folder = document.createElement('span');
+  folder.className = 'material-symbols-outlined layer-group-icon';
+  folder.textContent = 'folder';
+  folder.setAttribute('aria-hidden', 'true');
 
-  // Plain text, not a live input - a single click/tap selects the layer
-  // like anywhere else on the row; double-click/double-tap (see the row
-  // handler above) or Enter/F2 while focused renames.
   const nameLabel = document.createElement('span');
   nameLabel.className = 'layer-name';
-  nameLabel.textContent = layer.name;
-  nameLabel.tabIndex = 0;
-  nameLabel.title = 'Double-click to rename';
-  nameLabel.setAttribute('aria-keyshortcuts', 'Enter F2');
-  nameLabel.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== 'F2') return;
-    e.preventDefault();
-    startLayerRename(row, layer, { restoreFocus: true });
+  nameLabel.textContent = group.name;
+  const rename = (opts) => startRename(row, group.name, (name) => layerStack.renameGroup(group.id, name), { ...opts, key: group.id });
+  const nameTap = bindNameTaps(nameLabel, group.id, rename);
+  row.addEventListener('click', (e) => {
+    if (e.target.closest('button, input, label')) return;
+    if (e.target.closest('.layer-name')) nameTap(e);
   });
 
-  // Background layer is locked in stacking position; reference image
-  // layer is locked against becoming the active/drawing layer, being
-  // merged, and being marked for merge, but - unlike Background - is
-  // freely reorderable, so the user can move it below their drawing
-  // layers instead of it permanently sitting on top blocking the view.
-  // The lock icon reflects both kinds of restriction; only the reorder
-  // buttons below care about which kind.
-  let lockIcon = null;
-  if (layer.isBackground || layer.isReferenceImage) {
-    lockIcon = document.createElement('span');
-    lockIcon.className = 'material-symbols-outlined layer-lock-icon';
-    lockIcon.textContent = 'lock';
-    lockIcon.title = layer.isReferenceImage
-      ? 'Reference image layer - non-drawable, excluded from export, but can be reordered'
-      : 'Background layer - locked in position';
-  }
+  const text = document.createElement('div');
+  text.className = 'layer-text';
+  const detail = document.createElement('span');
+  detail.className = 'layer-detail';
+  const count = memberIndices.length;
+  detail.textContent = `Group · ${count} ${count === 1 ? 'layer' : 'layers'}` + (group.opacity < 1 ? ` · ${Math.round(group.opacity * 100)}%` : '');
+  text.append(nameLabel, detail);
 
-  // A swap moves both layers involved (see LayerStack.moveLayerUp/
-  // moveLayerDown's matching comment), so a button is disabled not
-  // just when its own layer is position-locked (Background only -
-  // reference image layers ARE reorderable), but also when the
-  // neighbor it would swap into is - either way the move is refused.
-  const isPositionLocked = (l) => l?.isBackground;
-  const upButton = document.createElement('button');
-  upButton.type = 'button';
-  upButton.className = 'layer-reorder-button';
-  upButton.innerHTML = '<span class="material-symbols-outlined">arrow_upward</span>';
-  upButton.dataset.tooltip = 'Move layer up';
-  upButton.setAttribute('aria-label', 'Move layer up');
-  upButton.disabled = index === layerCount - 1 || isPositionLocked(layer) || isPositionLocked(layers[index + 1]);
-  upButton.addEventListener('click', () => {
-    layerStack.moveLayerUp(index);
+  const more = iconButton('layer-more-button', 'more_horiz', `Actions for ${group.name}`);
+  more.setAttribute('aria-haspopup', 'menu');
+  more.addEventListener('click', () => openContextMenu(more, groupMenuItems(group, row, rename)));
+
+  row.append(chevron, folder, text, more, buildVisibilitySwitch(group.name, group.visible, (visible) => {
+    layerStack.setGroupVisibility(group.id, visible);
+    renderCanvas();
+    commit();
+  }));
+  return row;
+}
+
+/**
+ * Reference image layer controls: Pixelated/Original resolution, and (in
+ * Pixelated mode) smoothed vs blocky downscale. Unchanged behaviour from
+ * the earlier panel, now inline in its row card.
+ */
+function buildReferenceToggles(layer) {
+  const layerStack = getLayerStack();
+  const buttons = [];
+  // 'pixelated' fits the source to the canvas grid; 'original' shows it at
+  // its native resolution on screen, which needs the stored upload.
+  const canGoOriginal = layer.referenceMode === REFERENCE_MODES.ORIGINAL || !!layer.originalSourceBlob;
+  const modeToggle = iconButton('layer-reference-mode-toggle', layer.referenceMode === REFERENCE_MODES.ORIGINAL ? 'image' : 'grid_on', 'Toggle reference image resolution mode');
+  modeToggle.disabled = !canGoOriginal;
+  modeToggle.dataset.tooltip = modeToggle.disabled
+    ? 'Upload a new reference image to enable Original resolution mode'
+    : layer.referenceMode === REFERENCE_MODES.ORIGINAL
+      ? 'Original resolution - tap for Pixelated (fit to the canvas grid)'
+      : 'Pixelated (fit to the canvas grid) - tap for Original resolution';
+  modeToggle.addEventListener('click', () => {
+    layerStack.setReferenceMode(layer.referenceMode === REFERENCE_MODES.ORIGINAL ? REFERENCE_MODES.PIXELATED : REFERENCE_MODES.ORIGINAL);
     renderCanvas();
     commit();
   });
+  buttons.push(modeToggle);
 
-  const downButton = document.createElement('button');
-  downButton.type = 'button';
-  downButton.className = 'layer-reorder-button';
-  downButton.innerHTML = '<span class="material-symbols-outlined">arrow_downward</span>';
-  downButton.dataset.tooltip = 'Move layer down';
-  downButton.setAttribute('aria-label', 'Move layer down');
-  downButton.disabled = index === 0 || isPositionLocked(layer) || isPositionLocked(layers[index - 1]);
-  downButton.addEventListener('click', () => {
-    layerStack.moveLayerDown(index);
-    renderCanvas();
-    commit();
-  });
-
-  const deleteButton = document.createElement('button');
-  deleteButton.type = 'button';
-  deleteButton.className = 'layer-delete-button icon-button no-buzz';
-  deleteButton.innerHTML = '<span class="material-symbols-outlined">delete</span>';
-  deleteButton.dataset.tooltip = 'Delete layer';
-  deleteButton.setAttribute('aria-label', 'Delete layer');
-  deleteButton.disabled = layerCount <= 1;
-  deleteButton.addEventListener('click', async () => {
-    const proceed = await confirmDialog({
-      title: 'Delete layer?',
-      message: `Delete "${layer.name}"? This can't be undone.`,
-    });
-    if (!proceed) return;
-    layerStack.deleteLayer(index);
-    clearLayerMarks(); // remaining indices shifted; stale marks would misalign
-    if (layer.isReferenceImage) {
-      // Forget the stored source - a future upload adds a new reference
-      // layer from scratch and should default back to smoothed, not
-      // silently reuse a deleted layer's source/setting.
-      referenceImageSourceImage = null;
-      referenceImageSmoothing = true;
-    }
-    renderCanvas();
-    commit();
-  });
-
-  // Reference image layer only: toggles between 'pixelated' (fit/
-  // downscaled to this canvas's fixed pixel grid) and 'original'
-  // (rendered on-screen at the source image's own native resolution).
-  // The icon shows the CURRENT mode. Switching TO 'pixelated' always
-  // works; switching TO 'original' needs the layer's
-  // originalSourceBlob, so the button is disabled when that's
-  // unavailable.
-  let modeToggleButton = null;
-  if (layer.isReferenceImage) {
-    const canGoOriginal = layer.referenceMode === REFERENCE_MODES.ORIGINAL || !!layer.originalSourceBlob;
-    modeToggleButton = document.createElement('button');
-    modeToggleButton.type = 'button';
-    modeToggleButton.className = 'layer-reference-mode-toggle icon-button no-buzz';
-    modeToggleButton.innerHTML = `<span class="material-symbols-outlined">${layer.referenceMode === REFERENCE_MODES.ORIGINAL ? 'image' : 'grid_on'}</span>`;
-    modeToggleButton.disabled = !canGoOriginal;
-    modeToggleButton.dataset.tooltip = modeToggleButton.disabled
-      ? 'Upload a new reference image to enable Original resolution mode'
-      : layer.referenceMode === REFERENCE_MODES.ORIGINAL
-        ? 'Original resolution (un-pixelated) - click to switch to Pixelated (fit to canvas grid)'
-        : 'Pixelated (fit to canvas grid) - click to switch to Original resolution';
-    modeToggleButton.setAttribute('aria-label', 'Toggle reference image resolution mode');
-    modeToggleButton.addEventListener('click', () => {
-      layerStack.setReferenceMode(layer.referenceMode === REFERENCE_MODES.ORIGINAL ? REFERENCE_MODES.PIXELATED : REFERENCE_MODES.ORIGINAL);
-      renderCanvas();
-      commit();
-    });
-  }
-
-  // Reference image layer, Pixelated mode only: toggles whether the
-  // last upload's downscale was smoothed (blended average, can look
-  // flat/"vectorized" on a canvas this small) or nearest-neighbor
-  // (blockier, no blending). Hidden entirely (not just disabled) in
-  // Original mode. Disabled if the source image isn't held in memory
-  // (e.g. after a page reload) since there's nothing to re-fit from
-  // without re-uploading.
-  let smoothingToggleButton = null;
-  if (layer.isReferenceImage && layer.referenceMode === REFERENCE_MODES.PIXELATED) {
-    smoothingToggleButton = document.createElement('button');
-    smoothingToggleButton.type = 'button';
-    smoothingToggleButton.className = 'layer-reference-smoothing-toggle icon-button no-buzz';
-    smoothingToggleButton.innerHTML = `<span class="material-symbols-outlined">${referenceImageSmoothing ? 'blur_on' : 'blur_off'}</span>`;
-    smoothingToggleButton.disabled = !referenceImageSourceImage;
-    smoothingToggleButton.dataset.tooltip = smoothingToggleButton.disabled
+  // Pixelated only: smoothed (can look flat on a tiny canvas) or blocky.
+  // Needs the decoded source in memory, so not after a reload.
+  if (layer.referenceMode === REFERENCE_MODES.PIXELATED) {
+    const smoothing = iconButton('layer-reference-smoothing-toggle', referenceImageSmoothing ? 'blur_on' : 'blur_off', 'Toggle reference image smoothing');
+    smoothing.disabled = !referenceImageSourceImage;
+    smoothing.dataset.tooltip = smoothing.disabled
       ? 'Re-upload the reference image to change smoothing (not available after a page reload)'
       : referenceImageSmoothing
-        ? 'Smoothed downscale (may look flat/"vectorized") - click for a blockier, unsmoothed one'
-        : 'Blocky, unsmoothed downscale - click for a smoothed one';
-    smoothingToggleButton.setAttribute('aria-label', 'Toggle reference image smoothing');
-    smoothingToggleButton.addEventListener('click', () => {
+        ? 'Smoothed downscale - tap for a blockier, unsmoothed one'
+        : 'Blocky, unsmoothed downscale - tap for a smoothed one';
+    smoothing.addEventListener('click', () => {
       referenceImageSmoothing = !referenceImageSmoothing;
       const imageData = fitImageToCanvas(referenceImageSourceImage, layerStack.width, layerStack.height, referenceImageSmoothing);
       layerStack.updateReferenceImageData(imageData.data);
       renderCanvas();
       commit();
     });
+    buttons.push(smoothing);
   }
+  return buttons;
+}
 
-  const actions = document.createElement('div');
-  actions.className = 'layer-row-actions';
-  actions.append(upButton, downButton, deleteButton);
+/** Index of a layer by id right now (indices shift; ids don't). */
+const indexOf = (id) => getLayerStack().getLayers().findIndex((l) => l.id === id);
 
-  row.append(visibilityButton, thumbnail, nameLabel);
-  if (lockIcon) row.append(lockIcon);
-  if (modeToggleButton) row.append(modeToggleButton);
-  if (smoothingToggleButton) row.append(smoothingToggleButton);
-  row.append(actions);
-  return row;
+function layerMenuItems(layer, row) {
+  const layerStack = getLayerStack();
+  const layers = layerStack.getLayers();
+  const index = indexOf(layer.id);
+  const locked = layer.isBackground || layer.isReferenceImage;
+  const merge = mergeButtonState(layers, index, new Set());
+  return [
+    { label: 'Rename', icon: 'edit', onSelect: () => startRename(row, layer.name, (name) => layerStack.renameLayer(indexOf(layer.id), name), { restoreFocus: true, key: layer.id }) },
+    { label: 'Opacity & Blend…', icon: 'tune', disabled: layer.isReferenceImage, onSelect: (anchor) => openProperties({ kind: 'layer', id: layer.id }, anchor) },
+    { label: 'Duplicate', icon: 'content_copy', shortcut: '⌘J', disabled: layers.length >= MAX_LAYERS || layer.isReferenceImage, onSelect: duplicateActiveLayer },
+    { label: 'Merge Down', icon: 'merge', shortcut: '⌘E', disabled: merge.disabled, onSelect: () => apply(() => layerStack.mergeDown(indexOf(layer.id))) },
+    layer.groupId
+      ? { label: 'Remove from Group', icon: 'folder_off', onSelect: () => apply(() => removeFromGroup(layer.id)) }
+      : { label: 'Group', icon: 'create_new_folder', shortcut: '⌘G', disabled: locked, onSelect: () => apply(() => layerStack.groupLayers([indexOf(layer.id)])) },
+    { label: 'Move Up', icon: 'arrow_upward', disabled: layer.isBackground, onSelect: () => apply(() => layerStack.moveLayerUp(indexOf(layer.id))) },
+    { label: 'Move Down', icon: 'arrow_downward', disabled: layer.isBackground, onSelect: () => apply(() => layerStack.moveLayerDown(indexOf(layer.id))) },
+    'separator',
+    { label: 'Delete Layer', icon: 'delete', danger: true, disabled: layers.length <= 1, onSelect: () => deleteLayerWithConfirm(layer) },
+  ];
+}
+
+function groupMenuItems(group, row, rename) {
+  const layerStack = getLayerStack();
+  const memberCount = layerStack.groupMemberIndices(group.id).length;
+  return [
+    { label: 'Rename', icon: 'edit', onSelect: () => rename({ restoreFocus: true }) },
+    { label: 'Opacity…', icon: 'tune', onSelect: (anchor) => openProperties({ kind: 'group', id: group.id }, anchor) },
+    { label: 'Ungroup', icon: 'folder_off', onSelect: () => apply(() => (layerStack.ungroup(group.id), true)) },
+    { label: 'Move Group Up', icon: 'arrow_upward', onSelect: () => apply(() => layerStack.moveGroup(group.id, 1)) },
+    { label: 'Move Group Down', icon: 'arrow_downward', onSelect: () => apply(() => layerStack.moveGroup(group.id, -1)) },
+    'separator',
+    {
+      label: 'Delete Group',
+      icon: 'delete',
+      danger: true,
+      disabled: memberCount >= layerStack.getLayers().length,
+      onSelect: async () => {
+        const proceed = await confirmDialog({
+          title: 'Delete group?',
+          message: `Delete "${group.name}" and its ${memberCount} ${memberCount === 1 ? 'layer' : 'layers'}? You can undo this.`,
+        });
+        if (proceed) apply(() => layerStack.deleteGroup(group.id));
+      },
+    },
+  ];
+}
+
+/** Runs a LayerStack change; on success, clears marks, repaints and commits (one undo step). */
+function apply(change) {
+  if (!change()) return;
+  clearLayerMarks(); // indices shifted; stale marks would misalign
+  renderCanvas();
+  commit();
 }
 
 /**
- * Swaps `row`'s .layer-name label for a focused, fully selected text
- * input. Enter/blur commits (via resolveLayerRename - empty/unchanged
- * names commit nothing), Escape cancels; either way the panel re-renders
- * back to the plain label. `done` guards the blur that a commit's own
- * re-render fires on the detached input. If something else re-renders
- * the panel mid-edit (e.g. Cmd+Z), the input is gone and the edit is
- * dropped, same as Escape - and the layer is looked up by id at commit
- * time, never by the index it had when the row was built. With
- * `restoreFocus` (a keyboard-started rename), focus returns to the
- * layer's name afterwards instead of falling back to <body>.
+ * Takes a layer out of its group: in place when it's the top or bottom
+ * member, otherwise just above the group, so the group stays contiguous.
  */
-function startLayerRename(row, layer, { restoreFocus = false } = {}) {
+function removeFromGroup(layerId) {
+  const layerStack = getLayerStack();
+  const index = indexOf(layerId);
+  if (layerStack.moveLayerTo(index, index, null)) return true;
+  const groupId = layerStack.getLayers()[index].groupId;
+  const others = layerStack.groupMemberIndices(groupId).filter((i) => i !== index);
+  const top = Math.max(...others);
+  // `top` counts the layer itself when it's below top; moveLayerTo's index excludes it.
+  return layerStack.moveLayerTo(index, top, null);
+}
+
+async function deleteLayerWithConfirm(layer) {
+  const proceed = await confirmDialog({
+    title: 'Delete layer?',
+    message: `Delete "${layer.name}"? You can undo this.`,
+  });
+  if (!proceed) return;
+  const layerStack = getLayerStack();
+  layerStack.deleteLayer(indexOf(layer.id));
+  clearLayerMarks(); // remaining indices shifted; stale marks would misalign
+  if (layer.isReferenceImage) {
+    // Forget the stored source - a future upload adds a new reference
+    // layer from scratch and should default back to smoothed.
+    referenceImageSourceImage = null;
+    referenceImageSmoothing = true;
+  }
+  renderCanvas();
+  commit();
+}
+
+/**
+ * Shows #layer-menu filled with `items` beside `anchor` (a row's ⋯).
+ * Items: { label, icon, shortcut?, disabled?, danger?, onSelect(anchor) }
+ * or 'separator'. Arrow keys move, Escape closes back to the anchor, an
+ * outside press closes it. One menu, rebuilt per open, so nothing piles
+ * up listeners on re-rendered rows.
+ */
+function openContextMenu(anchor, items) {
+  layerMenu.innerHTML = '';
+  for (const item of items) {
+    if (item === 'separator') {
+      const sep = document.createElement('div');
+      sep.className = 'topbar-menu-separator';
+      sep.setAttribute('role', 'separator');
+      layerMenu.appendChild(sep);
+      continue;
+    }
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'topbar-menu-item' + (item.danger ? ' topbar-menu-item-danger' : '');
+    button.setAttribute('role', 'menuitem');
+    button.disabled = !!item.disabled;
+    button.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">${item.icon}</span>`;
+    button.append(item.label);
+    if (item.shortcut) {
+      const kbd = document.createElement('kbd');
+      kbd.className = 'topbar-menu-shortcut';
+      kbd.textContent = item.shortcut;
+      button.appendChild(kbd);
+    }
+    button.addEventListener('click', () => {
+      closeContextMenu({ restoreFocus: false });
+      item.onSelect(anchor);
+    });
+    layerMenu.appendChild(button);
+  }
+  layerMenu.classList.remove('hidden');
+  layerMenu.anchor = anchor;
+  anchor.setAttribute('aria-expanded', 'true');
+  const rect = anchor.getBoundingClientRect();
+  const menuRect = layerMenu.getBoundingClientRect();
+  const margin = 8;
+  // Toward the canvas (the card's start side) when there's room, else below.
+  let left = rect.left - menuRect.width - margin;
+  if (left < margin) left = Math.min(rect.right + margin, window.innerWidth - menuRect.width - margin);
+  const top = Math.max(margin, Math.min(rect.top, window.innerHeight - menuRect.height - margin));
+  layerMenu.style.left = `${left}px`;
+  layerMenu.style.top = `${top}px`;
+  layerMenu.querySelector('[role="menuitem"]:not(:disabled)')?.focus();
+}
+
+function closeContextMenu({ restoreFocus = true } = {}) {
+  if (layerMenu.classList.contains('hidden')) return;
+  layerMenu.classList.add('hidden');
+  layerMenu.anchor?.setAttribute('aria-expanded', 'false');
+  if (restoreFocus && layerMenu.anchor?.isConnected) layerMenu.anchor.focus();
+  layerMenu.anchor = null;
+}
+
+/**
+ * Swaps a row's name label for a focused, selected text input. Enter/
+ * blur commits through `save(name)` (via resolveLayerRename - empty or
+ * unchanged names commit nothing), Escape cancels; either way the panel
+ * re-renders. `done` guards the blur a commit's own re-render fires on
+ * the detached input. If something else re-renders the panel mid-edit
+ * (e.g. Cmd+Z) the edit is dropped, same as Escape. With `restoreFocus`
+ * (a keyboard-started rename), focus returns to the name afterwards.
+ */
+function startRename(row, current, save, { restoreFocus = false, key } = {}) {
   const label = row.querySelector('.layer-name');
-  if (!label) return;
+  if (!label || !label.isConnected) return;
   const input = document.createElement('input');
   input.type = 'text';
   input.className = 'layer-name-input';
-  input.value = layer.name;
-  input.setAttribute('aria-label', 'Layer name');
+  input.value = current;
+  input.setAttribute('aria-label', 'Name');
   input.autocomplete = 'off';
   input.spellcheck = false;
 
   let done = false;
-  const finish = (save) => {
+  const finish = (commitIt) => {
     if (done) return;
     done = true;
     if (!input.isConnected) return; // panel re-rendered under the edit
-    const layerStack = getLayerStack();
-    const index = layerStack.getLayers().findIndex((l) => l.id === layer.id);
-    const name = save && index !== -1 ? resolveLayerRename(input.value, layer.name) : null;
+    const name = commitIt ? resolveLayerRename(input.value, current) : null;
     if (name) {
-      layerStack.renameLayer(index, name);
+      save(name);
       commit(); // re-renders the panel
     } else {
       renderLayersPanel();
     }
     if (restoreFocus) {
-      layersPanelList.querySelector(`.layer-row[data-layer-id="${CSS.escape(String(layer.id))}"] .layer-name`)?.focus();
+      const selector = `[data-layer-id="${CSS.escape(String(key))}"] .layer-name, [data-group-id="${CSS.escape(String(key))}"] .layer-name`;
+      layersPanelList.querySelector(selector)?.focus();
     }
   };
   input.addEventListener('keydown', (e) => {
@@ -515,42 +744,144 @@ function startLayerRename(row, layer, { restoreFocus = false } = {}) {
 }
 
 /**
- * Positions and shows #layers-panel-opacity-popover anchored below the
- * Layers toolbar row (#layers-panel-opacity-toggle) - clamp-to-viewport
- * approach, opening below rather than to the side since the toggle
- * sits inside the right sidebar's narrow column.
+ * Drag a row by its grip to reorder (and to move it into or out of a
+ * group). The row follows the pointer; a line shows where it will land;
+ * dropTarget + LayerStack.moveLayerTo decide and validate the move.
  */
-function openLayersOpacityPopover() {
+function startDrag(e, layer, row) {
+  if (selectMode) return;
+  e.preventDefault();
+  const grip = e.currentTarget;
+  grip.setPointerCapture?.(e.pointerId);
+  const items = displayItems.filter((it) => !(it.kind === 'layer' && it.id === layer.id));
+  const mids = items.map((it) => {
+    const r = it.el.getBoundingClientRect();
+    return r.top + r.height / 2;
+  });
+  const listRect = layersPanelList.getBoundingClientRect();
+  const startY = e.clientY;
+  const indicator = document.createElement('div');
+  indicator.className = 'layer-drop-indicator';
+  layersPanelList.appendChild(indicator);
+  row.classList.add('dragging');
+  let gap = null;
+
+  const stackIds = () => getLayerStack().getLayers().map((l) => l.id).filter((id) => id !== layer.id);
+
+  const move = (ev) => {
+    row.style.transform = `translateY(${ev.clientY - startY}px)`;
+    gap = mids.filter((m) => m < ev.clientY).length;
+    const target = dropTarget(items, gap, stackIds());
+    const ref = items[gap]?.el ?? items[items.length - 1]?.el;
+    const refRect = ref?.getBoundingClientRect();
+    const y = !refRect ? 0 : items[gap] ? refRect.top - listRect.top - 2 : refRect.bottom - listRect.top + 2;
+    indicator.style.top = `${y + layersPanelList.scrollTop}px`;
+    indicator.classList.toggle('in-group', !!target?.groupId);
+  };
+  const end = (ev) => {
+    grip.removeEventListener('pointermove', move);
+    grip.removeEventListener('pointerup', end);
+    grip.removeEventListener('pointercancel', end);
+    indicator.remove();
+    row.classList.remove('dragging');
+    row.style.transform = '';
+    if (ev.type === 'pointercancel' || gap === null) return;
+    const target = dropTarget(items, gap, stackIds());
+    if (target) apply(() => getLayerStack().moveLayerTo(indexOf(layer.id), target.toIndex, target.groupId));
+  };
+  grip.addEventListener('pointermove', move);
+  grip.addEventListener('pointerup', end);
+  grip.addEventListener('pointercancel', end);
+}
+
+/** Fills the Opacity & Blend popover from its target (a layer or a group). */
+function syncPropertiesPopover() {
+  const layerStack = getLayerStack();
+  const title = layersPanelOpacityPopover.querySelector('#layer-properties-title');
+  const blendRow = layersPanelOpacityPopover.querySelector('#layer-properties-blend-row');
+  if (propertiesTarget.kind === 'group') {
+    const group = layerStack.getGroup(propertiesTarget.id);
+    if (!group) return closeLayersOpacityPopover();
+    title.textContent = group.name;
+    blendRow.hidden = true;
+    setOpacityFields(Math.round(group.opacity * 100));
+  } else {
+    const layer = layerStack.getLayers()[indexOf(propertiesTarget.id)];
+    if (!layer) return closeLayersOpacityPopover();
+    title.textContent = layer.name;
+    blendRow.hidden = false;
+    layersPanelBlendSelect.value = layer.blendMode;
+    setOpacityFields(Math.round(layer.opacity * 100));
+  }
+}
+
+function setOpacityFields(percent) {
+  layersPanelOpacitySlider.value = String(percent);
+  layersPanelOpacityNumber.value = String(percent);
+}
+
+/** Opens Opacity & Blend for `target`, beside `anchor`, kept on screen. */
+function openProperties(target, anchor) {
+  propertiesTarget = target;
+  syncPropertiesPopover();
   layersPanelOpacityPopover.classList.remove('hidden'); // unhide before measuring
-  const rect = layersPanelOpacityToggle.getBoundingClientRect();
+  const rect = (anchor?.isConnected ? anchor : layersPanel).getBoundingClientRect();
   const popRect = layersPanelOpacityPopover.getBoundingClientRect();
   const margin = 8;
-
-  let left = rect.right - popRect.width;
-  left = Math.max(margin, Math.min(left, window.innerWidth - popRect.width - margin));
-
-  let top = rect.bottom + 6;
-  top = Math.max(margin, Math.min(top, window.innerHeight - popRect.height - margin));
-
+  let left = rect.left - popRect.width - margin;
+  if (left < margin) left = Math.min(rect.right + margin, window.innerWidth - popRect.width - margin);
+  const top = Math.max(margin, Math.min(rect.top, window.innerHeight - popRect.height - margin));
   layersPanelOpacityPopover.style.left = `${left}px`;
   layersPanelOpacityPopover.style.top = `${top}px`;
-  layersPanelOpacityNumber.focus();
+  layersPanelOpacitySlider.focus();
 }
 
 export function closeLayersOpacityPopover() {
-  layersPanelOpacityPopover.classList.add('hidden');
+  layersPanelOpacityPopover?.classList.add('hidden');
+  propertiesTarget = null;
 }
 
 /**
- * Cmd/Ctrl+E: merges the marked set (2+ layers) if one exists,
- * otherwise merges the active layer down into the layer directly
- * below it. Marks are always cleared afterward, win or no-op, so a
- * merge attempt never leaves stale marks referring to layers that no
- * longer exist in their marked positions. Only a successful merge
- * re-renders/commits - the no-op paths (bottom-most active layer,
- * single-layer stack, Background layer involved) leave the stack and
- * undo history untouched. Called directly by workspace.js's Cmd/Ctrl+E
- * keydown handler.
+ * What the Merge button would do right now - the same choice
+ * mergeMarkedOrActiveDown makes: the marked set when 2+ layers are
+ * marked (marking already refuses locked layers), else the active layer
+ * down, refused for the bottom layer or when either layer is the
+ * Background/reference image layer (LayerStack.mergeDown's own rules).
+ */
+export function mergeButtonState(layers, activeIndex, markedIds) {
+  const markedCount = layers.filter((l) => markedIds.has(l.id)).length;
+  if (markedCount >= 2) return { disabled: false, label: `Merge ${markedCount} layers` };
+  const locked = (l) => !l || l.isBackground || l.isReferenceImage;
+  const disabled = activeIndex <= 0 || locked(layers[activeIndex]) || locked(layers[activeIndex - 1]);
+  return { disabled, label: 'Merge down' };
+}
+
+/**
+ * Duplicates the active layer (LayerStack.duplicateLayer) - the row menu's
+ * Duplicate and workspace.js's Cmd/Ctrl+J.
+ */
+export function duplicateActiveLayer() {
+  const layerStack = getLayerStack();
+  apply(() => layerStack.duplicateLayer(layerStack.getActiveIndex()));
+}
+
+/**
+ * Cmd/Ctrl+G and Select mode's Group: groups the marked layers (when
+ * any are marked), otherwise the active layer.
+ */
+export function groupMarkedOrActive() {
+  const layerStack = getLayerStack();
+  const layers = layerStack.getLayers();
+  const marked = layers.map((l, i) => (markedLayerIds.has(l.id) ? i : -1)).filter((i) => i !== -1);
+  apply(() => layerStack.groupLayers(marked.length ? marked : [layerStack.getActiveIndex()]));
+}
+
+/**
+ * Cmd/Ctrl+E and Select mode's Merge: merges the marked set (2+ layers)
+ * if one exists, otherwise merges the active layer down into the layer
+ * directly below it. Marks are always cleared afterward, win or no-op.
+ * Only a successful merge re-renders/commits - the no-op paths leave the
+ * stack and undo history untouched.
  */
 export function mergeMarkedOrActiveDown() {
   const layerStack = getLayerStack();
@@ -565,10 +896,18 @@ export function mergeMarkedOrActiveDown() {
       : layerStack.mergeDown(layerStack.getActiveIndex());
 
   clearLayerMarks();
-  if (!merged) return;
-
+  if (!merged) {
+    renderLayersPanel();
+    return;
+  }
   renderCanvas();
   commit();
+}
+
+function setSelectMode(on) {
+  selectMode = on;
+  clearLayerMarks();
+  renderLayersPanel();
 }
 
 /** Wires the Layers panel's DOM once - see workspace.js's own bindDomOnce for the analogous pattern. */
@@ -578,14 +917,17 @@ export function initLayers(root = document) {
   layersPanelToggle = root.querySelector('#layers-panel-toggle');
   layersPanelList = root.querySelector('#layers-panel-list');
   layersPanelBlendSelect = root.querySelector('#layers-panel-blend-select');
-  layersPanelOpacityToggle = root.querySelector('#layers-panel-opacity-toggle');
-  layersPanelOpacityReadout = root.querySelector('#layers-panel-opacity-readout');
   layersPanelOpacitySlider = root.querySelector('#layers-panel-opacity-slider');
   layersPanelOpacityNumber = root.querySelector('#layers-panel-opacity-number');
   layersPanelOpacityPopover = root.querySelector('#layers-panel-opacity-popover');
   addLayerButton = root.querySelector('#add-layer-button');
   addReferenceImageButton = root.querySelector('#add-reference-image-button');
   addReferenceImageInput = root.querySelector('#add-reference-image-input');
+  selectBar = root.querySelector('#layers-select-bar');
+  selectCount = root.querySelector('#layers-select-count');
+  selectGroupButton = root.querySelector('#layers-select-group');
+  selectMergeButton = root.querySelector('#layers-select-merge');
+  layerMenu = root.querySelector('#layer-menu');
 
   syncLayersCollapse();
   layersPanelToggle.addEventListener('click', () => {
@@ -597,79 +939,99 @@ export function initLayers(root = document) {
     syncLayersCollapse();
   });
 
-  // Layers panel toolbar (Blend mode + Opacity) - edits whichever layer
-  // is active, Photoshop-style, rather than living inline in every row.
+  // Header ⋯: Select Layers, Add Reference Image….
+  initMenuButton(root.querySelector('#layers-panel-menu-button'), root.querySelector('#layers-panel-menu'));
+  root.querySelector('#layers-select-mode-button').addEventListener('click', () => setSelectMode(true));
+  root.querySelector('#layers-select-done').addEventListener('click', () => setSelectMode(false));
+  selectGroupButton.addEventListener('click', () => {
+    groupMarkedOrActive();
+    setSelectMode(false);
+  });
+  selectMergeButton.addEventListener('click', () => {
+    mergeMarkedOrActiveDown();
+    setSelectMode(false);
+  });
+
+  // Row/group ⋯ menu: keyboard and outside-press handling for the one
+  // shared #layer-menu.
+  layerMenu.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      closeContextMenu();
+      return;
+    }
+    if (e.key === 'Tab') {
+      closeContextMenu({ restoreFocus: false });
+      return;
+    }
+    const items = [...layerMenu.querySelectorAll('[role="menuitem"]:not(:disabled)')];
+    const current = items.indexOf(document.activeElement);
+    const next = menuKeyTarget(e.key, current, items.length);
+    if (next !== current) {
+      e.preventDefault();
+      items[next]?.focus();
+    }
+  });
+  document.addEventListener('pointerdown', (e) => {
+    if (layerMenu.classList.contains('hidden')) return;
+    if (layerMenu.contains(e.target) || layerMenu.anchor?.contains(e.target)) return;
+    closeContextMenu({ restoreFocus: false });
+  });
+
+  // Opacity & Blend: header tune button = the active layer.
+  root.querySelector('#layers-properties-button').addEventListener('click', (e) => {
+    const layer = getLayerStack().getActiveLayer();
+    if (!layersPanelOpacityPopover.classList.contains('hidden')) {
+      closeLayersOpacityPopover();
+      return;
+    }
+    openProperties({ kind: 'layer', id: layer.id }, e.currentTarget);
+  });
   for (const mode of BLEND_MODES) {
     const option = document.createElement('option');
     option.value = mode;
-    option.textContent = mode[0].toUpperCase() + mode.slice(1);
+    option.textContent = blendLabel(mode);
     layersPanelBlendSelect.appendChild(option);
   }
   layersPanelBlendSelect.addEventListener('change', () => {
-    const layerStack = getLayerStack();
-    layerStack.setBlendMode(layerStack.getActiveIndex(), layersPanelBlendSelect.value);
+    if (propertiesTarget?.kind !== 'layer') return;
+    getLayerStack().setBlendMode(indexOf(propertiesTarget.id), layersPanelBlendSelect.value);
     renderCanvas();
     commit();
   });
 
-  function applyLayerOpacity(value, { commitChange } = {}) {
+  function applyOpacity(value, { commitChange } = {}) {
+    if (!propertiesTarget) return;
     const clamped = Math.max(0, Math.min(100, value));
     const layerStack = getLayerStack();
-    // Live-update the canvas while dragging/typing, but don't rebuild
-    // the panel (that would fight an in-progress edit) or commit every
-    // tick - only on the final value (slider "change", number "change").
-    layerStack.setOpacity(layerStack.getActiveIndex(), clamped / 100);
-    layersPanelOpacityReadout.textContent = `${clamped}%`;
-    layersPanelOpacitySlider.value = String(clamped);
-    layersPanelOpacityNumber.value = String(clamped);
+    // Live while dragging/typing; commit only the final value.
+    if (propertiesTarget.kind === 'group') layerStack.setGroupOpacity(propertiesTarget.id, clamped / 100);
+    else layerStack.setOpacity(indexOf(propertiesTarget.id), clamped / 100);
+    setOpacityFields(clamped);
     renderCanvas();
     if (commitChange) commit();
   }
+  layersPanelOpacitySlider.addEventListener('input', () => applyOpacity(Number(layersPanelOpacitySlider.value)));
+  layersPanelOpacitySlider.addEventListener('change', () => applyOpacity(Number(layersPanelOpacitySlider.value), { commitChange: true }));
+  layersPanelOpacityNumber.addEventListener('change', () => applyOpacity(Number(layersPanelOpacityNumber.value) || 0, { commitChange: true }));
 
-  layersPanelOpacitySlider.addEventListener('input', () => {
-    applyLayerOpacity(Number(layersPanelOpacitySlider.value));
-  });
-  layersPanelOpacitySlider.addEventListener('change', () => {
-    applyLayerOpacity(Number(layersPanelOpacitySlider.value), { commitChange: true });
-  });
-  layersPanelOpacityNumber.addEventListener('change', () => {
-    applyLayerOpacity(Number(layersPanelOpacityNumber.value) || 0, { commitChange: true });
-  });
-
-  layersPanelOpacityToggle.addEventListener('click', () => {
-    if (layersPanelOpacityPopover.classList.contains('hidden')) {
-      openLayersOpacityPopover();
-    } else {
-      closeLayersOpacityPopover();
-    }
-  });
   document.addEventListener('pointerdown', (e) => {
     if (layersPanelOpacityPopover.classList.contains('hidden')) return;
     if (layersPanelOpacityPopover.contains(e.target)) return;
-    if (e.target === layersPanelOpacityToggle || layersPanelOpacityToggle.contains(e.target)) return;
+    if (e.target.closest?.('#layers-properties-button, #layer-menu')) return;
     closeLayersOpacityPopover();
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !layersPanelOpacityPopover.classList.contains('hidden')) closeLayersOpacityPopover();
   });
 
-  addLayerButton.addEventListener('click', () => {
-    const layerStack = getLayerStack();
-    const added = layerStack.addLayer();
-    if (!added) return;
-    clearLayerMarks(); // remaining indices shifted; stale marks would misalign
-    renderCanvas();
-    commit();
-  });
+  addLayerButton.addEventListener('click', () => apply(() => getLayerStack().addLayer()));
 
   // Decode via the shared image-import helper, but skip Color Library
   // import's downsample/pixelate/quantize step entirely -
-  // fitImageToCanvas keeps full fidelity (no palette reduction, no
-  // forced pixelation), only scaling down (never up, never stretched)
-  // when the source is larger than the canvas. addReferenceImageButton
-  // is disabled by renderLayersPanel once a reference layer already
-  // exists, so this handler doesn't need its own guard beyond what
-  // addReferenceImageLayer already refuses.
+  // fitImageToCanvas keeps full fidelity, only scaling down when the
+  // source is larger than the canvas.
   addReferenceImageButton.addEventListener('click', () => addReferenceImageInput.click());
   addReferenceImageInput.addEventListener('change', async () => {
     const file = addReferenceImageInput.files?.[0];
@@ -684,9 +1046,8 @@ export function initLayers(root = document) {
     const layerStack = getLayerStack();
     const imageData = fitImageToCanvas(image, layerStack.width, layerStack.height, referenceImageSmoothing);
     // A fresh upload defaults to 'original' mode - `file` (the raw
-    // upload, a Blob) is kept on the Layer itself as originalSourceBlob,
-    // both for on-screen Original-mode rendering and so it survives a
-    // reload via toProjectRecord/fromProjectRecord.
+    // upload) is kept on the Layer as originalSourceBlob, for on-screen
+    // Original-mode rendering and so it survives a reload.
     const added = layerStack.addReferenceImageLayer(imageData.data, 'Reference', {
       referenceMode: REFERENCE_MODES.ORIGINAL,
       originalSourceBlob: file,
@@ -701,6 +1062,8 @@ export function initLayers(root = document) {
     layersPanelVisible = true;
     syncLayersCollapse();
     closeLayersOpacityPopover();
+    closeContextMenu({ restoreFocus: false });
+    selectMode = false;
     clearLayerMarks();
     // A stale reference-image source from a previously open project
     // would be meaningless (and could get re-fitted onto a differently-

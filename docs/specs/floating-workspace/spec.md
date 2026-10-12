@@ -113,10 +113,9 @@ the outermost rails on each side.
   mini-rail against the left edge with the panel cards just to its right
 
 #### Scenario: Both on the same side
-- **WHEN** both side preferences are Left and the Colors and Layers
-  cards are open
+- **WHEN** both side preferences are Left and the Layers card is open
 - **THEN** the tool rail is against the left edge, the mini-rail just to
-  its right, and the cards just to the right of the mini-rail, none
+  its right, and the card just to the right of the mini-rail, none
   overlapping, and the tool-options bar and palette card do not overlap
   any of them
 
@@ -449,6 +448,7 @@ order, for each tool:
 | Eraser | Size, Opacity, Pixel-perfect, Symmetry |
 | Brush | Spacing, Rotation, Symmetry, Color Library sequence |
 | Rectangle | Filled, 1:1 proportion |
+| Ellipse | Filled, 1:1 proportion |
 | Select | 1:1 proportion |
 
 For Move, Bucket, Line, Hand and Eyedropper the bar SHALL NOT be shown.
@@ -584,19 +584,17 @@ controls SHALL open above the bar and stay fully on screen.
 ### Requirement: Panel mini-rail
 In the floating layout the Workspace SHALL show a panel mini-rail: a
 floating card against the right edge that starts just below the top bar
-and is only as tall as its contents. It SHALL hold three buttons, in this
-order from top to bottom: Colors, Brushes and Layers. Activating a button
-SHALL open its panel card if it is closed, and close it if it is open.
-Each button SHALL show whether its card is open. The Brushes button SHALL
-be unavailable while any tool other than Brush is active, and SHALL say
-that it is for the Brush tool. The mini-rail SHALL be hidden with the
-rest of the interface while the interface is hidden.
+and is only as tall as its contents. It SHALL hold one button, Layers
+(colours are in the bottom colour bar, brushes in the brush palette - see
+the `color-library` and `brushes` specs). Activating it SHALL open the
+Layers card if it is closed, and close it if it is open, and it SHALL show
+whether the card is open. The mini-rail SHALL be hidden with the rest of
+the interface while the interface is hidden.
 
 #### Scenario: Mini-rail contents
 - **WHEN** a project opens in the floating layout
 - **THEN** a mini-rail against the right edge, below the top bar, shows
-  Colors, Brushes and Layers buttons in that order, and ends just after
-  the Layers button
+  the Layers button and ends just after it
 
 #### Scenario: Closing and reopening Layers
 - **WHEN** the Layers card is open and the user activates the Layers
@@ -604,147 +602,96 @@ rest of the interface while the interface is hidden.
 - **THEN** the Layers card closes and the button shows it as closed, then
   the card opens again and the button shows it as open
 
-#### Scenario: Brushes button with another tool
-- **WHEN** the Pencil tool is active and the user activates the Brushes
-  button
-- **THEN** no card opens or closes, and the button indicates that it is
-  for the Brush tool
-
 #### Scenario: Hidden interface
 - **WHEN** the user hides the interface
-- **THEN** the mini-rail and every panel card are hidden, and come back
+- **THEN** the mini-rail and the Layers card are hidden, and come back
   with the rest of the interface in the same open or closed state
 
 ### Requirement: Panel cards
-In the floating layout Color Library, Brushes and Layers SHALL each be
-shown as its own floating card, never all three in one card. A card SHALL
-be either open (shown in full) or closed (not shown at all). Cards SHALL
-NOT collapse to their header in the floating layout. Each card's header
-SHALL have a close button, and activating it SHALL close that card. A
-card SHALL keep its existing controls and behaviour while open.
+In the floating layout the right side SHALL hold only the Layers card. It
+SHALL be either open (shown in full) or closed (not shown at all), never
+collapsed to its header. Its header SHALL have a close button that closes
+it. It SHALL sit beside the mini-rail, on the side that faces the canvas,
+starting just below the top bar, and end above the bottom screen edge;
+when its contents are taller than that, the layer list SHALL scroll inside
+it with the header visible.
 
-Open cards SHALL stack in one column beside the mini-rail, on the side
-that faces the canvas, starting just below the top bar. They SHALL keep
-this order from top to bottom, skipping closed cards: Colors, Brushes,
-Layers. They SHALL have the usual gap between floating cards. The column
-SHALL end above the bottom screen edge. When the open cards are taller
-than the space available, they SHALL share that height. Each card SHALL
-then scroll its own contents, and every open card's header SHALL stay
-visible.
-
-Opening, closing or resizing a card SHALL NOT move or re-fit the canvas.
-Closing a card SHALL also close any popover or editor that was opened
-from it (palette import preview, ramp preview, layer opacity, brush
-editor).
-
-#### Scenario: Cards stack in order
-- **WHEN** Colors and Layers are open with the Pencil tool, and the user
-  selects the Brush tool
-- **THEN** the Brushes card appears between Colors and Layers, and the
-  artwork stays at the same position and zoom on screen
+Opening, closing or resizing the card SHALL NOT move or re-fit the canvas.
+Closing it SHALL also close the layer opacity popover.
 
 #### Scenario: Closing from the header
-- **WHEN** the user activates the close button in the Color Library
-  card's header
-- **THEN** the Color Library card is no longer shown, Layers moves up to
-  take its place below the top bar, the Colors button in the mini-rail
-  shows the card as closed, and the artwork does not move
+- **WHEN** the user activates the close button in the Layers card's header
+- **THEN** the card is no longer shown, the Layers button in the mini-rail
+  shows it as closed, and the artwork does not move
 
 #### Scenario: Too tall for the screen
-- **WHEN** Colors, Brushes and Layers are all open and the project has
-  more layers than fit on screen
-- **THEN** the column stops above the bottom screen edge, each card's
-  header is visible, and the layer list scrolls within the Layers card
+- **WHEN** the project has more layers than fit on screen
+- **THEN** the card stops above the bottom screen edge, its header is
+  visible, and the layer list scrolls within it
 
-#### Scenario: Closing Colors with the import preview open
-- **WHEN** the palette import preview is open and the user closes the
-  Color Library card
-- **THEN** the import preview closes as if cancelled, and no palette is
-  saved
-
-#### Scenario: Popover from a card
+#### Scenario: Popover from the card
 - **WHEN** the user opens the layer opacity popover from the Layers card
 - **THEN** the popover appears fully on screen, not clipped by the card
 
-### Requirement: Brushes card follows the Brush tool
-In the floating layout the Brushes card SHALL be shown only while the
-Brush tool is active and the card is open. Switching from the Brush tool
-to another tool SHALL hide the card without changing whether it is open.
-If the user closes the Brushes card, it SHALL stay closed when they
-switch to another tool and back to Brush, until they open it from the
-mini-rail or a project is opened. The Brushes card SHALL hold the brush
-grid, the add and delete brush buttons, and the brush editor. It SHALL
-NOT hold Spacing or Rotation, which are in the tool-options bar.
+### Requirement: Brush palette
+In the floating layout the brushes SHALL be a popover (the brush palette),
+not a card: the tool-options bar SHALL show a brush button while the Brush
+tool is active, showing the current brush's shape and named after it
+("Brush: Heart"). Activating it SHALL open the brush palette above it
+(fully on screen), or close it if open. The palette SHALL hold the brush
+grid, the add and delete brush buttons, and the brush editor; it SHALL NOT
+hold Spacing or Rotation, which stay in the tool-options bar. Picking a
+brush SHALL keep the palette open. It SHALL close on its close button,
+Escape (focus returns to the brush button), a press outside it, switching
+to another tool, or opening a project; closing it closes the brush editor.
 
-#### Scenario: Brush tool shows the card
-- **WHEN** a project has just opened and the user selects the Brush tool
-- **THEN** the Brushes card is shown with the brush grid, and the
-  Brushes button shows it as open
+#### Scenario: Opening the brush palette
+- **WHEN** the Brush tool is active and the user taps the brush button
+- **THEN** the brush palette opens above it with the brush grid
 
-#### Scenario: Closed Brushes stays closed
-- **WHEN** the Brush tool is active and the user closes the Brushes card,
-  then selects the Pencil and then the Brush tool again
-- **THEN** the Brushes card is not shown, and the Brushes button shows it
-  as closed
+#### Scenario: Picking a brush
+- **WHEN** the user picks Circle in the brush palette
+- **THEN** Circle becomes the current brush, the brush button shows the
+  Circle shape and is named "Brush: Circle", and the palette stays open
 
 #### Scenario: Leaving the Brush tool
-- **WHEN** the Brushes card is open and the user selects the Eraser
-- **THEN** the Brushes card is hidden, and selecting Brush again shows it
+- **WHEN** the brush palette is open and the user selects the Eraser
+- **THEN** the palette closes, and selecting Brush again shows it closed
 
 ### Requirement: Panel cards on project open
 In the floating layout, whenever a project is opened in a window at least
-600 CSS pixels wide, exactly the cards pinned in the Prefs sheet SHALL be
-open; by default all three are pinned, so the Colors and Layers cards
-are open and the Brushes card is open (and so shown while the Brush tool
-is active). Changing which cards are pinned SHALL NOT open or close cards
-in the project already open.
-Whenever a project is opened in a narrower window, all three cards SHALL
-be closed, and the user SHALL open them from the panel mini-rail. The
-window's width when the project opens decides this. Resizing the window
-afterwards SHALL NOT open or close cards. The initial view SHALL be
-fitted after these defaults are applied, beside the cards that are then
-open. Which cards are open SHALL NOT be remembered across project opens
-or page reloads; only the pins are.
+600 CSS pixels wide, the Layers card SHALL be open if it is pinned in the
+Prefs sheet (the default); in a narrower window it SHALL be closed, and
+the user opens it from the mini-rail. The window's width when the project
+opens decides this; resizing afterwards SHALL NOT open or close it.
+Changing the pin SHALL NOT open or close the card in the project already
+open. The initial view SHALL be fitted after this, beside the card if
+open. Whether the card is open SHALL NOT be remembered across project
+opens or page reloads; only the pin is.
 
 #### Scenario: Defaults on open
-- **WHEN** the user closes the Colors and Layers cards in a 1180×820
-  window and then opens another project
-- **THEN** the Colors and Layers cards are open again, and the canvas is
-  fitted beside them
-
-#### Scenario: Reload
-- **WHEN** the user closes the Layers card in a 1180×820 window and
-  reloads the page
-- **THEN** the project opens with the Layers card open
+- **WHEN** the user closes the Layers card in a 1180×820 window and then
+  opens another project
+- **THEN** the Layers card is open again, and the canvas is fitted beside it
 
 #### Scenario: Narrow window
 - **WHEN** a project opens at 390×844
-- **THEN** the Colors, Brushes and Layers cards are closed, the mini-rail
-  shows them as closed, and the whole canvas is visible between the tool
-  rail and the mini-rail
+- **THEN** the Layers card is closed, the mini-rail shows it as closed, and
+  the whole canvas is visible between the tool rail and the mini-rail
 
-#### Scenario: Opening a card on a narrow window
-- **WHEN** a project has opened at 390×844 and the user activates Layers
-  in the mini-rail
-- **THEN** the Layers card opens, and the artwork stays at the same
-  position and zoom on screen
-
-#### Scenario: Resizing does not toggle cards
+#### Scenario: Resizing does not toggle the card
 - **WHEN** a project opened at 1180×820 and the window is then narrowed
   to 390 pixels wide
-- **THEN** the cards that were open stay open
+- **THEN** the Layers card stays open
 
 ### Requirement: Mini-rail and panel cards are accessible
-Each mini-rail button SHALL have an accessible name naming its panel, and
-SHALL report to assistive technology whether its card is expanded. The
-unavailable Brushes button SHALL report that it is unavailable while
-staying reachable by keyboard, so its explanation can be read. Each
-card's close button SHALL have an accessible name that names its panel.
-When a card is closed from its own close button, focus SHALL move to that
-card's mini-rail button. Every mini-rail button and close button SHALL be
-at least 44×44 CSS pixels. Tooltips for mini-rail buttons and for
-controls inside the panel cards SHALL open on the side of the rail or
-card column that faces the canvas, and SHALL stay fully on screen.
+The mini-rail's Layers button SHALL have the accessible name "Layers" and
+SHALL report to assistive technology whether the card is expanded. The
+card's close button SHALL be named "Close Layers"; closing the card with
+it SHALL move focus to the mini-rail's Layers button. The mini-rail button
+and close button SHALL be at least 44×44 CSS pixels. Tooltips for the
+mini-rail and for controls inside the card SHALL open on the side that
+faces the canvas, fully on screen.
 
 #### Scenario: Expanded state announced
 - **WHEN** a screen reader user moves focus to the Layers button while
@@ -755,11 +702,6 @@ card column that faces the canvas, and SHALL stay fully on screen.
 - **WHEN** a keyboard user activates the close button in the Layers card
 - **THEN** the Layers card closes and focus is on the Layers button in
   the mini-rail
-
-#### Scenario: Mini-rail tooltip
-- **WHEN** the user hovers the Colors button in the mini-rail against the
-  right edge
-- **THEN** the tooltip opens to the left of the rail, fully on screen
 
 ### Requirement: Selection action bar
 In the floating layout the Workspace SHALL show a selection action bar: a
@@ -940,9 +882,12 @@ SHALL be grouped under headings, in this order:
   of the Prefs sheet; closing it returns to the Prefs sheet with focus
   on that row
 - Layout: Tools Side (Left or Right) and Panels Side (Left or Right)
-- Open When a Project Opens: Colors, Brushes and Layers, each an on/off
+- Open When a Project Opens: Layers, an on/off
   switch
-- Drawing: Hide Interface While Drawing, an on/off switch
+- Drawing: Hide Interface While Drawing, Show Brush Cursor and Draw Only
+  With Apple Pencil, each an on/off switch (the last two on by default;
+  see the brush cursor and palm rejection requirements in
+  `pixel-drawing-engine`)
 
 Each control SHALL show the current preference when the sheet opens, and
 a change SHALL take effect immediately, with no separate save step.
@@ -998,7 +943,7 @@ canvas SHALL follow the regions to their new side.
 When Hide interface while drawing is on, the top bar, tool rail, panel
 mini-rail, panel cards, tool-options bar, palette card and selection
 action bar SHALL fade out while a stroke with the Pencil, Eraser, Brush,
-Line or Rectangle tool is in progress on the canvas, and SHALL NOT take
+Line, Rectangle or Ellipse tool is in progress on the canvas, and SHALL NOT take
 pointer input while faded. The fade SHALL start only after a short delay,
 so a tap does not make the interface flicker, and SHALL be instant
 rather than animated when the user prefers reduced motion. When the
@@ -1020,7 +965,7 @@ default), nothing SHALL fade while drawing.
 In the standalone app the tool rail SHALL show only the tools chosen as
 favorites, in the chosen order. By default, and after Reset to default,
 every tool SHALL be a favorite, in the order Move, Pencil, Eraser,
-Bucket, Brush, Line, Rectangle, Select, Hand, Eyedropper. Any number of
+Bucket, Brush, Line, Rectangle, Ellipse, Select, Hand, Eyedropper. Any number of
 favorites, including none, SHALL be allowed. Every tool's keyboard
 shortcut SHALL keep working whether or not the tool is on the rail. The
 favorites and their order SHALL be kept with the other preferences

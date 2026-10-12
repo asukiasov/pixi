@@ -118,9 +118,9 @@ docked descriptions in the floating layout).
 **Narrow windows (5h-switch-on-floating).** Floating at every width,
 with no separate narrow layout. A project opened in a window narrower
 than `NARROW_MAX_WIDTH` (600 CSS px, `js/panel-rail.js`) starts with
-Colors, Brushes and Layers closed: `openWorkspace()` (`js/app.js`) calls
-`applyOpenCardDefaults()` right after `initWorkspace()` has reset all
-three to open, then re-runs `resetView()`, so Fit always sees the cards
+the Layers card closed: `openWorkspace()` (`js/app.js`) calls
+`applyOpenCardDefaults()` right after `initWorkspace()` has reset it to
+open, then re-runs `resetView()`, so Fit always sees the cards
 actually open (on every open, not only the first). The width at open
 decides; resizing never opens or closes a card. Constraint fixes, all
 floating-scoped CSS: the card column is
@@ -136,8 +136,10 @@ scrolls sideways inside it.
 bar is no card of its own (pass-through; each group is its own glass:
 Home and More are glass circles, the title is bare text, the zoom pill
 and the Undo/Redo `.topbar-group` are glass pills) and is slim: Back, `#topbar-title` (read-only project name, truncated,
-full name in `title`), `#zoom-pill` (current %, opens `#zoom-menu`:
-100%/Fit/Fill/Zoom out/Zoom in), Undo, Redo, and
+full name in `title`), `#zoom-pill` (current %, plus the view angle when turned, e.g.
+"2100% · 90°"; opens `#zoom-menu`: 100%/Fit/Fill/Zoom out/Zoom in/Rotate
+View Left/Rotate View Right/Reset Rotation), `#transform-toggle`, Undo,
+Redo, and
 `#more-button` (opens `#more-menu`: Canvas settings, Export, Record
 timelapse, Tile preview, Prefs, Theme Light/Dark/System, Hide interface). The
 buttons those menus replace, and `.bottom-bar`, stay in the DOM but are
@@ -162,8 +164,7 @@ Groups: **Tools** - Customize Tools… (a `<button>` drawn as a row,
 `chevron_right` at the end; opens the Customize Tools sheet on top of
 Prefs); **Layout** - Tools Side and Panels Side (Left/Right each,
 independent; this replaces the roadmap's single handedness flag);
-**Open When a Project Opens** - Colors, Brushes, Layers (the pinned
-cards); **Drawing** - Hide Interface While Drawing. Every change applies at once and is saved; Done, Escape or
+**Open When a Project Opens** - Layers (the pinned card); **Drawing** - Hide Interface While Drawing, Show Brush Cursor (`#prefs-brush-cursor`, default on; `data-brush-cursor` on the Workspace screen, overlay `.brush-cursor` from `js/canvas-view.js`, footprint/outline in `js/brush-cursor.js`), Draw Only With Apple Pencil (`#prefs-pencil-only`, default on; palm rejection in `js/canvas-view.js` via `js/pointer-policy.js`). Every change applies at once and is saved; Done, Escape or
 a press on the backdrop closes the sheet and focus returns to More.
 Values live in `js/prefs.js` (defaults: tools left, panels right, all
 pinned, auto-hide off), stored as JSON under the `pixi-prefs`
@@ -273,29 +274,25 @@ open above the bar. Markup is `.floating-only` and absent from
 `js/app.js`).
 
 **Floating panel cards + mini-rail (5e-cards-mini-rail).** In the
-floating layout `#panel-rail` (Colors, Brushes, Layers; 44px disclosure
-buttons with `aria-expanded`/`aria-controls`) sits against the end edge
-below the top bar, and `#right-sidebar` becomes a see-through column
-beside it (`--slot-cards-start/end`) in which Color Library, Brushes and
-Layers are each their own glass card, in that order. A card is open or
-closed - no collapse-to-header: the panels' existing `.collapsed` state
-means "not displayed", the chevron is hidden, and a `.panel-close`
-button in each header closes the card (focus moves to its rail button;
-a tap on the title does nothing, and the `role="button"` headers get
-`tabindex="-1"`). Colors forwards to `#color-library-header`, Layers to
-the hidden `#layers-panel-toggle`, Brushes calls `setBrushesCardOpen()`
-(`js/workspace.js`; `.collapsed` is the user's flag, `.hidden` stays the
-Brush-tool scoping, so a closed Brushes card stays closed across tool
-switches). Rail state is mirrored from each card's class by a
-`MutationObserver`; outside the Brush tool the Brushes button is
-`aria-disabled` and reads "Brushes (Brush tool)". All three cards reopen
-on project open; nothing is remembered. When the open cards don't fit
-they share the height by flex shrink and each scrolls inside itself,
-headers always visible; the column also stops above the bottom cards
-where those reach under it (`--slot-options-reach`, measured by a
-`ResizeObserver`). Closing a card cancels the palette import/ramp
-previews (Colors), the layer opacity popover (Layers) or the brush
-editor (Brushes). Opening and closing cards never re-fits the canvas.
+floating layout `#panel-rail` (Layers only since 2026-10-12; 44px
+disclosure button with `aria-expanded`/`aria-controls`) sits against the
+end edge below the top bar, and `#right-sidebar` becomes a see-through
+column beside it (`--slot-cards-start/end`) holding the Layers glass
+card. Colours are in the bottom colour bar (`#color-bar`), brushes in the
+brush palette popover (`#brushes-panel.brush-popover`, opened from
+`#brush-picker-button` in the tool-options bar's Brush group, which shows
+the current brush; `setBrushesCardOpen()` in `js/workspace.js` toggles
+`.collapsed` and positions it above the button; `.hidden` stays the
+Brush-tool scoping; it closes on its close button, Escape, a press
+outside, a tool switch or a project open). The card is open or closed -
+no collapse-to-header: `.collapsed` means "not displayed", and the
+`.panel-close` button closes it (focus moves to the rail button). Rail
+state is mirrored from the card's class by a `MutationObserver`. The card
+reopens on project open (if pinned); nothing is remembered. It stops above
+the bottom cards where those reach under it (`--slot-options-reach`,
+measured by a `ResizeObserver`) and scrolls inside itself. Closing it
+cancels the layer opacity popover. Opening and closing never re-fits the
+canvas.
 Wiring: `js/panel-rail.js` (once, from `js/app.js`). The docked
 sidebar, its collapse-to-header and its top bar toggles are unchanged.
 
@@ -333,8 +330,8 @@ unchanged.
 
 ### Top bar (`.workspace-topbar`)
 
-Icon-only buttons, left-to-right, `magnetic-hover` class (iOS-only
-magnetic cursor attraction, see `topbar-magnetic-hover` spec):
+Icon-only buttons, left-to-right. No hover/selected motion effects
+(the iOS magnetic hover and hover "buzz" were removed on 2026-10-12):
 
 | id | Icon | Purpose | Notes |
 |---|---|---|---|
@@ -347,6 +344,7 @@ magnetic cursor attraction, see `topbar-magnetic-hover` spec):
 | `#record-toggle` | fiber_manual_record | Start/stop timelapse recording | on/off, opens `#timelapse-review-panel` on stop if any frames were captured; see below |
 | `#tile-preview-toggle` | grid_view | 3x3 seamless-tile preview | on/off, no popover - see below |
 | *(spacer)* | | | pushes the rest right |
+| `#transform-toggle` | transform | Transform popover (`#transform-panel`, `js/transform-ui.js`) | rotate/flip/align the selection or active layer; spec `layer-transform` |
 | `#undo-button` | undo | Undo | disabled when nothing to undo |
 | `#redo-button` | redo | Redo | disabled when nothing to redo |
 | `#right-sidebar-toggle` | dock_to_right | Hide/show whole right sidebar | slides open/closed (AUD-11, 2026-08-17); respects `prefers-reduced-motion` |
@@ -400,12 +398,13 @@ attributes drive both click-to-select and the keyboard shortcut:
 | Brush | `brush` | B | brush |
 | Line | `line` | L | horizontal_rule |
 | Rectangle | `rectangle` | R | rectangle |
+| Ellipse | `ellipse` | O | circle |
 | Select | `selection` | M | crop_free |
 | Hand (pan) | `hand` | H | back_hand |
 | Eyedropper | `eyedropper` | I | colorize |
 
 Specs: `pixel-drawing-engine` (Pencil/Eraser/Bucket/pixel-perfect line),
-`shape-tools` (Line/Rectangle/Selection/Move), `brushes` (Brush),
+`shape-tools` (Line/Rectangle/Ellipse/Selection/Move), `brushes` (Brush),
 `canvas-navigation` (Hand), `color-library`/`pixel-drawing-engine`
 (Eyedropper). Implementation: `js/workspace.js`, `js/shape-tools.js`,
 `js/brushes.js`.
@@ -413,10 +412,10 @@ Specs: `pixel-drawing-engine` (Pencil/Eraser/Bucket/pixel-perfect line),
 **Tool-scoped option surfaces** (shown/hidden based on active tool, all
 in `js/workspace.js`):
 
-- `#rectangle-options` (Rectangle only) — `#rectangle-fill-toggle`,
+- `#rectangle-options` (Rectangle + Ellipse) — `#rectangle-fill-toggle`,
   outline/filled toggle using two swapped inline SVGs (not the webfont
   icon — the subsetted font only bakes one FILL-axis point).
-- `#square-constraint-options` (Rectangle + Selection) —
+- `#square-constraint-options` (Rectangle + Ellipse + Selection) —
   holding Shift while dragging (for touch, which has no Shift key).
 - `#library-sequence-options` (Pencil + Brush only) —
   `#library-sequence-toggle` ("Color Library sequence", cycles through
@@ -446,17 +445,22 @@ Bottom of the left tools sidebar, Photoshop-style overlapping stack:
 - `#fg-bg-swap` (swap_horiz) — swap FG/BG.
 - `#fg-bg-reset` (restart_alt) — reset to default black/white.
 
-`#color-picker-popover` (opened by either swatch): `#color-picker-native`
-(native `<input type=color>`), `#color-picker-hex` (hex text entry,
-double-click to copy, `#color-picker-copied` "Copied!" flash), RGB
-number inputs (`#color-picker-r/g/b`), `#color-picker-add` ("Add to
-palette", adds to the active Color Library palette), `#color-picker-
-generate-ramp` ("Generate ramp", opens `#ramp-preview-row` for whichever
-swatch — foreground or background — this popover is currently editing).
-**Does not exist on iOS** — `#add-current-color-button` in the Color
-Library header (below) is the only add-to-palette path there; the ramp
-generator's `#library-generate-ramp-button` (below) is likewise the only
-ramp-generation path on iOS.
+`#color-picker-popover` (opened by either swatch; spec
+`pixel-drawing-engine` "Colour picker panels"; panels in
+`js/color-picker.js`, maths in `js/color-math.js`): header with the title,
+`#color-picker-previous` (the colour it had when opened - tap to go back)
+beside `#color-picker-current`, and close; a tablist (`#color-tab-disc`,
+`-classic`, `-value`, `-palettes`, arrow keys move between tabs, last tab
+remembered on the device): **Disc** `#color-disc` (hue ring around a
+saturation/brightness square), **Classic** `#color-classic-square` +
+`#color-classic-hue` slider, **Value** `#color-value-h/s/v` sliders,
+`#color-picker-r/g/b`, `#color-picker-hex` (double-click to copy,
+`#color-picker-copied`) and `#color-picker-native` (the system picker),
+**Palettes** `#color-picker-palettes` (every palette's swatches); then
+`#color-picker-history` (last 10 colours, newest first, kept on the
+device), `#color-picker-add` ("Add to palette") and
+`#color-picker-generate-ramp` ("Ramp" → `#ramp-preview-row`). The same
+popover opens on every platform, including iOS.
 
 Spec: `color-library` (FG/BG model), `canvas-creation`/`layers`
 (Background layer interaction, `2g`).
@@ -494,61 +498,51 @@ Spec: `color-library` (FG/BG model), `canvas-creation`/`layers`
   the 20-entry undo stack. Recording buffer and on/off state are
   session-only: a reload or navigating away from the Workspace discards
   an in-progress recording. Spec: `drawing-timelapse-recording`.
-- `#palette-row` — the fixed preset palette swatches (Phase 1's
-  original 16-swatch row, distinct from Color Library's persisted
-  palettes).
+- `#color-bar` — the colour bar (spec `color-library`,
+  `js/color-library-ui.js`): `#palette-menu-button` (palette name +
+  chevron; chevron only below 480px; opens `#palette-menu`),
+  `#color-library-grid` (the active palette, one row scrolling sideways,
+  active swatch marked and scrolled into view), `#palette-row` (Rainbow
+  only - embeds without a colour bar still get the 16 fixed presets here),
+  `#add-current-color-button` (+, adds the current colour to the active
+  palette).
+- `#palette-menu` (screen level, `js/topbar-menu.js`'s `initMenuButton`)
+  — `#palette-menu-list` (every palette, alphabetical, count, active one
+  checked), `#add-palette-button` (New Palette… → `#new-palette-row`
+  popover: `#new-palette-name`, Save/Cancel, Enter/Escape),
+  `#import-palette-button` (Import from Image… →
+  `#color-library-import-input` → `#import-preview-row`),
+  `#library-generate-ramp-button` (Generate Ramp… → `#ramp-preview-row`),
+  `#edit-palette-colors-button` (Edit Colors, menuitemcheckbox),
+  `#standard-libraries-button` (Standard Libraries… →
+  `#standard-libraries-sheet`), `#delete-palette-button`. The import,
+  ramp and new-palette popovers anchor to `#palette-menu-button` and sit
+  at the workspace screen's top level, outside every slot.
 - `#selection-controls` (Selection tool, active selection only) —
   `#selection-clear-button` ("Clear selection"), `#selection-delete-button`
   ("Delete").
 - `.bottom-bar` (bottom-left) — `#zoom-out-button`/`#zoom-in-button`
   (remove/add icons, also Ctrl/Cmd +/-), `#zoom-readout` (percentage),
   `#zoom-preset-100`/`#zoom-preset-fit`/`#zoom-preset-fill` ("100%" /
-  "Fit" / "Fill"). Spec: `canvas-navigation`.
+  "Fit" / "Fill"), `#rotate-view-left`/`#rotate-view-right`/
+  `#rotate-view-reset` (view rotation; the Zoom menu forwards to them).
+  Spec: `canvas-navigation`.
 
 ### Right sidebar (`#right-sidebar`)
 
-Order top→bottom: Color Library → Brushes → Layers (color selection
-used most often while drawing, per `2l`'s ordering rationale). Each
-panel has its own collapse-to-header state; the whole sidebar has its
-own show/hide (`#right-sidebar-toggle` in the top bar), independent of
-the per-panel states.
+Order top→bottom: Brushes → Layers (Colors moved to the bottom colour
+bar on 2026-10-12). Each panel has its own collapse-to-header state; the
+whole sidebar has its own show/hide (`#right-sidebar-toggle` in the top
+bar), independent of the per-panel states.
 
-**Color Library** (`#color-library-panel`, spec `color-library`):
-- `#color-library-header` (click to collapse/expand, chevron rotates) —
-  `#add-current-color-button` (playlist_add, add current FG to active
-  palette), `#add-palette-button` (add, new palette), `#import-palette-button`
-  (image icon, opens `#color-library-import-input` file picker →
-  `#import-preview-row` popover), `#library-generate-ramp-button`
-  (gradient icon, generates a shading ramp from the current Foreground
-  color → `#ramp-preview-row` popover, spec `color-library`,
-  `7-add-palette-color-ramp-generator`), `#delete-palette-button` (delete
-  current palette).
-- `#color-library-select` — dropdown to switch palette once more than
-  one exists (alphabetically sorted).
-- `#new-palette-row` — inline `#new-palette-name` + Save/Cancel, shown
-  when creating a palette.
-- `#color-library-grid` — swatches of the active palette. Bounded
-  height (doesn't fill all remaining sidebar space, per `2l`).
-- `#import-preview-row` — popover anchored to `#import-palette-button`
-  (fixed-position, not in-flow, so the color-count control below the
-  swatch grid can't shift as the grid's row count changes — `2o` fixed
-  an earlier version that still shifted). `#import-preview-grid` (live
-  swatch preview), `#import-preview-count` (2–32 colors, re-extracts via
-  median-cut on change), `#import-preview-name`, Save/Cancel.
-- `#ramp-preview-row` — popover anchored to whichever button opened it
-  (`#library-generate-ramp-button` in this header, or `#color-picker-
-  generate-ramp` in `#color-picker-popover` above), same fixed-position/
-  clamped-to-viewport pattern as `#import-preview-row`. Source color is
-  the current Foreground color (header button) or whichever swatch
-  `#color-picker-popover` is editing (popover button).
-  `#ramp-preview-grid` (live swatch preview, `js/color-ramp.js`'s
-  `generateColorRamp`, dark→light through the source hue with a hue/
-  saturation shift at the extremes), `#ramp-preview-steps` (3–9 steps,
-  default 5, regenerates live on change), Confirm/Cancel
-  (`#ramp-preview-confirm`/`#ramp-preview-cancel`) — Confirm adds every
-  previewed color to the active palette via `addColorToPalette` and
-  refreshes the panel; Cancel discards the preview with no palette
-  changes. Spec: `color-library` (`7-add-palette-color-ramp-generator`).
+`#import-preview-row` (import preview: `#import-preview-grid`,
+`#import-preview-count` 2–32 colors re-extracted by median-cut,
+`#import-preview-name`, Save/Cancel) and `#ramp-preview-row` (ramp
+preview: `#ramp-preview-grid` from `js/color-ramp.js`'s
+`generateColorRamp`, `#ramp-preview-steps` 3–9 default 5,
+`#ramp-preview-confirm`/`#ramp-preview-cancel`) are fixed popovers
+anchored to `#palette-menu-button`, or to `#color-picker-generate-ramp`
+when opened from the colour picker.
 
 **Brushes** (`#brushes-panel`, spec `brushes`, shown only while Brush
 tool is active):
@@ -565,19 +559,29 @@ tool is active):
   (min 3px), `#brush-editor-grid` (click-to-toggle pixel editor),
   Clear/Cancel/Save.
 
-**Layers** (`#layers-panel`, spec `layers`):
-- `#layers-panel-header` (click to collapse/expand) — `#add-layer-button`
-  ("+ Layer").
-- `.layers-panel-toolbar` — shared controls editing whichever layer is
-  active (Photoshop-style, not per-row): `#layers-panel-blend-select`
-  (blend mode dropdown), `#layers-panel-opacity-toggle` (shows current
-  %, opens `#layers-panel-opacity-popover` — slider + number input,
-  lives outside `.right-sidebar` so its own `overflow-y:auto` can't
-  clip the popover).
-- `#layers-panel-list` — compact rows: live pixel thumbnail, name,
-  visibility toggle, reorder (tap, no drag-and-drop), delete. The
-  Background layer (white-background canvases only, `2g`) is locked —
-  reorder-disabled.
+**Layers** (`#layers-panel`, spec `layers`, `js/layers-ui.js`; Pixelmator
+Pro for iPad style):
+- `#layers-panel-header` — `#layers-panel-menu-button` (⋯ → `#layers-panel-menu`:
+  `#layers-select-mode-button` Select Layers, `#add-reference-image-button`
+  Add Reference Image… → `#add-reference-image-input`), "Layers",
+  `#layers-properties-button` (tune → Opacity & Blend for the active
+  layer), `#add-layer-button`, close.
+- `#layers-select-bar` (Select mode only) — `#layers-select-count`,
+  `#layers-select-group`, `#layers-select-merge`, `#layers-select-done`.
+- `#layers-panel-list` (role list) — `.layer-row` cards: `.layer-grip`
+  (CSS-drawn dots, drag to reorder; none on Background), thumbnail,
+  `.layer-name` (double-tap / Enter / F2 to rename) over `.layer-detail`,
+  reference toggles, `.layer-more-button` (active row only → `#layer-menu`),
+  `.layer-switch` (visibility, checkbox with role switch). `.in-group` rows
+  are indented under their `.layer-group-row` (chevron, folder, name,
+  "Group · N layers", ⋯, switch). `.layer-drop-indicator` shows the drop
+  point while dragging.
+- `#layer-menu` — one shared menu filled per use with a row's or group's
+  actions (arrow keys, Escape, outside press).
+- `#layers-panel-opacity-popover` — Opacity & Blend for a layer or group:
+  `#layer-properties-title`, `#layers-panel-blend-select` (layers only),
+  `#layers-panel-opacity-slider` + `#layers-panel-opacity-number`.
+- Shortcuts: ⌘J duplicate, ⌘E merge, ⌘G group.
 
 ---
 
@@ -596,7 +600,6 @@ tool is active):
   Library, Layers — click the header) vs. whole-sidebar hide/show
   (`#right-sidebar-toggle`) are independent and can compound (e.g.
   sidebar hidden while a panel inside it is individually collapsed).
-- **Magnetic hover**: top bar and left tool rail buttons carry a
-  `magnetic-hover` class (specs `topbar-magnetic-hover`,
-  `toolrail-magnetic-hover`) — iOS-only per `2026-08-17-restrict-magnetic-hover-to-ios`;
-  desktop/Android get plain hover.
+- **No hover motion**: buttons and swatches don't move, scale or wiggle
+  on hover or selection, on any platform (magnetic hover and the iOS
+  hover "buzz" were removed on 2026-10-12, per feedback).

@@ -16,7 +16,7 @@ import them directly as ES modules. Last verified against commit
 
 ## What's in here
 
-Four files, each a plain ES module with no import beyond the others in
+Five files, each a plain ES module with no import beyond the others in
 this folder:
 
 | File | Exports | What it does |
@@ -24,6 +24,7 @@ this folder:
 | `engine.js` | `PixelEngine`, `bresenhamLine`, `circleOffsets`, `strokeFreehandThick`, `setPixelPerfectEnabled` | A single layer's pixel buffer (`Uint8ClampedArray`, RGBA) and pure drawing operations on it: freehand stroke, flood fill, region extract/clear/stamp, opacity-blended paint/erase, PNG encode |
 | `pixel-perfect.js` | `removeRedundantCorners` | Aseprite-style corner removal for pixel-perfect drawing mode - pure, imported directly by `engine.js` |
 | `layers.js` | `LayerStack`, `BLEND_MODES` | An ordered stack of `PixelEngine` buffers (up to 8) with per-layer visibility/opacity/blend mode, compositing, merge, resize, rotate, and project-record (de)serialization |
+| `transform.js` | `flipRegion`, `rotateRegion`, `contentBounds`, `alignOffset`, `moveRegion` | Flip, quarter/half-turn, bounds and align for a rect of one `PixelEngine` (a layer or a selection), in place, Move-tool semantics |
 | `undo.js` | `UndoStack` | A capped (20-deep) undo/redo stack of opaque snapshots — you decide what a "snapshot" is; typically a `LayerStack.snapshot()` result |
 
 **Browser-only aside from that**: the only browser API these files touch
@@ -82,6 +83,9 @@ const pngBlob = await stack.toPNGBlob();
 - `.getLayers()` → array of `{ id, name, engine, visible, opacity, blendMode, isBackground, isReferenceImage, ... }`
 - `.getActiveLayer()` / `.setActiveLayer(index)` / `.getActiveIndex()`
 - `.addLayer(name)` → new `Layer` or `null` if at the 8-layer cap
+- `.moveLayerTo(from, to, groupId)` — drag-reorder move into or out of a group; refuses anything that would split a group or touch the Background
+- `.groupLayers(indices, name?)` → the new group (one level; members gathered at the topmost one) or `null`; `.ungroup(id)`, `.deleteGroup(id)`, `.moveGroup(id, ±1)`, `.renameGroup`/`.setGroupVisibility`/`.setGroupOpacity`/`.setGroupCollapsed`, `.getGroups()`, `.getGroup(id)`, `.groupMemberIndices(id)`. Each layer has `groupId`; Up/Down at a group's edge joins or leaves it. A hidden group hides its members; its opacity multiplies theirs
+- `.duplicateLayer(index)` → the copy (above `index`, active, named "<name> copy") or `null` for the reference image layer or at the cap
 - `.deleteLayer(index)`, `.moveLayerUp(index)`, `.moveLayerDown(index)`, `.renameLayer(index, name)`
 - `.setVisibility(index, visible)`, `.setOpacity(index, opacity)`, `.setBlendMode(index, mode)` — `mode` is one of `BLEND_MODES` (`'normal' | 'multiply' | 'screen' | 'overlay'`)
 - `.mergeLayers(indices)` / `.mergeDown(index)` — flattens 2+ layers into one, respecting each layer's opacity/blend mode

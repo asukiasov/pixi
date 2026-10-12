@@ -1003,22 +1003,6 @@ textarea,
   border-radius: 0.3rem;
 }
 
-/* iOS 26 / Apple Pencil-style "magnetic hover" for the top bar
-   (docs/history/2026-08-17-adopt-magnetic-hover-topbar) - see
-   js/magnetic-hover.js. Position/scale and transition live in CSS;
-   magnetic-hover.js only ever sets the --pull-x/--pull-y/--pull-scale
-   custom properties and toggles the .magnetic-active class (on at most
-   one button at a time - see that change's "Exclusive activation"
-   requirement). No glow/halo - real iOS 26 doesn't have one either, per
-   feedback. */
-.magnetic-hover {
-  transition: transform 150ms ease-out;
-}
-
-.magnetic-hover.magnetic-active {
-  transform: translate(var(--pull-x, 0), var(--pull-y, 0)) scale(var(--pull-scale, 1));
-}
-
 .workspace-main {
   display: flex;
   flex-direction: column;
@@ -2140,7 +2124,10 @@ span.layer-lock-icon {
   padding: 0.6rem;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   z-index: 60;
-  width: 13.5rem;
+  /* The disc canvas is 232px; plus padding. */
+  width: 16.25rem;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
 }
 
 .color-picker-popover-header {
@@ -2158,8 +2145,9 @@ span.layer-lock-icon {
 }
 
 .color-picker-popover input[type='color'] {
-  width: 100%;
-  height: 1.9rem;
+  flex: none;
+  width: 2.75rem;
+  height: 2.2rem;
   padding: 0;
   border: 1px solid var(--color-border);
   border-radius: 0.3rem;
@@ -2990,62 +2978,6 @@ span.layer-lock-icon {
   }
 }
 
-/* "Buzz" hover feedback - a small, fast shake, reimplemented directly
-   (a few lines of CSS) rather than pulling in ianlunn.github.io/Hover/
-   as an external dependency, since this app has no CDN/build step for
-   third-party CSS libraries (see CLAUDE.md's stack). Applied to most
-   clickable controls (buttons and swatches) - explicitly not the
-   drawing canvas, text/number/range inputs, the brush-editor's
-   pixel-toggle grid, the Foreground/Background swatches and their
-   swap/reset corner buttons, the bottom bar's zoom toolset, any
-   delete-labeled button, "new artwork" actions (+ New Canvas, Create),
-   or Clear selection/Delete - buttons used often/in quick succession,
-   fine click targets, or destructive/creation actions, where a
-   jitter-on-hover reads as noise (or feels wrong for something
-   consequential) rather than a nice touch - per feedback.
-   Scoped to iPad/iPhone only, per feedback that it shouldn't fire on
-   ordinary desktop mouse hover. Originally tried as a pure CSS media
-   query, `(hover: hover) and (pointer: coarse)` (meant to catch a
-   hover-capable touchscreen) - but Apple Pencil is a *precise* stylus,
-   reporting `pointer: fine` exactly like a mouse, so that query
-   excluded Pencil hover right along with the desktop mouse hover it
-   was meant to exclude, and buzz disappeared on iPad entirely. CSS
-   alone can't distinguish "a mouse is hovering" from "a Pencil is
-   hovering" - platform detection is used instead: js/app.js adds
-   `.ios-platform` to <html> via a UA check. Also respects
-   prefers-reduced-motion.
-   Exclusions (Clear selection/Delete/zoom toolset/"new artwork"/etc.)
-   are marked with a shared `.no-buzz` class instead of separate
-   higher-specificity override rules - simpler and less fragile than
-   fighting a specificity/source-order battle against this rule for
-   every excluded element that happens to also carry .tool-button/
-   .icon-button (a real bug this app hit once already: adding
-   `.ios-platform` to this rule's selectors upgraded its specificity
-   past the old override rules, silently un-excluding the zoom toolset
-   and the confirm-dialog's "Delete" button on iOS). */
-@media (prefers-reduced-motion: no-preference) {
-  .ios-platform .tool-button:not(:disabled):not(.no-buzz):hover,
-  .ios-platform .preset-button:not(:disabled):not(.no-buzz):hover,
-  .ios-platform .icon-button:not(:disabled):not(.no-buzz):hover,
-  .ios-platform .layer-visibility-toggle:not(.no-buzz):hover,
-  .ios-platform .layer-reorder-button:not(:disabled):not(.no-buzz):hover,
-  .ios-platform .brush-swatch:not(.no-buzz):hover,
-  .ios-platform .palette-swatch:not(.no-buzz):hover,
-  .ios-platform .color-library-swatch:not(.no-buzz):hover {
-    animation: hover-buzz 0.25s linear infinite; /* slowed further per feedback (was 0.2s) */
-  }
-}
-
-@keyframes hover-buzz {
-  50% {
-    transform: translateX(3px) rotate(2deg);
-  }
-  100% {
-    transform: translateX(-3px) rotate(-2deg);
-  }
-}
-
-
 /* ------------------------------------------------------------------
    Floating workspace layout (5a-floating-shell)
 
@@ -3231,7 +3163,8 @@ span.layer-lock-icon {
   top: var(--float-below-top);
   inset-inline-start: var(--slot-cards-start);
   inset-inline-end: var(--slot-cards-end);
-  width: min(15rem, var(--slot-cards-room));
+  /* Wide enough for the Layers rows' thumbnail, name and switch. */
+  width: min(17.5rem, var(--slot-cards-room));
   height: auto;
   /* Stops above the bottom cards where they reach under the column
      (--slot-options-reach, measured by js/panel-rail.js; 0 otherwise). */
@@ -3242,7 +3175,7 @@ span.layer-lock-icon {
    it no longer shares a row with the canvas, so there's nothing to push.
    setRightSidebarVisible (js/workspace.js) still sets `inert`. */
 .workspace-screen[data-layout="floating"] .right-sidebar.right-sidebar-collapsed {
-  width: min(15rem, var(--slot-cards-room));
+  width: min(17.5rem, var(--slot-cards-room));
   visibility: hidden;
   opacity: 0;
 }
@@ -3503,7 +3436,7 @@ span.layer-lock-icon {
 
    The rail hugs its contents below the top bar. Only .tool-rail-tools
    scrolls, so the color swatches at the foot always stay visible (the
-   tool-scoped toggles moved to the tool-options bar in 5d). The rail itself no longer clips, so magnetic hover and
+   tool-scoped toggles moved to the tool-options bar in 5d). The rail itself no longer clips, so
    the Swap/Reset hit areas can't be cut off at its edge.
    ------------------------------------------------------------------ */
 
@@ -3513,8 +3446,7 @@ span.layer-lock-icon {
 }
 
 /* Bleeds into the rail's padding (and pads back) so the scroll box's
-   clipping edge is the card's edge, leaving room for magnetic hover's
-   translate/scale. No visible scrollbar: a classic desktop scrollbar
+   clipping edge is the card's edge. No visible scrollbar: a classic desktop scrollbar
    would eat the rail's width; wheel, trackpad and touch still scroll. */
 .workspace-screen[data-layout="floating"] .tool-rail-tools {
   display: flex;
@@ -3644,6 +3576,7 @@ span.layer-lock-icon {
 .workspace-screen[data-layout="floating"][data-current-tool="eraser"] .tool-options-group[data-tools~="eraser"],
 .workspace-screen[data-layout="floating"][data-current-tool="brush"] .tool-options-group[data-tools~="brush"],
 .workspace-screen[data-layout="floating"][data-current-tool="rectangle"] .tool-options-group[data-tools~="rectangle"],
+.workspace-screen[data-layout="floating"][data-current-tool="ellipse"] .tool-options-group[data-tools~="ellipse"],
 .workspace-screen[data-layout="floating"][data-current-tool="selection"] .tool-options-group[data-tools~="selection"] {
   display: flex;
 }
@@ -4381,4 +4314,849 @@ span.layer-lock-icon {
 
 .customize-tools-marker[hidden] {
   display: none;
+}
+
+/* Brush cursor (js/brush-cursor.js, drawn by js/canvas-view.js): the
+   outline of the pixels the next dab paints, a dark line over a wider
+   light one so it reads on any colour. Strokes stay 1px/3px on screen at
+   every zoom. Prefs' Show Brush Cursor off hides it. */
+.brush-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.brush-cursor path {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: miter;
+}
+
+.brush-cursor .brush-cursor-light {
+  stroke: rgb(255 255 255 / 0.9);
+  stroke-width: 3px;
+}
+
+.brush-cursor .brush-cursor-dark {
+  stroke: rgb(0 0 0 / 0.85);
+  stroke-width: 1px;
+}
+
+.workspace-screen[data-brush-cursor="off"] .brush-cursor {
+  display: none;
+}
+
+/* Transform popover (js/transform-ui.js) - Canvas Settings' popover look
+   with two labelled rows of 44px icon buttons. Sized to its widest row
+   (five buttons) rather than the shared 15rem. */
+.transform-panel {
+  width: auto;
+}
+
+.transform-section-heading {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.transform-row {
+  gap: 0.25rem;
+}
+
+.transform-row .tool-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.transform-text-button {
+  font-variant-numeric: tabular-nums;
+}
+
+/* "flip" mirrors left-right; turned a quarter it reads as top-bottom. */
+.transform-icon-quarter {
+  transform: rotate(90deg);
+}
+
+/* Standard Libraries sheet (js/color-library-ui.js) - a Prefs sheet whose
+   rows are a palette name over its colours, with Add on the end. */
+.standard-libraries-list {
+  margin-top: 0.75rem;
+  max-height: min(60vh, 32rem);
+  overflow-y: auto;
+}
+
+.standard-library-row {
+  gap: 0.75rem;
+}
+
+.standard-library-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.standard-library-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.standard-library-swatches span {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
+}
+
+.standard-library-add {
+  min-width: 5rem;
+  min-height: 44px;
+}
+
+/* ------------------------------------------------------------------
+   Colour bar (js/color-library-ui.js): the bottom card's one row - the
+   palette menu button, the active palette's swatches scrolling sideways,
+   Rainbow (#palette-row) and "add current colour". Replaced the fixed
+   16-colour strip and the right-side Color Library card.
+   ------------------------------------------------------------------ */
+.color-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.25rem 0.4rem;
+}
+
+.palette-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  /* Shrinks before the swatches do (down to the chevron and a little name). */
+  flex: 0 1 auto;
+  min-width: 4.5rem;
+  max-width: 9rem;
+  min-height: 44px;
+  padding: 0 0.4rem 0 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: var(--color-surface-alt);
+}
+
+.palette-menu-button .material-symbols-outlined {
+  flex: none;
+  width: 1.25rem;
+  overflow: hidden;
+  font-size: 1.25rem;
+}
+
+.palette-menu-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* One row that scrolls sideways - wheel, trackpad, touch - without a
+   visible scrollbar eating the bar's height. */
+.color-bar .color-library-grid {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 0.3rem;
+  /* At least four swatches, even on a phone. */
+  min-width: 8.5rem;
+  max-width: 38rem;
+  padding: 0.35rem 0.25rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.color-bar .color-library-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.color-bar .color-library-swatch {
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  aspect-ratio: auto;
+}
+
+.color-bar .color-library-empty {
+  align-self: center;
+  padding: 0 0.5rem;
+  white-space: nowrap;
+}
+
+/* #palette-row holds only Rainbow in the bar. */
+.color-bar .palette-row {
+  flex: none;
+  padding: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.color-bar-add {
+  flex: none;
+}
+
+/* Palette menu: the palette list scrolls on its own when it's long, so
+   the actions under it stay in reach. */
+.palette-menu-list {
+  max-height: min(45vh, 22rem);
+  overflow-y: auto;
+}
+
+.palette-menu-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-menu-item-count {
+  margin-inline-start: auto;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.palette-menu-item[aria-checked]::after {
+  margin-inline-start: 0.6rem;
+}
+
+.topbar-menu-item-danger {
+  color: var(--color-danger);
+}
+
+/* New-palette name popover (positioned like the import/ramp popovers). */
+.new-palette-panel input {
+  flex: 1;
+  min-height: 44px;
+}
+
+/* Phone width: the card sits between the two rails, so the palette button
+   drops to its chevron (the name stays in its label) and the row shows at
+   least two swatches, scrolling for the rest. */
+@media (max-width: 480px) {
+  .palette-menu-button {
+    min-width: 44px;
+    padding-inline: 0;
+    justify-content: center;
+  }
+
+  .palette-menu-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .color-bar {
+    gap: 0;
+    padding-inline: 0.15rem;
+  }
+
+  .color-bar .color-library-grid {
+    min-width: 4rem;
+    padding-inline: 0.15rem;
+  }
+}
+
+/* Brush palette (js/workspace.js setBrushesCardOpen): the Brushes panel
+   as a popover over the tool-options bar, opened from
+   #brush-picker-button. Floating only - the docked embed keeps the
+   in-flow panel. */
+.workspace-screen[data-layout="floating"] .brush-popover {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  width: min(19rem, calc(100vw - 16px));
+  max-height: min(70vh, 34rem);
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.workspace-screen[data-layout="floating"] .brush-popover.collapsed {
+  display: none;
+}
+
+.workspace-screen[data-layout="floating"] .brush-popover > :is(.brushes-panel-header, .brushes-panel-toolbar) {
+  flex: none;
+}
+
+.workspace-screen[data-layout="floating"] .brush-popover .brushes-panel-header h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--color-text);
+}
+
+.brush-picker-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding-inline: 0.5rem 0.25rem;
+}
+
+.brush-picker-preview {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  image-rendering: pixelated;
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.brush-picker-button .material-symbols-outlined {
+  flex: none;
+  width: 1.25rem;
+  overflow: hidden;
+  font-size: 1.25rem;
+}
+
+/* Wider than the bar's square buttons: brush preview + chevron. */
+.workspace-screen[data-layout="floating"] .tool-options-bar .brush-picker-button {
+  width: auto;
+}
+
+/* ------------------------------------------------------------------
+   Colour picker panels (js/color-picker.js) - Procreate-style.
+   ------------------------------------------------------------------ */
+.color-picker-popover-header {
+  gap: 0.5rem;
+}
+
+#color-picker-popover-title {
+  flex: 1;
+}
+
+/* New colour (right) beside the one it had when opened (left, tappable). */
+.color-picker-compare {
+  display: flex;
+  height: 1.9rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.color-picker-previous,
+.color-picker-current {
+  display: block;
+  width: 2.25rem;
+  height: 100%;
+  border: none;
+  padding: 0;
+}
+
+.color-picker-previous {
+  cursor: pointer;
+}
+
+.color-picker-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 0.5rem;
+  background: var(--color-surface-alt);
+}
+
+.color-picker-tab {
+  flex: 1;
+  min-height: 36px;
+  border: none;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.color-picker-tab[aria-selected="true"] {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+}
+
+.color-picker-tab:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.color-picker-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.color-picker-panel[hidden] {
+  display: none;
+}
+
+.color-disc,
+.color-classic-square {
+  display: block;
+  align-self: center;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.color-classic-square {
+  border-radius: 0.4rem;
+}
+
+/* Hue slider: the spectrum is its track. */
+.color-hue-slider {
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  border-radius: 999px;
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.color-hue-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.4);
+  background: transparent;
+}
+
+.color-hue-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.4);
+  background: transparent;
+}
+
+.color-value-row {
+  display: grid;
+  grid-template-columns: 1rem 1fr 2.6rem;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 36px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.color-value-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--color-accent);
+}
+
+.color-value-row output {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.color-picker-hex-row {
+  gap: 0.35rem;
+}
+
+.color-picker-palettes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: 15rem;
+  overflow-y: auto;
+}
+
+.color-picker-palette h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.color-picker-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(22px, 1fr));
+  gap: 3px;
+}
+
+.color-picker-palette-swatch,
+.color-picker-history-swatch {
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 4px;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
+}
+
+.color-picker-history-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.color-picker-history-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.color-picker-history {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 3px;
+  min-height: 20px;
+}
+
+.color-picker-history-empty {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.color-picker-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.color-picker-actions .tool-button {
+  flex: 1;
+  min-height: 40px;
+}
+
+.color-picker-actions .material-symbols-outlined {
+  flex: none;
+  width: 1.25rem;
+  overflow: hidden;
+  font-size: 1.25rem;
+}
+
+/* ------------------------------------------------------------------
+   Layers panel, Pixelmator Pro for iPad style (js/layers-ui.js): rows
+   are rounded cards - grip, thumbnail, name over a detail line, ⋯ on the
+   active row, a visibility switch. Overrides the older Photoshop-style
+   row rules above.
+   ------------------------------------------------------------------ */
+.layers-panel-list {
+  position: relative;
+  gap: 4px;
+  padding: 4px 6px 8px;
+}
+
+.layer-row,
+.layer-group-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 52px;
+  padding: 4px 6px 4px 2px;
+  border: none;
+  border-radius: 12px;
+  background: var(--color-surface-alt);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.layer-row.in-group {
+  margin-inline-start: 18px;
+}
+
+.layer-row.active {
+  background: var(--color-accent-soft);
+  box-shadow: inset 0 0 0 1.5px var(--color-accent);
+}
+
+.layer-row.active :is(.layer-name, .layer-name-input) {
+  color: var(--color-text);
+}
+
+.layer-row.marked {
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+.layer-row.active.marked {
+  background: var(--color-accent-soft);
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+.layer-row.dragging {
+  position: relative;
+  z-index: 2;
+  opacity: 0.9;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+  cursor: grabbing;
+}
+
+.layer-grip {
+  flex: none;
+  width: 22px;
+  align-self: stretch;
+  /* Two columns of three dots. */
+  background-image: radial-gradient(circle, var(--color-text-secondary) 1.6px, transparent 2px);
+  background-size: 7px 7px;
+  background-position: center;
+  background-repeat: repeat;
+  -webkit-mask: linear-gradient(#000 0 0) center / 14px 21px no-repeat;
+  mask: linear-gradient(#000 0 0) center / 14px 21px no-repeat;
+  cursor: grab;
+  /* The grip starts a drag, never a scroll. */
+  touch-action: none;
+}
+
+.layer-grip.disabled {
+  visibility: hidden;
+}
+
+.layer-row .layer-thumbnail {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+}
+
+.layer-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.layer-text :is(.layer-name, .layer-name-input) {
+  flex: none;
+  min-width: 0;
+  padding: 0 0.2rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.layer-detail {
+  padding: 0 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.layer-more-button,
+.layer-group-chevron,
+.layer-row :is(.layer-reference-mode-toggle, .layer-reference-smoothing-toggle) {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.layer-more-button:not(:disabled):hover,
+.layer-group-chevron:hover {
+  background: var(--color-surface);
+}
+
+.layer-group-chevron .material-symbols-outlined {
+  transition: transform 150ms ease;
+}
+
+.layer-group-row:not(.collapsed) .layer-group-chevron .material-symbols-outlined {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layer-group-chevron .material-symbols-outlined {
+    transition: none;
+  }
+}
+
+.layer-group-icon {
+  flex: none;
+  width: 24px;
+  overflow: hidden;
+  font-size: 1.4rem;
+  color: var(--color-accent);
+}
+
+/* Visibility: an iOS-style switch over a real checkbox. */
+.layer-switch {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.layer-switch input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.layer-switch-track {
+  position: relative;
+  width: 36px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--color-border);
+  transition: background-color 150ms ease;
+}
+
+.layer-switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+  transition: transform 150ms ease;
+}
+
+.layer-switch input:checked + .layer-switch-track {
+  background: var(--color-accent);
+}
+
+.layer-switch input:checked + .layer-switch-track::after {
+  transform: translateX(14px);
+}
+
+.layer-switch input:focus-visible + .layer-switch-track {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layer-switch-track,
+  .layer-switch-track::after {
+    transition: none;
+  }
+}
+
+.layer-select-check {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0 0 0 6px;
+  accent-color: var(--color-accent);
+}
+
+.layer-drop-indicator {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  pointer-events: none;
+}
+
+.layer-drop-indicator.in-group {
+  left: 26px;
+}
+
+/* Header: ⋯ on the start, then the title, Opacity & Blend, + and close. */
+.layers-panel-header .panel-header-top {
+  gap: 0.15rem;
+}
+
+.layers-select-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem 0.4rem;
+}
+
+.layers-select-bar.hidden {
+  display: none;
+}
+
+.layers-select-count {
+  flex: 1;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.layers-select-bar .tool-button {
+  min-height: 36px;
+  padding: 0 0.6rem;
+  font-size: 0.8rem;
+}
+
+/* Opacity & Blend popover. */
+.layer-properties-popover {
+  width: 16rem;
+}
+
+.layer-properties-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.layer-properties-row[hidden] {
+  display: none;
+}
+
+.layer-properties-row select {
+  flex: 1;
+  min-height: 36px;
+}
+
+.layer-properties-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--color-accent);
+}
+
+.layer-properties-row input[type="number"] {
+  width: 3.5rem;
+  min-height: 32px;
+}
+
+/* Phone width: the Layers card sits between the rails, so rows tighten. */
+@media (max-width: 480px) {
+  .layer-row .layer-thumbnail {
+    width: 28px;
+    height: 28px;
+  }
+
+  .layer-grip {
+    width: 16px;
+  }
+
+  .layer-row.in-group {
+    margin-inline-start: 10px;
+  }
+
+  .layer-row,
+  .layer-group-row {
+    gap: 0.2rem;
+  }
 }

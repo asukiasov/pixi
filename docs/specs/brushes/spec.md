@@ -9,25 +9,21 @@ instead of drawing them freehand every time.
 ## Requirements
 
 ### Requirement: Brush picker
-The Brush tool SHALL offer a picker of available brush shapes, presented
-as a titled panel (a thumbnail grid, similar in layout to the Layers
-panel) rather than a bare unlabeled row; selecting one makes it the
-current brush. The system ships with two built-in shapes (Heart, Circle).
-The Brushes panel SHALL be visible only while the Brush tool is the
-current tool, the same way the Canvas Settings panel is scoped to its own
-toggle — other tools don't need it taking up space. The panel SHALL be a
-fixed-width sidebar on the right side of the workspace (its own column,
-not part of the canvas/Layers/palette column), distinct from the Layers
-panel and the bottom bar.
+The Brush tool SHALL offer a picker of available brush shapes as a titled
+thumbnail grid; selecting one makes it the current brush. The system ships
+with two built-in shapes (Heart, Circle). In the app the picker is the
+brush palette, a popover opened from the tool-options bar's brush button
+while the Brush tool is active (see `floating-workspace`'s Brush palette
+requirement); in a docked embed it is the Brushes panel, visible only
+while the Brush tool is the current tool.
 
 #### Scenario: Selecting a brush
 - **WHEN** the user selects the Heart brush from the picker
 - **THEN** Heart becomes the current brush for subsequent placements
 
-#### Scenario: Panel visibility follows tool selection
+#### Scenario: Picker follows tool selection
 - **WHEN** the user switches to a tool other than Brush
-- **THEN** the Brushes panel is hidden, and it reappears when the Brush
-  tool is selected again
+- **THEN** the picker is hidden (the brush palette closes)
 
 ### Requirement: Brush thumbnails show the pattern, not the name
 Each entry in the Brush picker SHALL show a black-on-white pixel preview

@@ -210,7 +210,7 @@ describe('floating tool-options bar (5d)', () => {
 
   test('the bar-hiding rule and the data-tools lists name every tool exactly once', () => {
     const tools = new Set([...html.matchAll(/data-tool="([a-z]+)"/g)].map((m) => m[1]));
-    assert.equal(tools.size, 10);
+    assert.equal(tools.size, 11);
     const shown = new Set([...html.matchAll(/data-tools="([^"]*)"/g)].flatMap((m) => m[1].split(/\s+/).filter(Boolean)));
     const hideRule = all.find((r) => r.selector.endsWith('.tool-options-bar') && /display:\s*none/.test(r.body) && r.selector.includes('data-current-tool'));
     const hidden = new Set([...hideRule.selector.matchAll(/data-current-tool="([a-z]+)"/g)].map((m) => m[1]));
@@ -263,10 +263,10 @@ describe('floating panel cards + mini-rail (5e)', () => {
     assert.deepEqual(docked.map((r) => r.selector), []);
   });
 
-  test('the glass lists name the rail and the three cards, not the whole sidebar', () => {
+  test('the glass lists name the rail and the cards, not the whole sidebar', () => {
     assert.doesNotMatch(css, /:is\([^)]*\.slot-panels[^)]*\)/);
     const glass = formaSelector('glass');
-    for (const part of ['.panel-rail', '.right-sidebar > .color-library-panel', '.right-sidebar > .brushes-panel', '.right-sidebar > .layers-panel']) {
+    for (const part of ['.panel-rail', '.right-sidebar > .layers-panel']) {
       assert.ok(glass.includes(part), part);
     }
     assert.ok(!glass.includes('.right-sidebar,'), glass);
@@ -380,7 +380,7 @@ describe('narrow windows (5h)', () => {
   test('the card column (open and collapsed) is capped by --slot-cards-room', () => {
     for (const sel of [`${FLOATING} .right-sidebar`, `${FLOATING} .right-sidebar.right-sidebar-collapsed`]) {
       const widths = bodyOf(sel).map((b) => /(?:^|[\s;])width:\s*([^;]+);/.exec(b)?.[1]).filter(Boolean);
-      assert.deepEqual(widths, ['min(15rem, var(--slot-cards-room))'], sel);
+      assert.deepEqual(widths, ['min(17.5rem, var(--slot-cards-room))'], sel);
     }
   });
 
@@ -538,5 +538,33 @@ describe('Prefs sheet (5g)', () => {
     assert.equal(sheet.length, 1);
     assert.match(sheet[0].body, /background:\s*var\(--color-surface\)/);
     assert.doesNotMatch(sheet[0].body, /backdrop-filter/);
+  });
+});
+
+describe('Color Library popovers', () => {
+  // Generate ramp opens from the colour picker too. The popovers sit at
+  // the workspace screen's top level, outside every slot, so no slot's
+  // stacking context can put them under the picker.
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+
+  // The class attributes of the elements enclosing `id`, outermost first.
+  function ancestorClasses(id) {
+    const stack = [];
+    const tag = /<(\/?)(div|aside|nav|section|main|header|dialog)\b([^>]*)>/g;
+    for (const m of html.matchAll(tag)) {
+      if (m[1]) { stack.pop(); continue; }
+      if (m[3].includes(`id="${id}"`)) return stack;
+      stack.push(/class="([^"]*)"/.exec(m[3])?.[1] ?? '');
+    }
+    return null;
+  }
+
+  test('the import, ramp and new-palette popovers and the palette menu are outside every slot', () => {
+    for (const id of ['import-preview-row', 'ramp-preview-row', 'new-palette-row', 'palette-menu']) {
+      const classes = ancestorClasses(id);
+      assert.ok(classes, `${id} found`);
+      assert.ok(classes.some((c) => c.includes('workspace-screen')), `${id} is on the workspace screen`);
+      assert.ok(!classes.some((c) => /\bslot-/.test(c)), `${id} is outside the slots: ${classes.join(' > ')}`);
+    }
   });
 });

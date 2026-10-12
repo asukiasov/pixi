@@ -27,13 +27,15 @@ describe('normalizePrefs', () => {
     }
   });
 
-  test('defaults: tools left, panels right, every card pinned, no auto-hide', () => {
+  test('defaults: tools left, panels right, every card pinned, no auto-hide, brush cursor on', () => {
     assert.deepEqual(DEFAULT_PREFS, {
       toolsSide: 'left',
       panelsSide: 'right',
       pinned: { colors: true, brushes: true, layers: true },
       autoHide: false,
-      railTools: ['move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'selection', 'hand', 'eyedropper'],
+      brushCursor: true,
+      pencilOnly: true,
+      railTools: ['move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'hand', 'eyedropper'],
     });
   });
 
@@ -48,6 +50,10 @@ describe('normalizePrefs', () => {
     assert.equal(prefs.toolsSide, 'right');
     assert.equal(prefs.panelsSide, 'right');
     assert.equal(prefs.autoHide, false);
+    assert.equal(normalizePrefs({ brushCursor: 'no' }).brushCursor, true);
+    assert.equal(normalizePrefs({ brushCursor: false }).brushCursor, false);
+    assert.equal(normalizePrefs({ pencilOnly: 1 }).pencilOnly, true);
+    assert.equal(normalizePrefs({ pencilOnly: false }).pencilOnly, false);
   });
 
   test('both sides may be the same', () => {
@@ -85,7 +91,7 @@ describe('loadPrefs / savePrefs', () => {
 
   test('round trip', () => {
     const storage = fakeStorage();
-    const prefs = { toolsSide: 'right', panelsSide: 'left', pinned: { colors: false, brushes: true, layers: false }, autoHide: true, railTools: ['pencil', 'move'] };
+    const prefs = { toolsSide: 'right', panelsSide: 'left', pinned: { colors: false, brushes: true, layers: false }, autoHide: true, brushCursor: false, pencilOnly: false, railTools: ['pencil', 'move'] };
     savePrefs(storage, prefs);
     assert.equal(PREFS_STORAGE_KEY, 'pixi-prefs');
     assert.deepEqual(loadPrefs(storage), prefs);
@@ -101,16 +107,16 @@ describe('loadPrefs / savePrefs', () => {
 describe('applyPrefsToScreen', () => {
   test('writes the sides and auto-hide as data attributes', () => {
     const screen = { dataset: {} };
-    applyPrefsToScreen(screen, { ...DEFAULT_PREFS, toolsSide: 'right', panelsSide: 'right', autoHide: true });
-    assert.deepEqual(screen.dataset, { toolsSide: 'right', panelsSide: 'right', autoHide: 'on' });
+    applyPrefsToScreen(screen, { ...DEFAULT_PREFS, toolsSide: 'right', panelsSide: 'right', autoHide: true, brushCursor: false });
+    assert.deepEqual(screen.dataset, { toolsSide: 'right', panelsSide: 'right', autoHide: 'on', brushCursor: 'off' });
     applyPrefsToScreen(screen, DEFAULT_PREFS);
-    assert.deepEqual(screen.dataset, { toolsSide: 'left', panelsSide: 'right', autoHide: 'off' });
+    assert.deepEqual(screen.dataset, { toolsSide: 'left', panelsSide: 'right', autoHide: 'off', brushCursor: 'on' });
   });
 });
 
 describe('isAutoHideTool', () => {
   test('stroke tools hide the interface', () => {
-    for (const tool of ['pencil', 'eraser', 'brush', 'line', 'rectangle']) assert.equal(isAutoHideTool(tool), true, tool);
+    for (const tool of ['pencil', 'eraser', 'brush', 'line', 'rectangle', 'ellipse']) assert.equal(isAutoHideTool(tool), true, tool);
   });
 
   test('other tools never do', () => {

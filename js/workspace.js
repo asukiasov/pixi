@@ -3,7 +3,9 @@ import { saveProject, renameProject, createCustomBrush, listCustomBrushes, delet
 import { initExport, sanitizeFilename } from './export.js';
 import { TimelapseRecorder, captureFrame, encodeTimelapseVideo, isTimelapseSupported } from './timelapse.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
-import { drawRectangle, clipToSelection } from './shape-tools.js';
+import { drawRectangle, drawEllipse, clipToSelection } from './shape-tools.js';
+import { cursorFootprint, footprintOutlinePath } from './brush-cursor.js';
+import { flipRegion, rotateRegion, contentBounds, alignOffset, moveRegion } from '../lib/pixel-engine/transform.js';
 import { bresenhamLine, strokeFreehandThick } from '../lib/pixel-engine/engine.js';
 import { confirmDialog } from './confirm-dialog.js';
 import { initSymmetry, applySymmetryTransform } from './symmetry-ui.js';
@@ -19,13 +21,14 @@ import { initCanvasSettings } from './canvas-settings.js';
 // ES modules support this fine as long as neither side calls the other's
 // exports at module-evaluation time, only from inside function bodies
 // invoked later - true of every call site below.
-import { renderLayersPanel, clearLayerMarksAndRefresh, mergeMarkedOrActiveDown } from './layers-ui.js';
+import { renderLayersPanel, clearLayerMarksAndRefresh, mergeMarkedOrActiveDown, duplicateActiveLayer, groupMarkedOrActive } from './layers-ui.js';
 import { isHideUiShortcut } from './hide-ui.js';
 import { showToast } from './toast.js';
 import { visibleAnchor, canvasSide } from './layout.js';
 import { isAutoHideTool } from './prefs.js';
 import { syncToolButtons } from './tool-rail.js';
-import { getColorSequenceColor, setLibrarySequenceEnabled, syncColorLibraryActiveSwatch } from './color-library-ui.js';
+import { getColorSequenceColor, setLibrarySequenceEnabled, syncColorLibraryActiveSwatch, getColorPalettes } from './color-library-ui.js';
+import { initColorPicker } from './color-picker.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
 
@@ -519,12 +522,27 @@ function renderBrushesPanel() {
     swatch.appendChild(buildBrushPreviewCanvas(brush));
     swatch.addEventListener('click', () => {
       state.currentBrush = brush;
+      refreshBrushCursor();
+      syncBrushPickerButton();
       brushesPanelGrid.querySelectorAll('.brush-swatch').forEach((s) => s.classList.toggle('active', s === swatch));
       deleteBrushButton.disabled = !brush.isCustom;
     });
     brushesPanelGrid.appendChild(swatch);
   });
   deleteBrushButton.disabled = !state.currentBrush?.isCustom;
+  syncBrushPickerButton();
+}
+
+/** The tool-options bar's brush button shows the current brush's shape and name. */
+function syncBrushPickerButton() {
+  const button = root.querySelector('#brush-picker-button');
+  const preview = root.querySelector('#brush-picker-preview');
+  const brush = state.currentBrush;
+  if (!button || !preview || !brush) return;
+  preview.width = brush.width;
+  preview.height = brush.height;
+  preview.getContext('2d').drawImage(buildBrushPreviewCanvas(brush), 0, 0);
+  button.setAttribute('aria-label', `Brush: ${brush.name}`);
 }
 
 /** Fetches custom brushes from IndexedDB, merges with the built-ins, re-renders the panel. */
@@ -640,17 +658,32 @@ function closeBrushEditor() {
 }
 
 /**
- * Opens or closes the Brushes card in the floating layout
- * (5e-cards-mini-rail), from js/panel-rail.js. Two independent classes
- * decide whether the panel shows: `.hidden` is the tool's (Brush only,
- * applyToolScopedUI), `.collapsed` is the user's (this). So a closed card
- * stays closed across tool switches, and an open one reappears with the
- * Brush tool. Only floating CSS reads `.collapsed` here, and nothing in
- * the docked layout calls this with `false`.
+ * Opens or closes the brush palette (the Brushes panel as a popover,
+ * anchored to #brush-picker-button in the tool-options bar). Two
+ * independent classes decide whether the panel shows: `.hidden` is the
+ * tool's (Brush only, applyToolScopedUI), `.collapsed` is open/closed
+ * (this). Only floating CSS reads `.collapsed`, so in the docked embed
+ * layout the panel just stays in place.
  */
 export function setBrushesCardOpen(open) {
   brushesPanel.classList.toggle('collapsed', !open);
+  const button = root.querySelector('#brush-picker-button');
+  button?.setAttribute('aria-expanded', String(open));
+  if (open && button) positionBrushPalette(button);
   if (!open) closeBrushEditor();
+}
+
+/** Above the brush button (the bar is at the bottom), centred on it and kept on screen. */
+function positionBrushPalette(button) {
+  const rect = button.getBoundingClientRect();
+  const panelRect = brushesPanel.getBoundingClientRect();
+  const margin = 8;
+  let top = rect.top - panelRect.height - margin;
+  if (top < margin) top = rect.bottom + margin;
+  top = Math.max(margin, Math.min(top, window.innerHeight - panelRect.height - margin));
+  const left = Math.max(margin, Math.min(rect.left + rect.width / 2 - panelRect.width / 2, window.innerWidth - panelRect.width - margin));
+  brushesPanel.style.left = `${left}px`;
+  brushesPanel.style.top = `${top}px`;
 }
 
 /**
@@ -991,13 +1024,16 @@ function bindTooltips() {
 }
 
 /**
- * Rebuilds the palette row's swatches from the fixed PALETTE presets
- * plus the Rainbow swatch last. User-added colors live in the Color
- * Library panel (js/color-library-ui.js), not here.
+ * Rebuilds the palette row: the Rainbow swatch, after the fixed PALETTE
+ * presets only where there's no colour bar (Pixi.mount() embeds). In the
+ * app the colour bar shows the active Color Library palette instead
+ * (js/color-library-ui.js), and these presets live on as its "Pixi
+ * Basics" palette.
  */
 function renderPaletteRow() {
   paletteRow.innerHTML = '';
-  PALETTE.forEach((hex) => {
+  const presets = root.querySelector('#color-bar') ? [] : PALETTE;
+  presets.forEach((hex) => {
     const swatch = document.createElement('button');
     swatch.type = 'button';
     swatch.className = 'palette-swatch';
@@ -1048,8 +1084,13 @@ export function syncActiveSwatch() {
   syncColorLibraryActiveSwatch(fgHex, state.brushRainbow);
 }
 
-/** Keeps the native color input, hex field, and RGB fields all showing the same color. */
+// The Disc/Classic/Value/Palettes panels (js/color-picker.js); null in
+// embeds, whose markup has only the plain hex/RGB picker.
+let colorPicker = null;
+
+/** Keeps the native color input, hex field, RGB fields and picker panels all showing the same color. */
 function updateColorPickerInputs(rgba) {
+  colorPicker?.update(rgba);
   const hex = rgbaToHex(rgba);
   root.querySelector('#color-picker-native').value = hex;
   root.querySelector('#color-picker-hex').value = hex;
@@ -1132,6 +1173,7 @@ function openColorPicker(target, anchorEl) {
   // Unhide before measuring - .hidden is display:none, which has no box
   // to read a size from.
   popover.classList.remove('hidden');
+  colorPicker?.open(current);
   const rect = anchorEl.getBoundingClientRect();
   const popRect = popover.getBoundingClientRect();
   const margin = 8;
@@ -1164,7 +1206,9 @@ function openColorPicker(target, anchorEl) {
 }
 
 function closeColorPicker() {
-  root.querySelector('#color-picker-popover').classList.add('hidden');
+  const popover = root.querySelector('#color-picker-popover');
+  if (!popover.classList.contains('hidden')) colorPicker?.close();
+  popover.classList.add('hidden');
 }
 
 // openLayersOpacityPopover/closeLayersOpacityPopover live in
@@ -1235,10 +1279,11 @@ export function bindSliderWheel(slider) {
  * removes the chance of it recurring for a future tool-scoped panel.
  */
 function applyToolScopedUI() {
+  refreshBrushCursor();
   brushesPanel.classList.toggle('hidden', state.currentTool !== 'brush');
-  // Leaving the Brush tool mid-edit closes the editor rather than
-  // leaving it open behind a now-hidden panel.
-  if (state.currentTool !== 'brush') closeBrushEditor();
+  // Leaving the Brush tool closes the brush palette (and its editor)
+  // rather than leaving it to reappear with the next Brush pick.
+  if (state.currentTool !== 'brush') setBrushesCardOpen(false);
   // Hand tool: single-pointer drag pans the canvas instead of drawing
   // (see CanvasView#setPanMode). Every other tool leaves pan mode off.
   state.canvasView.setPanMode(state.currentTool === 'hand');
@@ -1252,7 +1297,7 @@ function applyToolScopedUI() {
   // 1:1 proportion toggle: Rectangle and Selection.
   squareConstraintPanel.classList.toggle(
     'hidden',
-    state.currentTool !== 'rectangle' && state.currentTool !== 'selection'
+    state.currentTool !== 'rectangle' && state.currentTool !== 'ellipse' && state.currentTool !== 'selection'
   );
   // Floating tool-options bar (5d-tool-options-bar): CSS shows the bar's
   // groups from this attribute, and js/tool-options-bar.js refreshes its
@@ -1419,17 +1464,50 @@ function bindTimelapseControls() {
   });
 }
 
+function selectTool(tool) {
+  state.currentTool = tool;
+  syncToolButtons(toolButtons, state.currentTool);
+  applyToolScopedUI();
+}
+
 function bindDomOnce() {
   toolButtons = root.querySelectorAll('.tool-button[data-tool]');
   paletteRow = root.querySelector('#palette-row');
   brushesPanel = root.querySelector('#brushes-panel');
+  const brushPickerButton = root.querySelector('#brush-picker-button');
+  brushPickerButton?.addEventListener('click', () => {
+    setBrushesCardOpen(brushesPanel.classList.contains('collapsed'));
+  });
+  root.querySelector('#brushes-close')?.addEventListener('click', () => {
+    setBrushesCardOpen(false);
+    brushPickerButton?.focus();
+  });
+  // Closes like the other popovers: a press outside it or Escape. Only
+  // where there's a brush button to reopen it (not in the docked embed).
+  if (brushPickerButton && !globalListenersBound) {
+    document.addEventListener('pointerdown', (e) => {
+      if (brushesPanel.classList.contains('collapsed')) return;
+      if (brushesPanel.contains(e.target) || root.querySelector('#brush-picker-button')?.contains(e.target)) return;
+      // Dialogs opened from the palette (confirm delete) aren't "outside".
+      if (e.target.closest?.('dialog, .confirm-overlay')) return;
+      setBrushesCardOpen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || brushesPanel.classList.contains('collapsed')) return;
+      setBrushesCardOpen(false);
+      root.querySelector('#brush-picker-button')?.focus();
+    });
+  }
   const backToGalleryButton = root.querySelector('#back-to-gallery-button');
 
   toolButtons.forEach((button) => {
     button.addEventListener('click', () => {
-      state.currentTool = button.dataset.tool;
-      syncToolButtons(toolButtons, state.currentTool);
-      applyToolScopedUI();
+      // Remembered so a successful Eyedropper pick can hand control back
+      // to whatever tool was in use (see onDrawStart).
+      if (button.dataset.tool === 'eyedropper' && state.currentTool !== 'eyedropper') {
+        state.toolBeforeEyedropper = state.currentTool;
+      }
+      selectTool(button.dataset.tool);
     });
   });
 
@@ -1451,6 +1529,7 @@ function bindDomOnce() {
     const value = Number(pencilSizeSlider.value);
     state.pencilSize = value;
     pencilSizeReadout.textContent = `${value}px`;
+    refreshBrushCursor();
   });
 
   // Mouse wheel adjusts Size by one step per notch while hovering the
@@ -1481,6 +1560,7 @@ function bindDomOnce() {
   const colorPickerG = root.querySelector('#color-picker-g');
   const colorPickerB = root.querySelector('#color-picker-b');
   const colorPickerPopover = root.querySelector('#color-picker-popover');
+  colorPicker = initColorPicker({ root, setColor: (rgba) => applyPickedColor(rgba), getPalettes: getColorPalettes });
 
   colorPickerNative.addEventListener('input', () => {
     applyPickedColor(hexToRgba(colorPickerNative.value));
@@ -1670,6 +1750,9 @@ function bindDomOnce() {
   root.querySelector('#zoom-preset-100').addEventListener('click', () => state.canvasView.setZoomPreset('100'));
   root.querySelector('#zoom-preset-fit').addEventListener('click', () => state.canvasView.setZoomPreset('fit'));
   root.querySelector('#zoom-preset-fill').addEventListener('click', () => state.canvasView.setZoomPreset('fill'));
+  root.querySelector('#rotate-view-left')?.addEventListener('click', () => state.canvasView.rotateBy(-90));
+  root.querySelector('#rotate-view-right')?.addEventListener('click', () => state.canvasView.rotateBy(90));
+  root.querySelector('#rotate-view-reset')?.addEventListener('click', () => state.canvasView.resetRotation());
 
   state.undoButton.addEventListener('click', performUndo);
   state.redoButton.addEventListener('click', performRedo);
@@ -1727,6 +1810,20 @@ function bindDomOnce() {
       if (key === 'e') {
         e.preventDefault();
         mergeMarkedOrActiveDown();
+        return;
+      }
+
+      // Cmd/Ctrl+J: duplicate the active layer (Photoshop's shortcut).
+      if (key === 'j') {
+        e.preventDefault();
+        duplicateActiveLayer();
+        return;
+      }
+
+      // Cmd/Ctrl+G: group the selected layers, or the active one.
+      if (key === 'g') {
+        e.preventDefault();
+        groupMarkedOrActive();
       }
     });
 
@@ -1906,13 +2003,15 @@ function renameCurrentProject(name) {
   syncTopbarTitle();
 }
 
-function setZoomReadout(percent) {
-  zoomReadout.textContent = `${percent}%`;
+/** Zoom readouts; a turned view also shows its angle ("2100% · 90°"). */
+function setZoomReadout(percent, rotation = 0) {
+  const text = rotation ? `${percent}% · ${rotation}°` : `${percent}%`;
+  zoomReadout.textContent = text;
   if (zoomPillReadout) {
-    zoomPillReadout.textContent = `${percent}%`;
+    zoomPillReadout.textContent = text;
     // The label must contain the visible text, or speech users can't say
     // "click 2100%" and screen readers hide the zoom level.
-    zoomPillReadout.parentElement.setAttribute('aria-label', `Zoom, ${percent}%`);
+    zoomPillReadout.parentElement.setAttribute('aria-label', `Zoom, ${text}`);
   }
 }
 
@@ -1950,6 +2049,55 @@ let canvasSettingsControls = null;
  * does - not a special case.
  */
 const workspaceResetListeners = [];
+/**
+ * What the Transform popover (js/transform-ui.js) would act on: the
+ * selection if there is one, else the active layer. `disabled` for the
+ * reference image layer; `alignDisabled` too when there's nothing to
+ * align (no pixels in the target) or the target is the opaque
+ * Background layer, whose content box is always the whole canvas.
+ */
+export function getTransformTarget() {
+  const layer = state.layerStack.getActiveLayer();
+  const engine = layer.engine;
+  const rect = state.selection ?? { x: 0, y: 0, width: engine.width, height: engine.height };
+  const disabled = layer.isReferenceImage;
+  const alignDisabled = disabled || (!state.selection && layer.isBackground) || !contentBounds(engine, rect);
+  return { kind: state.selection ? 'selection' : 'layer', disabled, alignDisabled };
+}
+
+/**
+ * Runs a Transform popover action on the selection (if any) or the whole
+ * active layer, as one undo step. `op` is { kind: 'flip', axis },
+ * { kind: 'rotate', turn } or { kind: 'align', edge } - see
+ * lib/pixel-engine/transform.js. The selection follows the content (a
+ * quarter turn swaps its width and height; align moves it), and clears
+ * if the content left the canvas entirely.
+ */
+export function transformActiveLayer(op) {
+  const target = getTransformTarget();
+  if (target.disabled) return;
+  const engine = state.layerStack.getActiveLayer().engine;
+  const rect = state.selection ?? { x: 0, y: 0, width: engine.width, height: engine.height };
+  let next = rect;
+  if (op.kind === 'flip') {
+    flipRegion(engine, rect, op.axis);
+  } else if (op.kind === 'rotate') {
+    next = rotateRegion(engine, rect, op.turn);
+  } else {
+    if (target.alignDisabled) return;
+    const { dx, dy } = alignOffset(contentBounds(engine, rect), engine.width, engine.height, op.edge);
+    if (!dx && !dy) return; // already there - no empty undo step
+    next = moveRegion(engine, rect, dx, dy);
+  }
+  if (state.selection) {
+    state.selection = next;
+    state.canvasView.setSelectionRect(next);
+    updateSelectionControls();
+  }
+  state.canvasView.render();
+  commit();
+}
+
 export function onWorkspaceReset(fn) {
   workspaceResetListeners.push(fn);
 }
@@ -1998,6 +2146,22 @@ function setStroking(on) {
 }
 
 /**
+ * Shows the brush cursor (js/brush-cursor.js) for the current tool at the
+ * last hover point, or hides it with no point or a non-painting tool.
+ * Called on every hover move and whenever the tool, Size or brush changes.
+ * Whether it's visible at all is the Prefs' data-brush-cursor (CSS).
+ */
+function refreshBrushCursor() {
+  const point = state.hoverPoint;
+  const footprint = point && cursorFootprint(state.currentTool, { pencilSize: state.pencilSize, brush: state.currentBrush });
+  if (!footprint) {
+    state.canvasView.hideCursor();
+    return;
+  }
+  state.canvasView.setCursorPath(footprintOutlinePath(footprint), point);
+}
+
+/**
  * Redraws the current line/rectangle preview (or committed shape) from the
  * pre-drag backup, applying the selection clip if one is active. Shared by
  * onDrawMove (live preview) and onDrawEnd (final commit) so both look and
@@ -2029,6 +2193,8 @@ function drawShapePreview() {
       state.dragCurrent.y,
       rgba
     );
+  } else if (state.currentTool === 'ellipse') {
+    drawEllipse(state.strokeEngine, state.dragStart.x, state.dragStart.y, state.dragCurrent.x, state.dragCurrent.y, rgba);
   }
   clipToSelection(state.strokeEngine, state.strokeBackup, state.selection);
 }
@@ -2155,6 +2321,8 @@ export function initWorkspace({
     // recording, same as pixel-perfect mode and every other field here).
     timelapseRecorder: new TimelapseRecorder(),
     currentTool: initialTool,
+    toolBeforeEyedropper: null,
+    hoverPoint: null,
     foregroundColor: hexToRgba(PALETTE[0]),
     backgroundColor: hexToRgba('#ffffff'),
     currentBrush: allBrushes[0],
@@ -2222,7 +2390,7 @@ export function initWorkspace({
   renderBrushesPanel();
   root.querySelector('#brush-spacing').value = '1';
   root.querySelector('#brush-rotation').value = '0';
-  setBrushesCardOpen(true);
+  setBrushesCardOpen(false);
   setRightSidebarVisible(true);
   // A re-init while hidden (e.g. an embed-style loadImage(), or opening
   // another project) already fit the view to the full-size container;
@@ -2290,12 +2458,17 @@ export function initWorkspace({
   canvasView.setHandlers({
     // Fires on every zoom change (buttons, shortcuts, presets, touch
     // pinch, and the initial Fit Screen from resetView) — see design.md.
-    onZoomChange(percent) {
-      setZoomReadout(percent);
+    onZoomChange(percent, rotation) {
+      setZoomReadout(percent, rotation);
     },
 
     onViewChange() {
       for (const fn of canvasViewChangeListeners) fn();
+    },
+
+    onHover(point) {
+      state.hoverPoint = point;
+      refreshBrushCursor();
     },
 
     onDrawStart(point) {
@@ -2321,6 +2494,9 @@ export function initWorkspace({
           const i = (point.y * composite.width + point.x) * 4;
           const rgba = [composite.data[i], composite.data[i + 1], composite.data[i + 2], composite.data[i + 3]];
           setForegroundColor(rgba);
+          // Back to the tool the Eyedropper was picked from, so sampling
+          // is a quick detour rather than a mode to leave by hand.
+          if (state.toolBeforeEyedropper) selectTool(state.toolBeforeEyedropper);
         }
         return;
       }
@@ -2357,7 +2533,7 @@ export function initWorkspace({
         return;
       }
 
-      if (tool === 'line' || tool === 'rectangle') {
+      if (tool === 'line' || tool === 'rectangle' || tool === 'ellipse') {
         state.dragStart = point;
         state.dragCurrent = point;
         drawShapePreview();
@@ -2419,8 +2595,8 @@ export function initWorkspace({
 
       if (!state.strokeBackup) return;
 
-      if (tool === 'line' || tool === 'rectangle') {
-        state.dragCurrent = tool === 'rectangle' && isSquareConstrained() ? squareDragCurrent(state.dragStart, point) : point;
+      if (tool === 'line' || tool === 'rectangle' || tool === 'ellipse') {
+        state.dragCurrent = (tool === 'rectangle' || tool === 'ellipse') && isSquareConstrained() ? squareDragCurrent(state.dragStart, point) : point;
         drawShapePreview();
         state.canvasView.render();
         return;

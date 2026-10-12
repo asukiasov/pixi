@@ -263,6 +263,17 @@ export const DEFAULT_MATERIAL_COLORS = [
 ];
 
 /**
+ * The 16 colours of the old fixed bottom strip, kept as a palette now the
+ * bottom bar shows the active Color Library palette instead.
+ */
+export const PIXI_BASICS = [
+  '#000000', '#ffffff', '#9d9d9d', '#4a4a4a',
+  '#be2633', '#e06f8b', '#ea4f36', '#f7a417',
+  '#f2ca30', '#a2ce29', '#3f9337', '#39a6a3',
+  '#2ce8f4', '#1a5fb4', '#5843c0', '#8b2fb0',
+];
+
+/**
  * Predefined starter palettes, auto-created alongside "Material" on
  * first-ever load (see workspace.js's loadColorPalettes) - unlike
  * Material, these are regular, deletable palettes, just pre-populated
@@ -272,6 +283,7 @@ export const DEFAULT_MATERIAL_COLORS = [
  * always-visible palettes from the moment the app is opened.
  */
 export const PREDEFINED_PALETTES = {
+  'Pixi Basics': PIXI_BASICS,
   Vaporwave: ['#ff71ce', '#01cdfe', '#05ffa1', '#b967ff', '#fffb96'],
   Sunset: ['#ff9a00', '#ff6d00', '#ff3d00', '#ff006e', '#8338ec'],
   Ocean: ['#03045e', '#0077b6', '#00b4d8', '#90e0ef', '#caf0f8'],
@@ -285,3 +297,21 @@ export const PREDEFINED_PALETTES = {
   "M&M's": ['#ff0000', '#ff8c00', '#ffd700', '#00a651', '#0072ce', '#6f4e37'],
   Snickers: ['#002d72', '#6f4e37', '#d2a679', '#f5deb3'],
 };
+
+/**
+ * The Standard Libraries list (js/standard-libraries.js): every starter
+ * palette plus a few classics, offered to re-add at any time. The same
+ * list ships as assets/palettes/standard.json, which the app downloads
+ * first; this copy is the offline fallback (a test keeps the two equal).
+ */
+export const STANDARD_PALETTES = [
+  ...Object.entries(PREDEFINED_PALETTES).map(([name, colors]) => ({ name, colors })),
+  {
+    name: 'PICO-8',
+    colors: [
+      '#000000', '#1d2b53', '#7e2553', '#008751', '#ab5236', '#5f574f', '#c2c3c7', '#fff1e8',
+      '#ff004d', '#ffa300', '#ffec27', '#00e436', '#29adff', '#83769c', '#ff77a8', '#ffccaa',
+    ],
+  },
+  { name: 'Game Boy', colors: ['#0f380f', '#306230', '#8bac0f', '#9bbc0f'] },
+];

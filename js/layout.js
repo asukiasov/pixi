@@ -12,10 +12,10 @@
  * isn't listed: it carries .slider in the markup already.
  */
 export const FORMA_CLASSES = [
-  ['.slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar, #back-to-gallery-button, #zoom-pill, .topbar-group, #more-button, .right-sidebar > .color-library-panel, .right-sidebar > .brushes-panel, .right-sidebar > .layers-panel', ['glass']],
+  ['.slot-tools, .panel-rail, .options-card, .tool-options-bar, #selection-bar, #back-to-gallery-button, #zoom-pill, .topbar-group, #more-button, .right-sidebar > .layers-panel', ['glass']],
   ['.slot-tools, .panel-rail, .options-card, #selection-bar, #zoom-pill, .topbar-group', ['glass-pill']],
   ['#back-to-gallery-button, #more-button', ['glass-circle']],
-  [':is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group) .tool-button', ['ghost-button']],
+  [':is(.tool-rail-tools, .panel-rail, .tool-options-bar, #selection-bar, .topbar-group, .color-bar, .layers-panel-header) .tool-button', ['ghost-button']],
   ['#selection-bar .tool-button', ['ghost-text']],
   ['.fg-bg-swatch-stack', ['swatch-pair']],
 ];

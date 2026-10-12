@@ -156,10 +156,17 @@ current foreground draw color, without modifying any pixel data.
 - **THEN** the foreground color becomes fully transparent, the same as
   the sampled pixel
 
-#### Scenario: Sampled color is usable immediately
-- **WHEN** the user samples a color with the Eyedropper and then switches
-  to the Pencil tool
-- **THEN** the Pencil draws with the sampled color
+#### Scenario: Returns to the previous tool after a pick
+- **WHEN** the user switches from the Pencil (or any other tool) to the
+  Eyedropper and taps a point on the canvas
+- **THEN** the foreground color becomes the sampled color and the Pencil
+  (the tool active before the Eyedropper) is selected again, ready to
+  draw with it
+
+#### Scenario: A tap outside the canvas keeps the Eyedropper
+- **WHEN** the Eyedropper is active and the user taps outside the canvas
+  bounds
+- **THEN** nothing is sampled and the Eyedropper stays selected
 
 ### Requirement: Foreground and background colors
 The system SHALL maintain two selectable colors, Foreground and
@@ -229,6 +236,38 @@ approach aimed for.
 - **THEN** iOS's native color picker opens, since that's a real tap on a
   real native `<input type="color">`, not a scripted click
 
+### Requirement: Colour picker panels
+The colour picker popover SHALL show, in its header, the colour being
+edited beside the colour it had when the popover opened; tapping the old
+colour SHALL restore it. It SHALL offer four tabs, remembering the last
+one used on this device: Disc (a hue ring around a saturation/brightness
+square), Classic (a large saturation/brightness square with a hue slider),
+Value (hue, saturation and brightness sliders with their values, the R, G,
+B and hex fields, and the system colour picker) and Palettes (every Color
+Library palette's colours). Dragging on the ring, square or sliders SHALL
+change the colour live. The hue SHALL be kept when saturation or
+brightness reaches zero, so dragging back out of grey or black returns to
+the same hue. Below the tabs the popover SHALL show a history of the last
+10 colours picked (newest first, no repeats, kept on this device); a
+colour joins the history when the popover closes with a different colour
+than it opened with. Tapping a history or palette swatch picks it.
+
+#### Scenario: Picking on the disc
+- **WHEN** the user drags the ring to green and then the square to its
+  top-right corner
+- **THEN** the foreground colour becomes a fully saturated, bright green,
+  and the Value tab shows hue 90°, saturation 100%, brightness 100%
+
+#### Scenario: Going back
+- **WHEN** the user opened the picker on black, picked another colour, and
+  taps the previous-colour half of the header
+- **THEN** the colour is black again
+
+#### Scenario: History
+- **WHEN** the user opens the picker, picks a colour from Palettes, closes
+  it, and opens it again
+- **THEN** that colour is first in the history
+
 ### Requirement: Touch and pointer interaction
 The system SHALL support drawing with a one-finger (or mouse) drag, panning
 with a two-finger drag, and zooming with a pinch gesture, without the browser
@@ -245,6 +284,68 @@ intercepting these as native page gestures.
 #### Scenario: Pinch zoom
 - **WHEN** the user pinches with two fingers on the canvas
 - **THEN** the canvas view zooms in or out without drawing
+
+### Requirement: Draw only with Apple Pencil (palm rejection)
+While the Prefs' Draw Only With Apple Pencil switch is on (the default)
+and an Apple Pencil has touched the canvas in this session, only the
+Pencil SHALL draw. A touch that lands while the Pencil is down SHALL be
+ignored: it SHALL NOT draw, pan, zoom or cancel the stroke. Touches
+already down when the Pencil lands SHALL stop counting until lifted. A
+single finger SHALL NOT draw (it pans only with the Hand tool); two
+fingers SHALL still pinch-zoom and pan. Mouse input, devices that never
+use a Pencil, and the switch turned off SHALL keep the plain touch rules
+above.
+
+#### Scenario: Palm lands while drawing
+- **WHEN** the user draws with the Pencil and a palm touches the screen
+  mid-stroke
+- **THEN** the stroke continues and completes, and the view does not move
+
+#### Scenario: Palm was resting first
+- **WHEN** a palm is resting on the canvas and the Pencil then draws
+- **THEN** the Pencil draws normally and the palm has no effect
+
+#### Scenario: Finger after using the Pencil
+- **WHEN** the Pencil has been used and the user drags one finger on the
+  canvas
+- **THEN** nothing is drawn
+
+#### Scenario: Two-finger zoom still works
+- **WHEN** the Pencil has been used and the user pinches with two fingers
+- **THEN** the view zooms as before
+
+#### Scenario: No Pencil
+- **WHEN** no Apple Pencil has touched the canvas in this session
+- **THEN** a finger draws exactly as before
+
+### Requirement: Brush cursor
+While a mouse or Apple Pencil hovers over the canvas or draws on it, the
+system SHALL outline exactly the pixels the next dab would paint, snapped
+to the pixel grid: the circular tip at the current Size for Pencil and
+Eraser, the current brush's pattern for Brush, and a single pixel for
+Line, Rectangle, Ellipse, Bucket and Eyedropper. Move, Select and Hand
+SHALL show no brush cursor. The outline SHALL stay legible over both
+light and dark pixels at every zoom. Finger (touch) input SHALL never
+show it. It SHALL be shown only while the Prefs' Show Brush Cursor switch
+is on (the default).
+
+#### Scenario: Hovering with the Pencil tool
+- **WHEN** Size is 8 and the user hovers the mouse over the canvas
+- **THEN** an outline of the 8px tip appears around the pixel under the
+  pointer, matching the pixels a click there would paint
+
+#### Scenario: Leaving the canvas
+- **WHEN** the pointer leaves the canvas, or an Apple Pencil is lifted
+- **THEN** the brush cursor disappears (a hover-capable Pencil shows it
+  again on its next hover)
+
+#### Scenario: Finger input
+- **WHEN** the user touches the canvas with a finger
+- **THEN** no brush cursor is shown
+
+#### Scenario: Turned off in Prefs
+- **WHEN** Show Brush Cursor is off and the user hovers over the canvas
+- **THEN** no brush cursor is shown
 
 ### Requirement: Undo and redo
 The system SHALL let the user undo and redo completed drawing actions (strokes

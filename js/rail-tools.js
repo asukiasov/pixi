@@ -7,7 +7,7 @@
 
 /** Every tool, in the rail's default order. */
 export const TOOL_IDS = Object.freeze([
-  'move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'selection', 'hand', 'eyedropper',
+  'move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'hand', 'eyedropper',
 ]);
 
 /** Short names for the ⋯ menu and the Customize Tools sheet. */
@@ -19,6 +19,7 @@ export const TOOL_LABELS = Object.freeze({
   brush: 'Brush',
   line: 'Line',
   rectangle: 'Rectangle',
+  ellipse: 'Ellipse',
   selection: 'Select',
   hand: 'Hand',
   eyedropper: 'Eyedropper',

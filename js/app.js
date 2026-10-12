@@ -6,11 +6,11 @@ import { loadProject } from './persistence.js';
 import { LayerStack } from '../lib/pixel-engine/layers.js';
 import { parseRoute, navigate, onRouteChange } from './router.js';
 import { VERSION } from './version.js';
-import { initMagneticHover } from './magnetic-hover.js';
 import { initThemeToggle, bindThemeRadios } from './theme.js';
 import { initIconFontFallback } from './icon-font-fallback.js';
 import { initColorLibrary } from './color-library-ui.js';
 import { initLayers, closeLayersOpacityPopover } from './layers-ui.js';
+import { initTransform } from './transform-ui.js';
 import { initToasts } from './toast.js';
 import { applyLayout, measureClearInsets } from './layout.js';
 import { initFloatingTopbar } from './floating-topbar.js';
@@ -85,34 +85,6 @@ initIconFontFallback();
   document.addEventListener(type, (e) => e.preventDefault());
 });
 
-// Flags iOS/iPadOS (including iPadOS 13+, which reports as "MacIntel"
-// in the UA string - the maxTouchPoints check distinguishes it from an
-// actual Mac) via a class on <html>, so style.css can scope the "Buzz"
-// hover effect to it. A CSS media-query approach was tried first
-// ((hover: hover) and (pointer: coarse), meant to target a hover-
-// capable touchscreen) but Apple Pencil is a *precise* stylus - it
-// reports `pointer: fine`, the same as a mouse - so that query excluded
-// Pencil hover right along with the desktop mouse hover it was meant to
-// exclude, and buzz stopped appearing on iPad entirely. CSS alone can't
-// distinguish "a mouse is hovering" from "a Pencil is hovering" (both
-// are fine+hover-capable); platform detection is the only way to keep
-// buzz iPad-only without also catching desktop mice.
-if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
-  document.documentElement.classList.add('ios-platform');
-}
-
-// See js/magnetic-hover.js. Top bar + tool rail buttons are registered
-// together, in one call, not two separate ones - exclusivity ("only the
-// nearest button reacts") is computed across whatever set a single call
-// receives, so this is what makes a top bar button and a tool rail
-// button mutually exclusive (see docs/specs/topbar-magnetic-hover
-// and docs/history/2026-08-17-extend-magnetic-hover-tool-rail).
-initMagneticHover([
-  ...document.querySelectorAll('.workspace-topbar button'),
-  ...document.querySelectorAll('.tools-sidebar [data-tool]'),
-  toolOverflowButton,
-]);
-
 // Light/dark/system theme toggle - applies the persisted/system-resolved
 // theme immediately and wires the top-bar button. Runs once here (not per
 // Workspace open, unlike e.g. #right-sidebar-toggle in js/workspace.js):
@@ -152,6 +124,7 @@ function setPrefs(next) {
   applyPrefsToScreen(screens.workspace, prefs);
   applyRailTools(railToolsEl, prefs.railTools, toolOverflowButton);
   toolOverflow?.refresh();
+  canvasView?.setPencilOnly(prefs.pencilOnly);
 }
 const getPrefs = () => prefs;
 initPrefsSheet({ getPrefs, setPrefs });
@@ -170,6 +143,7 @@ prefsCustomizeRow?.addEventListener('click', () => customizeTools?.open(prefsCus
 // (true from module load - no injection involved).
 initColorLibrary();
 initLayers();
+initTransform();
 // Built at startup, not on the first toast: screen readers (VoiceOver
 // especially) can miss announcements in a live region that was only just
 // inserted - see js/toast.js.
@@ -203,6 +177,7 @@ function openWorkspace({ layerStack, projectId, projectName }) {
     canvasView = new CanvasView(canvasEl, containerEl, layerStack, {
       getClearInsets: () => measureClearInsets(screens.workspace, containerEl),
     });
+    canvasView.setPencilOnly(prefs.pencilOnly);
     canvasView.resetView();
     canvasView.render();
     // One-shot re-fit after the browser's first real paint: the very first

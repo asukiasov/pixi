@@ -20,7 +20,6 @@ reference — is just as common at module top-level and is consistently
 
 - `js/canvas-view.js:6-8` — `MIN_SCALE`, `MAX_SCALE`, `ZOOM_STEP_FACTOR` (fixed tunables)
 - `lib/pixel-engine/layers.js:9,11,22` — `MAX_LAYERS`, `BLEND_MODES`, `LOSSY_QUALITY` (fixed tunables)
-- `js/magnetic-hover.js:17-19` — `ACTIVATION_RADIUS`, `MAX_PULL`, `MAX_SCALE_BUMP` (fixed tunables)
 - `js/persistence.js:32` — `export const db = new Dexie('pixi');` (mutable-ish singleton reference, camelCase)
 - `js/persistence.js:57,71` — `let activeAdapter = ...`, `const writeQueues = new Map();` (module state, camelCase)
 - `lib/pixel-engine/engine.js:203,208` — `let pathTransform = null;`, `const circleOffsetsCache = new Map();` (module state, camelCase)
@@ -87,7 +86,7 @@ knowing, not worth following as the general rule.
 
 - `js/canvas-view.js` exports `CanvasView`
 - `js/confirm-dialog.js` exports `confirmDialog`
-- `js/icon-font-fallback.js`, `js/magnetic-hover.js`, `lib/storage-adapter.js` — kebab-case throughout, all 26 files checked, zero exceptions
+- `js/icon-font-fallback.js`, `lib/storage-adapter.js` — kebab-case throughout, all 26 files checked, zero exceptions
 
 ### Options-object arguments: a genuinely optional argument gets an overall `= {}` default with inline per-field defaults; a required argument (all fields always supplied by the caller) does not
 

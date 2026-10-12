@@ -134,6 +134,36 @@ artwork was supplied directly.
 - **THEN** the canvas cursor is that tool's own cursor (e.g. crosshair for
   Pencil), never either paw cursor
 
+### Requirement: View rotation
+The user SHALL be able to rotate the view of the canvas - not its pixels -
+by twisting two fingers on it (together with the existing pinch zoom and
+pan, around the fingers' midpoint), by a trackpad rotate gesture where the
+browser reports one (Safari), and from the Zoom menu's Rotate View Left /
+Rotate View Right (90° steps) and Reset Rotation. When a twist ends within
+6° of a multiple of 90°, the view SHALL settle on that angle. Drawing,
+the brush cursor and the selection SHALL follow the turned view exactly:
+a tap paints the pixel under it at any angle. The zoom readout SHALL show
+the angle while it isn't 0° ("2100% · 90°"). Fit, Fill and 100% SHALL keep
+the angle (Fit and Fill fit the turned canvas's bounding box); Reset
+Rotation SHALL return to 0° and fit. Rotation is view state, like zoom: it
+is not saved, and every project opens at 0°.
+
+#### Scenario: Twist to rotate
+- **WHEN** the user twists two fingers 37° on the canvas
+- **THEN** the view turns 37° around the fingers and stays there
+
+#### Scenario: Small wobble snaps back
+- **WHEN** a two-finger pinch-zoom turns the view by 4° and the fingers lift
+- **THEN** the view settles back at 0°
+
+#### Scenario: Drawing on a turned view
+- **WHEN** the view is turned by any angle and the user taps a pixel
+- **THEN** exactly that pixel is painted
+
+#### Scenario: Menu steps and reset
+- **WHEN** the user chooses Rotate View Right twice, then Reset Rotation
+- **THEN** the view turns to 90°, then 180°, then back to 0° and fits
+
 ### Requirement: Only the canvas pinch-zooms
 Native browser pinch-zoom of the whole page SHALL be disabled everywhere
 except the canvas itself, which handles pinch-zoom entirely through its

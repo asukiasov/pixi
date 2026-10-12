@@ -15,7 +15,7 @@ import {
 
 describe('tool ids', () => {
   test('ten tools in rail order, each labelled', () => {
-    assert.deepEqual([...TOOL_IDS], ['move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'selection', 'hand', 'eyedropper']);
+    assert.deepEqual([...TOOL_IDS], ['move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'hand', 'eyedropper']);
     for (const id of TOOL_IDS) assert.equal(typeof TOOL_LABELS[id], 'string', id);
     assert.equal(TOOL_LABELS.selection, 'Select');
   });
@@ -42,7 +42,7 @@ describe('normalizeRailTools', () => {
 
 describe('list operations', () => {
   test('overflowTools is the rest, in default order', () => {
-    assert.deepEqual(overflowTools(['hand', 'move']), ['pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'selection', 'eyedropper']);
+    assert.deepEqual(overflowTools(['hand', 'move']), ['pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'eyedropper']);
     assert.deepEqual(overflowTools([...TOOL_IDS]), []);
   });
 

@@ -3571,6 +3571,7 @@ span.layer-lock-icon {
 .workspace-screen[data-layout="floating"][data-current-tool="eraser"] .tool-options-group[data-tools~="eraser"],
 .workspace-screen[data-layout="floating"][data-current-tool="brush"] .tool-options-group[data-tools~="brush"],
 .workspace-screen[data-layout="floating"][data-current-tool="rectangle"] .tool-options-group[data-tools~="rectangle"],
+.workspace-screen[data-layout="floating"][data-current-tool="ellipse"] .tool-options-group[data-tools~="ellipse"],
 .workspace-screen[data-layout="floating"][data-current-tool="selection"] .tool-options-group[data-tools~="selection"] {
   display: flex;
 }

@@ -449,6 +449,7 @@ order, for each tool:
 | Eraser | Size, Opacity, Pixel-perfect, Symmetry |
 | Brush | Spacing, Rotation, Symmetry, Color Library sequence |
 | Rectangle | Filled, 1:1 proportion |
+| Ellipse | Filled, 1:1 proportion |
 | Select | 1:1 proportion |
 
 For Move, Bucket, Line, Hand and Eyedropper the bar SHALL NOT be shown.
@@ -998,7 +999,7 @@ canvas SHALL follow the regions to their new side.
 When Hide interface while drawing is on, the top bar, tool rail, panel
 mini-rail, panel cards, tool-options bar, palette card and selection
 action bar SHALL fade out while a stroke with the Pencil, Eraser, Brush,
-Line or Rectangle tool is in progress on the canvas, and SHALL NOT take
+Line, Rectangle or Ellipse tool is in progress on the canvas, and SHALL NOT take
 pointer input while faded. The fade SHALL start only after a short delay,
 so a tap does not make the interface flicker, and SHALL be instant
 rather than animated when the user prefers reduced motion. When the
@@ -1020,7 +1021,7 @@ default), nothing SHALL fade while drawing.
 In the standalone app the tool rail SHALL show only the tools chosen as
 favorites, in the chosen order. By default, and after Reset to default,
 every tool SHALL be a favorite, in the order Move, Pencil, Eraser,
-Bucket, Brush, Line, Rectangle, Select, Hand, Eyedropper. Any number of
+Bucket, Brush, Line, Rectangle, Ellipse, Select, Hand, Eyedropper. Any number of
 favorites, including none, SHALL be allowed. Every tool's keyboard
 shortcut SHALL keep working whether or not the tool is on the rail. The
 favorites and their order SHALL be kept with the other preferences

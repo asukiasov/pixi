@@ -354,7 +354,7 @@
                 <input type="checkbox" role="switch" class="prefs-switch" id="prefs-auto-hide" name="autoHide" aria-describedby="prefs-auto-hide-note">
               </label>
             </div>
-            <p id="prefs-auto-hide-note" class="prefs-note">Fades the bars and panels during Pencil, Eraser, Brush, Line and Rectangle strokes.</p>
+            <p id="prefs-auto-hide-note" class="prefs-note">Fades the bars and panels during Pencil, Eraser, Brush, Line, Rectangle and Ellipse strokes.</p>
           </section>
         </div>
       </div>
@@ -418,6 +418,9 @@
         </button>
         <button type="button" class="tool-button" aria-pressed="false" data-tool="rectangle" aria-label="Rectangle" data-tooltip="Rectangle" data-shortcut="R">
           <span class="material-symbols-outlined">rectangle</span>
+        </button>
+        <button type="button" class="tool-button" aria-pressed="false" data-tool="ellipse" aria-label="Ellipse" data-tooltip="Ellipse" data-shortcut="O">
+          <span class="material-symbols-outlined">circle</span>
         </button>
         <button type="button" class="tool-button" aria-pressed="false" data-tool="selection" aria-label="Select" data-tooltip="Select (click outside or Esc to deselect)" data-shortcut="M">
           <span class="material-symbols-outlined">crop_free</span>
@@ -726,15 +729,15 @@
               <span class="slider-icon" aria-hidden="true"><span class="material-symbols-outlined">rotate_right</span></span>
             </div>
           </div>
-          <div class="tool-options-group" data-tools="rectangle">
+          <div class="tool-options-group" data-tools="rectangle ellipse">
             <!-- Source: #rectangle-fill-toggle (js/rectangle-fill-ui.js).
                  Same two inline SVGs, swapped by [aria-pressed] in CSS. -->
-            <button type="button" class="tool-button icon-button tool-options-filled" data-forward="rectangle-fill-toggle" aria-pressed="false" aria-label="Filled" data-tooltip="Filled rectangle">
+            <button type="button" class="tool-button icon-button tool-options-filled" data-forward="rectangle-fill-toggle" aria-pressed="false" aria-label="Filled" data-tooltip="Filled shape">
               <svg class="rectangle-fill-icon tool-options-filled-off" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Zm80-80h640v-480H160v480Zm0 0v-480 480Z"/></svg>
               <svg class="rectangle-fill-icon tool-options-filled-on" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Z"/></svg>
             </button>
           </div>
-          <div class="tool-options-group" data-tools="rectangle selection">
+          <div class="tool-options-group" data-tools="rectangle ellipse selection">
             <!-- Source: #square-constraint-toggle (js/workspace.js). -->
             <button type="button" class="tool-button square-constraint-button" data-forward="square-constraint-toggle" aria-pressed="false" aria-label="1:1 proportion" data-tooltip="1:1 proportion (like holding Shift)">1:1</button>
           </div>

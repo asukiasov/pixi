@@ -33,7 +33,7 @@ describe('normalizePrefs', () => {
       panelsSide: 'right',
       pinned: { colors: true, brushes: true, layers: true },
       autoHide: false,
-      railTools: ['move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'selection', 'hand', 'eyedropper'],
+      railTools: ['move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'hand', 'eyedropper'],
     });
   });
 
@@ -110,7 +110,7 @@ describe('applyPrefsToScreen', () => {
 
 describe('isAutoHideTool', () => {
   test('stroke tools hide the interface', () => {
-    for (const tool of ['pencil', 'eraser', 'brush', 'line', 'rectangle']) assert.equal(isAutoHideTool(tool), true, tool);
+    for (const tool of ['pencil', 'eraser', 'brush', 'line', 'rectangle', 'ellipse']) assert.equal(isAutoHideTool(tool), true, tool);
   });
 
   test('other tools never do', () => {

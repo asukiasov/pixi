@@ -210,7 +210,7 @@ describe('floating tool-options bar (5d)', () => {
 
   test('the bar-hiding rule and the data-tools lists name every tool exactly once', () => {
     const tools = new Set([...html.matchAll(/data-tool="([a-z]+)"/g)].map((m) => m[1]));
-    assert.equal(tools.size, 10);
+    assert.equal(tools.size, 11);
     const shown = new Set([...html.matchAll(/data-tools="([^"]*)"/g)].flatMap((m) => m[1].split(/\s+/).filter(Boolean)));
     const hideRule = all.find((r) => r.selector.endsWith('.tool-options-bar') && /display:\s*none/.test(r.body) && r.selector.includes('data-current-tool'));
     const hidden = new Set([...hideRule.selector.matchAll(/data-current-tool="([a-z]+)"/g)].map((m) => m[1]));

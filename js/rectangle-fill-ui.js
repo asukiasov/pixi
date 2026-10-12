@@ -1,5 +1,5 @@
 // Rectangle's Filled toggle: wires the #rectangle-fill-toggle button
-// (index.html) to shape-tools.js's setRectangleFilled directly, and owns
+// (index.html) to shape-tools.js's setShapeFilled directly, and owns
 // the whole "#rectangle-options" panel's show/hide-on-tool-change behavior,
 // since that panel exists only to house this toggle. Restored from the
 // Standard/Pro split (docs/history/2026-08-21-split-pixi-pro-
@@ -11,7 +11,7 @@
 // than needing a workspace.js change - multiple listeners on one element
 // coexist fine.
 
-import { setRectangleFilled } from './shape-tools.js';
+import { setShapeFilled } from './shape-tools.js';
 
 let filled = false;
 
@@ -27,14 +27,14 @@ export function initRectangleFill(root = document) {
     toggle.classList.toggle('active', filled);
     iconOutline.classList.toggle('hidden', filled);
     iconFilled.classList.toggle('hidden', !filled);
-    setRectangleFilled(filled);
+    setShapeFilled(filled);
   }
 
   toggle.addEventListener('click', () => setFilled(!filled));
 
   root.querySelectorAll('.tool-button[data-tool]').forEach((button) => {
     button.addEventListener('click', () => {
-      panel.classList.toggle('hidden', button.dataset.tool !== 'rectangle');
+      panel.classList.toggle('hidden', button.dataset.tool !== 'rectangle' && button.dataset.tool !== 'ellipse');
     });
   });
 }

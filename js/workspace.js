@@ -3,7 +3,7 @@ import { saveProject, renameProject, createCustomBrush, listCustomBrushes, delet
 import { initExport, sanitizeFilename } from './export.js';
 import { TimelapseRecorder, captureFrame, encodeTimelapseVideo, isTimelapseSupported } from './timelapse.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
-import { drawRectangle, clipToSelection } from './shape-tools.js';
+import { drawRectangle, drawEllipse, clipToSelection } from './shape-tools.js';
 import { bresenhamLine, strokeFreehandThick } from '../lib/pixel-engine/engine.js';
 import { confirmDialog } from './confirm-dialog.js';
 import { initSymmetry, applySymmetryTransform } from './symmetry-ui.js';
@@ -1252,7 +1252,7 @@ function applyToolScopedUI() {
   // 1:1 proportion toggle: Rectangle and Selection.
   squareConstraintPanel.classList.toggle(
     'hidden',
-    state.currentTool !== 'rectangle' && state.currentTool !== 'selection'
+    state.currentTool !== 'rectangle' && state.currentTool !== 'ellipse' && state.currentTool !== 'selection'
   );
   // Floating tool-options bar (5d-tool-options-bar): CSS shows the bar's
   // groups from this attribute, and js/tool-options-bar.js refreshes its
@@ -2045,6 +2045,8 @@ function drawShapePreview() {
       state.dragCurrent.y,
       rgba
     );
+  } else if (state.currentTool === 'ellipse') {
+    drawEllipse(state.strokeEngine, state.dragStart.x, state.dragStart.y, state.dragCurrent.x, state.dragCurrent.y, rgba);
   }
   clipToSelection(state.strokeEngine, state.strokeBackup, state.selection);
 }
@@ -2377,7 +2379,7 @@ export function initWorkspace({
         return;
       }
 
-      if (tool === 'line' || tool === 'rectangle') {
+      if (tool === 'line' || tool === 'rectangle' || tool === 'ellipse') {
         state.dragStart = point;
         state.dragCurrent = point;
         drawShapePreview();
@@ -2439,8 +2441,8 @@ export function initWorkspace({
 
       if (!state.strokeBackup) return;
 
-      if (tool === 'line' || tool === 'rectangle') {
-        state.dragCurrent = tool === 'rectangle' && isSquareConstrained() ? squareDragCurrent(state.dragStart, point) : point;
+      if (tool === 'line' || tool === 'rectangle' || tool === 'ellipse') {
+        state.dragCurrent = (tool === 'rectangle' || tool === 'ellipse') && isSquareConstrained() ? squareDragCurrent(state.dragStart, point) : point;
         drawShapePreview();
         state.canvasView.render();
         return;

@@ -31,7 +31,7 @@ const CARDS = ['colors', 'brushes', 'layers'];
 // Tools whose strokes hide the interface while auto-hide is on. The rest
 // are taps (Bucket, Eyedropper), pan (Hand), or have their own drag
 // feedback that needs the selection bar logic (Select, Move).
-const AUTO_HIDE_TOOLS = new Set(['pencil', 'eraser', 'brush', 'line', 'rectangle']);
+const AUTO_HIDE_TOOLS = new Set(['pencil', 'eraser', 'brush', 'line', 'rectangle', 'ellipse']);
 
 export const DEFAULT_PREFS = Object.freeze({
   toolsSide: 'left',

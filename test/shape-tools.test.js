@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { PixelEngine } from '../lib/pixel-engine/engine.js';
-import { drawRectangle, clipToSelection, setRectangleFilled } from '../js/shape-tools.js';
+import { drawRectangle, drawEllipse, clipToSelection, setShapeFilled } from '../js/shape-tools.js';
 
 describe('drawRectangle', () => {
   test('outline mode (default): draws only the perimeter', () => {
@@ -30,9 +30,9 @@ describe('drawRectangle', () => {
     assert.deepEqual(engine.getPixel(2, 2), [9, 9, 9, 255]);
   });
 
-  describe('Filled toggle (setRectangleFilled)', () => {
+  describe('Filled toggle (setShapeFilled)', () => {
     test('sets every pixel in the bounding box, not just the perimeter', () => {
-      setRectangleFilled(true);
+      setShapeFilled(true);
       try {
         const engine = new PixelEngine(6, 6, 'transparent');
         drawRectangle(engine, 1, 1, 3, 3, [0, 255, 0, 255]);
@@ -44,12 +44,12 @@ describe('drawRectangle', () => {
         assert.deepEqual(engine.getPixel(0, 0), [0, 0, 0, 0]);
         assert.deepEqual(engine.getPixel(4, 4), [0, 0, 0, 0]);
       } finally {
-        setRectangleFilled(false); // don't leak into other tests
+        setShapeFilled(false); // don't leak into other tests
       }
     });
 
     test('normalizes corners regardless of drag direction when filled', () => {
-      setRectangleFilled(true);
+      setShapeFilled(true);
       try {
         const engineA = new PixelEngine(6, 6, 'transparent');
         drawRectangle(engineA, 4, 4, 1, 1, [1, 1, 1, 255]);
@@ -57,7 +57,7 @@ describe('drawRectangle', () => {
         drawRectangle(engineB, 1, 1, 4, 4, [1, 1, 1, 255]);
         assert.deepEqual(Array.from(engineA.data), Array.from(engineB.data));
       } finally {
-        setRectangleFilled(false);
+        setShapeFilled(false);
       }
     });
   });
@@ -87,4 +87,92 @@ describe('clipToSelection', () => {
     clipToSelection(engine, backup, null);
     assert.deepEqual(engine.getPixel(1, 1), [0, 0, 0, 255]);
   });
+});
+
+describe('drawEllipse', () => {
+  const INK = [255, 0, 0, 255];
+  // The set of painted cells as "x,y" strings.
+  function cells(w, h, x0, y0, x1, y1, { filled = false } = {}) {
+    setShapeFilled(filled);
+    try {
+      const engine = new PixelEngine(w, h, 'transparent');
+      drawEllipse(engine, x0, y0, x1, y1, INK);
+      const out = new Set();
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (engine.getPixel(x, y)[3]) out.add(`${x},${y}`);
+      return out;
+    } finally {
+      setShapeFilled(false);
+    }
+  }
+  const bitmap = (set, w, h) => Array.from({ length: h }, (_, y) => Array.from({ length: w }, (_, x) => (set.has(`${x},${y}`) ? '#' : '.')).join(''));
+
+  test('a 5x5 box draws a round, symmetric circle', () => {
+    assert.deepEqual(bitmap(cells(5, 5, 0, 0, 4, 4), 5, 5), [
+      '.###.',
+      '#...#',
+      '#...#',
+      '#...#',
+      '.###.',
+    ]);
+  });
+
+  test('an even 4x4 box stays 4x4 and symmetric', () => {
+    assert.deepEqual(bitmap(cells(4, 4, 0, 0, 3, 3), 4, 4), [
+      '.##.',
+      '#..#',
+      '#..#',
+      '.##.',
+    ]);
+  });
+
+  test('degenerate boxes: one pixel, a line, a 2x2 block', () => {
+    assert.deepEqual([...cells(3, 3, 1, 1, 1, 1)], ['1,1']);
+    assert.equal(cells(6, 3, 0, 1, 5, 1).size, 6);
+    assert.equal(cells(3, 6, 1, 0, 1, 5).size, 6);
+    assert.equal(cells(2, 2, 0, 0, 1, 1).size, 4);
+  });
+
+  for (const [w, h] of [[7, 4], [9, 9], [12, 5], [16, 11], [3, 8]]) {
+    test(`${w}x${h}: inside the box, touches every side, symmetric, direction-independent`, () => {
+      const set = cells(w + 2, h + 2, 1, 1, w, h);
+      const pts = [...set].map((s) => s.split(',').map(Number));
+      assert.ok(pts.every(([x, y]) => x >= 1 && x <= w && y >= 1 && y <= h));
+      assert.ok(pts.some(([x]) => x === 1) && pts.some(([x]) => x === w));
+      assert.ok(pts.some(([, y]) => y === 1) && pts.some(([, y]) => y === h));
+      for (const [x, y] of pts) {
+        assert.ok(set.has(`${w + 1 - x},${y}`), `mirror x of ${x},${y}`);
+        assert.ok(set.has(`${x},${h + 1 - y}`), `mirror y of ${x},${y}`);
+      }
+      assert.deepEqual(cells(w + 2, h + 2, w, h, 1, 1), set);
+    });
+
+    test(`${w}x${h}: the outline is one closed 8-connected loop`, () => {
+      const set = cells(w + 2, h + 2, 1, 1, w, h);
+      // Every outline pixel has exactly 2 neighbours along the loop once
+      // the shape is big enough to have an inside.
+      if (w < 3 || h < 3) return;
+      const [start] = set;
+      const seen = new Set([start]);
+      const stack = [start];
+      while (stack.length) {
+        const [x, y] = stack.pop().split(',').map(Number);
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const k = `${x + dx},${y + dy}`;
+          if (set.has(k) && !seen.has(k)) { seen.add(k); stack.push(k); }
+        }
+      }
+      assert.equal(seen.size, set.size, 'connected');
+    });
+
+    test(`${w}x${h}: filled covers the outline with one solid span per row`, () => {
+      const outline = cells(w + 2, h + 2, 1, 1, w, h);
+      const filled = cells(w + 2, h + 2, 1, 1, w, h, { filled: true });
+      for (const k of outline) assert.ok(filled.has(k));
+      for (let y = 1; y <= h; y++) {
+        const xs = [...filled].map((s) => s.split(',').map(Number)).filter(([, py]) => py === y).map(([x]) => x).sort((a, b) => a - b);
+        assert.ok(xs.length > 0, `row ${y} empty`);
+        assert.equal(xs[xs.length - 1] - xs[0] + 1, xs.length, `row ${y} has a gap`);
+      }
+    });
+  }
 });

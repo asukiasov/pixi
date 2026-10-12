@@ -400,12 +400,13 @@ attributes drive both click-to-select and the keyboard shortcut:
 | Brush | `brush` | B | brush |
 | Line | `line` | L | horizontal_rule |
 | Rectangle | `rectangle` | R | rectangle |
+| Ellipse | `ellipse` | O | circle |
 | Select | `selection` | M | crop_free |
 | Hand (pan) | `hand` | H | back_hand |
 | Eyedropper | `eyedropper` | I | colorize |
 
 Specs: `pixel-drawing-engine` (Pencil/Eraser/Bucket/pixel-perfect line),
-`shape-tools` (Line/Rectangle/Selection/Move), `brushes` (Brush),
+`shape-tools` (Line/Rectangle/Ellipse/Selection/Move), `brushes` (Brush),
 `canvas-navigation` (Hand), `color-library`/`pixel-drawing-engine`
 (Eyedropper). Implementation: `js/workspace.js`, `js/shape-tools.js`,
 `js/brushes.js`.
@@ -413,10 +414,10 @@ Specs: `pixel-drawing-engine` (Pencil/Eraser/Bucket/pixel-perfect line),
 **Tool-scoped option surfaces** (shown/hidden based on active tool, all
 in `js/workspace.js`):
 
-- `#rectangle-options` (Rectangle only) — `#rectangle-fill-toggle`,
+- `#rectangle-options` (Rectangle + Ellipse) — `#rectangle-fill-toggle`,
   outline/filled toggle using two swapped inline SVGs (not the webfont
   icon — the subsetted font only bakes one FILL-axis point).
-- `#square-constraint-options` (Rectangle + Selection) —
+- `#square-constraint-options` (Rectangle + Ellipse + Selection) —
   holding Shift while dragging (for touch, which has no Shift key).
 - `#library-sequence-options` (Pencil + Brush only) —
   `#library-sequence-toggle` ("Color Library sequence", cycles through

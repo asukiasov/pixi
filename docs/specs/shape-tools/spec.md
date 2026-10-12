@@ -50,9 +50,36 @@ filled, previewed live while dragging and committed on release.
 - **THEN** the rectangle immediately goes back to following the pointer
   freely, no longer constrained to a square
 
+### Requirement: Ellipse tool
+The user SHALL be able to draw an ellipse fitted to the box between two
+dragged corners (shortcut O), in the current draw color, previewed live
+while dragging and committed on release as one undoable step. It SHALL
+share Rectangle's outline/filled toggle (one "Filled shape" setting for
+both tools), and Shift or the 1:1 proportion toggle SHALL constrain it to
+a circle. The ellipse SHALL fit the box exactly for both even and odd
+sizes and be symmetric about both of the box's axes.
+
+#### Scenario: Drawing an outline ellipse
+- **WHEN** the user drags a 5x5 box with outline mode selected
+- **THEN** a 1px round outline is drawn that touches all four sides of
+  the box and leaves its corners empty
+
+#### Scenario: Even-sized circle
+- **WHEN** the user drags a 4x4 box
+- **THEN** the circle is exactly 4x4 pixels and symmetric, not shifted
+  or grown to 5x5
+
+#### Scenario: Drawing a filled ellipse
+- **WHEN** the user drags a box with filled mode selected
+- **THEN** the outline and every pixel inside it are set, with no gaps
+
+#### Scenario: Constraining to a circle
+- **WHEN** the user holds Shift (or has 1:1 proportion on) while dragging
+- **THEN** the ellipse is constrained to a circle
+
 ### Requirement: 1:1 proportion toggle (Rectangle and Selection)
 A persistent "1:1 proportion" toggle SHALL be available for the
-Rectangle and Selection tools, constraining drags to a square exactly
+Rectangle, Ellipse and Selection tools, constraining drags to a square exactly
 like holding Shift does, for as long as it stays on - not just while
 physically held. Requested directly: touchscreens (iPad, etc.) have no
 Shift key, so Shift's square constraint (see the Rectangle tool

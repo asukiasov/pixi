@@ -83,6 +83,7 @@ const pngBlob = await stack.toPNGBlob();
 - `.getLayers()` → array of `{ id, name, engine, visible, opacity, blendMode, isBackground, isReferenceImage, ... }`
 - `.getActiveLayer()` / `.setActiveLayer(index)` / `.getActiveIndex()`
 - `.addLayer(name)` → new `Layer` or `null` if at the 8-layer cap
+- `.groupLayers(indices, name?)` → the new group (one level; members gathered at the topmost one) or `null`; `.ungroup(id)`, `.deleteGroup(id)`, `.moveGroup(id, ±1)`, `.renameGroup`/`.setGroupVisibility`/`.setGroupOpacity`/`.setGroupCollapsed`, `.getGroups()`, `.getGroup(id)`, `.groupMemberIndices(id)`. Each layer has `groupId`; Up/Down at a group's edge joins or leaves it. A hidden group hides its members; its opacity multiplies theirs
 - `.duplicateLayer(index)` → the copy (above `index`, active, named "<name> copy") or `null` for the reference image layer or at the cap
 - `.deleteLayer(index)`, `.moveLayerUp(index)`, `.moveLayerDown(index)`, `.renameLayer(index, name)`
 - `.setVisibility(index, visible)`, `.setOpacity(index, opacity)`, `.setBlendMode(index, mode)` — `mode` is one of `BLEND_MODES` (`'normal' | 'multiply' | 'screen' | 'overlay'`)

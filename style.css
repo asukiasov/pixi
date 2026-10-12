@@ -3163,7 +3163,8 @@ span.layer-lock-icon {
   top: var(--float-below-top);
   inset-inline-start: var(--slot-cards-start);
   inset-inline-end: var(--slot-cards-end);
-  width: min(15rem, var(--slot-cards-room));
+  /* Wide enough for the Layers rows' thumbnail, name and switch. */
+  width: min(17.5rem, var(--slot-cards-room));
   height: auto;
   /* Stops above the bottom cards where they reach under the column
      (--slot-options-reach, measured by js/panel-rail.js; 0 otherwise). */
@@ -3174,7 +3175,7 @@ span.layer-lock-icon {
    it no longer shares a row with the canvas, so there's nothing to push.
    setRightSidebarVisible (js/workspace.js) still sets `inert`. */
 .workspace-screen[data-layout="floating"] .right-sidebar.right-sidebar-collapsed {
-  width: min(15rem, var(--slot-cards-room));
+  width: min(17.5rem, var(--slot-cards-room));
   visibility: hidden;
   opacity: 0;
 }
@@ -4846,4 +4847,295 @@ span.layer-lock-icon {
   width: 1.25rem;
   overflow: hidden;
   font-size: 1.25rem;
+}
+
+/* ------------------------------------------------------------------
+   Layers panel, Pixelmator Pro for iPad style (js/layers-ui.js): rows
+   are rounded cards - grip, thumbnail, name over a detail line, ⋯ on the
+   active row, a visibility switch. Overrides the older Photoshop-style
+   row rules above.
+   ------------------------------------------------------------------ */
+.layers-panel-list {
+  position: relative;
+  gap: 4px;
+  padding: 4px 6px 8px;
+}
+
+.layer-row,
+.layer-group-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 52px;
+  padding: 4px 6px 4px 2px;
+  border: none;
+  border-radius: 12px;
+  background: var(--color-surface-alt);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.layer-row.in-group {
+  margin-inline-start: 18px;
+}
+
+.layer-row.active {
+  background: var(--color-accent-soft);
+  box-shadow: inset 0 0 0 1.5px var(--color-accent);
+}
+
+.layer-row.active :is(.layer-name, .layer-name-input) {
+  color: var(--color-text);
+}
+
+.layer-row.marked {
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+.layer-row.active.marked {
+  background: var(--color-accent-soft);
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+.layer-row.dragging {
+  position: relative;
+  z-index: 2;
+  opacity: 0.9;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+  cursor: grabbing;
+}
+
+.layer-grip {
+  flex: none;
+  width: 22px;
+  align-self: stretch;
+  /* Two columns of three dots. */
+  background-image: radial-gradient(circle, var(--color-text-secondary) 1.6px, transparent 2px);
+  background-size: 7px 7px;
+  background-position: center;
+  background-repeat: repeat;
+  -webkit-mask: linear-gradient(#000 0 0) center / 14px 21px no-repeat;
+  mask: linear-gradient(#000 0 0) center / 14px 21px no-repeat;
+  cursor: grab;
+  /* The grip starts a drag, never a scroll. */
+  touch-action: none;
+}
+
+.layer-grip.disabled {
+  visibility: hidden;
+}
+
+.layer-row .layer-thumbnail {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+}
+
+.layer-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.layer-text :is(.layer-name, .layer-name-input) {
+  flex: none;
+  min-width: 0;
+  padding: 0 0.2rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.layer-detail {
+  padding: 0 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.layer-more-button,
+.layer-group-chevron,
+.layer-row :is(.layer-reference-mode-toggle, .layer-reference-smoothing-toggle) {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.layer-more-button:not(:disabled):hover,
+.layer-group-chevron:hover {
+  background: var(--color-surface);
+}
+
+.layer-group-chevron .material-symbols-outlined {
+  transition: transform 150ms ease;
+}
+
+.layer-group-row:not(.collapsed) .layer-group-chevron .material-symbols-outlined {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layer-group-chevron .material-symbols-outlined {
+    transition: none;
+  }
+}
+
+.layer-group-icon {
+  flex: none;
+  width: 24px;
+  overflow: hidden;
+  font-size: 1.4rem;
+  color: var(--color-accent);
+}
+
+/* Visibility: an iOS-style switch over a real checkbox. */
+.layer-switch {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.layer-switch input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.layer-switch-track {
+  position: relative;
+  width: 36px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--color-border);
+  transition: background-color 150ms ease;
+}
+
+.layer-switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+  transition: transform 150ms ease;
+}
+
+.layer-switch input:checked + .layer-switch-track {
+  background: var(--color-accent);
+}
+
+.layer-switch input:checked + .layer-switch-track::after {
+  transform: translateX(14px);
+}
+
+.layer-switch input:focus-visible + .layer-switch-track {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layer-switch-track,
+  .layer-switch-track::after {
+    transition: none;
+  }
+}
+
+.layer-select-check {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0 0 0 6px;
+  accent-color: var(--color-accent);
+}
+
+.layer-drop-indicator {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  pointer-events: none;
+}
+
+.layer-drop-indicator.in-group {
+  left: 26px;
+}
+
+/* Header: ⋯ on the start, then the title, Opacity & Blend, + and close. */
+.layers-panel-header .panel-header-top {
+  gap: 0.15rem;
+}
+
+.layers-select-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem 0.4rem;
+}
+
+.layers-select-bar.hidden {
+  display: none;
+}
+
+.layers-select-count {
+  flex: 1;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.layers-select-bar .tool-button {
+  min-height: 36px;
+  padding: 0 0.6rem;
+  font-size: 0.8rem;
+}
+
+/* Opacity & Blend popover. */
+.layer-properties-popover {
+  width: 16rem;
+}
+
+.layer-properties-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.layer-properties-row[hidden] {
+  display: none;
+}
+
+.layer-properties-row select {
+  flex: 1;
+  min-height: 36px;
+}
+
+.layer-properties-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--color-accent);
+}
+
+.layer-properties-row input[type="number"] {
+  width: 3.5rem;
+  min-height: 32px;
 }

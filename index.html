@@ -34,7 +34,7 @@
        keep it sorted alphabetically — the Google Fonts API 400s the whole
        request (breaking every icon on the page, not just an unsorted one)
        if icon_names isn't in alphabetical order. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&icon_names=add,align_horizontal_center,align_horizontal_left,align_horizontal_right,align_vertical_bottom,align_vertical_center,align_vertical_top,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check,check_box,check_box_outline_blank,chevron_right,circle,close,colorize,content_copy,crop_free,dark_mode,delete,dock_to_right,download,edit,error,expand_more,fiber_manual_record,flip,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,handyman,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,layers,library_add,light_mode,lock,merge,more_horiz,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,settings,swap_horiz,transform,tune,undo,unfold_more,visibility,visibility_off" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&icon_names=add,align_horizontal_center,align_horizontal_left,align_horizontal_right,align_vertical_bottom,align_vertical_center,align_vertical_top,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check,check_box,check_box_outline_blank,chevron_right,circle,close,colorize,content_copy,create_new_folder,crop_free,dark_mode,delete,dock_to_right,download,drag_indicator,drive_file_move,edit,error,expand_more,fiber_manual_record,flip,folder,folder_off,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,handyman,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,layers,library_add,light_mode,lock,merge,more_horiz,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,settings,swap_horiz,transform,tune,undo,unfold_more,visibility,visibility_off" />
 </head>
 <body>
   <main id="screen-gallery" class="screen home-screen">
@@ -681,6 +681,20 @@
         </div>
       </div>
 
+      <!-- Layers panel menus (js/layers-ui.js). #layers-panel-menu is the
+           header ⋯; #layer-menu is filled per use with a row's or group's
+           actions. -->
+      <div id="layers-panel-menu" class="topbar-menu hidden" role="menu" aria-label="Layers panel actions">
+        <button type="button" id="layers-select-mode-button" class="topbar-menu-item" role="menuitem">
+          <span class="material-symbols-outlined" aria-hidden="true">check_box</span>Select Layers
+        </button>
+        <button type="button" id="add-reference-image-button" class="topbar-menu-item" role="menuitem">
+          <span class="material-symbols-outlined" aria-hidden="true">image_arrow_up</span>Add Reference Image…
+        </button>
+      </div>
+      <input type="file" id="add-reference-image-input" accept="image/*" class="hidden" aria-label="Reference image file" />
+      <div id="layer-menu" class="topbar-menu hidden" role="menu" aria-label="Layer actions"></div>
+
       <!-- Brush palette (js/workspace.js): the Brushes card as a popover,
            opened from #brush-picker-button in the tool-options bar while
            the Brush tool is active. .collapsed = closed, .hidden = not the
@@ -1145,70 +1159,41 @@
     </nav>
     <aside id="right-sidebar" class="right-sidebar slot-panels">
 
-      <!-- Photoshop-style Layers panel - a shared toolbar (Blend mode +
-           Opacity, editing whichever layer is active) above a list of
-           compact single-row layers (thumbnail + name + visibility),
-           rather than each row carrying its own opacity/blend controls.
-           Reorder/delete stay as small per-row icons. Wired in
-           js/layers-ui.js. Bottom-most section - see #right-sidebar
-           above for why. -->
+      <!-- Layers panel (js/layers-ui.js), after Pixelmator Pro for iPad:
+           rounded row cards (thumbnail, name, a detail line, a visibility
+           switch, and ⋯ for the active row's actions), groups with a
+           disclosure chevron, drag-to-reorder by each row's grip, and a
+           Select mode for touch multi-select. -->
       <div id="layers-panel" class="layers-panel">
         <div id="layers-panel-header" class="layers-panel-header panel-header" role="button" tabindex="0" aria-expanded="true">
           <div class="panel-header-top">
+            <button type="button" id="layers-panel-menu-button" class="tool-button icon-button" aria-label="Layers panel actions" data-tooltip="More">
+              <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
+            </button>
             <h2>Layers</h2>
             <span class="material-symbols-outlined panel-collapse-chevron">expand_more</span>
+            <button type="button" id="layers-properties-button" class="tool-button icon-button" aria-label="Opacity and blend mode" data-tooltip="Opacity &amp; Blend">
+              <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+            </button>
+            <!-- "layers_add" isn't a Material Symbols glyph - CSS-masked
+                 asset (assets/icons/layers_add.svg), see .layers-add-icon. -->
+            <button type="button" id="add-layer-button" class="tool-button icon-button" aria-label="Add layer" data-tooltip="Add layer">
+              <span class="layers-add-icon"></span>
+            </button>
             <button type="button" class="tool-button icon-button panel-close floating-only" aria-label="Close Layers" data-tooltip="Close">
               <span class="material-symbols-outlined" aria-hidden="true">close</span>
             </button>
           </div>
-          <div class="panel-header-actions layers-panel-header-actions">
-            <!-- reference-image-layer: trace-over guide upload, disabled once
-                 one already exists on the canvas (LayerStack allows at most
-                 one) - see js/layers-ui.js's addReferenceImageButton wiring.
-                 Hidden file input below, same pattern as
-                 #brush-editor-import-input / #color-library-import-input. -->
-            <!-- Merge (marked layers, else active down) and Duplicate -
-                 js/layers-ui.js keeps their disabled state and Merge's
-                 label in sync in renderLayersPanel. -->
-            <button type="button" id="merge-layers-button" class="tool-button icon-button" aria-label="Merge down" data-tooltip="Merge down" data-shortcut="⌘E">
-              <span class="material-symbols-outlined" aria-hidden="true">merge</span>
-            </button>
-            <button type="button" id="duplicate-layer-button" class="tool-button icon-button" aria-label="Duplicate layer" data-tooltip="Duplicate layer" data-shortcut="⌘J">
-              <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
-            </button>
-            <button type="button" id="add-reference-image-button" class="tool-button icon-button" aria-label="Add reference image" data-tooltip="Add reference image">
-              <span class="material-symbols-outlined">image_arrow_up</span>
-            </button>
-            <input type="file" id="add-reference-image-input" accept="image/*" class="hidden" aria-label="Reference image file" />
-            <!-- Not a Material Symbols glyph - "layers_add" isn't a real
-                 icon in that set (checked its codepoints file directly),
-                 so this uses the provided image asset (assets/icons/
-                 layers_add.svg - same real-file convention as the pan
-                 cursor's assets/cursors/pets.svg) instead of hand-copied
-                 inline markup. Empty span, not <img> - see
-                 .layers-add-icon in style.css for why (CSS mask, so it
-                 still recolors via currentColor like every other icon
-                 button here, light or dark theme). -->
-            <button type="button" id="add-layer-button" class="icon-button" aria-label="Add layer" data-tooltip="Add layer">
-              <span class="layers-add-icon"></span>
-            </button>
-          </div>
+        </div>
+        <!-- Select mode (header ⋯ > Select Layers): rows get checkboxes. -->
+        <div id="layers-select-bar" class="layers-select-bar hidden" role="toolbar" aria-label="Selected layers">
+          <span id="layers-select-count" class="layers-select-count" aria-live="polite">0 selected</span>
+          <button type="button" id="layers-select-group" class="tool-button">Group</button>
+          <button type="button" id="layers-select-merge" class="tool-button">Merge</button>
+          <button type="button" id="layers-select-done" class="tool-button">Done</button>
         </div>
         <div id="layers-panel-body" class="layers-panel-body">
-          <!-- One row: Blend mode sized to its own text, Opacity as a
-               small button showing the current percentage that opens a
-               popover (slider + number field) - Photoshop's own
-               click-to-reveal-slider interaction, replacing an
-               always-visible slider that couldn't share a line with
-               Blend mode at this sidebar's width. -->
-          <div class="layers-panel-toolbar">
-            <select id="layers-panel-blend-select" class="layers-panel-blend-select" aria-label="Blend mode"></select>
-            <button type="button" id="layers-panel-opacity-toggle" class="layers-panel-opacity-toggle" aria-label="Opacity" data-tooltip="Opacity">
-              <span class="material-symbols-outlined layers-panel-opacity-icon">opacity</span>
-              <span id="layers-panel-opacity-readout" class="layers-panel-opacity-readout">100%</span>
-            </button>
-          </div>
-          <div id="layers-panel-list" class="layers-panel-list"></div>
+          <div id="layers-panel-list" class="layers-panel-list" role="list" aria-label="Layers"></div>
         </div>
       </div>
     </aside>
@@ -1218,9 +1203,21 @@
          pattern #color-picker-popover uses (see openColorPicker in
          js/workspace.js). Lives outside .right-sidebar so its own
          overflow-y:auto can't clip it. -->
-    <div id="layers-panel-opacity-popover" class="opacity-popover hidden">
-      <input type="range" id="layers-panel-opacity-slider" class="layers-panel-opacity-slider" min="0" max="100" value="100" aria-label="Layer opacity" />
-      <input type="number" id="layers-panel-opacity-number" class="layers-panel-opacity-number" min="0" max="100" value="100" aria-label="Layer opacity percent" />
+    <!-- Opacity & Blend (js/layers-ui.js) for one layer or group - opened
+         from the header's tune button or a row's ⋯ menu. Groups have no
+         blend mode, so that row hides for them. -->
+    <div id="layers-panel-opacity-popover" class="canvas-settings-panel layer-properties-popover hidden" role="dialog" aria-labelledby="layer-properties-title">
+      <div class="canvas-settings-row canvas-settings-header-row">
+        <h2 id="layer-properties-title">Layer 1</h2>
+      </div>
+      <label class="layer-properties-row" id="layer-properties-blend-row">Blend
+        <select id="layers-panel-blend-select" class="layers-panel-blend-select"></select>
+      </label>
+      <div class="layer-properties-row">
+        <label for="layers-panel-opacity-slider">Opacity</label>
+        <input type="range" id="layers-panel-opacity-slider" class="layers-panel-opacity-slider" min="0" max="100" value="100" />
+        <input type="number" id="layers-panel-opacity-number" class="layers-panel-opacity-number" min="0" max="100" value="100" aria-label="Opacity percent" />
+      </div>
     </div>
     </div>
   </main>

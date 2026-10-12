@@ -380,7 +380,7 @@ describe('narrow windows (5h)', () => {
   test('the card column (open and collapsed) is capped by --slot-cards-room', () => {
     for (const sel of [`${FLOATING} .right-sidebar`, `${FLOATING} .right-sidebar.right-sidebar-collapsed`]) {
       const widths = bodyOf(sel).map((b) => /(?:^|[\s;])width:\s*([^;]+);/.exec(b)?.[1]).filter(Boolean);
-      assert.deepEqual(widths, ['min(15rem, var(--slot-cards-room))'], sel);
+      assert.deepEqual(widths, ['min(17.5rem, var(--slot-cards-room))'], sel);
     }
   });
 

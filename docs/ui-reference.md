@@ -559,21 +559,29 @@ tool is active):
   (min 3px), `#brush-editor-grid` (click-to-toggle pixel editor),
   Clear/Cancel/Save.
 
-**Layers** (`#layers-panel`, spec `layers`):
-- `#layers-panel-header` (click to collapse/expand) — `#merge-layers-button`
-  (merge, label "Merge down" / "Merge N layers", ⌘E),
-  `#duplicate-layer-button` (content_copy, ⌘J),
-  `#add-reference-image-button`, `#add-layer-button` ("+ Layer").
-- `.layers-panel-toolbar` — shared controls editing whichever layer is
-  active (Photoshop-style, not per-row): `#layers-panel-blend-select`
-  (blend mode dropdown), `#layers-panel-opacity-toggle` (shows current
-  %, opens `#layers-panel-opacity-popover` — slider + number input,
-  lives outside `.right-sidebar` so its own `overflow-y:auto` can't
-  clip the popover).
-- `#layers-panel-list` — compact rows: live pixel thumbnail, name,
-  visibility toggle, reorder (tap, no drag-and-drop), delete. The
-  Background layer (white-background canvases only, `2g`) is locked —
-  reorder-disabled.
+**Layers** (`#layers-panel`, spec `layers`, `js/layers-ui.js`; Pixelmator
+Pro for iPad style):
+- `#layers-panel-header` — `#layers-panel-menu-button` (⋯ → `#layers-panel-menu`:
+  `#layers-select-mode-button` Select Layers, `#add-reference-image-button`
+  Add Reference Image… → `#add-reference-image-input`), "Layers",
+  `#layers-properties-button` (tune → Opacity & Blend for the active
+  layer), `#add-layer-button`, close.
+- `#layers-select-bar` (Select mode only) — `#layers-select-count`,
+  `#layers-select-group`, `#layers-select-merge`, `#layers-select-done`.
+- `#layers-panel-list` (role list) — `.layer-row` cards: `.layer-grip`
+  (CSS-drawn dots, drag to reorder; none on Background), thumbnail,
+  `.layer-name` (double-tap / Enter / F2 to rename) over `.layer-detail`,
+  reference toggles, `.layer-more-button` (active row only → `#layer-menu`),
+  `.layer-switch` (visibility, checkbox with role switch). `.in-group` rows
+  are indented under their `.layer-group-row` (chevron, folder, name,
+  "Group · N layers", ⋯, switch). `.layer-drop-indicator` shows the drop
+  point while dragging.
+- `#layer-menu` — one shared menu filled per use with a row's or group's
+  actions (arrow keys, Escape, outside press).
+- `#layers-panel-opacity-popover` — Opacity & Blend for a layer or group:
+  `#layer-properties-title`, `#layers-panel-blend-select` (layers only),
+  `#layers-panel-opacity-slider` + `#layers-panel-opacity-number`.
+- Shortcuts: ⌘J duplicate, ⌘E merge, ⌘G group.
 
 ---
 

@@ -133,12 +133,25 @@ remaining layer.
 - **THEN** the delete control is disabled for that layer
 
 ### Requirement: Reorder layers
-The user SHALL be able to move a layer up or down in the stack.
+The user SHALL be able to move a layer up or down in the stack - from the
+row's ⋯ menu (Move Up / Move Down), or by dragging the row's grip and
+dropping it between other rows; a line SHALL show where it will land.
 
 #### Scenario: Moving a layer up
-- **WHEN** the user moves a non-topmost layer up
+- **WHEN** the user moves a non-topmost, ungrouped layer up whose
+  neighbour above is ungrouped
 - **THEN** it swaps position with the layer directly above it, and the
   visual stacking order (and therefore compositing order) updates to match
+
+#### Scenario: Dragging a layer
+- **WHEN** the user drags Layer 1's grip and drops it above Layer 3
+- **THEN** Layer 1 sits directly above Layer 3 in the stack, as one
+  undoable step
+
+#### Scenario: Background stays put
+- **WHEN** the user tries to drag a layer below the Background layer, or
+  drag the Background layer
+- **THEN** nothing moves (the Background row has no grip)
 
 ### Requirement: Rename layer
 The user SHALL be able to rename a layer. A layer's name SHALL be shown in
@@ -246,17 +259,14 @@ fill actions are.
   original content and settings
 
 ### Requirement: Layers panel position in the right sidebar
-The Layers panel SHALL be the bottom-most section of the right sidebar,
-below the Color Library panel and the Brushes panel (when Brushes is
-shown), rather than the topmost section. Superseded from this
-requirement's original form (a right-side sidebar alongside Brushes,
-with no defined order) once Color Library moved above both.
+The Layers panel SHALL be the only panel on the right side of the
+Workspace (since 2026-10-12: colours moved to the bottom colour bar,
+brushes to the brush palette popover).
 
-#### Scenario: Layers renders below Color Library and Brushes
+#### Scenario: Layers alone on the right
 - **WHEN** the Workspace screen is open
-- **THEN** the Layers panel appears below the Color Library panel in the
-  right sidebar, and below the Brushes panel whenever Brushes is also
-  visible
+- **THEN** the right side shows only the Layers card (and its mini-rail
+  button)
 
 ### Requirement: Layers panel collapse
 The user SHALL be able to collapse the Layers panel down to just its
@@ -302,54 +312,18 @@ resize, rotate) the next time the panel re-renders.
 - **WHEN** the user draws on a layer and the Layers panel re-renders
 - **THEN** that layer's thumbnail shows the new content
 
-### Requirement: Opacity and Blend mode apply to the active layer via shared controls
-The Layers panel SHALL offer one Opacity control and one Blend mode
-selector, editing whichever layer is currently active, rather than
-separate controls duplicated in every row. Selecting a different layer
-SHALL update these controls to reflect that layer's own Opacity and
-Blend mode. The two SHALL fit on a single row: the Blend mode selector
-sized to its own content rather than the full row width, and Opacity
-presented as a directly-editable numeric field (0-100) rather than an
-always-visible slider - clicking the Opacity field SHALL open a slider
-in a small popover for drag-to-set, and typing a value directly in the
-field SHALL also work without opening the popover. Revised from this
-requirement's original form (a full-width Blend selector above an
-always-visible Opacity slider, stacked on two rows) once both were
-compressed onto one line.
+### Requirement: Opacity and Blend popover
+The Layers panel SHALL offer an Opacity & Blend popover, titled with the
+layer or group it edits: opened for the active layer from the header's
+tune button, or for any layer or group from its ⋯ menu. It SHALL hold a
+Blend mode selector (layers only) and an Opacity slider with a numeric
+field (0-100). Dragging the slider SHALL update the canvas live and commit
+one undo step when released.
 
-#### Scenario: Selecting a layer syncs the shared controls
-- **WHEN** the user selects a different layer in the panel
-- **THEN** the Opacity control and Blend mode selector update to show
-  that layer's own values
-
-#### Scenario: Changing Opacity or Blend mode affects only the active layer
-- **WHEN** the user adjusts the shared Opacity control or Blend mode
-  selector
-- **THEN** only the currently active layer's opacity/blend mode changes
-
-#### Scenario: Blend mode and Opacity share one row
-- **WHEN** the Layers panel toolbar is visible
-- **THEN** the Blend mode selector and the Opacity control both appear
-  on the same row, without wrapping to a second line at the sidebar's
-  normal width
-
-#### Scenario: Typing an opacity value directly
-- **WHEN** the user types a number into the Opacity field and confirms
-  it
-- **THEN** the active layer's opacity updates to that value, the same as
-  dragging the slider would
-
-#### Scenario: Adjusting opacity via the popover slider
-- **WHEN** the user clicks the Opacity field and drags the slider that
-  appears in the popover
-- **THEN** the active layer's opacity updates live as the slider moves,
-  and the numeric field reflects the current value
-
-#### Scenario: Popover closes without committing an in-progress edit incorrectly
-- **WHEN** the user clicks outside the open Opacity popover, or presses
-  Escape
-- **THEN** the popover closes and the active layer's opacity remains
-  whatever value was last set
+#### Scenario: Changing a layer's opacity
+- **WHEN** the user opens Opacity & Blend for Layer 2 and sets 40
+- **THEN** Layer 2 composites at 40% and its row's detail line reads
+  "Normal · 40%"
 
 ### Requirement: Reference image layer
 The user SHALL be able to add a **reference image layer** to the layer
@@ -614,23 +588,15 @@ active layer down into the layer directly below it.
   Cmd/Ctrl+E
 - **THEN** no merge occurs
 
-### Requirement: Merge button
-The Layers panel header SHALL offer a Merge button that does the same as
-Cmd/Ctrl+E, so merging is reachable on touch devices without a keyboard.
-Its label SHALL say what it will do ("Merge N layers" while 2 or more
-layers are marked, otherwise "Merge down"), and it SHALL be disabled when
-that merge would be refused.
+### Requirement: Merge without a keyboard
+Merging SHALL be reachable on touch devices: the active row's ⋯ menu SHALL
+offer Merge Down (disabled when it would be refused), and Select mode's
+Merge SHALL merge the selected layers (2 or more).
 
-#### Scenario: Merge button merges down
-- **WHEN** no layers are marked, the active layer is above another
-  ordinary layer, and the user taps Merge
+#### Scenario: Merge Down from the row menu
+- **WHEN** no layers are selected, the active layer is above another
+  ordinary layer, and the user chooses Merge Down from its ⋯ menu
 - **THEN** the active layer is merged into the layer below it
-
-#### Scenario: Merge button disabled
-- **WHEN** the active layer is the bottom layer (or it or the layer below
-  is the Background or reference image layer) and fewer than 2 layers are
-  marked
-- **THEN** the Merge button is disabled
 
 ### Requirement: Merge marked layers
 When 2 or more non-Background layers are marked and a merge is triggered,
@@ -711,3 +677,73 @@ opacity/blend mode) are.
 - **THEN** the merged layers are removed, the original source layers
   reappear in their prior positions with their original content, opacity,
   blend mode, and names, and the previously active layer is active again
+
+### Requirement: Layers panel rows
+The Layers panel SHALL list layers top to bottom as rounded row cards
+(after Pixelmator Pro for iPad): a drag grip (none for the Background
+layer), a live thumbnail, the name over a detail line ("Background",
+"Reference · Original"/"Pixelated", or the blend mode and opacity, e.g.
+"Normal · 100%"), the reference image layer's own toggles, and a
+visibility switch named "Show <layer>". The active row SHALL be
+highlighted and show a ⋯ button whose menu offers Rename, Opacity &
+Blend…, Duplicate (⌘J), Merge Down (⌘E), Group (⌘G) or Remove from Group,
+Move Up, Move Down and Delete Layer (confirmed; undoable). The header SHALL
+offer ⋯ (Select Layers, Add Reference Image…), the Layers title, Opacity &
+Blend for the active layer, Add layer and Close.
+
+#### Scenario: Hiding with the switch
+- **WHEN** the user turns off Layer 2's switch
+- **THEN** Layer 2 no longer composites, as one undoable step
+
+### Requirement: Layer groups
+The user SHALL be able to put layers in groups, one level deep: from a
+row's ⋯ menu (Group), Select mode's Group, or Cmd/Ctrl+G (the selected
+layers, else the active one). Grouped layers SHALL be gathered, in order,
+at the topmost one's position. A group SHALL be listed as its own row
+above its members - a chevron to collapse or expand it, a folder, its
+name over "Group · N layers" (and its opacity when below 100%), ⋯ and a
+visibility switch - with its members indented beneath it and hidden
+while it's collapsed. The group's ⋯ menu SHALL offer Rename, Opacity…,
+Ungroup, Move Group Up, Move Group Down and Delete Group (the group and
+its layers; confirmed; undoable). A hidden group SHALL hide its members;
+its opacity SHALL multiply theirs. Moving a group's top member up, or its
+bottom member down, SHALL take it out of the group without moving it; an
+ungrouped layer moved up into a group's bottom, or down into its top,
+SHALL join it. Dropping a dragged layer under a group's header or between
+two members SHALL put it in the group; above the header or under the last
+member, outside it. The Background and reference image layers SHALL NOT
+be grouped. Groups SHALL be saved with the project and restored by
+undo/redo; projects from before groups open ungrouped.
+
+#### Scenario: Grouping two layers
+- **WHEN** the user selects Layer 2 and Layer 3 in Select mode and taps
+  Group
+- **THEN** a "Group 1" row appears above them, both are indented under it,
+  and the canvas is unchanged
+
+#### Scenario: Hiding a group
+- **WHEN** the user turns off a group's switch
+- **THEN** none of its layers composite, while their own switches stay on
+
+#### Scenario: Group opacity
+- **WHEN** a group holding one opaque black pixel is set to 50% opacity
+- **THEN** that pixel composites at half opacity, and the group row reads
+  "Group · 1 layer · 50%"
+
+#### Scenario: Dragging into a group
+- **WHEN** the user drops Layer 4 between two members of a group
+- **THEN** Layer 4 is in the group, between them
+
+### Requirement: Select mode
+The header's ⋯ menu SHALL offer Select Layers, which shows a checkbox on
+each row (disabled for the Background and reference image layers) and a
+bar with the number selected, Group, Merge and Done. A tap on a row SHALL
+toggle its selection instead of activating it. Group SHALL be available
+when at least one ungrouped layer is selected; Merge when two or more are.
+Group, Merge and Done SHALL leave Select mode. Cmd/Ctrl- and Shift-click
+marking SHALL keep working outside Select mode.
+
+#### Scenario: Merging two layers on a touch device
+- **WHEN** the user chooses Select Layers, checks Layer 1 and Layer 2 and
+  taps Merge
+- **THEN** the two are merged into one layer and Select mode ends

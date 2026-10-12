@@ -34,7 +34,7 @@
        keep it sorted alphabetically — the Google Fonts API 400s the whole
        request (breaking every icon on the page, not just an unsorted one)
        if icon_names isn't in alphabetical order. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&icon_names=add,align_horizontal_center,align_horizontal_left,align_horizontal_right,align_vertical_bottom,align_vertical_center,align_vertical_top,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check,check_box,check_box_outline_blank,chevron_right,circle,close,colorize,content_copy,crop_free,dark_mode,delete,dock_to_right,download,edit,error,expand_more,fiber_manual_record,flip,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,handyman,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,layers,light_mode,lock,merge,more_horiz,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,settings,swap_horiz,transform,tune,undo,unfold_more,visibility,visibility_off" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&icon_names=add,align_horizontal_center,align_horizontal_left,align_horizontal_right,align_vertical_bottom,align_vertical_center,align_vertical_top,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check,check_box,check_box_outline_blank,chevron_right,circle,close,colorize,content_copy,crop_free,dark_mode,delete,dock_to_right,download,edit,error,expand_more,fiber_manual_record,flip,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,handyman,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,layers,library_add,light_mode,lock,merge,more_horiz,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,settings,swap_horiz,transform,tune,undo,unfold_more,visibility,visibility_off" />
 </head>
 <body>
   <main id="screen-gallery" class="screen home-screen">
@@ -297,6 +297,24 @@
     <!-- Prefs sheet (5g-prefs), opened from More. A native modal <dialog>
          (focus containment, Escape, inert background); js/prefs-sheet.js
          wires it, js/prefs.js holds the values. Changes apply at once. -->
+    <!-- Standard Libraries (js/color-library-ui.js, list from
+         js/standard-libraries.js): the palettes that ship with Pixi, each
+         re-addable without touching the user's own. -->
+    <dialog id="standard-libraries-sheet" class="prefs-sheet" aria-labelledby="standard-libraries-title">
+      <div class="prefs-sheet-inner">
+        <header class="prefs-header">
+          <h2 id="standard-libraries-title" class="prefs-title">Standard Libraries</h2>
+          <button type="button" id="standard-libraries-done" class="prefs-done" aria-label="Done">
+            <span class="material-symbols-outlined" aria-hidden="true">check</span>
+          </button>
+        </header>
+        <div class="prefs-body">
+          <p class="prefs-note">Adds a fresh copy to your Color Library. Palettes you already have are never changed.</p>
+          <div id="standard-libraries-list" class="prefs-group standard-libraries-list" aria-live="polite"></div>
+        </div>
+      </div>
+    </dialog>
+
     <dialog id="prefs-sheet" class="prefs-sheet" aria-labelledby="prefs-title">
       <div class="prefs-sheet-inner">
         <header class="prefs-header">
@@ -965,6 +983,9 @@
                  works the same for mouse, finger, Pencil and keyboard. -->
             <button type="button" id="edit-palette-colors-button" class="tool-button icon-button" aria-label="Edit colors" aria-pressed="false" data-tooltip="Edit colors">
               <span class="material-symbols-outlined">edit</span>
+            </button>
+            <button type="button" id="standard-libraries-button" class="tool-button icon-button" aria-label="Standard libraries" data-tooltip="Standard libraries" aria-haspopup="dialog">
+              <span class="material-symbols-outlined" aria-hidden="true">library_add</span>
             </button>
             <button type="button" id="delete-palette-button" class="tool-button icon-button" aria-label="Delete palette" data-tooltip="Delete palette">
               <span class="material-symbols-outlined">delete</span>

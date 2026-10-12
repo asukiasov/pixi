@@ -1,0 +1,179 @@
+[
+  {
+    "name": "Pixi Basics",
+    "colors": [
+      "#000000",
+      "#ffffff",
+      "#9d9d9d",
+      "#4a4a4a",
+      "#be2633",
+      "#e06f8b",
+      "#ea4f36",
+      "#f7a417",
+      "#f2ca30",
+      "#a2ce29",
+      "#3f9337",
+      "#39a6a3",
+      "#2ce8f4",
+      "#1a5fb4",
+      "#5843c0",
+      "#8b2fb0"
+    ]
+  },
+  {
+    "name": "Vaporwave",
+    "colors": [
+      "#ff71ce",
+      "#01cdfe",
+      "#05ffa1",
+      "#b967ff",
+      "#fffb96"
+    ]
+  },
+  {
+    "name": "Sunset",
+    "colors": [
+      "#ff9a00",
+      "#ff6d00",
+      "#ff3d00",
+      "#ff006e",
+      "#8338ec"
+    ]
+  },
+  {
+    "name": "Ocean",
+    "colors": [
+      "#03045e",
+      "#0077b6",
+      "#00b4d8",
+      "#90e0ef",
+      "#caf0f8"
+    ]
+  },
+  {
+    "name": "Candy",
+    "colors": [
+      "#ff6fb5",
+      "#ffd23f",
+      "#7bf1a8",
+      "#4cc9f0",
+      "#c77dff"
+    ]
+  },
+  {
+    "name": "Autumn",
+    "colors": [
+      "#582f0e",
+      "#7f4f24",
+      "#a68a64",
+      "#d4a373",
+      "#bc6c25",
+      "#dda15e"
+    ]
+  },
+  {
+    "name": "Galaxy",
+    "colors": [
+      "#240046",
+      "#3c096c",
+      "#5a189a",
+      "#7b2cbf",
+      "#e0aaff"
+    ]
+  },
+  {
+    "name": "Pastel",
+    "colors": [
+      "#ffadad",
+      "#ffd6a5",
+      "#fdffb6",
+      "#caffbf",
+      "#9bf6ff",
+      "#a0c4ff",
+      "#bdb2ff"
+    ]
+  },
+  {
+    "name": "Monochrome",
+    "colors": [
+      "#000000",
+      "#2b2b2b",
+      "#555555",
+      "#7f7f7f",
+      "#aaaaaa",
+      "#d4d4d4",
+      "#ffffff"
+    ]
+  },
+  {
+    "name": "Old Money",
+    "colors": [
+      "#1b263b",
+      "#f5f0e6",
+      "#2d4a3e",
+      "#c19a6b",
+      "#6d0f22",
+      "#b08d57",
+      "#3c3c3c"
+    ]
+  },
+  {
+    "name": "Kit Kat",
+    "colors": [
+      "#d0021b",
+      "#ffffff",
+      "#3c1f14",
+      "#7b4b2a"
+    ]
+  },
+  {
+    "name": "M&M's",
+    "colors": [
+      "#ff0000",
+      "#ff8c00",
+      "#ffd700",
+      "#00a651",
+      "#0072ce",
+      "#6f4e37"
+    ]
+  },
+  {
+    "name": "Snickers",
+    "colors": [
+      "#002d72",
+      "#6f4e37",
+      "#d2a679",
+      "#f5deb3"
+    ]
+  },
+  {
+    "name": "PICO-8",
+    "colors": [
+      "#000000",
+      "#1d2b53",
+      "#7e2553",
+      "#008751",
+      "#ab5236",
+      "#5f574f",
+      "#c2c3c7",
+      "#fff1e8",
+      "#ff004d",
+      "#ffa300",
+      "#ffec27",
+      "#00e436",
+      "#29adff",
+      "#83769c",
+      "#ff77a8",
+      "#ffccaa"
+    ]
+  },
+  {
+    "name": "Game Boy",
+    "colors": [
+      "#0f380f",
+      "#306230",
+      "#8bac0f",
+      "#9bbc0f"
+    ]
+  }
+]

@@ -335,3 +335,35 @@ same way.
 - **WHEN** the user clicks the header of a collapsed Color Library panel
 - **THEN** the palette controls and swatch grid reappear showing the
   active palette, unaffected by having been collapsed
+
+### Requirement: Standard libraries
+The user SHALL be able to open a Standard Libraries sheet listing the
+palettes that ship with Pixi - Pixi Basics (the colours of the former fixed
+bottom strip), the starter palettes (Vaporwave, Sunset, Ocean, Candy,
+Autumn, Galaxy, Pastel, Monochrome, Old Money, Kit Kat, M&M's, Snickers),
+PICO-8 and Game Boy - each with its colours and an Add button. The list
+SHALL be downloaded from the site (`assets/palettes/standard.json`) when
+the sheet opens, falling back to the same list built into the app when
+the download fails. Add SHALL create a new palette with that name and
+colours and make it active; it SHALL NOT change, replace or merge into
+any existing palette. A standard palette whose name the library already
+has (case-insensitive) SHALL show as Added instead.
+
+#### Scenario: Restoring a deleted standard palette
+- **WHEN** the user has deleted Kit Kat and opens Standard Libraries
+- **THEN** Kit Kat shows Add; tapping it creates Kit Kat again with its
+  original colours, as the active palette
+
+#### Scenario: User's own palettes are untouched
+- **WHEN** the user has edited their Kit Kat palette and opens Standard
+  Libraries
+- **THEN** Kit Kat shows Added and the user's palette is not changed
+
+#### Scenario: Offline
+- **WHEN** the standard list can't be downloaded
+- **THEN** the sheet shows the built-in list and works the same
+
+### Requirement: Pixi Basics for existing libraries
+A library created before Pixi Basics existed SHALL get it added once, the
+next time the app loads, unless it already has a palette by that name. It
+SHALL NOT be re-added after the user deletes it.

@@ -4384,3 +4384,41 @@ span.layer-lock-icon {
 .transform-icon-quarter {
   transform: rotate(90deg);
 }
+
+/* Standard Libraries sheet (js/color-library-ui.js) - a Prefs sheet whose
+   rows are a palette name over its colours, with Add on the end. */
+.standard-libraries-list {
+  margin-top: 0.75rem;
+  max-height: min(60vh, 32rem);
+  overflow-y: auto;
+}
+
+.standard-library-row {
+  gap: 0.75rem;
+}
+
+.standard-library-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.standard-library-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.standard-library-swatches span {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
+}
+
+.standard-library-add {
+  min-width: 5rem;
+  min-height: 44px;
+}

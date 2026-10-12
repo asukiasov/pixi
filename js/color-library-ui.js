@@ -37,6 +37,7 @@ import {
 import { extractPalette } from './color-extraction.js';
 import { generateColorRamp } from './color-ramp.js';
 import { DEFAULT_MATERIAL_COLORS, PREDEFINED_PALETTES } from './default-color-library.js';
+import { loadStandardLibraries, standardLibraryRows } from './standard-libraries.js';
 
 // Fixed internal sample grid for Color Library image import - purely a
 // color-reduction step before median-cut clustering, never shown to the
@@ -159,12 +160,93 @@ async function loadColorPalettes() {
       const created = await createColorPalette(name, [...colors]);
       palettes = [...palettes, created];
     }
+    markBasicsSeeded();
+  } else if (!basicsSeeded()) {
+    // Once, for libraries created before the fixed bottom strip became
+    // "Pixi Basics": its colours stay one tap away.
+    if (!palettes.some((p) => p.name === 'Pixi Basics')) {
+      palettes = [...palettes, await createColorPalette('Pixi Basics', [...PREDEFINED_PALETTES['Pixi Basics']])];
+    }
+    markBasicsSeeded();
   }
   colorPalettes = palettes;
   if (!colorPalettes.some((p) => p.id === activePaletteId)) {
     activePaletteId = colorPalettes[0].id;
   }
   renderColorLibraryPanel();
+}
+
+const BASICS_SEEDED_KEY = 'pixi-basics-seeded';
+// A failed read counts as seeded: better to skip the one-time add than
+// to add Pixi Basics on every load where storage is blocked.
+function basicsSeeded() {
+  try {
+    return localStorage.getItem(BASICS_SEEDED_KEY) !== null;
+  } catch {
+    return true;
+  }
+}
+function markBasicsSeeded() {
+  try {
+    localStorage.setItem(BASICS_SEEDED_KEY, '1');
+  } catch {
+    // Storage blocked - see basicsSeeded().
+  }
+}
+
+/**
+ * Fills the Standard Libraries sheet: each standard palette with its
+ * colours and Add, or Added when the library already has one by that
+ * name. Add makes a new palette (and the active one); nothing existing
+ * is ever changed.
+ */
+async function renderStandardLibraries(list) {
+  const listEl = document.querySelector('#standard-libraries-list');
+  const rows = standardLibraryRows(list, colorPalettes.map((p) => p.name));
+  listEl.innerHTML = '';
+  for (const row of rows) {
+    const item = document.createElement('div');
+    item.className = 'prefs-row standard-library-row';
+    const label = document.createElement('div');
+    label.className = 'standard-library-label';
+    const name = document.createElement('span');
+    name.className = 'prefs-row-label';
+    name.textContent = row.name;
+    const swatches = document.createElement('span');
+    swatches.className = 'standard-library-swatches';
+    swatches.setAttribute('aria-hidden', 'true');
+    for (const hex of row.colors) {
+      const chip = document.createElement('span');
+      chip.style.background = hex;
+      swatches.appendChild(chip);
+    }
+    label.append(name, swatches);
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'tool-button standard-library-add';
+    add.textContent = row.added ? 'Added' : 'Add';
+    add.disabled = row.added;
+    add.setAttribute('aria-label', row.added ? `${row.name} is in your library` : `Add ${row.name}`);
+    add.addEventListener('click', async () => {
+      add.disabled = true;
+      const created = await createColorPalette(row.name, [...row.colors]);
+      activePaletteId = created.id;
+      await loadColorPalettes();
+      showToast(`Added ${row.name}`);
+      await renderStandardLibraries(list);
+      document.querySelector('#standard-libraries-list .standard-library-add:not(:disabled)')?.focus();
+    });
+    item.append(label, add);
+    listEl.appendChild(item);
+  }
+}
+
+async function openStandardLibraries() {
+  const sheet = document.querySelector('#standard-libraries-sheet');
+  const listEl = document.querySelector('#standard-libraries-list');
+  listEl.textContent = 'Loading…';
+  sheet.showModal();
+  await renderStandardLibraries(await loadStandardLibraries());
 }
 
 function renderColorLibraryPanel() {
@@ -354,6 +436,13 @@ export function initColorLibrary(root = document) {
   });
 
   editColorsButton.addEventListener('click', () => setEditingColors(editingPaletteId === null));
+
+  const standardSheet = root.querySelector('#standard-libraries-sheet');
+  root.querySelector('#standard-libraries-button')?.addEventListener('click', openStandardLibraries);
+  root.querySelector('#standard-libraries-done')?.addEventListener('click', () => standardSheet.close());
+  standardSheet?.addEventListener('click', (e) => {
+    if (e.target === standardSheet) standardSheet.close(); // backdrop
+  });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && editingPaletteId !== null) setEditingColors(false);
   });

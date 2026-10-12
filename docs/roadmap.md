@@ -461,9 +461,16 @@ Follow-ups after 5h:
   2026-10-12: palm rejection (Draw Only With Apple Pencil, Prefs), a
   Transform popover (rotate/flip/align the layer or selection), and view
   rotation (two-finger twist, trackpad, Zoom menu). Design:
-  `docs/superpowers/specs/2026-10-12-pencil-and-transform-design.md`. The
-  Layers/colour redesigns from the same feedback are still open in
-  `docs/feature-ideas/2026-10-12-ipad-feedback.md`.
+  `docs/superpowers/specs/2026-10-12-pencil-and-transform-design.md`.
+- ~~**Layers and colours redesign**~~ — **done** 2026-10-12: Layers alone
+  on the right as a Pixelmator Pro for iPad-style panel (row cards,
+  visibility switches, ⋯ menus, drag to reorder, Select mode) with
+  one-level layer groups; the colour palette moved into a bottom colour
+  bar with a palette menu; a Procreate-style colour picker (Disc,
+  Classic, Value, Palettes, history); Standard Libraries (re-add Kit Kat
+  and the other shipped palettes, downloaded from the site); the Brushes
+  card became a brush palette popover. Design:
+  `docs/superpowers/specs/2026-10-12-layers-and-colours-redesign-design.md`.
 
 Status: in progress - 5a–5g, Customize Tools, the 5h switch-on, the
 embed mount fix, the home screen redesign and its theme setting done.

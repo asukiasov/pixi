@@ -5139,3 +5139,24 @@ span.layer-lock-icon {
   width: 3.5rem;
   min-height: 32px;
 }
+
+/* Phone width: the Layers card sits between the rails, so rows tighten. */
+@media (max-width: 480px) {
+  .layer-row .layer-thumbnail {
+    width: 28px;
+    height: 28px;
+  }
+
+  .layer-grip {
+    width: 16px;
+  }
+
+  .layer-row.in-group {
+    margin-inline-start: 10px;
+  }
+
+  .layer-row,
+  .layer-group-row {
+    gap: 0.2rem;
+  }
+}

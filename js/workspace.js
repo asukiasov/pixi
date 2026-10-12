@@ -522,12 +522,26 @@ function renderBrushesPanel() {
     swatch.addEventListener('click', () => {
       state.currentBrush = brush;
       refreshBrushCursor();
+      syncBrushPickerButton();
       brushesPanelGrid.querySelectorAll('.brush-swatch').forEach((s) => s.classList.toggle('active', s === swatch));
       deleteBrushButton.disabled = !brush.isCustom;
     });
     brushesPanelGrid.appendChild(swatch);
   });
   deleteBrushButton.disabled = !state.currentBrush?.isCustom;
+  syncBrushPickerButton();
+}
+
+/** The tool-options bar's brush button shows the current brush's shape and name. */
+function syncBrushPickerButton() {
+  const button = root.querySelector('#brush-picker-button');
+  const preview = root.querySelector('#brush-picker-preview');
+  const brush = state.currentBrush;
+  if (!button || !preview || !brush) return;
+  preview.width = brush.width;
+  preview.height = brush.height;
+  preview.getContext('2d').drawImage(buildBrushPreviewCanvas(brush), 0, 0);
+  button.setAttribute('aria-label', `Brush: ${brush.name}`);
 }
 
 /** Fetches custom brushes from IndexedDB, merges with the built-ins, re-renders the panel. */
@@ -643,17 +657,32 @@ function closeBrushEditor() {
 }
 
 /**
- * Opens or closes the Brushes card in the floating layout
- * (5e-cards-mini-rail), from js/panel-rail.js. Two independent classes
- * decide whether the panel shows: `.hidden` is the tool's (Brush only,
- * applyToolScopedUI), `.collapsed` is the user's (this). So a closed card
- * stays closed across tool switches, and an open one reappears with the
- * Brush tool. Only floating CSS reads `.collapsed` here, and nothing in
- * the docked layout calls this with `false`.
+ * Opens or closes the brush palette (the Brushes panel as a popover,
+ * anchored to #brush-picker-button in the tool-options bar). Two
+ * independent classes decide whether the panel shows: `.hidden` is the
+ * tool's (Brush only, applyToolScopedUI), `.collapsed` is open/closed
+ * (this). Only floating CSS reads `.collapsed`, so in the docked embed
+ * layout the panel just stays in place.
  */
 export function setBrushesCardOpen(open) {
   brushesPanel.classList.toggle('collapsed', !open);
+  const button = root.querySelector('#brush-picker-button');
+  button?.setAttribute('aria-expanded', String(open));
+  if (open && button) positionBrushPalette(button);
   if (!open) closeBrushEditor();
+}
+
+/** Above the brush button (the bar is at the bottom), centred on it and kept on screen. */
+function positionBrushPalette(button) {
+  const rect = button.getBoundingClientRect();
+  const panelRect = brushesPanel.getBoundingClientRect();
+  const margin = 8;
+  let top = rect.top - panelRect.height - margin;
+  if (top < margin) top = rect.bottom + margin;
+  top = Math.max(margin, Math.min(top, window.innerHeight - panelRect.height - margin));
+  const left = Math.max(margin, Math.min(rect.left + rect.width / 2 - panelRect.width / 2, window.innerWidth - panelRect.width - margin));
+  brushesPanel.style.left = `${left}px`;
+  brushesPanel.style.top = `${top}px`;
 }
 
 /**
@@ -1243,9 +1272,9 @@ export function bindSliderWheel(slider) {
 function applyToolScopedUI() {
   refreshBrushCursor();
   brushesPanel.classList.toggle('hidden', state.currentTool !== 'brush');
-  // Leaving the Brush tool mid-edit closes the editor rather than
-  // leaving it open behind a now-hidden panel.
-  if (state.currentTool !== 'brush') closeBrushEditor();
+  // Leaving the Brush tool closes the brush palette (and its editor)
+  // rather than leaving it to reappear with the next Brush pick.
+  if (state.currentTool !== 'brush') setBrushesCardOpen(false);
   // Hand tool: single-pointer drag pans the canvas instead of drawing
   // (see CanvasView#setPanMode). Every other tool leaves pan mode off.
   state.canvasView.setPanMode(state.currentTool === 'hand');
@@ -1436,6 +1465,30 @@ function bindDomOnce() {
   toolButtons = root.querySelectorAll('.tool-button[data-tool]');
   paletteRow = root.querySelector('#palette-row');
   brushesPanel = root.querySelector('#brushes-panel');
+  const brushPickerButton = root.querySelector('#brush-picker-button');
+  brushPickerButton?.addEventListener('click', () => {
+    setBrushesCardOpen(brushesPanel.classList.contains('collapsed'));
+  });
+  root.querySelector('#brushes-close')?.addEventListener('click', () => {
+    setBrushesCardOpen(false);
+    brushPickerButton?.focus();
+  });
+  // Closes like the other popovers: a press outside it or Escape. Only
+  // where there's a brush button to reopen it (not in the docked embed).
+  if (brushPickerButton && !globalListenersBound) {
+    document.addEventListener('pointerdown', (e) => {
+      if (brushesPanel.classList.contains('collapsed')) return;
+      if (brushesPanel.contains(e.target) || root.querySelector('#brush-picker-button')?.contains(e.target)) return;
+      // Dialogs opened from the palette (confirm delete) aren't "outside".
+      if (e.target.closest?.('dialog, .confirm-overlay')) return;
+      setBrushesCardOpen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || brushesPanel.classList.contains('collapsed')) return;
+      setBrushesCardOpen(false);
+      root.querySelector('#brush-picker-button')?.focus();
+    });
+  }
   const backToGalleryButton = root.querySelector('#back-to-gallery-button');
 
   toolButtons.forEach((button) => {
@@ -2320,7 +2373,7 @@ export function initWorkspace({
   renderBrushesPanel();
   root.querySelector('#brush-spacing').value = '1';
   root.querySelector('#brush-rotation').value = '0';
-  setBrushesCardOpen(true);
+  setBrushesCardOpen(false);
   setRightSidebarVisible(true);
   // A re-init while hidden (e.g. an embed-style loadImage(), or opening
   // another project) already fit the view to the full-size container;

@@ -266,7 +266,7 @@ describe('floating panel cards + mini-rail (5e)', () => {
   test('the glass lists name the rail and the cards, not the whole sidebar', () => {
     assert.doesNotMatch(css, /:is\([^)]*\.slot-panels[^)]*\)/);
     const glass = formaSelector('glass');
-    for (const part of ['.panel-rail', '.right-sidebar > .brushes-panel', '.right-sidebar > .layers-panel']) {
+    for (const part of ['.panel-rail', '.right-sidebar > .layers-panel']) {
       assert.ok(glass.includes(part), part);
     }
     assert.ok(!glass.includes('.right-sidebar,'), glass);

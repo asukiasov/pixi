@@ -4,9 +4,8 @@
 //
 // A card's open/closed state is the panel's existing collapsed state
 // (.collapsed on the card), never stored here: Layers forwards to the
-// (hidden) top bar toggle, Brushes to setBrushesCardOpen in
-// js/workspace.js. (Colours are no longer a card - they live in the
-// bottom colour bar, js/color-library-ui.js.) Each rail button's state is read
+// (hidden) top bar toggle. (Colours and brushes are no longer cards -
+// they live in the bottom colour bar and the brush palette popover.) Each rail button's state is read
 // back from its card's class by a MutationObserver, so every path that
 // opens or closes a card shows up on the rail. Floating CSS turns
 // .collapsed into "not displayed".
@@ -85,7 +84,6 @@ export function applyOpenCardDefaults(pinned = ALL_PINNED, root = document) {
 }
 
 const PANELS = [
-  { card: 'brushes-panel', label: 'Brushes', unavailableLabel: 'Brushes (Brush tool)' },
   { card: 'layers-panel', label: 'Layers' },
 ];
 

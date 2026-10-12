@@ -4567,3 +4567,64 @@ span.layer-lock-icon {
     padding-inline: 0.15rem;
   }
 }
+
+/* Brush palette (js/workspace.js setBrushesCardOpen): the Brushes panel
+   as a popover over the tool-options bar, opened from
+   #brush-picker-button. Floating only - the docked embed keeps the
+   in-flow panel. */
+.workspace-screen[data-layout="floating"] .brush-popover {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  width: min(19rem, calc(100vw - 16px));
+  max-height: min(70vh, 34rem);
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.workspace-screen[data-layout="floating"] .brush-popover.collapsed {
+  display: none;
+}
+
+.workspace-screen[data-layout="floating"] .brush-popover > :is(.brushes-panel-header, .brushes-panel-toolbar) {
+  flex: none;
+}
+
+.workspace-screen[data-layout="floating"] .brush-popover .brushes-panel-header h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--color-text);
+}
+
+.brush-picker-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding-inline: 0.5rem 0.25rem;
+}
+
+.brush-picker-preview {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  image-rendering: pixelated;
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.brush-picker-button .material-symbols-outlined {
+  flex: none;
+  width: 1.25rem;
+  overflow: hidden;
+  font-size: 1.25rem;
+}
+
+/* Wider than the bar's square buttons: brush preview + chevron. */
+.workspace-screen[data-layout="floating"] .tool-options-bar .brush-picker-button {
+  width: auto;
+}

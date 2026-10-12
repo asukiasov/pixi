@@ -118,9 +118,9 @@ docked descriptions in the floating layout).
 **Narrow windows (5h-switch-on-floating).** Floating at every width,
 with no separate narrow layout. A project opened in a window narrower
 than `NARROW_MAX_WIDTH` (600 CSS px, `js/panel-rail.js`) starts with
-Colors, Brushes and Layers closed: `openWorkspace()` (`js/app.js`) calls
-`applyOpenCardDefaults()` right after `initWorkspace()` has reset all
-three to open, then re-runs `resetView()`, so Fit always sees the cards
+the Layers card closed: `openWorkspace()` (`js/app.js`) calls
+`applyOpenCardDefaults()` right after `initWorkspace()` has reset it to
+open, then re-runs `resetView()`, so Fit always sees the cards
 actually open (on every open, not only the first). The width at open
 decides; resizing never opens or closes a card. Constraint fixes, all
 floating-scoped CSS: the card column is
@@ -164,8 +164,7 @@ Groups: **Tools** - Customize Tools… (a `<button>` drawn as a row,
 `chevron_right` at the end; opens the Customize Tools sheet on top of
 Prefs); **Layout** - Tools Side and Panels Side (Left/Right each,
 independent; this replaces the roadmap's single handedness flag);
-**Open When a Project Opens** - Colors, Brushes, Layers (the pinned
-cards); **Drawing** - Hide Interface While Drawing, Show Brush Cursor (`#prefs-brush-cursor`, default on; `data-brush-cursor` on the Workspace screen, overlay `.brush-cursor` from `js/canvas-view.js`, footprint/outline in `js/brush-cursor.js`), Draw Only With Apple Pencil (`#prefs-pencil-only`, default on; palm rejection in `js/canvas-view.js` via `js/pointer-policy.js`). Every change applies at once and is saved; Done, Escape or
+**Open When a Project Opens** - Layers (the pinned card); **Drawing** - Hide Interface While Drawing, Show Brush Cursor (`#prefs-brush-cursor`, default on; `data-brush-cursor` on the Workspace screen, overlay `.brush-cursor` from `js/canvas-view.js`, footprint/outline in `js/brush-cursor.js`), Draw Only With Apple Pencil (`#prefs-pencil-only`, default on; palm rejection in `js/canvas-view.js` via `js/pointer-policy.js`). Every change applies at once and is saved; Done, Escape or
 a press on the backdrop closes the sheet and focus returns to More.
 Values live in `js/prefs.js` (defaults: tools left, panels right, all
 pinned, auto-hide off), stored as JSON under the `pixi-prefs`
@@ -275,29 +274,25 @@ open above the bar. Markup is `.floating-only` and absent from
 `js/app.js`).
 
 **Floating panel cards + mini-rail (5e-cards-mini-rail).** In the
-floating layout `#panel-rail` (Brushes, Layers; 44px disclosure
-buttons with `aria-expanded`/`aria-controls`) sits against the end edge
-below the top bar, and `#right-sidebar` becomes a see-through column
-beside it (`--slot-cards-start/end`) in which Brushes and Layers are
-each their own glass card, in that order (colours are in the bottom
-colour bar). A card is open or
-closed - no collapse-to-header: the panels' existing `.collapsed` state
-means "not displayed", the chevron is hidden, and a `.panel-close`
-button in each header closes the card (focus moves to its rail button;
-a tap on the title does nothing, and the `role="button"` headers get
-`tabindex="-1"`). Layers forwards to the hidden `#layers-panel-toggle`, Brushes calls `setBrushesCardOpen()`
-(`js/workspace.js`; `.collapsed` is the user's flag, `.hidden` stays the
-Brush-tool scoping, so a closed Brushes card stays closed across tool
-switches). Rail state is mirrored from each card's class by a
-`MutationObserver`; outside the Brush tool the Brushes button is
-`aria-disabled` and reads "Brushes (Brush tool)". All three cards reopen
-on project open; nothing is remembered. When the open cards don't fit
-they share the height by flex shrink and each scrolls inside itself,
-headers always visible; the column also stops above the bottom cards
-where those reach under it (`--slot-options-reach`, measured by a
-`ResizeObserver`). Closing a card cancels the palette import/ramp
-previews (Colors), the layer opacity popover (Layers) or the brush
-editor (Brushes). Opening and closing cards never re-fits the canvas.
+floating layout `#panel-rail` (Layers only since 2026-10-12; 44px
+disclosure button with `aria-expanded`/`aria-controls`) sits against the
+end edge below the top bar, and `#right-sidebar` becomes a see-through
+column beside it (`--slot-cards-start/end`) holding the Layers glass
+card. Colours are in the bottom colour bar (`#color-bar`), brushes in the
+brush palette popover (`#brushes-panel.brush-popover`, opened from
+`#brush-picker-button` in the tool-options bar's Brush group, which shows
+the current brush; `setBrushesCardOpen()` in `js/workspace.js` toggles
+`.collapsed` and positions it above the button; `.hidden` stays the
+Brush-tool scoping; it closes on its close button, Escape, a press
+outside, a tool switch or a project open). The card is open or closed -
+no collapse-to-header: `.collapsed` means "not displayed", and the
+`.panel-close` button closes it (focus moves to the rail button). Rail
+state is mirrored from the card's class by a `MutationObserver`. The card
+reopens on project open (if pinned); nothing is remembered. It stops above
+the bottom cards where those reach under it (`--slot-options-reach`,
+measured by a `ResizeObserver`) and scrolls inside itself. Closing it
+cancels the layer opacity popover. Opening and closing never re-fits the
+canvas.
 Wiring: `js/panel-rail.js` (once, from `js/app.js`). The docked
 sidebar, its collapse-to-header and its top bar toggles are unchanged.
 

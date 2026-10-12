@@ -363,10 +363,6 @@
             <h3 id="prefs-pinned-heading" class="prefs-section-heading">Open When a Project Opens</h3>
             <div class="prefs-group">
               <label class="prefs-row">
-                <span class="prefs-row-label">Brushes</span>
-                <input type="checkbox" role="switch" class="prefs-switch" name="pin-brushes" data-pin="brushes" aria-describedby="prefs-pinned-note">
-              </label>
-              <label class="prefs-row">
                 <span class="prefs-row-label">Layers</span>
                 <input type="checkbox" role="switch" class="prefs-switch" name="pin-layers" data-pin="layers" aria-describedby="prefs-pinned-note">
               </label>
@@ -649,6 +645,72 @@
         </div>
       </div>
 
+      <!-- Brush palette (js/workspace.js): the Brushes card as a popover,
+           opened from #brush-picker-button in the tool-options bar while
+           the Brush tool is active. .collapsed = closed, .hidden = not the
+           Brush tool, as before. -->
+      <div id="brushes-panel" class="brushes-panel brush-popover collapsed" role="dialog" aria-label="Brushes">
+        <div class="brushes-panel-header">
+          <h2>Brushes</h2>
+          <button type="button" class="tool-button icon-button panel-close floating-only" id="brushes-close" aria-label="Close Brushes" data-tooltip="Close">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
+        </div>
+        <!-- .brush-stroke-settings rows are hidden in the floating layout,
+             where the tool-options bar shows them as sliders. -->
+        <div class="brushes-panel-row brush-stroke-settings">
+          <label class="brushes-spacing-label">Spacing
+            <input type="number" id="brush-spacing" min="1" max="20" value="1" /> px
+          </label>
+        </div>
+        <div class="brushes-panel-row brush-stroke-settings">
+          <label class="brushes-spacing-label">Rotation
+            <input type="number" id="brush-rotation" min="0" max="359" value="0" /> °
+          </label>
+        </div>
+        <div id="brushes-panel-grid" class="brushes-panel-grid"></div>
+        <div class="brushes-panel-toolbar">
+          <button type="button" id="add-brush-button" class="tool-button icon-button" aria-label="Add brush" data-tooltip="Add brush">
+            <span class="material-symbols-outlined">add</span>
+          </button>
+          <button type="button" id="delete-brush-button" class="tool-button icon-button" disabled aria-label="Delete selected brush" data-tooltip="Delete selected brush">
+            <span class="material-symbols-outlined">delete</span>
+          </button>
+        </div>
+
+        <div id="brush-editor-panel" class="brush-editor-panel hidden">
+          <div class="brush-editor-row brush-editor-header-row">
+            <h2>New Brush</h2>
+            <!-- Import an image to pre-fill the grid, icon-only + header-
+                 row position - same "image" icon Color Library's Import
+                 control uses for the same action. Wired in
+                 js/brush-import-ui.js - see that file's
+                 setBrushEditorGrid/getBrushEditorSize use. -->
+            <button type="button" id="brush-editor-import" class="tool-button icon-button" aria-label="Import from image" data-tooltip="Import from image">
+              <span class="material-symbols-outlined">image</span>
+            </button>
+            <input type="file" id="brush-editor-import-input" accept="image/*" class="hidden" />
+          </div>
+          <div class="brush-editor-row">
+            <input type="text" id="brush-editor-name" placeholder="Brush name" />
+          </div>
+          <div class="brush-editor-row">
+            <label class="brush-editor-size-label">W
+              <input type="number" id="brush-editor-width" min="3" value="9" />
+            </label>
+            <label class="brush-editor-size-label">H
+              <input type="number" id="brush-editor-height" min="3" value="9" />
+            </label>
+          </div>
+          <div id="brush-editor-grid" class="brush-editor-grid"></div>
+          <div class="brush-editor-row">
+            <button type="button" id="brush-editor-clear" class="tool-button">Clear</button>
+            <button type="button" id="brush-editor-cancel" class="tool-button">Cancel</button>
+            <button type="button" id="brush-editor-save" class="tool-button">Save</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Palette menu (js/color-library-ui.js), opened from
            #palette-menu-button: every palette (tap to switch), then the
            Color Library actions. The action items keep the ids the old
@@ -897,6 +959,11 @@
             </div>
           </div>
           <div class="tool-options-group" data-tools="brush">
+            <!-- Opens the brush palette (#brushes-panel); shows the current brush. -->
+            <button type="button" id="brush-picker-button" class="tool-button brush-picker-button" aria-haspopup="dialog" aria-expanded="false" aria-controls="brushes-panel" aria-label="Brushes" data-tooltip="Brushes">
+              <canvas id="brush-picker-preview" class="brush-picker-preview" width="9" height="9" aria-hidden="true"></canvas>
+              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+            </button>
             <!-- Source: #brush-spacing (js/workspace.js, Brushes panel). -->
             <div class="tool-options-slider slider">
               <label class="tool-options-label visually-hidden" for="tool-options-spacing">Spacing</label>
@@ -1032,80 +1099,15 @@
          closed from its header's .panel-close. -->
     <!-- Panel mini-rail (5e-cards-mini-rail), floating layout only. Each
          button opens/closes one card; its state is mirrored back from the
-         card's class by js/panel-rail.js. Sources, for 5h: Layers forwards
-         to #layers-panel-toggle, Brushes calls setBrushesCardOpen
-         (js/workspace.js). Colours live in the bottom colour bar. -->
+         card's class by js/panel-rail.js. Layers forwards to
+         #layers-panel-toggle. Colours live in the bottom colour bar,
+         brushes in the brush palette popover. -->
     <nav id="panel-rail" class="panel-rail slot-panels floating-only" aria-label="Panels">
-      <button type="button" class="tool-button icon-button" aria-controls="brushes-panel" aria-expanded="false" aria-label="Brushes" data-tooltip="Brushes">
-        <span class="material-symbols-outlined" aria-hidden="true">brush</span>
-      </button>
       <button type="button" class="tool-button icon-button" aria-controls="layers-panel" aria-expanded="true" data-forward="layers-panel-toggle" aria-label="Layers" data-tooltip="Layers">
         <span class="material-symbols-outlined" aria-hidden="true">layers</span>
       </button>
     </nav>
     <aside id="right-sidebar" class="right-sidebar slot-panels">
-
-      <div id="brushes-panel" class="brushes-panel">
-        <div class="brushes-panel-header">
-          <h2>Brushes</h2>
-          <button type="button" class="tool-button icon-button panel-close floating-only" aria-label="Close Brushes" data-tooltip="Close">
-            <span class="material-symbols-outlined" aria-hidden="true">close</span>
-          </button>
-        </div>
-        <!-- .brush-stroke-settings rows are hidden in the floating layout,
-             where the tool-options bar shows them as sliders. -->
-        <div class="brushes-panel-row brush-stroke-settings">
-          <label class="brushes-spacing-label">Spacing
-            <input type="number" id="brush-spacing" min="1" max="20" value="1" /> px
-          </label>
-        </div>
-        <div class="brushes-panel-row brush-stroke-settings">
-          <label class="brushes-spacing-label">Rotation
-            <input type="number" id="brush-rotation" min="0" max="359" value="0" /> °
-          </label>
-        </div>
-        <div id="brushes-panel-grid" class="brushes-panel-grid"></div>
-        <div class="brushes-panel-toolbar">
-          <button type="button" id="add-brush-button" class="tool-button icon-button" aria-label="Add brush" data-tooltip="Add brush">
-            <span class="material-symbols-outlined">add</span>
-          </button>
-          <button type="button" id="delete-brush-button" class="tool-button icon-button" disabled aria-label="Delete selected brush" data-tooltip="Delete selected brush">
-            <span class="material-symbols-outlined">delete</span>
-          </button>
-        </div>
-
-        <div id="brush-editor-panel" class="brush-editor-panel hidden">
-          <div class="brush-editor-row brush-editor-header-row">
-            <h2>New Brush</h2>
-            <!-- Import an image to pre-fill the grid, icon-only + header-
-                 row position - same "image" icon Color Library's Import
-                 control uses for the same action. Wired in
-                 js/brush-import-ui.js - see that file's
-                 setBrushEditorGrid/getBrushEditorSize use. -->
-            <button type="button" id="brush-editor-import" class="tool-button icon-button" aria-label="Import from image" data-tooltip="Import from image">
-              <span class="material-symbols-outlined">image</span>
-            </button>
-            <input type="file" id="brush-editor-import-input" accept="image/*" class="hidden" />
-          </div>
-          <div class="brush-editor-row">
-            <input type="text" id="brush-editor-name" placeholder="Brush name" />
-          </div>
-          <div class="brush-editor-row">
-            <label class="brush-editor-size-label">W
-              <input type="number" id="brush-editor-width" min="3" value="9" />
-            </label>
-            <label class="brush-editor-size-label">H
-              <input type="number" id="brush-editor-height" min="3" value="9" />
-            </label>
-          </div>
-          <div id="brush-editor-grid" class="brush-editor-grid"></div>
-          <div class="brush-editor-row">
-            <button type="button" id="brush-editor-clear" class="tool-button">Clear</button>
-            <button type="button" id="brush-editor-cancel" class="tool-button">Cancel</button>
-            <button type="button" id="brush-editor-save" class="tool-button">Save</button>
-          </div>
-        </div>
-      </div>
 
       <!-- Photoshop-style Layers panel - a shared toolbar (Blend mode +
            Opacity, editing whichever layer is active) above a list of

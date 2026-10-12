@@ -5,6 +5,7 @@ import { TimelapseRecorder, captureFrame, encodeTimelapseVideo, isTimelapseSuppo
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
 import { drawRectangle, drawEllipse, clipToSelection } from './shape-tools.js';
 import { cursorFootprint, footprintOutlinePath } from './brush-cursor.js';
+import { flipRegion, rotateRegion, contentBounds, alignOffset, moveRegion } from '../lib/pixel-engine/transform.js';
 import { bresenhamLine, strokeFreehandThick } from '../lib/pixel-engine/engine.js';
 import { confirmDialog } from './confirm-dialog.js';
 import { initSymmetry, applySymmetryTransform } from './symmetry-ui.js';
@@ -1970,6 +1971,55 @@ let canvasSettingsControls = null;
  * does - not a special case.
  */
 const workspaceResetListeners = [];
+/**
+ * What the Transform popover (js/transform-ui.js) would act on: the
+ * selection if there is one, else the active layer. `disabled` for the
+ * reference image layer; `alignDisabled` too when there's nothing to
+ * align (no pixels in the target) or the target is the opaque
+ * Background layer, whose content box is always the whole canvas.
+ */
+export function getTransformTarget() {
+  const layer = state.layerStack.getActiveLayer();
+  const engine = layer.engine;
+  const rect = state.selection ?? { x: 0, y: 0, width: engine.width, height: engine.height };
+  const disabled = layer.isReferenceImage;
+  const alignDisabled = disabled || (!state.selection && layer.isBackground) || !contentBounds(engine, rect);
+  return { kind: state.selection ? 'selection' : 'layer', disabled, alignDisabled };
+}
+
+/**
+ * Runs a Transform popover action on the selection (if any) or the whole
+ * active layer, as one undo step. `op` is { kind: 'flip', axis },
+ * { kind: 'rotate', turn } or { kind: 'align', edge } - see
+ * lib/pixel-engine/transform.js. The selection follows the content (a
+ * quarter turn swaps its width and height; align moves it), and clears
+ * if the content left the canvas entirely.
+ */
+export function transformActiveLayer(op) {
+  const target = getTransformTarget();
+  if (target.disabled) return;
+  const engine = state.layerStack.getActiveLayer().engine;
+  const rect = state.selection ?? { x: 0, y: 0, width: engine.width, height: engine.height };
+  let next = rect;
+  if (op.kind === 'flip') {
+    flipRegion(engine, rect, op.axis);
+  } else if (op.kind === 'rotate') {
+    next = rotateRegion(engine, rect, op.turn);
+  } else {
+    if (target.alignDisabled) return;
+    const { dx, dy } = alignOffset(contentBounds(engine, rect), engine.width, engine.height, op.edge);
+    if (!dx && !dy) return; // already there - no empty undo step
+    next = moveRegion(engine, rect, dx, dy);
+  }
+  if (state.selection) {
+    state.selection = next;
+    state.canvasView.setSelectionRect(next);
+    updateSelectionControls();
+  }
+  state.canvasView.render();
+  commit();
+}
+
 export function onWorkspaceReset(fn) {
   workspaceResetListeners.push(fn);
 }

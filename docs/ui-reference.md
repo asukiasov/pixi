@@ -347,6 +347,7 @@ Icon-only buttons, left-to-right. No hover/selected motion effects
 | `#record-toggle` | fiber_manual_record | Start/stop timelapse recording | on/off, opens `#timelapse-review-panel` on stop if any frames were captured; see below |
 | `#tile-preview-toggle` | grid_view | 3x3 seamless-tile preview | on/off, no popover - see below |
 | *(spacer)* | | | pushes the rest right |
+| `#transform-toggle` | transform | Transform popover (`#transform-panel`, `js/transform-ui.js`) | rotate/flip/align the selection or active layer; spec `layer-transform` |
 | `#undo-button` | undo | Undo | disabled when nothing to undo |
 | `#redo-button` | redo | Redo | disabled when nothing to redo |
 | `#right-sidebar-toggle` | dock_to_right | Hide/show whole right sidebar | slides open/closed (AUD-11, 2026-08-17); respects `prefers-reduced-motion` |

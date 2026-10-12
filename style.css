@@ -4350,3 +4350,37 @@ span.layer-lock-icon {
 .workspace-screen[data-brush-cursor="off"] .brush-cursor {
   display: none;
 }
+
+/* Transform popover (js/transform-ui.js) - Canvas Settings' popover look
+   with two labelled rows of 44px icon buttons. Sized to its widest row
+   (five buttons) rather than the shared 15rem. */
+.transform-panel {
+  width: auto;
+}
+
+.transform-section-heading {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.transform-row {
+  gap: 0.25rem;
+}
+
+.transform-row .tool-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.transform-text-button {
+  font-variant-numeric: tabular-nums;
+}
+
+/* "flip" mirrors left-right; turned a quarter it reads as top-bottom. */
+.transform-icon-quarter {
+  transform: rotate(90deg);
+}

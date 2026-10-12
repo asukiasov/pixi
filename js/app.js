@@ -10,6 +10,7 @@ import { initThemeToggle, bindThemeRadios } from './theme.js';
 import { initIconFontFallback } from './icon-font-fallback.js';
 import { initColorLibrary } from './color-library-ui.js';
 import { initLayers, closeLayersOpacityPopover } from './layers-ui.js';
+import { initTransform } from './transform-ui.js';
 import { initToasts } from './toast.js';
 import { applyLayout, measureClearInsets } from './layout.js';
 import { initFloatingTopbar } from './floating-topbar.js';
@@ -142,6 +143,7 @@ prefsCustomizeRow?.addEventListener('click', () => customizeTools?.open(prefsCus
 // (true from module load - no injection involved).
 initColorLibrary();
 initLayers();
+initTransform();
 // Built at startup, not on the first toast: screen readers (VoiceOver
 // especially) can miss announcements in a live region that was only just
 // inserted - see js/toast.js.

@@ -104,6 +104,29 @@ export function resolveLayerRename(raw, current) {
   return name && name !== current ? name : null;
 }
 
+/**
+ * Where a dragged layer lands, for LayerStack.moveLayerTo: `items` are
+ * the panel's rows top to bottom ({ kind: 'layer', id, groupId } or
+ * { kind: 'group', id, memberIds }), `gap` the drop position among them
+ * (0 = above the first), `stackIds` the layer ids bottom to top - all
+ * without the dragged layer. It goes just above the row under the gap;
+ * it joins a group when dropped under that group's header or between
+ * two of its members, and stays outside it above the header or under its
+ * last member. Null when there's nowhere to go (a group with no other
+ * members).
+ */
+export function dropTarget(items, gap, stackIds) {
+  const above = items[gap - 1];
+  const below = items[gap];
+  if (!below) return { toIndex: 0, groupId: null };
+  if (below.kind === 'group') {
+    const tops = below.memberIds.map((id) => stackIds.indexOf(id)).filter((i) => i !== -1);
+    return tops.length ? { toIndex: Math.max(...tops) + 1, groupId: null } : null;
+  }
+  const joins = below.groupId && ((above?.kind === 'group' && above.id === below.groupId) || (above?.kind === 'layer' && above.groupId === below.groupId));
+  return { toIndex: stackIds.indexOf(below.id) + 1, groupId: joins ? below.groupId : null };
+}
+
 // Last plain click on a layer name, for isDoubleTap - transient, and
 // deliberately not reset on re-render (that's the point).
 let lastNameTap = null;

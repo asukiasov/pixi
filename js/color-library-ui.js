@@ -407,6 +407,11 @@ function scrollSwatchIntoView(swatch) {
   else if (right > grid.scrollLeft + grid.clientWidth) grid.scrollLeft = right - grid.clientWidth;
 }
 
+/** Every palette, for the colour picker's Palettes tab (js/color-picker.js). */
+export function getColorPalettes() {
+  return colorPalettes;
+}
+
 /**
  * Called directly by workspace.js's colorForSequenceIndex. Returns an
  * rgba for the `index`-th placement from the active palette when the

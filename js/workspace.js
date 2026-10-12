@@ -27,7 +27,8 @@ import { showToast } from './toast.js';
 import { visibleAnchor, canvasSide } from './layout.js';
 import { isAutoHideTool } from './prefs.js';
 import { syncToolButtons } from './tool-rail.js';
-import { getColorSequenceColor, setLibrarySequenceEnabled, syncColorLibraryActiveSwatch } from './color-library-ui.js';
+import { getColorSequenceColor, setLibrarySequenceEnabled, syncColorLibraryActiveSwatch, getColorPalettes } from './color-library-ui.js';
+import { initColorPicker } from './color-picker.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
 
@@ -1083,8 +1084,13 @@ export function syncActiveSwatch() {
   syncColorLibraryActiveSwatch(fgHex, state.brushRainbow);
 }
 
-/** Keeps the native color input, hex field, and RGB fields all showing the same color. */
+// The Disc/Classic/Value/Palettes panels (js/color-picker.js); null in
+// embeds, whose markup has only the plain hex/RGB picker.
+let colorPicker = null;
+
+/** Keeps the native color input, hex field, RGB fields and picker panels all showing the same color. */
 function updateColorPickerInputs(rgba) {
+  colorPicker?.update(rgba);
   const hex = rgbaToHex(rgba);
   root.querySelector('#color-picker-native').value = hex;
   root.querySelector('#color-picker-hex').value = hex;
@@ -1167,6 +1173,7 @@ function openColorPicker(target, anchorEl) {
   // Unhide before measuring - .hidden is display:none, which has no box
   // to read a size from.
   popover.classList.remove('hidden');
+  colorPicker?.open(current);
   const rect = anchorEl.getBoundingClientRect();
   const popRect = popover.getBoundingClientRect();
   const margin = 8;
@@ -1199,7 +1206,9 @@ function openColorPicker(target, anchorEl) {
 }
 
 function closeColorPicker() {
-  root.querySelector('#color-picker-popover').classList.add('hidden');
+  const popover = root.querySelector('#color-picker-popover');
+  if (!popover.classList.contains('hidden')) colorPicker?.close();
+  popover.classList.add('hidden');
 }
 
 // openLayersOpacityPopover/closeLayersOpacityPopover live in
@@ -1551,6 +1560,7 @@ function bindDomOnce() {
   const colorPickerG = root.querySelector('#color-picker-g');
   const colorPickerB = root.querySelector('#color-picker-b');
   const colorPickerPopover = root.querySelector('#color-picker-popover');
+  colorPicker = initColorPicker({ root, setColor: (rgba) => applyPickedColor(rgba), getPalettes: getColorPalettes });
 
   colorPickerNative.addEventListener('input', () => {
     applyPickedColor(hexToRgba(colorPickerNative.value));

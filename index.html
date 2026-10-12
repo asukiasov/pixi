@@ -498,34 +498,70 @@
            whichever one was clicked (js/workspace.js tracks the target).
            Positioned via fixed + JS (getBoundingClientRect), clamped to
            the viewport, so its DOM location doesn't matter. -->
-      <div id="color-picker-popover" class="color-picker-popover hidden">
+      <!-- Colour picker (js/color-picker.js for the Disc/Classic/Value/
+           Palettes tabs and history; js/workspace.js opens it from the
+           Foreground/Background swatches and keeps the hex/RGB fields in
+           sync). Procreate-style: the new colour beside the one it had when
+           opened (tap that to go back), four ways to pick, recent colours. -->
+      <div id="color-picker-popover" class="color-picker-popover hidden" role="dialog" aria-labelledby="color-picker-popover-title">
         <div class="color-picker-popover-header">
           <span id="color-picker-popover-title">Foreground Color</span>
+          <div class="color-picker-compare">
+            <button type="button" id="color-picker-previous" class="color-picker-previous" aria-label="Back to the previous color" data-tooltip="Previous color"></button>
+            <span id="color-picker-current" class="color-picker-current" aria-hidden="true"></span>
+          </div>
           <button type="button" id="color-picker-close" class="icon-button" aria-label="Close">
             <span class="material-symbols-outlined">close</span>
           </button>
         </div>
-        <input type="color" id="color-picker-native" value="#000000" title="Custom color" />
-        <div class="color-picker-hex-row">
-          <input type="text" id="color-picker-hex" class="color-picker-hex" value="#000000" maxlength="7" placeholder="#000000" aria-label="Hex" title="Double-click to copy" />
-          <span id="color-picker-copied" class="color-picker-copied hidden" role="status" aria-live="polite">Copied!</span>
+        <div class="color-picker-tabs" role="tablist" aria-label="Color picker">
+          <button type="button" role="tab" id="color-tab-disc" class="color-picker-tab" aria-controls="color-panel-disc" aria-selected="true" data-panel="disc">Disc</button>
+          <button type="button" role="tab" id="color-tab-classic" class="color-picker-tab" aria-controls="color-panel-classic" aria-selected="false" tabindex="-1" data-panel="classic">Classic</button>
+          <button type="button" role="tab" id="color-tab-value" class="color-picker-tab" aria-controls="color-panel-value" aria-selected="false" tabindex="-1" data-panel="value">Value</button>
+          <button type="button" role="tab" id="color-tab-palettes" class="color-picker-tab" aria-controls="color-panel-palettes" aria-selected="false" tabindex="-1" data-panel="palettes">Palettes</button>
         </div>
-        <div class="color-picker-rgb-row">
-          <input type="number" id="color-picker-r" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Red" />
-          <input type="number" id="color-picker-g" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Green" />
-          <input type="number" id="color-picker-b" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Blue" />
+        <div id="color-panel-disc" class="color-picker-panel" role="tabpanel" aria-labelledby="color-tab-disc" data-panel="disc">
+          <!-- Hue ring around a saturation/brightness square. Pointer only;
+               the Value tab's sliders are the keyboard way. -->
+          <canvas id="color-disc" class="color-disc" aria-hidden="true"></canvas>
         </div>
-        <!-- "Add to palette" - wired in js/color-library-ui.js. -->
-        <button type="button" id="color-picker-add" class="tool-button">
-          <span class="material-symbols-outlined">add</span> Add to palette
-        </button>
-        <!-- Palette-aware color ramp generator - generates a dark-to-light
-             shading ramp from whichever swatch this popover is editing.
-             Opens #ramp-preview-row, same preview-then-confirm shape as
-             #import-preview-row. -->
-        <button type="button" id="color-picker-generate-ramp" class="tool-button">
-          <span class="material-symbols-outlined">gradient</span> Generate ramp
-        </button>
+        <div id="color-panel-classic" class="color-picker-panel" role="tabpanel" aria-labelledby="color-tab-classic" data-panel="classic" hidden>
+          <canvas id="color-classic-square" class="color-classic-square" aria-hidden="true"></canvas>
+          <input type="range" id="color-classic-hue" class="color-hue-slider" min="0" max="359" step="1" value="0" aria-label="Hue" />
+        </div>
+        <div id="color-panel-value" class="color-picker-panel color-picker-values" role="tabpanel" aria-labelledby="color-tab-value" data-panel="value" hidden>
+          <label class="color-value-row"><span>H</span><input type="range" id="color-value-h" min="0" max="359" step="1" data-channel="h" /><output for="color-value-h"></output></label>
+          <label class="color-value-row"><span>S</span><input type="range" id="color-value-s" min="0" max="100" step="1" data-channel="s" /><output for="color-value-s"></output></label>
+          <label class="color-value-row"><span>B</span><input type="range" id="color-value-v" min="0" max="100" step="1" data-channel="v" /><output for="color-value-v"></output></label>
+          <div class="color-picker-rgb-row">
+            <input type="number" id="color-picker-r" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Red" />
+            <input type="number" id="color-picker-g" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Green" />
+            <input type="number" id="color-picker-b" class="color-picker-rgb" min="0" max="255" value="0" aria-label="Blue" />
+          </div>
+          <div class="color-picker-hex-row">
+            <input type="text" id="color-picker-hex" class="color-picker-hex" value="#000000" maxlength="7" placeholder="#000000" aria-label="Hex" title="Double-click to copy" />
+            <span id="color-picker-copied" class="color-picker-copied hidden" role="status" aria-live="polite">Copied!</span>
+            <!-- The system colour picker (macOS/iPadOS eyedropper and all). -->
+            <input type="color" id="color-picker-native" value="#000000" title="System color picker" aria-label="System color picker" />
+          </div>
+        </div>
+        <div id="color-panel-palettes" class="color-picker-panel" role="tabpanel" aria-labelledby="color-tab-palettes" data-panel="palettes" hidden>
+          <div id="color-picker-palettes" class="color-picker-palettes"></div>
+        </div>
+        <div class="color-picker-history-row">
+          <span class="color-picker-history-label" id="color-picker-history-label">History</span>
+          <div id="color-picker-history" class="color-picker-history" role="group" aria-labelledby="color-picker-history-label"></div>
+        </div>
+        <div class="color-picker-actions">
+          <!-- "Add to palette" - wired in js/color-library-ui.js. -->
+          <button type="button" id="color-picker-add" class="tool-button">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span> Add to palette
+          </button>
+          <!-- Ramp from the colour being edited -> #ramp-preview-row. -->
+          <button type="button" id="color-picker-generate-ramp" class="tool-button">
+            <span class="material-symbols-outlined" aria-hidden="true">gradient</span> Ramp
+          </button>
+        </div>
       </div>
 
       <!-- Rectangle's Filled toggle, tool-scoped like Pencil options below.

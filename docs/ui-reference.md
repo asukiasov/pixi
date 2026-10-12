@@ -445,17 +445,22 @@ Bottom of the left tools sidebar, Photoshop-style overlapping stack:
 - `#fg-bg-swap` (swap_horiz) — swap FG/BG.
 - `#fg-bg-reset` (restart_alt) — reset to default black/white.
 
-`#color-picker-popover` (opened by either swatch): `#color-picker-native`
-(native `<input type=color>`), `#color-picker-hex` (hex text entry,
-double-click to copy, `#color-picker-copied` "Copied!" flash), RGB
-number inputs (`#color-picker-r/g/b`), `#color-picker-add` ("Add to
-palette", adds to the active Color Library palette), `#color-picker-
-generate-ramp` ("Generate ramp", opens `#ramp-preview-row` for whichever
-swatch — foreground or background — this popover is currently editing).
-**Does not exist on iOS** — `#add-current-color-button` in the Color
-Library header (below) is the only add-to-palette path there; the ramp
-generator's `#library-generate-ramp-button` (below) is likewise the only
-ramp-generation path on iOS.
+`#color-picker-popover` (opened by either swatch; spec
+`pixel-drawing-engine` "Colour picker panels"; panels in
+`js/color-picker.js`, maths in `js/color-math.js`): header with the title,
+`#color-picker-previous` (the colour it had when opened - tap to go back)
+beside `#color-picker-current`, and close; a tablist (`#color-tab-disc`,
+`-classic`, `-value`, `-palettes`, arrow keys move between tabs, last tab
+remembered on the device): **Disc** `#color-disc` (hue ring around a
+saturation/brightness square), **Classic** `#color-classic-square` +
+`#color-classic-hue` slider, **Value** `#color-value-h/s/v` sliders,
+`#color-picker-r/g/b`, `#color-picker-hex` (double-click to copy,
+`#color-picker-copied`) and `#color-picker-native` (the system picker),
+**Palettes** `#color-picker-palettes` (every palette's swatches); then
+`#color-picker-history` (last 10 colours, newest first, kept on the
+device), `#color-picker-add` ("Add to palette") and
+`#color-picker-generate-ramp` ("Ramp" → `#ramp-preview-row`). The same
+popover opens on every platform, including iOS.
 
 Spec: `color-library` (FG/BG model), `canvas-creation`/`layers`
 (Background layer interaction, `2g`).

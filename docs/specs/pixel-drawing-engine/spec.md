@@ -236,6 +236,38 @@ approach aimed for.
 - **THEN** iOS's native color picker opens, since that's a real tap on a
   real native `<input type="color">`, not a scripted click
 
+### Requirement: Colour picker panels
+The colour picker popover SHALL show, in its header, the colour being
+edited beside the colour it had when the popover opened; tapping the old
+colour SHALL restore it. It SHALL offer four tabs, remembering the last
+one used on this device: Disc (a hue ring around a saturation/brightness
+square), Classic (a large saturation/brightness square with a hue slider),
+Value (hue, saturation and brightness sliders with their values, the R, G,
+B and hex fields, and the system colour picker) and Palettes (every Color
+Library palette's colours). Dragging on the ring, square or sliders SHALL
+change the colour live. The hue SHALL be kept when saturation or
+brightness reaches zero, so dragging back out of grey or black returns to
+the same hue. Below the tabs the popover SHALL show a history of the last
+10 colours picked (newest first, no repeats, kept on this device); a
+colour joins the history when the popover closes with a different colour
+than it opened with. Tapping a history or palette swatch picks it.
+
+#### Scenario: Picking on the disc
+- **WHEN** the user drags the ring to green and then the square to its
+  top-right corner
+- **THEN** the foreground colour becomes a fully saturated, bright green,
+  and the Value tab shows hue 90°, saturation 100%, brightness 100%
+
+#### Scenario: Going back
+- **WHEN** the user opened the picker on black, picked another colour, and
+  taps the previous-colour half of the header
+- **THEN** the colour is black again
+
+#### Scenario: History
+- **WHEN** the user opens the picker, picks a colour from Palettes, closes
+  it, and opens it again
+- **THEN** that colour is first in the history
+
 ### Requirement: Touch and pointer interaction
 The system SHALL support drawing with a one-finger (or mouse) drag, panning
 with a two-finger drag, and zooming with a pinch gesture, without the browser

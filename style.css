@@ -1003,22 +1003,6 @@ textarea,
   border-radius: 0.3rem;
 }
 
-/* iOS 26 / Apple Pencil-style "magnetic hover" for the top bar
-   (docs/history/2026-08-17-adopt-magnetic-hover-topbar) - see
-   js/magnetic-hover.js. Position/scale and transition live in CSS;
-   magnetic-hover.js only ever sets the --pull-x/--pull-y/--pull-scale
-   custom properties and toggles the .magnetic-active class (on at most
-   one button at a time - see that change's "Exclusive activation"
-   requirement). No glow/halo - real iOS 26 doesn't have one either, per
-   feedback. */
-.magnetic-hover {
-  transition: transform 150ms ease-out;
-}
-
-.magnetic-hover.magnetic-active {
-  transform: translate(var(--pull-x, 0), var(--pull-y, 0)) scale(var(--pull-scale, 1));
-}
-
 .workspace-main {
   display: flex;
   flex-direction: column;
@@ -2990,62 +2974,6 @@ span.layer-lock-icon {
   }
 }
 
-/* "Buzz" hover feedback - a small, fast shake, reimplemented directly
-   (a few lines of CSS) rather than pulling in ianlunn.github.io/Hover/
-   as an external dependency, since this app has no CDN/build step for
-   third-party CSS libraries (see CLAUDE.md's stack). Applied to most
-   clickable controls (buttons and swatches) - explicitly not the
-   drawing canvas, text/number/range inputs, the brush-editor's
-   pixel-toggle grid, the Foreground/Background swatches and their
-   swap/reset corner buttons, the bottom bar's zoom toolset, any
-   delete-labeled button, "new artwork" actions (+ New Canvas, Create),
-   or Clear selection/Delete - buttons used often/in quick succession,
-   fine click targets, or destructive/creation actions, where a
-   jitter-on-hover reads as noise (or feels wrong for something
-   consequential) rather than a nice touch - per feedback.
-   Scoped to iPad/iPhone only, per feedback that it shouldn't fire on
-   ordinary desktop mouse hover. Originally tried as a pure CSS media
-   query, `(hover: hover) and (pointer: coarse)` (meant to catch a
-   hover-capable touchscreen) - but Apple Pencil is a *precise* stylus,
-   reporting `pointer: fine` exactly like a mouse, so that query
-   excluded Pencil hover right along with the desktop mouse hover it
-   was meant to exclude, and buzz disappeared on iPad entirely. CSS
-   alone can't distinguish "a mouse is hovering" from "a Pencil is
-   hovering" - platform detection is used instead: js/app.js adds
-   `.ios-platform` to <html> via a UA check. Also respects
-   prefers-reduced-motion.
-   Exclusions (Clear selection/Delete/zoom toolset/"new artwork"/etc.)
-   are marked with a shared `.no-buzz` class instead of separate
-   higher-specificity override rules - simpler and less fragile than
-   fighting a specificity/source-order battle against this rule for
-   every excluded element that happens to also carry .tool-button/
-   .icon-button (a real bug this app hit once already: adding
-   `.ios-platform` to this rule's selectors upgraded its specificity
-   past the old override rules, silently un-excluding the zoom toolset
-   and the confirm-dialog's "Delete" button on iOS). */
-@media (prefers-reduced-motion: no-preference) {
-  .ios-platform .tool-button:not(:disabled):not(.no-buzz):hover,
-  .ios-platform .preset-button:not(:disabled):not(.no-buzz):hover,
-  .ios-platform .icon-button:not(:disabled):not(.no-buzz):hover,
-  .ios-platform .layer-visibility-toggle:not(.no-buzz):hover,
-  .ios-platform .layer-reorder-button:not(:disabled):not(.no-buzz):hover,
-  .ios-platform .brush-swatch:not(.no-buzz):hover,
-  .ios-platform .palette-swatch:not(.no-buzz):hover,
-  .ios-platform .color-library-swatch:not(.no-buzz):hover {
-    animation: hover-buzz 0.25s linear infinite; /* slowed further per feedback (was 0.2s) */
-  }
-}
-
-@keyframes hover-buzz {
-  50% {
-    transform: translateX(3px) rotate(2deg);
-  }
-  100% {
-    transform: translateX(-3px) rotate(-2deg);
-  }
-}
-
-
 /* ------------------------------------------------------------------
    Floating workspace layout (5a-floating-shell)
 
@@ -3503,7 +3431,7 @@ span.layer-lock-icon {
 
    The rail hugs its contents below the top bar. Only .tool-rail-tools
    scrolls, so the color swatches at the foot always stay visible (the
-   tool-scoped toggles moved to the tool-options bar in 5d). The rail itself no longer clips, so magnetic hover and
+   tool-scoped toggles moved to the tool-options bar in 5d). The rail itself no longer clips, so
    the Swap/Reset hit areas can't be cut off at its edge.
    ------------------------------------------------------------------ */
 
@@ -3513,8 +3441,7 @@ span.layer-lock-icon {
 }
 
 /* Bleeds into the rail's padding (and pads back) so the scroll box's
-   clipping edge is the card's edge, leaving room for magnetic hover's
-   translate/scale. No visible scrollbar: a classic desktop scrollbar
+   clipping edge is the card's edge. No visible scrollbar: a classic desktop scrollbar
    would eat the rail's width; wheel, trackpad and touch still scroll. */
 .workspace-screen[data-layout="floating"] .tool-rail-tools {
   display: flex;
@@ -3918,6 +3845,14 @@ span.layer-lock-icon {
    them (still under the top bar's menus) while the picker is open. */
 .workspace-screen[data-layout="floating"] .slot-tools:has(#color-picker-popover:not(.hidden)) {
   z-index: 25;
+}
+
+/* Generate ramp opens from that picker too, but its popover lives in the
+   right sidebar. Lift the sidebar above the lifted rail while any of its
+   preview popovers is open, or the ramp's Steps/Confirm sit under the
+   picker. */
+.workspace-screen[data-layout="floating"] .slot-panels:has(.import-preview-panel:not(.hidden)) {
+  z-index: 26;
 }
 
 .workspace-screen[data-layout="floating"] .color-picker-popover-header .icon-button {

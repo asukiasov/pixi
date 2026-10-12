@@ -540,3 +540,17 @@ describe('Prefs sheet (5g)', () => {
     assert.doesNotMatch(sheet[0].body, /backdrop-filter/);
   });
 });
+
+describe('Color Library popovers over the colour picker', () => {
+  // Generate ramp can be opened from the colour picker, which lifts the
+  // tool rail to z-index 25. The ramp popover lives in the right sidebar
+  // (z-index 20), so without its own lift it paints under the picker.
+  test('the right sidebar is lifted above the open picker while one of its popovers is open', () => {
+    const zOf = (r) => Number(/z-index:\s*(\d+)/.exec(r.body)?.[1]);
+    const picker = all.find((r) => r.selector.includes('.slot-tools:has(#color-picker-popover:not(.hidden))'));
+    const panels = all.find((r) => r.selector.includes('.slot-panels:has(.import-preview-panel:not(.hidden))'));
+    assert.ok(panels, 'missing .slot-panels lift rule');
+    assert.ok(zOf(panels) > zOf(picker));
+    assert.ok(zOf(panels) < 30, 'stays under the top bar (z-index 30)');
+  });
+});

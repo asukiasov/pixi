@@ -579,6 +579,9 @@ export function initColorLibrary(root = document) {
     }
     closeRampPreview();
     await loadColorPalettes();
+    // The ramp lands at the end of the palette, often below the grid's
+    // scrolled area - bring it into view so the Confirm visibly did something.
+    colorLibraryGrid.lastElementChild?.scrollIntoView({ block: 'nearest' });
   });
 
   document.addEventListener('pointerdown', (e) => {

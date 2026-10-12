@@ -156,10 +156,17 @@ current foreground draw color, without modifying any pixel data.
 - **THEN** the foreground color becomes fully transparent, the same as
   the sampled pixel
 
-#### Scenario: Sampled color is usable immediately
-- **WHEN** the user samples a color with the Eyedropper and then switches
-  to the Pencil tool
-- **THEN** the Pencil draws with the sampled color
+#### Scenario: Returns to the previous tool after a pick
+- **WHEN** the user switches from the Pencil (or any other tool) to the
+  Eyedropper and taps a point on the canvas
+- **THEN** the foreground color becomes the sampled color and the Pencil
+  (the tool active before the Eyedropper) is selected again, ready to
+  draw with it
+
+#### Scenario: A tap outside the canvas keeps the Eyedropper
+- **WHEN** the Eyedropper is active and the user taps outside the canvas
+  bounds
+- **THEN** nothing is sampled and the Eyedropper stays selected
 
 ### Requirement: Foreground and background colors
 The system SHALL maintain two selectable colors, Foreground and

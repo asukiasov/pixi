@@ -363,7 +363,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
 
   const deleteButton = document.createElement('button');
   deleteButton.type = 'button';
-  deleteButton.className = 'layer-delete-button icon-button no-buzz';
+  deleteButton.className = 'layer-delete-button icon-button';
   deleteButton.innerHTML = '<span class="material-symbols-outlined">delete</span>';
   deleteButton.dataset.tooltip = 'Delete layer';
   deleteButton.setAttribute('aria-label', 'Delete layer');
@@ -399,7 +399,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
     const canGoOriginal = layer.referenceMode === REFERENCE_MODES.ORIGINAL || !!layer.originalSourceBlob;
     modeToggleButton = document.createElement('button');
     modeToggleButton.type = 'button';
-    modeToggleButton.className = 'layer-reference-mode-toggle icon-button no-buzz';
+    modeToggleButton.className = 'layer-reference-mode-toggle icon-button';
     modeToggleButton.innerHTML = `<span class="material-symbols-outlined">${layer.referenceMode === REFERENCE_MODES.ORIGINAL ? 'image' : 'grid_on'}</span>`;
     modeToggleButton.disabled = !canGoOriginal;
     modeToggleButton.dataset.tooltip = modeToggleButton.disabled
@@ -426,7 +426,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   if (layer.isReferenceImage && layer.referenceMode === REFERENCE_MODES.PIXELATED) {
     smoothingToggleButton = document.createElement('button');
     smoothingToggleButton.type = 'button';
-    smoothingToggleButton.className = 'layer-reference-smoothing-toggle icon-button no-buzz';
+    smoothingToggleButton.className = 'layer-reference-smoothing-toggle icon-button';
     smoothingToggleButton.innerHTML = `<span class="material-symbols-outlined">${referenceImageSmoothing ? 'blur_on' : 'blur_off'}</span>`;
     smoothingToggleButton.disabled = !referenceImageSourceImage;
     smoothingToggleButton.dataset.tooltip = smoothingToggleButton.disabled

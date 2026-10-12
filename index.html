@@ -123,7 +123,7 @@
     <!-- Top bar: navigation/toggles/settings/export, icon-only. Separate
          from the tool rail below - these aren't drawing tools. -->
     <header class="workspace-topbar slot-top">
-      <button type="button" id="back-to-gallery-button" class="tool-button icon-button magnetic-hover" aria-label="Gallery" data-tooltip="Gallery">
+      <button type="button" id="back-to-gallery-button" class="tool-button icon-button" aria-label="Gallery" data-tooltip="Gallery">
         <span class="material-symbols-outlined">home</span>
       </button>
       <!-- Floating layout only (5b-top-bar-more): project title and zoom
@@ -131,7 +131,7 @@
            zoom menu's items forward to the bottom bar's zoom buttons,
            which are hidden in this layout - see js/floating-topbar.js. -->
       <span id="topbar-title" class="topbar-title floating-only"></span>
-      <button type="button" id="zoom-pill" class="zoom-pill floating-only magnetic-hover" aria-label="Zoom, 100%" data-tooltip="Zoom">
+      <button type="button" id="zoom-pill" class="zoom-pill floating-only" aria-label="Zoom, 100%" data-tooltip="Zoom">
         <span id="zoom-pill-readout">100%</span>
       </button>
       <div id="zoom-menu" class="topbar-menu floating-only hidden" role="menu" aria-label="Zoom">
@@ -148,25 +148,25 @@
       </div>
       <!-- Pixel-perfect drawing (Aseprite-style corner removal) - see
            js/pixel-perfect-ui.js/lib/pixel-engine/engine.js. -->
-      <button type="button" id="pixel-perfect-toggle" class="tool-button icon-button magnetic-hover" aria-label="Pixel-perfect" data-tooltip="Pixel-perfect">
+      <button type="button" id="pixel-perfect-toggle" class="tool-button icon-button" aria-label="Pixel-perfect" data-tooltip="Pixel-perfect">
         <span class="material-symbols-outlined">grid_on</span>
       </button>
       <!-- Symmetry/mirror drawing - see js/symmetry-ui.js/js/symmetry.js. -->
-      <button type="button" id="symmetry-toggle" class="tool-button icon-button magnetic-hover" data-symmetry-mode="off" aria-label="Symmetry: off" data-tooltip="Symmetry: off">
+      <button type="button" id="symmetry-toggle" class="tool-button icon-button" data-symmetry-mode="off" aria-label="Symmetry: off" data-tooltip="Symmetry: off">
         <span class="material-symbols-outlined">flip</span>
       </button>
       <!-- Layers panel toggle - wired in js/layers-ui.js. Hidden in the
            floating layout, where the Layers button in #panel-rail
            forwards to it (5e-cards-mini-rail). -->
-      <button type="button" id="layers-panel-toggle" class="tool-button icon-button active magnetic-hover" aria-label="Layers" data-tooltip="Layers">
+      <button type="button" id="layers-panel-toggle" class="tool-button icon-button active" aria-label="Layers" data-tooltip="Layers">
         <span class="material-symbols-outlined">layers</span>
       </button>
       <!-- Canvas Settings (rename/resize/rotate) - see
            js/canvas-settings.js, wired from js/workspace.js. -->
-      <button type="button" id="canvas-settings-toggle" class="tool-button icon-button magnetic-hover" aria-label="Canvas Settings" data-tooltip="Canvas Settings">
+      <button type="button" id="canvas-settings-toggle" class="tool-button icon-button" aria-label="Canvas Settings" data-tooltip="Canvas Settings">
         <span class="material-symbols-outlined">settings</span>
       </button>
-      <button type="button" id="export-button" class="tool-button icon-button magnetic-hover" aria-label="Export PNG" data-tooltip="Export PNG">
+      <button type="button" id="export-button" class="tool-button icon-button" aria-label="Export PNG" data-tooltip="Export PNG">
         <span class="material-symbols-outlined">download</span>
       </button>
       <!-- drawing-timelapse-recording: opt-in capture of one composited
@@ -177,7 +177,7 @@
            topbar toggle in addition, so it still reads as "on" even
            without the pulse (prefers-reduced-motion, or the dot alone
            being an insufficient color-only signal). -->
-      <button type="button" id="record-toggle" class="tool-button icon-button magnetic-hover" aria-label="Record timelapse" data-tooltip="Record timelapse">
+      <button type="button" id="record-toggle" class="tool-button icon-button" aria-label="Record timelapse" data-tooltip="Record timelapse">
         <span class="material-symbols-outlined">fiber_manual_record</span>
       </button>
       <!-- (6-add-tile-seamless-preview) 3x3 seamless-tile preview toggle:
@@ -186,7 +186,7 @@
            center canvas) so a tileable asset can be checked for seams
            without exporting. Off by default, session-only state - see
            js/workspace.js. -->
-      <button type="button" id="tile-preview-toggle" class="tool-button icon-button magnetic-hover" aria-label="Tile preview" data-tooltip="Tile preview">
+      <button type="button" id="tile-preview-toggle" class="tool-button icon-button" aria-label="Tile preview" data-tooltip="Tile preview">
         <span class="material-symbols-outlined">grid_view</span>
       </button>
 
@@ -195,10 +195,10 @@
       <!-- One glass pill in the floating layout; display:contents in the
            docked one. -->
       <div class="topbar-group">
-        <button type="button" id="undo-button" class="tool-button icon-button magnetic-hover" disabled aria-label="Undo" data-tooltip="Undo">
+        <button type="button" id="undo-button" class="tool-button icon-button" disabled aria-label="Undo" data-tooltip="Undo">
           <span class="material-symbols-outlined">undo</span>
         </button>
-        <button type="button" id="redo-button" class="tool-button icon-button magnetic-hover" disabled aria-label="Redo" data-tooltip="Redo">
+        <button type="button" id="redo-button" class="tool-button icon-button" disabled aria-label="Redo" data-tooltip="Redo">
           <span class="material-symbols-outlined">redo</span>
         </button>
       </div>
@@ -209,13 +209,13 @@
            closest to the panel it controls - see js/workspace.js.
            Hidden in the floating layout, with no replacement: each card
            closes on its own (5e-cards-mini-rail). -->
-      <button type="button" id="right-sidebar-toggle" class="tool-button icon-button active magnetic-hover" aria-label="Right panel" data-tooltip="Right panel">
+      <button type="button" id="right-sidebar-toggle" class="tool-button icon-button active" aria-label="Right panel" data-tooltip="Right panel">
         <span class="material-symbols-outlined">dock_to_right</span>
       </button>
       <!-- Hide-all-UI (4d-hide-all-ui): hides every workspace region but
            the canvas; #show-ui-button below is the way back. Tab toggles
            too, while nothing interactive has focus - see js/hide-ui.js. -->
-      <button type="button" id="hide-ui-toggle" class="tool-button icon-button magnetic-hover" aria-label="Hide interface (Tab)" data-tooltip="Hide interface (Tab)">
+      <button type="button" id="hide-ui-toggle" class="tool-button icon-button" aria-label="Hide interface (Tab)" data-tooltip="Hide interface (Tab)">
         <span class="material-symbols-outlined">fullscreen</span>
       </button>
       <!-- Light/dark/system theme toggle. Right end of the top bar, after
@@ -223,7 +223,7 @@
            are set by initThemeToggle() to reflect the current preference
            (light_mode/dark_mode/brightness_auto); the values below are
            just the pre-JS fallback (system is the default preference). -->
-      <button type="button" id="theme-toggle" class="tool-button icon-button magnetic-hover" aria-label="Theme: System" data-tooltip="Theme: System">
+      <button type="button" id="theme-toggle" class="tool-button icon-button" aria-label="Theme: System" data-tooltip="Theme: System">
         <span class="material-symbols-outlined">brightness_auto</span>
       </button>
       <!-- Floating layout only (5b-top-bar-more): the More menu replaces
@@ -233,7 +233,7 @@
            keeps one code path; Theme sets a preference directly - see
            js/floating-topbar.js. The red dot while recording is CSS
            (:has(#record-toggle.recording)) in style.css. -->
-      <button type="button" id="more-button" class="tool-button icon-button floating-only magnetic-hover" aria-label="More" data-tooltip="More">
+      <button type="button" id="more-button" class="tool-button icon-button floating-only" aria-label="More" data-tooltip="More">
         <span class="material-symbols-outlined">more_horiz</span>
       </button>
       <div id="more-menu" class="topbar-menu floating-only hidden" role="menu" aria-label="More">
@@ -398,41 +398,41 @@
            color swatches below always stay visible (5c). In the
            docked layout it is display: contents - no box of its own. -->
       <div class="tool-rail-tools">
-        <button type="button" class="tool-button magnetic-hover" aria-pressed="false" data-tool="move" aria-label="Move" data-tooltip="Move" data-shortcut="V">
+        <button type="button" class="tool-button" aria-pressed="false" data-tool="move" aria-label="Move" data-tooltip="Move" data-shortcut="V">
           <span class="material-symbols-outlined">arrow_selector_tool</span>
         </button>
-        <button type="button" class="tool-button magnetic-hover" aria-pressed="false" data-tool="pencil" aria-label="Pencil" data-tooltip="Pencil" data-shortcut="P">
+        <button type="button" class="tool-button" aria-pressed="false" data-tool="pencil" aria-label="Pencil" data-tooltip="Pencil" data-shortcut="P">
           <span class="material-symbols-outlined">edit</span>
         </button>
-        <button type="button" class="tool-button magnetic-hover" aria-pressed="false" data-tool="eraser" aria-label="Eraser" data-tooltip="Eraser" data-shortcut="E">
+        <button type="button" class="tool-button" aria-pressed="false" data-tool="eraser" aria-label="Eraser" data-tooltip="Eraser" data-shortcut="E">
           <span class="material-symbols-outlined">ink_eraser</span>
         </button>
-        <button type="button" class="tool-button magnetic-hover" aria-pressed="false" data-tool="bucket" aria-label="Bucket" data-tooltip="Bucket" data-shortcut="G">
+        <button type="button" class="tool-button" aria-pressed="false" data-tool="bucket" aria-label="Bucket" data-tooltip="Bucket" data-shortcut="G">
           <span class="material-symbols-outlined">format_color_fill</span>
         </button>
-        <button type="button" class="tool-button magnetic-hover" aria-pressed="false" data-tool="brush" aria-label="Brush" data-tooltip="Brush" data-shortcut="B">
+        <button type="button" class="tool-button" aria-pressed="false" data-tool="brush" aria-label="Brush" data-tooltip="Brush" data-shortcut="B">
           <span class="material-symbols-outlined">brush</span>
         </button>
-        <button type="button" class="tool-button magnetic-hover" aria-pressed="false" data-tool="line" aria-label="Line" data-tooltip="Line" data-shortcut="L">
+        <button type="button" class="tool-button" aria-pressed="false" data-tool="line" aria-label="Line" data-tooltip="Line" data-shortcut="L">
           <span class="material-symbols-outlined">horizontal_rule</span>
         </button>
-        <button type="button" class="tool-button magnetic-hover" aria-pressed="false" data-tool="rectangle" aria-label="Rectangle" data-tooltip="Rectangle" data-shortcut="R">
+        <button type="button" class="tool-button" aria-pressed="false" data-tool="rectangle" aria-label="Rectangle" data-tooltip="Rectangle" data-shortcut="R">
           <span class="material-symbols-outlined">rectangle</span>
         </button>
-        <button type="button" class="tool-button magnetic-hover" aria-pressed="false" data-tool="selection" aria-label="Select" data-tooltip="Select (click outside or Esc to deselect)" data-shortcut="M">
+        <button type="button" class="tool-button" aria-pressed="false" data-tool="selection" aria-label="Select" data-tooltip="Select (click outside or Esc to deselect)" data-shortcut="M">
           <span class="material-symbols-outlined">crop_free</span>
         </button>
-        <button type="button" class="tool-button magnetic-hover" aria-pressed="false" data-tool="hand" aria-label="Hand (pan)" data-tooltip="Hand" data-shortcut="H">
+        <button type="button" class="tool-button" aria-pressed="false" data-tool="hand" aria-label="Hand (pan)" data-tooltip="Hand" data-shortcut="H">
           <span class="material-symbols-outlined">back_hand</span>
         </button>
-        <button type="button" class="tool-button magnetic-hover" aria-pressed="false" data-tool="eyedropper" aria-label="Eyedropper" data-tooltip="Eyedropper" data-shortcut="I">
+        <button type="button" class="tool-button" aria-pressed="false" data-tool="eyedropper" aria-label="Eyedropper" data-tooltip="Eyedropper" data-shortcut="I">
           <span class="material-symbols-outlined">colorize</span>
         </button>
         <!-- Customize Tools: the rest of the tools and Customize Tools…
              (js/tool-overflow.js). Tools that aren't favorites stay in
              this wrapper with .off-rail (js/tool-rail.js's
              applyRailTools), so their shortcuts keep working. -->
-        <button type="button" id="tool-overflow-button" class="tool-button magnetic-hover" aria-label="More tools" data-tooltip="More tools">
+        <button type="button" id="tool-overflow-button" class="tool-button" aria-label="More tools" data-tooltip="More tools">
           <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
         </button>
       </div>
@@ -770,24 +770,24 @@
                through #selection-bar's proxies (5f-selection-action-bar),
                which still read this element's .hidden to show/hide. -->
           <div id="selection-controls" class="selection-controls hidden">
-            <button type="button" id="selection-clear-button" class="tool-button no-buzz">Clear selection</button>
-            <button type="button" id="selection-delete-button" class="tool-button no-buzz">Delete</button>
+            <button type="button" id="selection-clear-button" class="tool-button">Clear selection</button>
+            <button type="button" id="selection-delete-button" class="tool-button">Delete</button>
           </div>
         </div>
 
         <nav class="bottom-bar">
           <!-- 1. Zoom: bottom-left, per the canvas-navigation spec. -->
           <div class="bottom-bar-group zoom-controls">
-            <button type="button" id="zoom-out-button" class="tool-button icon-button no-buzz" title="Zoom out (Ctrl/Cmd -)">
+            <button type="button" id="zoom-out-button" class="tool-button icon-button" title="Zoom out (Ctrl/Cmd -)">
               <span class="material-symbols-outlined">remove</span>
             </button>
             <span id="zoom-readout" class="zoom-readout">100%</span>
-            <button type="button" id="zoom-in-button" class="tool-button icon-button no-buzz" title="Zoom in (Ctrl/Cmd +)">
+            <button type="button" id="zoom-in-button" class="tool-button icon-button" title="Zoom in (Ctrl/Cmd +)">
               <span class="material-symbols-outlined">add</span>
             </button>
-            <button type="button" id="zoom-preset-100" class="tool-button no-buzz" title="Actual size">100%</button>
-            <button type="button" id="zoom-preset-fit" class="tool-button no-buzz" title="Fit the canvas to the screen">Fit</button>
-            <button type="button" id="zoom-preset-fill" class="tool-button no-buzz" title="Fill the screen with the canvas">Fill</button>
+            <button type="button" id="zoom-preset-100" class="tool-button" title="Actual size">100%</button>
+            <button type="button" id="zoom-preset-fit" class="tool-button" title="Fit the canvas to the screen">Fit</button>
+            <button type="button" id="zoom-preset-fill" class="tool-button" title="Fill the screen with the canvas">Fill</button>
           </div>
         </nav>
       </div>
@@ -798,8 +798,8 @@
            and #selection-delete-button (js/workspace.js) until the docked
            layout is deleted and these can become the real controls. -->
       <div id="selection-bar" class="selection-bar floating-only" role="group" aria-label="Selection actions">
-        <button type="button" class="tool-button no-buzz" data-forward="selection-clear-button">Clear selection</button>
-        <button type="button" class="tool-button no-buzz" data-forward="selection-delete-button">Delete</button>
+        <button type="button" class="tool-button" data-forward="selection-clear-button">Clear selection</button>
+        <button type="button" class="tool-button" data-forward="selection-delete-button">Delete</button>
       </div>
     </div>
 
@@ -876,7 +876,7 @@
             <button type="button" id="edit-palette-colors-button" class="tool-button icon-button" aria-label="Edit colors" aria-pressed="false" data-tooltip="Edit colors">
               <span class="material-symbols-outlined">edit</span>
             </button>
-            <button type="button" id="delete-palette-button" class="tool-button icon-button no-buzz" aria-label="Delete palette" data-tooltip="Delete palette">
+            <button type="button" id="delete-palette-button" class="tool-button icon-button" aria-label="Delete palette" data-tooltip="Delete palette">
               <span class="material-symbols-outlined">delete</span>
             </button>
           </div>
@@ -970,7 +970,7 @@
           <button type="button" id="add-brush-button" class="tool-button icon-button" aria-label="Add brush" data-tooltip="Add brush">
             <span class="material-symbols-outlined">add</span>
           </button>
-          <button type="button" id="delete-brush-button" class="tool-button icon-button no-buzz" disabled aria-label="Delete selected brush" data-tooltip="Delete selected brush">
+          <button type="button" id="delete-brush-button" class="tool-button icon-button" disabled aria-label="Delete selected brush" data-tooltip="Delete selected brush">
             <span class="material-symbols-outlined">delete</span>
           </button>
         </div>

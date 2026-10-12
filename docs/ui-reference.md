@@ -333,8 +333,8 @@ unchanged.
 
 ### Top bar (`.workspace-topbar`)
 
-Icon-only buttons, left-to-right, `magnetic-hover` class (iOS-only
-magnetic cursor attraction, see `topbar-magnetic-hover` spec):
+Icon-only buttons, left-to-right. No hover/selected motion effects
+(the iOS magnetic hover and hover "buzz" were removed on 2026-10-12):
 
 | id | Icon | Purpose | Notes |
 |---|---|---|---|
@@ -596,7 +596,6 @@ tool is active):
   Library, Layers — click the header) vs. whole-sidebar hide/show
   (`#right-sidebar-toggle`) are independent and can compound (e.g.
   sidebar hidden while a panel inside it is individually collapsed).
-- **Magnetic hover**: top bar and left tool rail buttons carry a
-  `magnetic-hover` class (specs `topbar-magnetic-hover`,
-  `toolrail-magnetic-hover`) — iOS-only per `2026-08-17-restrict-magnetic-hover-to-ios`;
-  desktop/Android get plain hover.
+- **No hover motion**: buttons and swatches don't move, scale or wiggle
+  on hover or selection, on any platform (magnetic hover and the iOS
+  hover "buzz" were removed on 2026-10-12, per feedback).

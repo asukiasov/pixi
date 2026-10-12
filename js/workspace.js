@@ -1419,6 +1419,12 @@ function bindTimelapseControls() {
   });
 }
 
+function selectTool(tool) {
+  state.currentTool = tool;
+  syncToolButtons(toolButtons, state.currentTool);
+  applyToolScopedUI();
+}
+
 function bindDomOnce() {
   toolButtons = root.querySelectorAll('.tool-button[data-tool]');
   paletteRow = root.querySelector('#palette-row');
@@ -1427,9 +1433,12 @@ function bindDomOnce() {
 
   toolButtons.forEach((button) => {
     button.addEventListener('click', () => {
-      state.currentTool = button.dataset.tool;
-      syncToolButtons(toolButtons, state.currentTool);
-      applyToolScopedUI();
+      // Remembered so a successful Eyedropper pick can hand control back
+      // to whatever tool was in use (see onDrawStart).
+      if (button.dataset.tool === 'eyedropper' && state.currentTool !== 'eyedropper') {
+        state.toolBeforeEyedropper = state.currentTool;
+      }
+      selectTool(button.dataset.tool);
     });
   });
 
@@ -2155,6 +2164,7 @@ export function initWorkspace({
     // recording, same as pixel-perfect mode and every other field here).
     timelapseRecorder: new TimelapseRecorder(),
     currentTool: initialTool,
+    toolBeforeEyedropper: null,
     foregroundColor: hexToRgba(PALETTE[0]),
     backgroundColor: hexToRgba('#ffffff'),
     currentBrush: allBrushes[0],
@@ -2321,6 +2331,9 @@ export function initWorkspace({
           const i = (point.y * composite.width + point.x) * 4;
           const rgba = [composite.data[i], composite.data[i + 1], composite.data[i + 2], composite.data[i + 3]];
           setForegroundColor(rgba);
+          // Back to the tool the Eyedropper was picked from, so sampling
+          // is a quick detour rather than a mode to leave by hand.
+          if (state.toolBeforeEyedropper) selectTool(state.toolBeforeEyedropper);
         }
         return;
       }

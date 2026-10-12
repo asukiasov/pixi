@@ -34,7 +34,7 @@
        keep it sorted alphabetically — the Google Fonts API 400s the whole
        request (breaking every icon on the page, not just an unsorted one)
        if icon_names isn't in alphabetical order. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check,check_box,check_box_outline_blank,chevron_right,close,colorize,crop_free,dark_mode,delete,dock_to_right,download,edit,error,expand_more,fiber_manual_record,flip,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,handyman,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,layers,light_mode,lock,more_horiz,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,settings,swap_horiz,tune,undo,unfold_more,visibility,visibility_off" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&icon_names=add,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check,check_box,check_box_outline_blank,chevron_right,circle,close,colorize,content_copy,crop_free,dark_mode,delete,dock_to_right,download,edit,error,expand_more,fiber_manual_record,flip,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,handyman,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,layers,light_mode,lock,merge,more_horiz,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,settings,swap_horiz,tune,undo,unfold_more,visibility,visibility_off" />
 </head>
 <body>
   <main id="screen-gallery" class="screen home-screen">
@@ -1030,6 +1030,15 @@
                  one) - see js/layers-ui.js's addReferenceImageButton wiring.
                  Hidden file input below, same pattern as
                  #brush-editor-import-input / #color-library-import-input. -->
+            <!-- Merge (marked layers, else active down) and Duplicate -
+                 js/layers-ui.js keeps their disabled state and Merge's
+                 label in sync in renderLayersPanel. -->
+            <button type="button" id="merge-layers-button" class="tool-button icon-button" aria-label="Merge down" data-tooltip="Merge down" data-shortcut="⌘E">
+              <span class="material-symbols-outlined" aria-hidden="true">merge</span>
+            </button>
+            <button type="button" id="duplicate-layer-button" class="tool-button icon-button" aria-label="Duplicate layer" data-tooltip="Duplicate layer" data-shortcut="⌘J">
+              <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+            </button>
             <button type="button" id="add-reference-image-button" class="tool-button icon-button" aria-label="Add reference image" data-tooltip="Add reference image">
               <span class="material-symbols-outlined">image_arrow_up</span>
             </button>

@@ -148,6 +148,8 @@ let layersPanelOpacitySlider = null;
 let layersPanelOpacityNumber = null;
 let layersPanelOpacityPopover = null;
 let addLayerButton = null;
+let duplicateLayerButton = null;
+let mergeLayersButton = null;
 let addReferenceImageButton = null;
 let addReferenceImageInput = null;
 
@@ -215,6 +217,15 @@ export function renderLayersPanel() {
   }
 
   addLayerButton.disabled = layers.length >= 8;
+  if (duplicateLayerButton) {
+    duplicateLayerButton.disabled = layers.length >= 8 || !!layers[activeIndex]?.isReferenceImage;
+  }
+  if (mergeLayersButton) {
+    const merge = mergeButtonState(layers, activeIndex, markedLayerIds);
+    mergeLayersButton.disabled = merge.disabled;
+    mergeLayersButton.setAttribute('aria-label', merge.label);
+    mergeLayersButton.dataset.tooltip = merge.label;
+  }
   // At most one reference image layer per canvas (also refused past the
   // 8-layer cap, same as addLayerButton above) - LayerStack.
   // addReferenceImageLayer enforces this too, this is just the
@@ -542,6 +553,33 @@ export function closeLayersOpacityPopover() {
 }
 
 /**
+ * What the Merge button would do right now - the same choice
+ * mergeMarkedOrActiveDown makes: the marked set when 2+ layers are
+ * marked (marking already refuses locked layers), else the active layer
+ * down, refused for the bottom layer or when either layer is the
+ * Background/reference image layer (LayerStack.mergeDown's own rules).
+ */
+export function mergeButtonState(layers, activeIndex, markedIds) {
+  const markedCount = layers.filter((l) => markedIds.has(l.id)).length;
+  if (markedCount >= 2) return { disabled: false, label: `Merge ${markedCount} layers` };
+  const locked = (l) => !l || l.isBackground || l.isReferenceImage;
+  const disabled = activeIndex <= 0 || locked(layers[activeIndex]) || locked(layers[activeIndex - 1]);
+  return { disabled, label: 'Merge down' };
+}
+
+/**
+ * Duplicates the active layer (LayerStack.duplicateLayer) - the Layers
+ * panel's Duplicate button and workspace.js's Cmd/Ctrl+J.
+ */
+export function duplicateActiveLayer() {
+  const layerStack = getLayerStack();
+  if (!layerStack.duplicateLayer(layerStack.getActiveIndex())) return;
+  clearLayerMarks(); // indices above the copy shifted; stale marks would misalign
+  renderCanvas();
+  commit();
+}
+
+/**
  * Cmd/Ctrl+E: merges the marked set (2+ layers) if one exists,
  * otherwise merges the active layer down into the layer directly
  * below it. Marks are always cleared afterward, win or no-op, so a
@@ -584,6 +622,8 @@ export function initLayers(root = document) {
   layersPanelOpacityNumber = root.querySelector('#layers-panel-opacity-number');
   layersPanelOpacityPopover = root.querySelector('#layers-panel-opacity-popover');
   addLayerButton = root.querySelector('#add-layer-button');
+  duplicateLayerButton = root.querySelector('#duplicate-layer-button');
+  mergeLayersButton = root.querySelector('#merge-layers-button');
   addReferenceImageButton = root.querySelector('#add-reference-image-button');
   addReferenceImageInput = root.querySelector('#add-reference-image-input');
 
@@ -652,6 +692,9 @@ export function initLayers(root = document) {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !layersPanelOpacityPopover.classList.contains('hidden')) closeLayersOpacityPopover();
   });
+
+  duplicateLayerButton?.addEventListener('click', duplicateActiveLayer);
+  mergeLayersButton?.addEventListener('click', mergeMarkedOrActiveDown);
 
   addLayerButton.addEventListener('click', () => {
     const layerStack = getLayerStack();

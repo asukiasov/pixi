@@ -95,6 +95,29 @@ currently active layer, up to a maximum of 8 layers per canvas.
 - **WHEN** the canvas already has 8 layers and the user tries to add another
 - **THEN** the add-layer control is disabled and no layer is added
 
+### Requirement: Duplicate layer
+The user SHALL be able to duplicate the active layer from the Layers panel
+(a Duplicate layer button) or with Cmd/Ctrl+J. The copy SHALL be inserted
+directly above the source and become active, with the source's pixels,
+opacity, blend mode and visibility, named "<name> copy" ("<name> copy 2",
+"copy 3"… when that name is taken; a copy of a copy is numbered, not
+named "copy copy"). Duplicating is one undoable step.
+
+#### Scenario: Duplicating a layer
+- **WHEN** the user duplicates "Layer 1"
+- **THEN** "Layer 1 copy" appears directly above it with identical pixels,
+  opacity, blend mode and visibility, and becomes the active layer
+
+#### Scenario: Duplicating the Background layer
+- **WHEN** the user duplicates the Background layer
+- **THEN** the copy is an ordinary, reorderable layer, not a second
+  Background layer
+
+#### Scenario: Duplicate is unavailable
+- **WHEN** the canvas has 8 layers, or the active layer is the reference
+  image layer
+- **THEN** the Duplicate layer button is disabled and Cmd/Ctrl+J does nothing
+
 ### Requirement: Delete layer
 The user SHALL be able to delete any layer except when it is the only
 remaining layer.
@@ -590,6 +613,24 @@ active layer down into the layer directly below it.
 - **WHEN** a screen other than Workspace is visible and the user presses
   Cmd/Ctrl+E
 - **THEN** no merge occurs
+
+### Requirement: Merge button
+The Layers panel header SHALL offer a Merge button that does the same as
+Cmd/Ctrl+E, so merging is reachable on touch devices without a keyboard.
+Its label SHALL say what it will do ("Merge N layers" while 2 or more
+layers are marked, otherwise "Merge down"), and it SHALL be disabled when
+that merge would be refused.
+
+#### Scenario: Merge button merges down
+- **WHEN** no layers are marked, the active layer is above another
+  ordinary layer, and the user taps Merge
+- **THEN** the active layer is merged into the layer below it
+
+#### Scenario: Merge button disabled
+- **WHEN** the active layer is the bottom layer (or it or the layer below
+  is the Background or reference image layer) and fewer than 2 layers are
+  marked
+- **THEN** the Merge button is disabled
 
 ### Requirement: Merge marked layers
 When 2 or more non-Background layers are marked and a merge is triggered,

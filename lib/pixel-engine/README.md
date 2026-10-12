@@ -82,6 +82,7 @@ const pngBlob = await stack.toPNGBlob();
 - `.getLayers()` → array of `{ id, name, engine, visible, opacity, blendMode, isBackground, isReferenceImage, ... }`
 - `.getActiveLayer()` / `.setActiveLayer(index)` / `.getActiveIndex()`
 - `.addLayer(name)` → new `Layer` or `null` if at the 8-layer cap
+- `.duplicateLayer(index)` → the copy (above `index`, active, named "<name> copy") or `null` for the reference image layer or at the cap
 - `.deleteLayer(index)`, `.moveLayerUp(index)`, `.moveLayerDown(index)`, `.renameLayer(index, name)`
 - `.setVisibility(index, visible)`, `.setOpacity(index, opacity)`, `.setBlendMode(index, mode)` — `mode` is one of `BLEND_MODES` (`'normal' | 'multiply' | 'screen' | 'overlay'`)
 - `.mergeLayers(indices)` / `.mergeDown(index)` — flattens 2+ layers into one, respecting each layer's opacity/blend mode

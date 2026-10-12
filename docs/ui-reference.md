@@ -566,8 +566,10 @@ tool is active):
   Clear/Cancel/Save.
 
 **Layers** (`#layers-panel`, spec `layers`):
-- `#layers-panel-header` (click to collapse/expand) — `#add-layer-button`
-  ("+ Layer").
+- `#layers-panel-header` (click to collapse/expand) — `#merge-layers-button`
+  (merge, label "Merge down" / "Merge N layers", ⌘E),
+  `#duplicate-layer-button` (content_copy, ⌘J),
+  `#add-reference-image-button`, `#add-layer-button` ("+ Layer").
 - `.layers-panel-toolbar` — shared controls editing whichever layer is
   active (Photoshop-style, not per-row): `#layers-panel-blend-select`
   (blend mode dropdown), `#layers-panel-opacity-toggle` (shows current

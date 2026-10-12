@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 // satisfy that module-load-time reference; nothing in this test touches it.
 globalThis.document ??= {};
 
-const { computeLayerMarkState } = await import('../js/layers-ui.js');
+const { computeLayerMarkState, mergeButtonState } = await import('../js/layers-ui.js');
 
 // Layers panel marking (multi-select) is DOM-bound in buildLayerRow's
 // click handler, so only this pure state-transition function is
@@ -214,5 +214,28 @@ describe('computeLayerMarkState', () => {
       shift: true,
     });
     assert.deepEqual([...result.marked].sort(), ['a', 'b']);
+  });
+});
+
+describe('mergeButtonState', () => {
+  const L = (extra = {}) => ({ id: crypto.randomUUID(), isBackground: false, isReferenceImage: false, ...extra });
+
+  test('merges the marked layers when two or more are marked', () => {
+    const layers = [L(), L(), L()];
+    const state = mergeButtonState(layers, 0, new Set([layers[0].id, layers[2].id]));
+    assert.deepEqual(state, { disabled: false, label: 'Merge 2 layers' });
+  });
+
+  test('otherwise merges the active layer down', () => {
+    const layers = [L(), L()];
+    assert.deepEqual(mergeButtonState(layers, 1, new Set()), { disabled: false, label: 'Merge down' });
+  });
+
+  test('disabled for the bottom layer, a single layer, or a locked pair', () => {
+    const two = [L(), L()];
+    assert.equal(mergeButtonState(two, 0, new Set()).disabled, true);
+    assert.equal(mergeButtonState([L()], 0, new Set()).disabled, true);
+    assert.equal(mergeButtonState([L({ isBackground: true }), L()], 1, new Set()).disabled, true);
+    assert.equal(mergeButtonState([L(), L({ isReferenceImage: true })], 1, new Set()).disabled, true);
   });
 });

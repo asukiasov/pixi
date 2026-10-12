@@ -19,7 +19,7 @@ import { initCanvasSettings } from './canvas-settings.js';
 // ES modules support this fine as long as neither side calls the other's
 // exports at module-evaluation time, only from inside function bodies
 // invoked later - true of every call site below.
-import { renderLayersPanel, clearLayerMarksAndRefresh, mergeMarkedOrActiveDown } from './layers-ui.js';
+import { renderLayersPanel, clearLayerMarksAndRefresh, mergeMarkedOrActiveDown, duplicateActiveLayer } from './layers-ui.js';
 import { isHideUiShortcut } from './hide-ui.js';
 import { showToast } from './toast.js';
 import { visibleAnchor, canvasSide } from './layout.js';
@@ -1736,6 +1736,13 @@ function bindDomOnce() {
       if (key === 'e') {
         e.preventDefault();
         mergeMarkedOrActiveDown();
+        return;
+      }
+
+      // Cmd/Ctrl+J: duplicate the active layer (Photoshop's shortcut).
+      if (key === 'j') {
+        e.preventDefault();
+        duplicateActiveLayer();
       }
     });
 

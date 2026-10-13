@@ -24,6 +24,9 @@ import { initCanvasSettings } from './canvas-settings.js';
 import { renderLayersPanel, clearLayerMarksAndRefresh, mergeMarkedOrActiveDown, duplicateActiveLayer, groupMarkedOrActive } from './layers-ui.js';
 import { isHideUiShortcut } from './hide-ui.js';
 import { showToast } from './toast.js';
+import { cropToContent, matchesRecord, placeOnCanvas, setRecord, getRecord, regionToPngBlob, writeImage, readImage, imageFromPasteEvent, imageToImageData } from './clipboard.js';
+import { decodeImageFile, fitImageToCanvas } from './image-import.js';
+import { MAX_LAYERS } from '../lib/pixel-engine/layers.js';
 import { visibleAnchor, canvasSide } from './layout.js';
 import { isAutoHideTool } from './prefs.js';
 import { syncToolButtons } from './tool-rail.js';
@@ -1796,6 +1799,17 @@ function bindDomOnce() {
         return;
       }
 
+      // Cmd/Ctrl+C and Cmd/Ctrl+X: copy or cut on the active layer
+      // (layer-context-menu), left to a focused text field. Cmd/Ctrl+V is
+      // the `paste` listener below - preventing its keydown would stop the
+      // paste event that carries the image.
+      if ((key === 'c' || key === 'x') && !isTextEntry(document.activeElement)) {
+        e.preventDefault();
+        if (key === 'c') copyActive();
+        else cutActive();
+        return;
+      }
+
       // Cmd/Ctrl+D: deselect, same as Escape below - the common shortcut
       // for this in Photoshop and similar tools. preventDefault matters
       // here specifically: Ctrl/Cmd+D is the browser's "bookmark this
@@ -1825,6 +1839,15 @@ function bindDomOnce() {
         e.preventDefault();
         groupMarkedOrActive();
       }
+    });
+
+    // Cmd/Ctrl+V (layer-context-menu): the paste event carries clipboard
+    // files with no permission prompt, Safari included.
+    document.addEventListener('paste', (e) => {
+      if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
+      if (isTextEntry(document.activeElement)) return;
+      e.preventDefault();
+      pasteImage(imageFromPasteEvent(e));
     });
 
     // Hide-all-UI (4d-hide-all-ui): Tab toggles only while nothing
@@ -1890,10 +1913,7 @@ function bindDomOnce() {
     document.addEventListener('keydown', (e) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
-      const active = document.activeElement;
-      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable)) {
-        return;
-      }
+      if (isTextEntry(document.activeElement)) return;
       const key = e.key.toLowerCase();
       const button = [...toolButtons].find((b) => b.dataset.shortcut?.toLowerCase() === key);
       if (!button) return;
@@ -1927,18 +1947,7 @@ function bindDomOnce() {
 
   state.selectionClearButton.addEventListener('click', clearSelection);
 
-  state.selectionDeleteButton.addEventListener('click', () => {
-    if (!state.selection) return;
-    const activeEngine = state.layerStack.getActiveLayer().engine;
-    const { x, y, width, height } = state.selection;
-    for (let dy = 0; dy < height; dy++) {
-      for (let dx = 0; dx < width; dx++) {
-        activeEngine.setPixel(x + dx, y + dy, [0, 0, 0, 0]);
-      }
-    }
-    state.canvasView.render();
-    commit(); // commit() calls renderLayersPanel() directly, so a stale Layers thumbnail always gets refreshed
-  });
+  state.selectionDeleteButton.addEventListener('click', deleteSelectionPixels);
 
   // Restored merge-pixi-pro-into-standard features (symmetry, pixel-
   // perfect, Rectangle Filled, Pencil/Eraser Opacity, Brush import from
@@ -2052,7 +2061,7 @@ const workspaceResetListeners = [];
 /**
  * What the Transform popover (js/transform-ui.js) would act on: the
  * selection if there is one, else the active layer. `disabled` for the
- * reference image layer; `alignDisabled` too when there's nothing to
+ * reference image layer and a locked layer; `alignDisabled` too when there's nothing to
  * align (no pixels in the target) or the target is the opaque
  * Background layer, whose content box is always the whole canvas.
  */
@@ -2060,7 +2069,7 @@ export function getTransformTarget() {
   const layer = state.layerStack.getActiveLayer();
   const engine = layer.engine;
   const rect = state.selection ?? { x: 0, y: 0, width: engine.width, height: engine.height };
-  const disabled = layer.isReferenceImage;
+  const disabled = layer.isReferenceImage || !!layer.locked;
   const alignDisabled = disabled || (!state.selection && layer.isBackground) || !contentBounds(engine, rect);
   return { kind: state.selection ? 'selection' : 'layer', disabled, alignDisabled };
 }
@@ -2096,6 +2105,125 @@ export function transformActiveLayer(op) {
   }
   state.canvasView.render();
   commit();
+}
+
+/** Whether `el` takes typed text - shortcuts leave those keys to it. */
+function isTextEntry(el) {
+  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+}
+
+/**
+ * False when the active layer is user-locked (layer-context-menu), after
+ * saying so. Every pixel-changing action calls this once as it starts,
+ * so a refused gesture shows one toast and commits nothing.
+ */
+function activeLayerEditable() {
+  if (!state.layerStack.getActiveLayer()?.locked) return true;
+  showToast('Layer is locked');
+  return false;
+}
+
+/** The active selection rect, or null. */
+export function getSelection() {
+  return state.selection;
+}
+
+/** Clears the selection's pixels on the active layer - selection Delete and Cut. One undo step. */
+function deleteSelectionPixels() {
+  if (!state.selection || !activeLayerEditable()) return false;
+  const { x, y, width, height } = state.selection;
+  state.layerStack.getActiveLayer().engine.clearRegion(x, y, width, height);
+  state.canvasView.render();
+  commit(); // commit() calls renderLayersPanel() directly, so a stale Layers thumbnail always gets refreshed
+  return true;
+}
+
+/**
+ * Copy (layer-context-menu): the selection's pixels on the active layer,
+ * or with no selection the whole layer with its name, opacity and blend
+ * mode, cropped to its content. Sets the in-app record and writes a PNG
+ * to the system clipboard - call it synchronously from the user's click
+ * or keydown (see clipboard.js's writeImage). False if there's nothing
+ * to copy.
+ */
+export function copyActive() {
+  const layer = state.layerStack.getActiveLayer();
+  if (!layer || layer.isReferenceImage) return false;
+  const engine = layer.engine;
+  const region = cropToContent(engine, state.selection ?? { x: 0, y: 0, width: engine.width, height: engine.height });
+  if (!region) return false;
+  setRecord(state.selection
+    ? { kind: 'selection', ...region }
+    : { kind: 'layer', ...region, name: layer.name, opacity: layer.opacity, blendMode: layer.blendMode });
+  writeImage(regionToPngBlob(region)).then((ok) => {
+    if (!ok) showToast('Copied inside Pixi only');
+  });
+  return true;
+}
+
+/** Cut: Copy then clear, selection only - with no selection it does nothing. */
+export function cutActive() {
+  if (!state.selection || !activeLayerEditable()) return false;
+  if (!copyActive()) return false;
+  return deleteSelectionPixels();
+}
+
+/**
+ * Paste (layer-context-menu): adds a new layer above the active one, as
+ * one undo step. `blob` is the clipboard image, or null. Pixi's own last
+ * copy comes back in place (and, for a whole layer, with its name,
+ * opacity and blend); any other image is pasted 1:1 or scaled down to
+ * fit, centred. With no image, Pixi's own last copy is used; with
+ * neither, "Nothing to paste".
+ */
+export async function pasteImage(blob) {
+  const stack = state.layerStack;
+  if (stack.getLayers().length >= MAX_LAYERS) {
+    showToast(`Can't paste: ${MAX_LAYERS} layers is the maximum`);
+    return false;
+  }
+  const record = getRecord();
+  let from = null;
+  let data = null;
+  if (blob) {
+    const image = await decodeImageFile(blob);
+    if (!image) {
+      showToast('Nothing to paste');
+      return false;
+    }
+    const sameSize = record && image.width === record.width && image.height === record.height;
+    if (sameSize && matchesRecord(record, imageToImageData(image))) from = record;
+    else data = fitImageToCanvas(image, stack.width, stack.height, false).data;
+  } else if (record) {
+    from = record;
+  } else {
+    showToast('Nothing to paste');
+    return false;
+  }
+  if (from) data = placeOnCanvas(from, stack.width, stack.height);
+  const options = from?.kind === 'layer'
+    ? { data, copyOf: from.name, opacity: from.opacity, blendMode: from.blendMode }
+    : { data };
+  if (!stack.insertLayerAbove(stack.getActiveIndex(), options)) return false;
+  state.canvasView.render();
+  commit();
+  return true;
+}
+
+/** The menu's Paste: reads the system clipboard (Safari shows its Paste bubble), then pasteImage. */
+export function pasteFromClipboard() {
+  return readImage().then(pasteImage);
+}
+
+/** Select Content: the selection becomes the box around the active layer's pixels. */
+export function selectActiveContent() {
+  const engine = state.layerStack.getActiveLayer().engine;
+  const bounds = contentBounds(engine, { x: 0, y: 0, width: engine.width, height: engine.height });
+  if (!bounds) return false;
+  state.selection = bounds;
+  state.canvasView.setSelectionRect(bounds);
+  updateSelectionControls();
+  return true;
 }
 
 export function onWorkspaceReset(fn) {
@@ -2500,6 +2628,11 @@ export function initWorkspace({
         }
         return;
       }
+
+      // Locked layer (layer-context-menu): every pixel-changing tool below
+      // starts here, so one check refuses the whole gesture - strokeBackup
+      // stays null, so onDrawMove/onDrawEnd do nothing.
+      if (!activeLayerEditable()) return;
 
       const activeEngine = state.layerStack.getActiveLayer().engine;
 

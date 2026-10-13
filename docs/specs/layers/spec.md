@@ -198,9 +198,10 @@ SHALL NOT start editing.
 - **THEN** the original name is kept and no undo history entry is added
 
 ### Requirement: Layer visibility
-The user SHALL be able to toggle a layer's visibility. Hidden layers are
-excluded from compositing (on-screen render and export) but keep their pixel
-data.
+The user SHALL be able to toggle a layer's visibility with a round checkbox
+on its row (checked = shown; groups have the same checkbox). Hidden layers
+are excluded from compositing (on-screen render and export) but keep their
+pixel data.
 
 #### Scenario: Hiding a layer
 - **WHEN** the user hides a layer
@@ -312,18 +313,30 @@ resize, rotate) the next time the panel re-renders.
 - **WHEN** the user draws on a layer and the Layers panel re-renders
 - **THEN** that layer's thumbnail shows the new content
 
-### Requirement: Opacity and Blend popover
-The Layers panel SHALL offer an Opacity & Blend popover, titled with the
-layer or group it edits: opened for the active layer from the header's
-tune button, or for any layer or group from its ⋯ menu. It SHALL hold a
-Blend mode selector (layers only) and an Opacity slider with a numeric
-field (0-100). Dragging the slider SHALL update the canvas live and commit
-one undo step when released.
+### Requirement: Header blend and opacity
+The Layers panel SHALL show the active layer's blend mode and opacity in a
+row under its title: a Blend mode selector, an Opacity slider (0-100) and
+a percentage readout. Changing the blend mode SHALL commit one undo step;
+dragging the slider SHALL update the canvas live and commit one undo step
+when released. Both controls SHALL be disabled while the reference image
+layer is active. Layer ⋯ menus SHALL NOT offer a separate "Opacity &
+Blend…" item.
 
 #### Scenario: Changing a layer's opacity
-- **WHEN** the user opens Opacity & Blend for Layer 2 and sets 40
-- **THEN** Layer 2 composites at 40% and its row's detail line reads
-  "Normal · 40%"
+- **WHEN** Layer 2 is active and the user drags the header's Opacity
+  slider to 40 and releases
+- **THEN** Layer 2 composites at 40%, its row's detail line reads
+  "Normal · 40%", and one Undo restores 100%
+
+#### Scenario: Reference image active
+- **WHEN** the reference image layer is the active layer
+- **THEN** the header's Blend selector and Opacity slider are disabled
+
+### Requirement: Group opacity
+A group's ⋯ menu SHALL open an Opacity popover titled with the group's
+name, holding an Opacity slider with a numeric field (0-100), applied to
+the whole group when compositing. Dragging SHALL update the canvas live
+and commit one undo step when released. Groups have no blend mode.
 
 ### Requirement: Reference image layer
 The user SHALL be able to add a **reference image layer** to the layer

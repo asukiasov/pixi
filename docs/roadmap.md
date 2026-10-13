@@ -683,6 +683,10 @@ reversed, or stopped applying. Kept for the record.
     on `#square-constraint-toggle`'s existing single-shared-control
     pattern (tool-scoped visibility: shown for Pencil/Brush, hidden
     otherwise) instead of two DOM instances driving one flag.
+  - ~~Glass menus, popovers and confirm dialog; Layers header
+    blend/opacity; round swatches; Ellipse fill icon (2026-10-13).~~
+    Next: Transform categories and rotation dial, then Copy/Cut/Paste
+    and Merge.
 
   A dated, per-finding audit register (id/severity/state, one row per
   issue) lives under `docs/audits/` going forward - e.g.

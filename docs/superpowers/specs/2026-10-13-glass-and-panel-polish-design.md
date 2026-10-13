@@ -39,7 +39,7 @@ Details:
   focus fills (`--ghost-hover`) inset from the menu edge. Separators are
   `--glass-border` hairlines.
 - **Confirm dialog:** 18px radius. Cancel is a `.ghost-button` pill; a
-  destructive confirm is a solid red pill (`--danger`). The `::backdrop`
+  destructive confirm is a solid red pill (`--color-danger`). The `::backdrop`
   is a dim plus a light blur.
 - **WebKit:** a translucent modal `<dialog>` can leak cards in WebKit. If
   headless WebKit still shows a leak after this change, that surface uses
@@ -77,7 +77,7 @@ glyphs we use, and to `js/icon-font-fallback.js` if that file lists them.
 
 - **Round swatches everywhere:** the picker's Palettes tab, History, the
   bottom colour bar, and the Standard Libraries sheet. The active swatch
-  gets a ring with a gap (an outer ring in `--accent` and an inner ring in
+  gets a ring with a gap (an outer ring in `--color-accent` and an inner ring in
   the surface colour), so it shows on any colour.
 - **Tabs** (Disc, Classic, Value, Palettes): a glass-pill segmented
   control. The checked segment is a raised pill.

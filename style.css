@@ -1614,76 +1614,6 @@ textarea,
   background: var(--color-surface-alt);
 }
 
-/* Takes the row's remaining width (Opacity next to it is sized to its
-   own compact content instead - see .layers-panel-opacity-toggle).
-   appearance: none + a custom background-image chevron, not the native
-   OS control - Safari otherwise renders <select> with its own puffy
-   chrome that ignores the dark background/border set here. */
-.layers-panel-blend-select {
-  width: auto;
-  flex: 1 1 auto;
-  min-width: 0;
-  appearance: none;
-  -webkit-appearance: none;
-  background: var(--color-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23a0a0a5' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") no-repeat right 0.3rem center / 1rem;
-  background-color: var(--color-surface);
-  color: inherit;
-  border: 1px solid var(--color-border);
-  border-radius: 0.3rem;
-  font-size: 0.75rem;
-  padding: 0.25rem 1.4rem 0.25rem 0.4rem;
-}
-
-/* Same control, light theme: the chevron above is baked into a data-URI
-   (can't be parameterized with a CSS var inside the URL string), so the
-   whole background shorthand is restated here with a darker chevron fill
-   for contrast against the light surface. */
-:root[data-theme="light"] .layers-panel-blend-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%236c6c70' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
-}
-
-/* Opens #layers-panel-opacity-popover on click - see openLayersOpacityPopover
-   in js/workspace.js. Icon, not the word "Opacity" - reclaims space at
-   the sidebar's narrowest clamped width (see .right-sidebar); a tooltip
-   (data-tooltip) still names it, same icon-only convention the Pencil
-   Size/Opacity sliders use. Sized to its own content (flex: none), not
-   flex-grown to fill the row - Blend mode above takes the rest instead.
-   appearance: none - Safari otherwise renders <button> with its own
-   native chrome (visibly lighter background, rounder corners) that
-   overrides the dark background/border set here. */
-.layers-panel-opacity-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  flex: none;
-  appearance: none;
-  -webkit-appearance: none;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 0.3rem;
-  color: inherit;
-  font: inherit;
-  padding: 0.25rem 0.4rem;
-  cursor: pointer;
-}
-
-/* Hover feedback (button-hover-states). */
-.layers-panel-opacity-toggle:hover {
-  background: var(--color-surface-alt);
-}
-
-.layers-panel-opacity-icon {
-  flex: none;
-  font-size: 1rem;
-  color: var(--color-text-secondary);
-}
-
-.layers-panel-opacity-readout {
-  flex: none;
-  font-size: 0.75rem;
-  white-space: nowrap;
-}
-
 /* Popover holding the actual slider + a number field for direct entry -
    position via fixed + JS, clamped to the viewport, same pattern as
    #color-picker-popover (see openColorPicker/openLayersOpacityPopover in
@@ -4914,6 +4844,46 @@ span.layer-lock-icon {
    active row, a visibility switch. Overrides the older Photoshop-style
    row rules above.
    ------------------------------------------------------------------ */
+
+/* The active layer's blend and opacity, under the title. */
+.layers-header-properties {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) 2.6rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.layers-header-blend {
+  min-height: 36px;
+  padding: 0 0.5rem;
+  border: none;
+  border-radius: 9px;
+  background: var(--ghost-hover);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.layers-header-opacity {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+.layers-header-opacity-readout {
+  text-align: end;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.layers-header-properties :disabled {
+  opacity: 0.5;
+}
+
 .layers-panel-list {
   position: relative;
   gap: 4px;

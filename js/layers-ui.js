@@ -1,8 +1,9 @@
 // The Layers panel, after Pixelmator Pro for iPad - rounded row cards
 // (thumbnail, name, detail line, visibility switch, ⋯ actions on the
 // active row), one level of groups with a disclosure chevron, drag to
-// reorder by each row's grip, Select mode for touch multi-select, and an
-// Opacity & Blend popover. Also the reference image layer's controls.
+// reorder by each row's grip, Select mode for touch multi-select, the
+// active layer's blend and opacity in a header row, and a group Opacity
+// popover. Also the reference image layer's controls.
 // LayerStack (lib/pixel-engine/layers.js) does the work; this module is
 // purely the UI that calls it, via workspace.js's
 // getLayerStack/renderCanvas/commit/onWorkspaceReset/
@@ -164,7 +165,7 @@ let layersPanelVisible = true;
 // Cmd/Ctrl- and Shift-click. Transient UI state.
 let selectMode = false;
 
-// What the Opacity & Blend popover is editing: { kind: 'layer' | 'group', id }.
+// What the group Opacity popover is editing: { kind: 'group', id }.
 let propertiesTarget = null;
 
 // The rows as shown, top to bottom, rebuilt by every render - for drag
@@ -178,7 +179,9 @@ let layersPanel = null;
 let layersPanelHeader = null;
 let layersPanelToggle = null;
 let layersPanelList = null;
-let layersPanelBlendSelect = null;
+let headerBlend = null;
+let headerOpacity = null;
+let headerOpacityReadout = null;
 let layersPanelOpacitySlider = null;
 let layersPanelOpacityNumber = null;
 let layersPanelOpacityPopover = null;
@@ -225,6 +228,22 @@ function layerDetail(layer) {
   if (layer.isBackground) return 'Background';
   if (layer.isReferenceImage) return layer.referenceMode === REFERENCE_MODES.ORIGINAL ? 'Reference · Original' : 'Reference · Pixelated';
   return `${blendLabel(layer.blendMode)} · ${Math.round(layer.opacity * 100)}%`;
+}
+
+/** What the header's blend and opacity controls show for the active layer. */
+export function headerPropertiesState(layer) {
+  if (!layer) return { blendMode: 'normal', opacityPercent: 100, disabled: true };
+  return { blendMode: layer.blendMode, opacityPercent: Math.round(layer.opacity * 100), disabled: !!layer.isReferenceImage };
+}
+
+function syncHeaderProperties() {
+  const layerStack = getLayerStack();
+  const state = headerPropertiesState(layerStack.getActiveLayer());
+  headerBlend.value = state.blendMode;
+  headerBlend.disabled = state.disabled;
+  headerOpacity.value = String(state.opacityPercent);
+  headerOpacity.disabled = state.disabled;
+  headerOpacityReadout.textContent = `${state.opacityPercent}%`;
 }
 
 /** An on/off switch (a real checkbox with role="switch") for visibility. */
@@ -295,6 +314,7 @@ export function renderLayersPanel() {
   // this is just the matching disabled UI state.
   addReferenceImageButton.disabled = layers.length >= MAX_LAYERS || layers.some((l) => l.isReferenceImage);
   syncSelectBar(layers);
+  syncHeaderProperties();
   if (propertiesTarget && !layersPanelOpacityPopover.classList.contains('hidden')) syncPropertiesPopover();
 }
 
@@ -549,7 +569,6 @@ function layerMenuItems(layer, row) {
   const merge = mergeButtonState(layers, index, new Set());
   return [
     { label: 'Rename', icon: 'edit', onSelect: () => startRename(row, layer.name, (name) => layerStack.renameLayer(indexOf(layer.id), name), { restoreFocus: true, key: layer.id }) },
-    { label: 'Opacity & Blend…', icon: 'tune', disabled: layer.isReferenceImage, onSelect: (anchor) => openProperties({ kind: 'layer', id: layer.id }, anchor) },
     { label: 'Duplicate', icon: 'content_copy', shortcut: '⌘J', disabled: layers.length >= MAX_LAYERS || layer.isReferenceImage, onSelect: duplicateActiveLayer },
     { label: 'Merge Down', icon: 'merge', shortcut: '⌘E', disabled: merge.disabled, onSelect: () => apply(() => layerStack.mergeDown(indexOf(layer.id))) },
     layer.groupId
@@ -794,25 +813,12 @@ function startDrag(e, layer, row) {
   grip.addEventListener('pointercancel', end);
 }
 
-/** Fills the Opacity & Blend popover from its target (a layer or a group). */
+/** Fills the group Opacity popover from its target group. */
 function syncPropertiesPopover() {
-  const layerStack = getLayerStack();
-  const title = layersPanelOpacityPopover.querySelector('#layer-properties-title');
-  const blendRow = layersPanelOpacityPopover.querySelector('#layer-properties-blend-row');
-  if (propertiesTarget.kind === 'group') {
-    const group = layerStack.getGroup(propertiesTarget.id);
-    if (!group) return closeLayersOpacityPopover();
-    title.textContent = group.name;
-    blendRow.hidden = true;
-    setOpacityFields(Math.round(group.opacity * 100));
-  } else {
-    const layer = layerStack.getLayers()[indexOf(propertiesTarget.id)];
-    if (!layer) return closeLayersOpacityPopover();
-    title.textContent = layer.name;
-    blendRow.hidden = false;
-    layersPanelBlendSelect.value = layer.blendMode;
-    setOpacityFields(Math.round(layer.opacity * 100));
-  }
+  const group = getLayerStack().getGroup(propertiesTarget.id);
+  if (!group) return closeLayersOpacityPopover();
+  layersPanelOpacityPopover.querySelector('#layer-properties-title').textContent = group.name;
+  setOpacityFields(Math.round(group.opacity * 100));
 }
 
 function setOpacityFields(percent) {
@@ -820,7 +826,7 @@ function setOpacityFields(percent) {
   layersPanelOpacityNumber.value = String(percent);
 }
 
-/** Opens Opacity & Blend for `target`, beside `anchor`, kept on screen. */
+/** Opens the group Opacity popover for `target`, beside `anchor`, kept on screen. */
 function openProperties(target, anchor) {
   propertiesTarget = target;
   syncPropertiesPopover();
@@ -916,7 +922,6 @@ export function initLayers(root = document) {
   layersPanelHeader = root.querySelector('#layers-panel-header');
   layersPanelToggle = root.querySelector('#layers-panel-toggle');
   layersPanelList = root.querySelector('#layers-panel-list');
-  layersPanelBlendSelect = root.querySelector('#layers-panel-blend-select');
   layersPanelOpacitySlider = root.querySelector('#layers-panel-opacity-slider');
   layersPanelOpacityNumber = root.querySelector('#layers-panel-opacity-number');
   layersPanelOpacityPopover = root.querySelector('#layers-panel-opacity-popover');
@@ -979,35 +984,40 @@ export function initLayers(root = document) {
     closeContextMenu({ restoreFocus: false });
   });
 
-  // Opacity & Blend: header tune button = the active layer.
-  root.querySelector('#layers-properties-button').addEventListener('click', (e) => {
-    const layer = getLayerStack().getActiveLayer();
-    if (!layersPanelOpacityPopover.classList.contains('hidden')) {
-      closeLayersOpacityPopover();
-      return;
-    }
-    openProperties({ kind: 'layer', id: layer.id }, e.currentTarget);
-  });
+  // The active layer's blend and opacity, in the header row.
+  headerBlend = root.querySelector('#layers-header-blend');
+  headerOpacity = root.querySelector('#layers-header-opacity');
+  headerOpacityReadout = root.querySelector('#layers-header-opacity-readout');
   for (const mode of BLEND_MODES) {
     const option = document.createElement('option');
     option.value = mode;
     option.textContent = blendLabel(mode);
-    layersPanelBlendSelect.appendChild(option);
+    headerBlend.appendChild(option);
   }
-  layersPanelBlendSelect.addEventListener('change', () => {
-    if (propertiesTarget?.kind !== 'layer') return;
-    getLayerStack().setBlendMode(indexOf(propertiesTarget.id), layersPanelBlendSelect.value);
+  headerBlend.addEventListener('change', () => {
+    const layerStack = getLayerStack();
+    layerStack.setBlendMode(layerStack.getActiveIndex(), headerBlend.value);
     renderCanvas();
     commit();
   });
+  // Live while dragging; one undo step for the final value.
+  const setActiveOpacity = (commitChange) => {
+    const layerStack = getLayerStack();
+    const percent = Number(headerOpacity.value);
+    layerStack.setOpacity(layerStack.getActiveIndex(), percent / 100);
+    headerOpacityReadout.textContent = `${percent}%`;
+    renderCanvas();
+    if (commitChange) commit();
+  };
+  headerOpacity.addEventListener('input', () => setActiveOpacity(false));
+  headerOpacity.addEventListener('change', () => setActiveOpacity(true));
 
   function applyOpacity(value, { commitChange } = {}) {
     if (!propertiesTarget) return;
     const clamped = Math.max(0, Math.min(100, value));
     const layerStack = getLayerStack();
     // Live while dragging/typing; commit only the final value.
-    if (propertiesTarget.kind === 'group') layerStack.setGroupOpacity(propertiesTarget.id, clamped / 100);
-    else layerStack.setOpacity(indexOf(propertiesTarget.id), clamped / 100);
+    layerStack.setGroupOpacity(propertiesTarget.id, clamped / 100);
     setOpacityFields(clamped);
     renderCanvas();
     if (commitChange) commit();
@@ -1019,7 +1029,7 @@ export function initLayers(root = document) {
   document.addEventListener('pointerdown', (e) => {
     if (layersPanelOpacityPopover.classList.contains('hidden')) return;
     if (layersPanelOpacityPopover.contains(e.target)) return;
-    if (e.target.closest?.('#layers-properties-button, #layer-menu')) return;
+    if (e.target.closest?.('#layer-menu')) return;
     closeLayersOpacityPopover();
   });
   document.addEventListener('keydown', (e) => {

@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 // satisfy that module-load-time reference; nothing in this test touches it.
 globalThis.document ??= {};
 
-const { computeLayerMarkState, mergeButtonState } = await import('../js/layers-ui.js');
+const { computeLayerMarkState, mergeButtonState, headerPropertiesState } = await import('../js/layers-ui.js');
 
 // Layers panel marking (multi-select) is DOM-bound in buildLayerRow's
 // click handler, so only this pure state-transition function is
@@ -237,5 +237,22 @@ describe('mergeButtonState', () => {
     assert.equal(mergeButtonState([L()], 0, new Set()).disabled, true);
     assert.equal(mergeButtonState([L({ isBackground: true }), L()], 1, new Set()).disabled, true);
     assert.equal(mergeButtonState([L(), L({ isReferenceImage: true })], 1, new Set()).disabled, true);
+  });
+});
+
+describe('headerPropertiesState', () => {
+  test('follows the layer: blend mode and rounded opacity percent', () => {
+    assert.deepEqual(
+      headerPropertiesState({ blendMode: 'multiply', opacity: 0.456 }),
+      { blendMode: 'multiply', opacityPercent: 46, disabled: false },
+    );
+  });
+
+  test('a reference image layer disables the controls', () => {
+    assert.equal(headerPropertiesState({ blendMode: 'normal', opacity: 1, isReferenceImage: true }).disabled, true);
+  });
+
+  test('no layer: disabled, at the defaults', () => {
+    assert.deepEqual(headerPropertiesState(undefined), { blendMode: 'normal', opacityPercent: 100, disabled: true });
   });
 });

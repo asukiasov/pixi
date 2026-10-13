@@ -1172,9 +1172,6 @@
             </button>
             <h2>Layers</h2>
             <span class="material-symbols-outlined panel-collapse-chevron">expand_more</span>
-            <button type="button" id="layers-properties-button" class="tool-button icon-button" aria-label="Opacity and blend mode" data-tooltip="Opacity &amp; Blend">
-              <span class="material-symbols-outlined" aria-hidden="true">tune</span>
-            </button>
             <!-- "layers_add" isn't a Material Symbols glyph - CSS-masked
                  asset (assets/icons/layers_add.svg), see .layers-add-icon. -->
             <button type="button" id="add-layer-button" class="tool-button icon-button" aria-label="Add layer" data-tooltip="Add layer">
@@ -1184,6 +1181,13 @@
               <span class="material-symbols-outlined" aria-hidden="true">close</span>
             </button>
           </div>
+        </div>
+        <!-- The active layer's blend mode and opacity, always visible,
+             after Pixelmator Pro (js/layers-ui.js). -->
+        <div id="layers-header-properties" class="layers-header-properties">
+          <select id="layers-header-blend" class="layers-header-blend" aria-label="Blend mode"></select>
+          <input type="range" id="layers-header-opacity" class="layers-header-opacity" min="0" max="100" value="100" aria-label="Opacity" />
+          <output id="layers-header-opacity-readout" class="layers-header-opacity-readout" for="layers-header-opacity">100%</output>
         </div>
         <!-- Select mode (header ⋯ > Select Layers): rows get checkboxes. -->
         <div id="layers-select-bar" class="layers-select-bar hidden" role="toolbar" aria-label="Selected layers">
@@ -1203,16 +1207,12 @@
          pattern #color-picker-popover uses (see openColorPicker in
          js/workspace.js). Lives outside .right-sidebar so its own
          overflow-y:auto can't clip it. -->
-    <!-- Opacity & Blend (js/layers-ui.js) for one layer or group - opened
-         from the header's tune button or a row's ⋯ menu. Groups have no
-         blend mode, so that row hides for them. -->
+    <!-- Opacity for one group, opened from the group's ⋯ menu. A layer's
+         blend and opacity live in the panel's header row. -->
     <div id="layers-panel-opacity-popover" class="canvas-settings-panel layer-properties-popover hidden" role="dialog" aria-labelledby="layer-properties-title">
       <div class="canvas-settings-row canvas-settings-header-row">
         <h2 id="layer-properties-title">Layer 1</h2>
       </div>
-      <label class="layer-properties-row" id="layer-properties-blend-row">Blend
-        <select id="layers-panel-blend-select" class="layers-panel-blend-select"></select>
-      </label>
       <div class="layer-properties-row">
         <label for="layers-panel-opacity-slider">Opacity</label>
         <input type="range" id="layers-panel-opacity-slider" class="layers-panel-opacity-slider" min="0" max="100" value="100" />

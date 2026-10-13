@@ -28,11 +28,13 @@ export function initRectangleFill(root = document) {
   const toggle = root.querySelector('#rectangle-fill-toggle');
   if (!toggle) return; // standalone-only (absent from lib/pixi.js's embed markup)
   const icons = toggle.querySelectorAll('[data-fill-icon]');
+  toggle.setAttribute('aria-pressed', 'false');
 
   function render() {
     const key = fillIconFor(tool, filled);
     for (const icon of icons) icon.classList.toggle('hidden', icon.dataset.fillIcon !== key);
     toggle.classList.toggle('active', filled);
+    toggle.setAttribute('aria-pressed', String(filled));
     toggle.dataset.tooltip = tool === 'ellipse' ? 'Filled ellipse' : 'Filled rectangle';
   }
 

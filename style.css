@@ -2822,13 +2822,25 @@ span.layer-lock-icon {
   z-index: 100;
 }
 
-/* Forma .glass (set in js/confirm-dialog.js); positioned for its ::before. */
+/* Forma .glass (set in js/confirm-dialog.js). */
 .confirm-dialog {
   position: relative;
   width: 20rem;
   max-width: calc(100vw - 2rem);
   padding: 1.25rem;
   border-radius: 18px;
+}
+
+/* No blurred ::before: WebKit drops .confirm-overlay's blur under a second
+   backdrop-filter, leaving the cards crisp behind. The dialog paints the
+   tint itself, over the scrim's blur. */
+.confirm-dialog.glass {
+  background: var(--glass-tint);
+  box-shadow: var(--glass-highlight), var(--float-shadow);
+}
+
+.confirm-dialog.glass::before {
+  display: none;
 }
 
 .confirm-dialog-title {
@@ -2883,6 +2895,10 @@ span.layer-lock-icon {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background: rgba(0, 0, 0, 0.5);
+  }
+
+  .confirm-dialog.glass {
+    background: var(--color-surface);
   }
 }
 
@@ -4477,6 +4493,7 @@ span.layer-lock-icon {
 .palette-menu-list {
   max-height: min(45vh, 22rem);
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .palette-menu-item-name {
@@ -4857,33 +4874,30 @@ span.layer-lock-icon {
   color: var(--color-text-muted);
 }
 
-/* One capsule of two segments, icon over label. Its own radius, not
+/* Two separate ghost pills, icon beside label. Their own radius, not
    .glass-pill, since js/layout.js adds and removes that class per layout. */
 .color-picker-actions {
   display: flex;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--ghost-hover);
+  gap: 8px;
 }
 
 .color-picker-action {
   flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  min-height: 52px;
-  border: none;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 0.72rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
   cursor: pointer;
-}
-
-.color-picker-action + .color-picker-action {
-  border-inline-start: 1px solid var(--glass-border);
+  touch-action: manipulation;
 }
 
 .color-picker-action:hover {
@@ -4892,11 +4906,11 @@ span.layer-lock-icon {
 
 .color-picker-action:focus-visible {
   outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 
 .color-picker-action .material-symbols-outlined {
-  font-size: 1.3rem;
+  font-size: 1.15rem;
 }
 
 /* ------------------------------------------------------------------
@@ -4909,7 +4923,7 @@ span.layer-lock-icon {
 /* The active layer's blend and opacity, under the title. */
 .layers-header-properties {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) 2.6rem;
+  grid-template-columns: auto minmax(0, 1fr) 2.6rem;
   align-items: center;
   gap: 0.5rem;
   padding: 0 0.75rem 0.5rem;
@@ -4917,7 +4931,7 @@ span.layer-lock-icon {
 }
 
 .layers-header-blend {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 0.5rem;
   border: none;
   border-radius: 9px;

@@ -16,9 +16,9 @@ function ensureBuilt() {
   overlayEl = document.createElement('div');
   overlayEl.className = 'confirm-overlay hidden';
   overlayEl.innerHTML = `
-    <div class="confirm-dialog glass" role="alertdialog" aria-modal="true">
-      <h2 class="confirm-dialog-title"></h2>
-      <p class="confirm-dialog-message"></p>
+    <div class="confirm-dialog glass" role="alertdialog" aria-modal="true" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message">
+      <h2 id="confirm-dialog-title" class="confirm-dialog-title"></h2>
+      <p id="confirm-dialog-message" class="confirm-dialog-message"></p>
       <div class="confirm-dialog-actions">
         <button type="button" class="ghost-button ghost-text glass-pill confirm-dialog-cancel">Cancel</button>
         <button type="button" class="confirm-dialog-confirm">Delete</button>

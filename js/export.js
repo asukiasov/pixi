@@ -53,6 +53,70 @@ export function sanitizeFilename(name) {
   return sanitized || 'untitled';
 }
 
+/** `<sanitized-project-name>@<scale>x.<ext>` - the export spec's Export filename requirement. */
+export function exportFilename(name, scale, format) {
+  return `${sanitizeFilename(name)}@${scale}x.${format}`;
+}
+
+/** Human-readable encoded size for the preview row: exact bytes, then ~KB, then MB. */
+export function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `~${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * The clipboard only takes image/png reliably across browsers, so Copy
+ * always copies a PNG - and says so when another format is selected.
+ */
+export function copyLabel(format) {
+  return format === 'png' ? 'Copy' : 'Copy PNG';
+}
+
+/**
+ * Which of Share/Copy this browser supports. Share needs Web Share with
+ * files (Safari on iOS/iPadOS/macOS, Android, Chrome on Windows/ChromeOS);
+ * Copy needs async clipboard image writes. Takes navigator-like and
+ * global-like objects so tests can pass fakes.
+ */
+export function shareCapabilities(nav = globalThis.navigator, env = globalThis) {
+  let canShare = false;
+  try {
+    canShare = typeof nav?.share === 'function'
+      && typeof nav?.canShare === 'function'
+      && typeof env.File === 'function'
+      && Boolean(nav.canShare({ files: [new env.File([''], 'probe.png', { type: 'image/png' })] }));
+  } catch {
+    canShare = false;
+  }
+  const canCopy = typeof nav?.clipboard?.write === 'function' && typeof env.ClipboardItem === 'function';
+  return { canShare, canCopy };
+}
+
+/**
+ * Lets only the newest of several overlapping async renders win, so a
+ * slow 8x render finishing late can't overwrite a newer 1x one. A stale
+ * run's rejection is swallowed too - nobody is waiting on it any more.
+ */
+export function createLatestOnly() {
+  let latest = 0;
+  return {
+    async run(task) {
+      const id = ++latest;
+      try {
+        const result = await task();
+        return id === latest ? { current: true, result } : { current: false };
+      } catch (err) {
+        if (id !== latest) return { current: false };
+        throw err;
+      }
+    },
+    cancel() {
+      latest++;
+    },
+  };
+}
+
 /**
  * Wires the Export popover (scale multiplier, format selector,
  * transparent-background override, Export action) in the Workspace

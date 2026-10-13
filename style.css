@@ -1238,7 +1238,7 @@ textarea,
   font-size: 0.9rem;
 }
 
-/* Export popover - reuses .canvas-settings-panel's base popover styling
+/* Share popover (export.js) - reuses .canvas-settings-panel's base popover styling
    (position/size/background/border), just its own content rows below. */
 .export-scale-row,
 .export-format-row {
@@ -1270,6 +1270,64 @@ textarea,
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: white;
+}
+
+.export-preview-row {
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* Fixed box, checkerboard so transparency reads; the image is scaled up
+   to fit with hard pixel edges. */
+.export-preview-frame {
+  width: 72px;
+  height: 72px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: repeating-conic-gradient(#d9d9d9 0% 25%, #ffffff 0% 50%) 50% / 12px 12px;
+}
+
+#export-preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.export-preview-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.export-preview-name {
+  color: var(--color-text);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.export-actions {
+  margin-top: 0.5rem;
+}
+
+.action-capsule-segment.is-primary {
+  background: var(--color-accent);
+  color: white;
+}
+
+.action-capsule-segment.is-primary:not(:disabled):hover {
+  background: var(--color-accent);
+  filter: brightness(1.08);
 }
 
 /* drawing-timelapse-recording: #record-toggle's active state. Shares

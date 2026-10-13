@@ -34,7 +34,7 @@
        keep it sorted alphabetically — the Google Fonts API 400s the whole
        request (breaking every icon on the page, not just an unsorted one)
        if icon_names isn't in alphabetical order. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&icon_names=add,add_circle,align_horizontal_center,align_horizontal_left,align_horizontal_right,align_vertical_bottom,align_vertical_center,align_vertical_top,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check,check_box,check_box_outline_blank,chevron_right,circle,close,colorize,content_copy,content_cut,content_paste,create_new_folder,crop_free,dark_mode,delete,dock_to_right,download,drag_indicator,drive_file_move,edit,error,expand_more,fiber_manual_record,flip,folder,folder_off,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,handyman,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,layers,library_add,light_mode,lock,lock_open,merge,more_horiz,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,select,settings,swap_horiz,transform,tune,undo,unfold_more,visibility,visibility_off" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&icon_names=add,add_circle,align_horizontal_center,align_horizontal_left,align_horizontal_right,align_vertical_bottom,align_vertical_center,align_vertical_top,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check,check_box,check_box_outline_blank,chevron_right,circle,close,colorize,content_copy,content_cut,content_paste,create_new_folder,crop_free,dark_mode,delete,dock_to_right,download,drag_indicator,drive_file_move,edit,error,expand_more,fiber_manual_record,flip,folder,folder_off,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,handyman,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,ios_share,layers,library_add,light_mode,lock,lock_open,merge,more_horiz,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,select,settings,swap_horiz,transform,tune,undo,unfold_more,visibility,visibility_off" />
 </head>
 <body>
   <main id="screen-gallery" class="screen home-screen">
@@ -174,8 +174,8 @@
       <button type="button" id="canvas-settings-toggle" class="tool-button icon-button" aria-label="Canvas Settings" data-tooltip="Canvas Settings">
         <span class="material-symbols-outlined">settings</span>
       </button>
-      <button type="button" id="export-button" class="tool-button icon-button" aria-label="Export PNG" data-tooltip="Export PNG">
-        <span class="material-symbols-outlined">download</span>
+      <button type="button" id="export-button" class="tool-button icon-button" aria-label="Share" data-tooltip="Share">
+        <span class="material-symbols-outlined">ios_share</span>
       </button>
       <!-- drawing-timelapse-recording: opt-in capture of one composited
            frame per commit (js/workspace.js's commit(), via
@@ -254,7 +254,7 @@
           <span class="material-symbols-outlined" aria-hidden="true">settings</span>Canvas settings
         </button>
         <button type="button" class="topbar-menu-item" role="menuitem" data-forward="export-button">
-          <span class="material-symbols-outlined" aria-hidden="true">download</span>Export
+          <span class="material-symbols-outlined" aria-hidden="true">ios_share</span>Share / Export
         </button>
         <button type="button" class="topbar-menu-item" role="menuitemcheckbox" aria-checked="false" data-forward="record-toggle">
           <span class="material-symbols-outlined" aria-hidden="true">fiber_manual_record</span><span class="topbar-menu-label">Record timelapse</span>
@@ -911,17 +911,29 @@
         </div>
       </div>
 
-      <!-- Popover anchored to the top bar's download icon (#export-button),
-           same clamped-to-viewport pattern as #canvas-settings-panel
-           (js/export.js). Scale, format, and the transparent-background
-           toggle are transient UI state - reset to their defaults every
-           time the popover opens, not persisted with the project. -->
+      <!-- Share popover (2026-10-13 share-export), anchored to the top bar's
+           share icon (#export-button), same clamped-to-viewport pattern as
+           #canvas-settings-panel (js/export.js). The output is pre-rendered
+           on open and on every option change, so the preview, the size, and
+           Copy/Share (which Safari only allows inside the click) all use the
+           same ready Blob. Scale, format and the transparent-background
+           toggle reset to their defaults every time it opens. -->
       <div id="export-panel" class="canvas-settings-panel export-panel hidden">
         <div class="canvas-settings-row canvas-settings-header-row">
-          <h2>Export</h2>
+          <h2>Share</h2>
           <button type="button" id="export-close" class="icon-button" aria-label="Close">
             <span class="material-symbols-outlined">close</span>
           </button>
+        </div>
+        <div class="canvas-settings-row export-preview-row">
+          <div class="export-preview-frame">
+            <img id="export-preview-image" alt="" />
+          </div>
+          <div class="export-preview-meta">
+            <span id="export-preview-name" class="export-preview-name"></span>
+            <span id="export-preview-dimensions"></span>
+            <span id="export-preview-size" aria-live="polite"></span>
+          </div>
         </div>
         <div class="canvas-settings-row export-scale-row" role="radiogroup" aria-label="Scale">
           <button type="button" class="tool-button export-scale-option active" data-scale="1">1x</button>
@@ -940,9 +952,15 @@
             Transparent background
           </label>
         </div>
-        <div class="canvas-settings-row">
-          <button type="button" id="export-download" class="tool-button export-download-button">
-            <span class="material-symbols-outlined">download</span> Export
+        <div class="action-capsule export-actions" role="group" aria-label="Share actions">
+          <button type="button" id="export-copy" class="action-capsule-segment">
+            <span class="material-symbols-outlined" aria-hidden="true">content_copy</span><span id="export-copy-label">Copy</span>
+          </button>
+          <button type="button" id="export-download" class="action-capsule-segment">
+            <span class="material-symbols-outlined" aria-hidden="true">download</span><span>Download</span>
+          </button>
+          <button type="button" id="export-share" class="action-capsule-segment">
+            <span class="material-symbols-outlined" aria-hidden="true">ios_share</span><span>Share</span>
           </button>
         </div>
       </div>

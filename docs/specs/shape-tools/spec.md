@@ -55,7 +55,9 @@ The user SHALL be able to draw an ellipse fitted to the box between two
 dragged corners (shortcut O), in the current draw color, previewed live
 while dragging and committed on release as one undoable step. It SHALL
 share Rectangle's outline/filled toggle (one "Filled shape" setting for
-both tools), and Shift or the 1:1 proportion toggle SHALL constrain it to
+both tools). The toggle SHALL show ellipse icons (outline or filled)
+while Ellipse is active and rectangle icons while Rectangle is active,
+and expose its state as pressed/not pressed. Shift or the 1:1 proportion toggle SHALL constrain it to
 a circle. The ellipse SHALL fit the box exactly for both even and odd
 sizes and be symmetric about both of the box's axes.
 

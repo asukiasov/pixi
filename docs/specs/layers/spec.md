@@ -198,9 +198,10 @@ SHALL NOT start editing.
 - **THEN** the original name is kept and no undo history entry is added
 
 ### Requirement: Layer visibility
-The user SHALL be able to toggle a layer's visibility. Hidden layers are
-excluded from compositing (on-screen render and export) but keep their pixel
-data.
+The user SHALL be able to toggle a layer's visibility with a round checkbox
+on its row (checked = shown; groups have the same checkbox). Hidden layers
+are excluded from compositing (on-screen render and export) but keep their
+pixel data.
 
 #### Scenario: Hiding a layer
 - **WHEN** the user hides a layer
@@ -312,18 +313,30 @@ resize, rotate) the next time the panel re-renders.
 - **WHEN** the user draws on a layer and the Layers panel re-renders
 - **THEN** that layer's thumbnail shows the new content
 
-### Requirement: Opacity and Blend popover
-The Layers panel SHALL offer an Opacity & Blend popover, titled with the
-layer or group it edits: opened for the active layer from the header's
-tune button, or for any layer or group from its ⋯ menu. It SHALL hold a
-Blend mode selector (layers only) and an Opacity slider with a numeric
-field (0-100). Dragging the slider SHALL update the canvas live and commit
-one undo step when released.
+### Requirement: Header blend and opacity
+The Layers panel SHALL show the active layer's blend mode and opacity in a
+row under its title: a Blend mode selector, an Opacity slider (0-100) and
+a percentage readout. Changing the blend mode SHALL commit one undo step;
+dragging the slider SHALL update the canvas live and commit one undo step
+when released. Both controls SHALL be disabled while the reference image
+layer is active. Layer ⋯ menus SHALL NOT offer a separate "Opacity &
+Blend…" item.
 
 #### Scenario: Changing a layer's opacity
-- **WHEN** the user opens Opacity & Blend for Layer 2 and sets 40
-- **THEN** Layer 2 composites at 40% and its row's detail line reads
-  "Normal · 40%"
+- **WHEN** Layer 2 is active and the user drags the header's Opacity
+  slider to 40 and releases
+- **THEN** Layer 2 composites at 40%, its row's detail line reads
+  "Normal · 40%", and one Undo restores 100%
+
+#### Scenario: Reference image active
+- **WHEN** the reference image layer is the active layer
+- **THEN** the header's Blend selector and Opacity slider are disabled
+
+### Requirement: Group opacity
+A group's ⋯ menu SHALL open an Opacity popover titled with the group's
+name, holding an Opacity slider with a numeric field (0-100), applied to
+the whole group when compositing. Dragging SHALL update the canvas live
+and commit one undo step when released. Groups have no blend mode.
 
 ### Requirement: Reference image layer
 The user SHALL be able to add a **reference image layer** to the layer
@@ -684,19 +697,20 @@ The Layers panel SHALL list layers top to bottom as rounded row cards
 layer), a live thumbnail, the name over a detail line ("Background",
 "Reference · Original"/"Pixelated", or the blend mode and opacity, e.g.
 "Normal · 100%"), the reference image layer's own toggles, and a
-visibility switch named "Show <layer>". A user-locked layer's detail line
-SHALL start with a lock glyph, read out as "Locked". The active row SHALL
-be highlighted and show a ⋯ button whose menu (after Pixelmator Pro for
-iPad) offers, in order: a capsule strip of Cut, Copy and Paste (icon over
-label; see the clipboard spec); Duplicate (⌘J), Lock or Unlock, and
-Rename; a separator and Select Content; a separator and Merge Down (⌘E),
-Group (⌘G) or Remove from Group, Move Up and Move Down; a separator and
-Delete Layer (confirmed; undoable). The header SHALL
-offer ⋯ (Select Layers, Add Reference Image…), the Layers title, Opacity &
-Blend for the active layer, Add layer and Close.
+round visibility checkbox named "Show <layer>". A user-locked layer's
+detail line SHALL start with a lock glyph, read out as "Locked". The
+active row SHALL be highlighted and show a ⋯ button whose menu (after
+Pixelmator Pro for iPad) offers, in order: a capsule strip of Cut, Copy
+and Paste (icon over label; see the clipboard spec); Duplicate (⌘J), Lock
+or Unlock, and Rename; a separator and Select Content; a separator and
+Merge Down (⌘E), Group (⌘G) or Remove from Group, Move Up and Move Down; a
+separator and Delete Layer (confirmed; undoable). The header SHALL offer
+⋯ (Select Layers, Add Reference Image…), the Layers title, Add layer and
+Close, with the active layer's blend and opacity in a row beneath (see
+"Header blend and opacity").
 
-#### Scenario: Hiding with the switch
-- **WHEN** the user turns off Layer 2's switch
+#### Scenario: Hiding with the checkbox
+- **WHEN** the user unchecks Layer 2's visibility checkbox
 - **THEN** Layer 2 no longer composites, as one undoable step
 
 ### Requirement: Layer lock
@@ -739,7 +753,7 @@ layers, else the active one). Grouped layers SHALL be gathered, in order,
 at the topmost one's position. A group SHALL be listed as its own row
 above its members - a chevron to collapse or expand it, a folder, its
 name over "Group · N layers" (and its opacity when below 100%), ⋯ and a
-visibility switch - with its members indented beneath it and hidden
+visibility checkbox - with its members indented beneath it and hidden
 while it's collapsed. The group's ⋯ menu SHALL offer Rename, Opacity…,
 Ungroup, Move Group Up, Move Group Down and Delete Group (the group and
 its layers; confirmed; undoable). A hidden group SHALL hide its members;
@@ -759,8 +773,9 @@ undo/redo; projects from before groups open ungrouped.
   and the canvas is unchanged
 
 #### Scenario: Hiding a group
-- **WHEN** the user turns off a group's switch
-- **THEN** none of its layers composite, while their own switches stay on
+- **WHEN** the user unchecks a group's visibility checkbox
+- **THEN** none of its layers composite, while their own checkboxes stay
+  checked
 
 #### Scenario: Group opacity
 - **WHEN** a group holding one opaque black pixel is set to 50% opacity

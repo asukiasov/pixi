@@ -1026,7 +1026,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Files:**
 - Modify: `docs/specs/layers/spec.md`, `docs/specs/color-library/spec.md`, `docs/specs/shape-tools/spec.md`, `docs/ui-reference.md`, `docs/roadmap.md`
 
-- [ ] **Step 1: Screenshots**
+- [x] **Step 1: Screenshots**
 
 Start `python3 -m http.server 8000` in the background. With Playwright, take screenshots of each item below in dark and light themes, at 1280×800 and 390×844, in Chromium and in WebKit. For WebKit, use `webkit.launchPersistentContext(dir, …)`, because an ephemeral context can't create a project.
 
@@ -1047,11 +1047,11 @@ Look at each one. Check that:
 
 If it does, add `.confirm-dialog.glass::before { display: none; }` with a comment, then retest and commit.
 
-- [ ] **Step 2: Web Interface Guidelines review**
+- [x] **Step 2: Web Interface Guidelines review**
 
 Invoke the `web-design-guidelines` skill on the changed files: `index.html`, `style.css`, `js/confirm-dialog.js`, `js/layers-ui.js`, `js/rectangle-fill-ui.js`. Fix any findings, run `npm test`, and commit as "Guidelines fixes for glass and panel polish".
 
-- [ ] **Step 3: Docs**
+- [x] **Step 3: Docs**
 
 - `docs/specs/layers/spec.md`: the header row shows the active layer's blend mode and opacity (disabled for a reference image; edits undoable); visibility is a checkbox; a group's opacity is set from its ⋯ menu; the "Opacity & Blend…" layer item is gone.
 - `docs/specs/color-library/spec.md`: swatches are round everywhere; the active swatch is ringed.
@@ -1059,7 +1059,7 @@ Invoke the `web-design-guidelines` skill on the changed files: `index.html`, `st
 - `docs/ui-reference.md`: update the Layers panel, colour picker, menus and confirm dialog entries to match.
 - `docs/roadmap.md`: under the UI polish pass, add "Glass menus, popovers and confirm dialog; Layers header blend/opacity; round swatches; Ellipse fill icon (2026-10-13). Next: Transform categories and rotation dial, then Copy/Cut/Paste and Merge."
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs
@@ -1068,6 +1068,6 @@ git commit -m "Specs, UI reference and roadmap: glass and panel polish
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 5: Code review**
+- [x] **Step 5: Code review**
 
 Invoke `superpowers:requesting-code-review` for the branch (model `sonnet`, per CLAUDE.md's dispatch table; this is a medium-risk UI diff).

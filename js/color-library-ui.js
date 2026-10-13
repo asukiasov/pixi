@@ -115,6 +115,9 @@ let editingPaletteId = null;
 // DOM refs, assigned once in initColorLibrary() - single active
 // instance, same module-level-state pattern workspace.js itself uses.
 let colorLibraryGrid = null;
+// The palette the colour bar last rendered - a different one starts
+// scrolled to its beginning, however it became active.
+let renderedPaletteId = null;
 let paletteMenuButton = null;
 let paletteMenuName = null;
 let paletteMenuList = null;
@@ -267,7 +270,6 @@ function renderColorLibraryPanel() {
     item.addEventListener('click', () => {
       activePaletteId = palette.id;
       renderColorLibraryPanel();
-      colorLibraryGrid.scrollLeft = 0;
     });
     paletteMenuList.appendChild(item);
   });
@@ -306,11 +308,16 @@ function renderColorLibraryPanel() {
     const empty = document.createElement('p');
     empty.className = 'color-library-empty';
     empty.textContent = 'No colors yet - tap + to add the current color.';
+    empty.title = empty.textContent;
     colorLibraryGrid.appendChild(empty);
   }
 
   deletePaletteButton.disabled = colorPalettes.length <= 1 || Boolean(active?.isDefault);
 
+  if (active?.id !== renderedPaletteId) {
+    colorLibraryGrid.scrollLeft = 0;
+    renderedPaletteId = active?.id;
+  }
   syncActiveSwatch(); // re-derives fgHex/isRainbow from state and calls syncColorLibraryActiveSwatch below
 }
 

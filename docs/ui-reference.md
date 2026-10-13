@@ -112,6 +112,15 @@ disabled at 35%. The shared pieces - `.glass`, `.glass-pill`,
 `.glass-circle`, `.ghost-button`, `.slider`, `.swatch-pair` - are in
 `style.css` ("Components") and shown in every state on
 `components.html`; the floating controls get the same look by selector.
+Menus (`.topbar-menu`: More, Zoom, palette, layer, tool overflow) and
+popovers in the floating layout are on the same glass, so the artwork
+shows blurred behind them; native `<dialog>` sheets (Prefs, Customize
+Tools, Standard Libraries) stay opaque. The shared confirm dialog
+(`js/confirm-dialog.js`, `.confirm-dialog.glass`, an `alertdialog` named
+by its title) is a glass card over a dimmed, 6px-blurred scrim, with a
+ghost-pill Cancel and a red pill confirm; it paints the glass tint itself
+(no blurred `::before`), because WebKit drops the scrim's blur under a
+second backdrop-filter.
 Spec: `floating-workspace` (takes precedence over other capabilities'
 docked descriptions in the floating layout).
 
@@ -413,8 +422,11 @@ Specs: `pixel-drawing-engine` (Pencil/Eraser/Bucket/pixel-perfect line),
 in `js/workspace.js`):
 
 - `#rectangle-options` (Rectangle + Ellipse) — `#rectangle-fill-toggle`,
-  outline/filled toggle using two swapped inline SVGs (not the webfont
-  icon — the subsetted font only bakes one FILL-axis point).
+  outline/filled toggle (`aria-pressed`) using four swapped inline SVGs,
+  rectangle or ellipse by the active tool (`fillIconFor` in
+  `js/rectangle-fill-ui.js`; not the webfont icon — the subsetted font
+  only bakes one FILL-axis point). The floating tool-options bar's
+  `.tool-options-filled` proxy swaps the same four in CSS.
 - `#square-constraint-options` (Rectangle + Ellipse + Selection) —
   holding Shift while dragging (for touch, which has no Shift key).
 - `#library-sequence-options` (Pencil + Brush only) —
@@ -458,8 +470,11 @@ saturation/brightness square), **Classic** `#color-classic-square` +
 `#color-picker-copied`) and `#color-picker-native` (the system picker),
 **Palettes** `#color-picker-palettes` (every palette's swatches); then
 `#color-picker-history` (last 10 colours, newest first, kept on the
-device), `#color-picker-add` ("Add to palette") and
-`#color-picker-generate-ramp` ("Ramp" → `#ramp-preview-row`). The same
+device), then `.color-picker-actions`: two separate ghost pills, icon
+beside label, `#color-picker-add` ("Add to palette") and
+`#color-picker-generate-ramp` ("Ramp" → `#ramp-preview-row`). Tabs are a
+pill segmented control, close is a ghost circle, and every swatch
+(Palettes tab, History) is round with a ring on the active one. The same
 popover opens on every platform, including iOS.
 
 Spec: `color-library` (FG/BG model), `canvas-creation`/`layers`
@@ -508,7 +523,8 @@ Spec: `color-library` (FG/BG model), `canvas-creation`/`layers`
   palette).
 - `#palette-menu` (screen level, `js/topbar-menu.js`'s `initMenuButton`)
   — `#palette-menu-list` (every palette, alphabetical, count, active one
-  checked), `#add-palette-button` (New Palette… → `#new-palette-row`
+  checked; scrolls past about 8 rows, `overscroll-behavior: contain`),
+  `#add-palette-button` (New Palette… → `#new-palette-row`
   popover: `#new-palette-name`, Save/Cancel, Enter/Escape),
   `#import-palette-button` (Import from Image… →
   `#color-library-import-input` → `#import-preview-row`),
@@ -564,18 +580,22 @@ Pro for iPad style):
 - `#layers-panel-header` — `#layers-panel-menu-button` (⋯ → `#layers-panel-menu`:
   `#layers-select-mode-button` Select Layers, `#add-reference-image-button`
   Add Reference Image… → `#add-reference-image-input`), "Layers",
-  `#layers-properties-button` (tune → Opacity & Blend for the active
-  layer), `#add-layer-button`, close.
+  `#add-layer-button` (add_circle), close.
+- `#layers-header-properties` — the active layer's blend and opacity,
+  always visible under the title: `#layers-header-blend` (select, sized to
+  its longest mode), `#layers-header-opacity` (slider, live; one undo step
+  on release), `#layers-header-opacity-readout`. Disabled while the
+  reference image is active.
 - `#layers-select-bar` (Select mode only) — `#layers-select-count`,
   `#layers-select-group`, `#layers-select-merge`, `#layers-select-done`.
 - `#layers-panel-list` (role list) — `.layer-row` cards: `.layer-grip`
-  (CSS-drawn dots, drag to reorder; none on Background), thumbnail,
+  (two CSS-drawn bars, drag to reorder; none on Background), thumbnail,
   `.layer-name` (double-tap / Enter / F2 to rename) over `.layer-detail`
   (starts with `span.layer-lock-icon` on a user-locked layer),
   reference toggles, `.layer-more-button` (active row only → `#layer-menu`),
-  `.layer-switch` (visibility, checkbox with role switch). `.in-group` rows
-  are indented under their `.layer-group-row` (chevron, folder, name,
-  "Group · N layers", ⋯, switch). `.layer-drop-indicator` shows the drop
+  `.layer-visibility` (a round accent checkbox, checked = shown, 44px hit
+  area). `.in-group` rows are indented under their `.layer-group-row`
+  (chevron, folder, name, "Group · N layers", ⋯, checkbox). `.layer-drop-indicator` shows the drop
   point while dragging.
 - `#layer-menu` — one shared menu filled per use with a row's or group's
   actions (arrow keys, Escape, outside press). A layer's menu starts with
@@ -585,9 +605,10 @@ Pro for iPad style):
   Down, Group / Remove from Group, Move Up, Move Down | Delete Layer.
   `.action-capsule` is a reusable capsule of segments (its own radius,
   never `.glass-pill`).
-- `#layers-panel-opacity-popover` — Opacity & Blend for a layer or group:
-  `#layer-properties-title`, `#layers-panel-blend-select` (layers only),
-  `#layers-panel-opacity-slider` + `#layers-panel-opacity-number`.
+- `#layers-panel-opacity-popover` — a group's Opacity, from its ⋯ menu:
+  `#layer-properties-title`, `#layers-panel-opacity-slider` +
+  `#layers-panel-opacity-number`. (A layer's blend and opacity are in the
+  header row; its ⋯ menu has no Opacity & Blend item.)
 - Shortcuts: ⌘J duplicate, ⌘E merge, ⌘G group, ⌘C copy, ⌘X cut (needs a
   selection), ⌘V paste (as a new layer).
 

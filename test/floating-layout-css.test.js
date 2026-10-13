@@ -603,13 +603,42 @@ describe('Confirm dialog on glass (2026-10-13 polish)', () => {
     assert.match(js, /class="confirm-dialog-confirm"/);
   });
 
+  test('the alertdialog is named and described by its title and message', () => {
+    assert.match(js, /role="alertdialog" aria-modal="true" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message"/);
+    assert.match(js, /<h2 id="confirm-dialog-title" class="confirm-dialog-title">/);
+    assert.match(js, /<p id="confirm-dialog-message" class="confirm-dialog-message">/);
+  });
+
+  test('the docked Filled toggle exposes its state as aria-pressed', () => {
+    const fill = readFileSync(new URL('../js/rectangle-fill-ui.js', import.meta.url), 'utf8');
+    assert.match(fill, /toggle\.setAttribute\('aria-pressed', String\(filled\)\)/);
+  });
+
   test('the backdrop dims and blurs; the confirm is a red pill', () => {
     assert.match(css, /\.confirm-overlay \{[^}]*backdrop-filter: blur\(6px\)/);
     assert.match(css, /\.confirm-dialog-confirm \{[^}]*border-radius: 999px;[^}]*background: var\(--color-danger\)/);
   });
+
+  // WebKit drops the scrim's blur under a second backdrop-filter, so the
+  // dialog paints the tint itself instead of through .glass::before.
+  test('the dialog has no blurred ::before; it tints over the scrim blur', () => {
+    assert.match(css, /\.confirm-dialog\.glass::before \{\s*display: none;/);
+    assert.match(css, /\.confirm-dialog\.glass \{[^}]*background: var\(--glass-tint\)/);
+  });
 });
 
 describe('Layers rows (2026-10-13 polish)', () => {
+  // A fractional column clipped "Normal" to "Non" in a 390px window.
+  test('the header blend select sizes to its longest mode', () => {
+    const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+    assert.match(css, /\.layers-header-properties \{[^}]*grid-template-columns: auto minmax\(0, 1fr\) 2\.6rem;/);
+  });
+
+  test('the header blend select is a 44px hit target', () => {
+    const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+    assert.match(css, /\.layers-header-blend \{[^}]*min-height: 44px;/);
+  });
+
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
   const js = readFileSync(new URL('../js/layers-ui.js', import.meta.url), 'utf8');
@@ -652,10 +681,38 @@ describe('Colour picker and swatches (2026-10-13 polish)', () => {
     assert.match(rule('.color-picker-compare'), /border-radius: 999px/);
   });
 
-  test('close is a ghost circle; actions are one capsule of two segments', () => {
+  test('close is a ghost circle; actions are two separate pills, icon beside label', () => {
     assert.match(html, /id="color-picker-close" class="color-picker-close"/);
     assert.match(html, /<div class="color-picker-actions" role="group" aria-label="Color actions">/);
-    assert.match(rule('.color-picker-actions'), /border-radius: 999px/);
+    assert.match(rule('.color-picker-actions'), /gap: 8px/);
+    assert.doesNotMatch(rule('.color-picker-actions'), /border-radius|overflow: hidden/);
     assert.match(html, /id="color-picker-add" class="color-picker-action"/);
+    const action = rule('.color-picker-action');
+    assert.match(action, /border-radius: 999px/);
+    assert.match(action, /min-height: 44px/);
+    assert.doesNotMatch(action, /flex-direction: column/);
+    assert.doesNotMatch(css, /\.color-picker-action \+ \.color-picker-action/);
+  });
+});
+
+// A palette made, imported or left by Delete used to inherit the previous
+// palette's sideways scroll (only a menu pick reset it), so at 390px an
+// empty palette's hint started off-screen beside the palette button.
+describe('Colour bar scroll and empty hint', () => {
+  const ui = readFileSync(new URL('../js/color-library-ui.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+
+  test('the bar scrolls back to the start whenever a different palette renders', () => {
+    const render = ui.slice(ui.indexOf('function renderColorLibraryPanel()'));
+    const body = render.slice(0, render.indexOf('\n}\n'));
+    assert.match(body, /if \(active\?\.id !== renderedPaletteId\) \{\s*colorLibraryGrid\.scrollLeft = 0;\s*renderedPaletteId = active\?\.id;/);
+  });
+
+  test('the empty hint ellipsizes in the bar, with the full text as a tooltip', () => {
+    assert.match(ui, /empty\.title = empty\.textContent;/);
+    const rule = css.match(/\.color-bar \.color-library-empty \{[^}]*\}/)?.[0] ?? '';
+    assert.match(rule, /min-width: 0;/);
+    assert.match(rule, /text-overflow: ellipsis;/);
+    assert.match(rule, /white-space: nowrap;/);
   });
 });

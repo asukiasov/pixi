@@ -10,7 +10,7 @@ import { bresenhamLine, strokeFreehandThick } from '../lib/pixel-engine/engine.j
 import { confirmDialog } from './confirm-dialog.js';
 import { initSymmetry, applySymmetryTransform } from './symmetry-ui.js';
 import { initPixelPerfect } from './pixel-perfect-ui.js';
-import { initRectangleFill } from './rectangle-fill-ui.js';
+import { initRectangleFill, syncRectangleFillTool } from './rectangle-fill-ui.js';
 import { initPencilOpacity, getPencilOpacity } from './pencil-opacity-ui.js';
 import { initBrushImport } from './brush-import-ui.js';
 import { initCanvasSettings } from './canvas-settings.js';
@@ -1302,6 +1302,8 @@ function applyToolScopedUI() {
     'hidden',
     state.currentTool !== 'rectangle' && state.currentTool !== 'ellipse' && state.currentTool !== 'selection'
   );
+  // Rectangle/Ellipse Filled toggle (js/rectangle-fill-ui.js).
+  syncRectangleFillTool(state.currentTool);
   // Floating tool-options bar (5d-tool-options-bar): CSS shows the bar's
   // groups from this attribute, and js/tool-options-bar.js refreshes its
   // slider values when it is set. Nothing in the docked layout reads it.

@@ -31,7 +31,11 @@ Surfaces:
   header ⋯, tool overflow.
 - Popovers: colour picker, Transform, Canvas Settings, Brushes, and the
   group Opacity popover.
-- Sheets: Prefs, Customize Tools, Standard Libraries.
+- Sheets (Prefs, Customize Tools, Standard Libraries) are **not** made
+  glass: they are native top-layer `<dialog>`s, and WebKit draws the
+  blurred cards through a translucent one (see the Prefs sheet comment in
+  `style.css`). They already use the glass border, radius and shadow;
+  only their buttons get the pill treatment below.
 
 Details:
 
@@ -41,10 +45,9 @@ Details:
 - **Confirm dialog:** 18px radius. Cancel is a `.ghost-button` pill; a
   destructive confirm is a solid red pill (`--color-danger`). The `::backdrop`
   is a dim plus a light blur.
-- **WebKit:** a translucent modal `<dialog>` can leak cards in WebKit. If
-  headless WebKit still shows a leak after this change, that surface uses
-  the opaque tint (same colour at full alpha) there, through an
-  `@supports` or class fallback. Glass stays everywhere else.
+- **WebKit:** the confirm dialog is a plain fixed `<div>` overlay, not a
+  top-layer `<dialog>`, so it can be glass. Check it in headless WebKit;
+  if it leaks too, it falls back to the opaque surface like the sheets.
 
 ## 2. Layers panel (feedback items 3, 4)
 
@@ -63,15 +66,15 @@ cards stay.
 - **Visibility:** a round checkbox in the accent colour (checked = visible)
   replaces the toggle switch. Same `aria-label`, same handler, 44px hit
   area.
-- **Drag grip:** the Material `drag_handle` glyph replaces
-  `drag_indicator`.
+- **Drag grip:** the shape of Material's `drag_handle` (two horizontal
+  bars) replaces the six dots. It is still drawn in CSS, not a font
+  glyph, so the grip stays visible and pressable if the icon font fails.
 - **Add layer:** the Material `add_circle` glyph replaces the masked
   `layers_add.svg`. Remove the `.layers-add-icon` rule and the asset, if
   nothing else uses it.
 
-`drag_handle` and `add_circle` must be added to the Material Symbols
-`icon_names` list in `index.html`'s font URL, which is subset to the
-glyphs we use, and to `js/icon-font-fallback.js` if that file lists them.
+`add_circle` must be added to the Material Symbols `icon_names` list in
+`index.html`'s font URL, which is subset to the glyphs we use.
 
 ## 3. Colour picker and swatches (feedback item 9)
 

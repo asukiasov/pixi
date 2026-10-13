@@ -90,8 +90,9 @@ All three act on the active layer, from the menu or the keyboard.
 - Cut is enabled only when there is a selection, the area under it has
   content, and the layer is neither locked nor a reference layer.
 - Cut copies first (as above), then clears the rectangle, exactly as the
-  selection action bar's Delete does. On the Background layer that means
-  painting the background colour, following the Eraser's rule.
+  selection action bar's Delete does: the rectangle becomes transparent,
+  on the Background layer too, since that's what Delete already does
+  there. Cut and Delete share one function.
 - Cut is one undo step.
 
 ### Paste
@@ -272,7 +273,7 @@ the layer's pixels is refused. Everything else still works:
 
 | Module | Change |
 |---|---|
-| `js/clipboard.js` (new) | Pure: `cropToContent(data, w, h, rect)` → `{ x, y, width, height, data } \| null`; `matchesRecord(record, decoded)` (true when sizes match and every channel is within ±1, which allows for canvas premultiplied-alpha rounding); `placePaste({ record, decoded, canvasWidth, canvasHeight })` → `{ x, y, data, width, height, fromRecord }`. Browser wiring: `writeImage(blobPromise)`, `readImage()`, `imageFromPasteEvent(e)`, and the in-app record (`setRecord`, `getRecord`). |
+| `js/clipboard.js` (new) | Pure: `cropToContent(source, rect)` (`source` is `{ data, width, height }`) → `{ x, y, width, height, data } \| null`; `matchesRecord(record, decoded)` (true when sizes match, alpha is within ±1, and colour is within `ceil(255 / alpha)` where alpha isn't 0; this allows for the browser's premultiplied-alpha rounding in a PNG round trip); `placeOnCanvas(region, canvasWidth, canvasHeight)` → a full-canvas RGBA buffer with `region` stamped at its `x, y`. Images from other apps go through `fitImageToCanvas(image, w, h, false)`, which already centres them. Browser wiring: `writeImage(blobPromise)`, `readImage()`, `imageFromPasteEvent(e)`, and the in-app record (`setRecord`, `getRecord`). |
 | `js/workspace.js` | `copyActive()`, `cutActive()`, `pasteImage(source)` and `selectActiveContent()`, exported for `layers-ui.js`. Also `activeLayerEditable()` with its checks, and the ⌘C/⌘X/⌘V bindings. |
 | `lib/pixel-engine/layers.js` | `locked`; `setLocked`; merge refusals; `insertLayerAbove(index, { name, data, opacity, blendMode })` for Paste, which shares placement and naming with `duplicateLayer`. |
 | `js/layers-ui.js` | Strip item kind, `layerMenuState`, new order, Lock/Unlock, row lock glyph. |
@@ -285,10 +286,10 @@ the layer's pixels is refused. Everything else still works:
 - `clipboard.test.js`:
   - `cropToContent`: an empty area gives null, the crop is tight, and a
     selection is clipped to the canvas.
-  - `matchesRecord`: an exact match, a match within ±1, different sizes,
-    different pixels.
-  - `placePaste`: from the record (in place), a smaller foreign image
-    (centred 1:1), a larger foreign image (fitted, then centred).
+  - `matchesRecord`: an exact match, a match within rounding, different
+    sizes, different pixels, colour ignored where alpha is 0.
+  - `placeOnCanvas`: stamps in place, and clips a region that hangs off
+    the canvas.
 - `LayerStack`:
   - `locked` round-trips through snapshot/restore and `toProjectRecord`.
   - A record without `locked` loads unlocked.

@@ -119,10 +119,12 @@ Where the pasted image goes depends on where it came from:
 Other rules:
 
 - **Layer cap.** At the 8-layer cap, the menu's Paste is disabled and ⌘V
-  shows the toast "Can't paste: 8 layers is the maximum".
-- **Nothing to paste.** If the clipboard has no image, or reading it fails,
-  the toast is "Nothing to paste". This includes the user dismissing
-  Safari's Paste bubble.
+  shows the toast "Can't paste: 8 layers is the maximum. Delete or merge a
+  layer first."
+- **Nothing to paste.** When there's neither a clipboard image nor a Pixi
+  copy (see the fallback rule below), the toast is "Nothing to paste. Copy
+  a layer or an image first." Dismissing Safari's Paste bubble counts as
+  no clipboard image.
 - **Paste stays enabled** (below the cap). A browser can't check what's on
   the clipboard without reading it, so it can't be greyed out the way
   Pixelmator greys it out.
@@ -144,9 +146,10 @@ Other rules:
   inside the click or keydown handler, and the PNG encodes inside the
   promise. Safari accepts a promise here, which keeps the user-gesture
   requirement satisfied without encoding ahead of time.
-- **Writing when `ClipboardItem` is missing.** The in-app record is still
-  set, so pasting inside Pixi works, and the toast is "Copied inside Pixi
-  only".
+- **Writing when `ClipboardItem` is missing, or the write fails.** The
+  in-app record is still set, so pasting inside Pixi works, and the toast
+  is "Copied inside Pixi only. This browser can't copy images to other
+  apps."
 - **Reading with ⌘V.** Uses the `paste` event's
   `clipboardData.files` / `items`. This needs no permission prompt and
   works in Safari.
@@ -207,8 +210,8 @@ the layer's pixels is refused. Everything else still works:
     `disabled` for a locked layer, so the popover greys out.
   - selection Delete
   - Cut
-- On a refusal: show the toast "Layer is locked" once per gesture, change
-  nothing, and commit nothing.
+- On a refusal: show the toast "Layer is locked. Unlock it from the
+  layer's ⋯ menu." once per gesture, change nothing, and commit nothing.
 
 **UI:**
 

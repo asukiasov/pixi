@@ -2119,7 +2119,7 @@ function isTextEntry(el) {
  */
 function activeLayerEditable() {
   if (!state.layerStack.getActiveLayer()?.locked) return true;
-  showToast('Layer is locked');
+  showToast("Layer is locked. Unlock it from the layer's ⋯ menu.");
   return false;
 }
 
@@ -2156,7 +2156,7 @@ export function copyActive() {
     ? { kind: 'selection', ...region }
     : { kind: 'layer', ...region, name: layer.name, opacity: layer.opacity, blendMode: layer.blendMode });
   writeImage(regionToPngBlob(region)).then((ok) => {
-    if (!ok) showToast('Copied inside Pixi only');
+    if (!ok) showToast("Copied inside Pixi only. This browser can't copy images to other apps.");
   });
   return true;
 }
@@ -2179,7 +2179,7 @@ export function cutActive() {
 export async function pasteImage(blob) {
   const stack = state.layerStack;
   if (stack.getLayers().length >= MAX_LAYERS) {
-    showToast(`Can't paste: ${MAX_LAYERS} layers is the maximum`);
+    showToast(`Can't paste: ${MAX_LAYERS} layers is the maximum. Delete or merge a layer first.`);
     return false;
   }
   const record = getRecord();
@@ -2188,7 +2188,7 @@ export async function pasteImage(blob) {
   if (blob) {
     const image = await decodeImageFile(blob);
     if (!image) {
-      showToast('Nothing to paste');
+      showToast('Nothing to paste. Copy a layer or an image first.');
       return false;
     }
     const sameSize = record && image.width === record.width && image.height === record.height;
@@ -2197,7 +2197,7 @@ export async function pasteImage(blob) {
   } else if (record) {
     from = record;
   } else {
-    showToast('Nothing to paste');
+    showToast('Nothing to paste. Copy a layer or an image first.');
     return false;
   }
   if (from) data = placeOnCanvas(from, stack.width, stack.height);

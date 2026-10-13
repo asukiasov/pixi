@@ -31,10 +31,10 @@ Spec: `docs/superpowers/specs/2026-10-13-layer-context-menu-design.md`.
 - Never put `.ghost-button` or `.glass-pill` in markup (`js/layout.js`
   toggles them).
 - Toast copy, verbatim:
-  - "Layer is locked"
-  - "Nothing to paste"
-  - "Can't paste: 8 layers is the maximum"
-  - "Copied inside Pixi only"
+  - "Layer is locked. Unlock it from the layer's ⋯ menu."
+  - "Nothing to paste. Copy a layer or an image first."
+  - "Can't paste: 8 layers is the maximum. Delete or merge a layer first."
+  - "Copied inside Pixi only. This browser can't copy images to other apps."
 - Never `git add -A`. Stage explicit paths only, because `node_modules`
   is a symlink in this worktree.
 
@@ -586,12 +586,12 @@ export function cutActive() {
  * copy comes back in place (and, for a whole layer, with its name,
  * opacity and blend); any other image is pasted 1:1 or scaled down to
  * fit, centred. With no image, Pixi's own last copy is used; with
- * neither, "Nothing to paste".
+ * neither, "Nothing to paste. Copy a layer or an image first.".
  */
 export async function pasteImage(blob) {
   const stack = state.layerStack;
   if (stack.getLayers().length >= MAX_LAYERS) {
-    showToast("Can't paste: 8 layers is the maximum");
+    showToast("Can't paste: 8 layers is the maximum. Delete or merge a layer first.");
     return false;
   }
   const record = getRecord();

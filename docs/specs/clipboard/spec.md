@@ -42,8 +42,11 @@ SHALL do nothing. Cut SHALL be refused on a locked layer.
 Paste SHALL add a new layer directly above the active layer, in its
 group, and make it active, as one undo step; existing layers SHALL never
 change. The image SHALL be the system clipboard's image when there is
-one, else Pixi's own last copy, else the toast "Nothing to paste. Copy a
-layer or an image first." is shown and nothing changes.
+one. With no clipboard image, Pixi's own last copy SHALL be used only if
+it never reached the system clipboard or the clipboard can't be read at
+all; a copy that reached the clipboard is stale once the clipboard holds
+something else. Otherwise the toast "Nothing to paste. Copy a layer or an
+image first." is shown and nothing changes.
 - An image that matches Pixi's own last copy SHALL be pasted 1:1 at the
   position it was copied from. A whole-layer copy SHALL keep its opacity
   and blend mode and be named after the source the way Duplicate names
@@ -73,8 +76,14 @@ on the clipboard without reading it.
 Cmd/Ctrl+C SHALL copy, Cmd/Ctrl+X SHALL cut and Cmd/Ctrl+V SHALL paste,
 running the same actions as the menu, while the workspace is showing.
 None of them SHALL act while a text input, textarea, select or
-contenteditable element has focus, so text copy and paste keep working in
-fields such as the layer rename field and the hex field.
+contenteditable element has focus, while a modal sheet or the confirm
+dialog is open, or while page text is selected, so text copy and paste
+keep working in fields such as the layer rename field and the hex field.
+
+#### Scenario: Text on the clipboard
+- **WHEN** the user copies a layer in Pixi, then copies text in another
+  app, then presses Cmd/Ctrl+V on the canvas
+- **THEN** no layer is added and "Nothing to paste" is shown
 
 #### Scenario: Copying text in the rename field
 - **WHEN** the layer rename field has focus and the user presses Cmd/Ctrl+C

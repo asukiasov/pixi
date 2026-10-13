@@ -157,9 +157,15 @@ Other rules:
   Safari shows its own "Paste" bubble, which the user taps, and Chromium
   may ask for permission once.
 - **One fallback rule for both.** Paste uses the clipboard's image when
-  there is one. If there's no image (or no way to read one), it uses
-  Pixi's own last copy. If there's neither, the toast is "Nothing to
-  paste".
+  there is one. With no image, it uses Pixi's own last copy only if that
+  copy never reached the system clipboard (`ClipboardItem` missing or the
+  write refused), or if the clipboard can't be read at all. A copy that
+  did reach the clipboard is stale once the clipboard holds something
+  else, such as text copied elsewhere. Otherwise the toast is "Nothing to
+  paste. Copy a layer or an image first." (`recordFallback` in
+  `js/clipboard.js`.)
+- **Not behind a modal.** ⌘C, ⌘X and ⌘V do nothing while a `<dialog>`
+  sheet or the confirm dialog is open, or while page text is selected.
 
 ### Coordination with Share & Export
 

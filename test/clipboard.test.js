@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { cropToContent, matchesRecord, placeOnCanvas, setRecord, getRecord } from '../js/clipboard.js';
+import { cropToContent, matchesRecord, placeOnCanvas, setRecord, getRecord, recordFallback } from '../js/clipboard.js';
 
 // 3x3 RGBA source with one opaque red pixel at (1, 2) and one at (2, 1).
 function source() {
@@ -61,6 +61,23 @@ describe('placeOnCanvas', () => {
     assert.deepEqual([...out.slice(4, 8)], [3, 3, 3, 3]); // region (0,1) lands at canvas (1,0)
     assert.deepEqual([...out.slice(0, 4)], [0, 0, 0, 0]);
     assert.deepEqual([...out.slice(8)], [0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+});
+
+describe('recordFallback (paste with no clipboard image)', () => {
+  test('a copy that never reached the system clipboard is used', () => {
+    const record = { kind: 'layer', onSystemClipboard: false };
+    assert.equal(recordFallback(record, true), record);
+  });
+  test('a copy on the system clipboard is stale once the clipboard has no image', () => {
+    assert.equal(recordFallback({ kind: 'layer', onSystemClipboard: true }, true), null);
+  });
+  test('used when the clipboard cannot be read at all', () => {
+    const record = { kind: 'layer', onSystemClipboard: true };
+    assert.equal(recordFallback(record, false), record);
+  });
+  test('null with no record', () => {
+    assert.equal(recordFallback(null, false), null);
   });
 });
 

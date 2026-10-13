@@ -67,9 +67,22 @@ export function placeOnCanvas(region, canvasWidth, canvasHeight) {
 }
 
 // Pixi's own last copy: { kind: 'layer' | 'selection', x, y, width,
-// height, data } plus name/opacity/blendMode for 'layer'. Memory only, so
-// after a reload every paste counts as coming from another app.
+// height, data } plus name/opacity/blendMode for 'layer', and
+// onSystemClipboard once the PNG write settles. Memory only, so after a
+// reload every paste counts as coming from another app.
 let record = null;
+
+/**
+ * The record to paste when the clipboard gave no image, or null. A copy
+ * that reached the system clipboard is stale once the clipboard holds
+ * something else (text, say), so it's only used when it never got there
+ * (no ClipboardItem, write refused) or the clipboard can't be read at
+ * all (`canReadClipboard` false).
+ */
+export function recordFallback(current, canReadClipboard) {
+  if (!current) return null;
+  return current.onSystemClipboard === true && canReadClipboard ? null : current;
+}
 
 export function setRecord(next) {
   record = next;

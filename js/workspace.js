@@ -24,7 +24,7 @@ import { initCanvasSettings } from './canvas-settings.js';
 import { renderLayersPanel, clearLayerMarksAndRefresh, mergeMarkedOrActiveDown, duplicateActiveLayer, groupMarkedOrActive } from './layers-ui.js';
 import { isHideUiShortcut } from './hide-ui.js';
 import { showToast } from './toast.js';
-import { cropToContent, matchesRecord, placeOnCanvas, setRecord, getRecord, regionToPngBlob, writeImage, readImage, imageFromPasteEvent, imageToImageData } from './clipboard.js';
+import { cropToContent, matchesRecord, placeOnCanvas, setRecord, getRecord, recordFallback, regionToPngBlob, writeImage, readImage, imageFromPasteEvent, imageToImageData } from './clipboard.js';
 import { decodeImageFile, fitImageToCanvas } from './image-import.js';
 import { MAX_LAYERS } from '../lib/pixel-engine/layers.js';
 import { visibleAnchor, canvasSide } from './layout.js';
@@ -1800,10 +1800,11 @@ function bindDomOnce() {
       }
 
       // Cmd/Ctrl+C and Cmd/Ctrl+X: copy or cut on the active layer
-      // (layer-context-menu), left to a focused text field. Cmd/Ctrl+V is
-      // the `paste` listener below - preventing its keydown would stop the
-      // paste event that carries the image.
-      if ((key === 'c' || key === 'x') && !isTextEntry(document.activeElement)) {
+      // (layer-context-menu), not while typing, behind a modal or with page
+      // text selected (clipboardShortcutsApply). Cmd/Ctrl+V is the `paste`
+      // listener below - preventing its keydown would stop the paste event
+      // that carries the image.
+      if ((key === 'c' || key === 'x') && clipboardShortcutsApply()) {
         e.preventDefault();
         if (key === 'c') copyActive();
         else cutActive();
@@ -1842,12 +1843,14 @@ function bindDomOnce() {
     });
 
     // Cmd/Ctrl+V (layer-context-menu): the paste event carries clipboard
-    // files with no permission prompt, Safari included.
+    // files with no permission prompt, Safari included. The event shows
+    // what's really on the clipboard, so a Pixi copy that reached it is
+    // stale here when there's no image (recordFallback).
     document.addEventListener('paste', (e) => {
       if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
-      if (isTextEntry(document.activeElement)) return;
+      if (!clipboardShortcutsApply()) return;
       e.preventDefault();
-      pasteImage(imageFromPasteEvent(e));
+      pasteImage(imageFromPasteEvent(e), recordFallback(getRecord(), true));
     });
 
     // Hide-all-UI (4d-hide-all-ui): Tab toggles only while nothing
@@ -2152,10 +2155,12 @@ export function copyActive() {
   const engine = layer.engine;
   const region = cropToContent(engine, state.selection ?? { x: 0, y: 0, width: engine.width, height: engine.height });
   if (!region) return false;
-  setRecord(state.selection
+  const record = state.selection
     ? { kind: 'selection', ...region }
-    : { kind: 'layer', ...region, name: layer.name, opacity: layer.opacity, blendMode: layer.blendMode });
+    : { kind: 'layer', ...region, name: layer.name, opacity: layer.opacity, blendMode: layer.blendMode };
+  setRecord(record);
   writeImage(regionToPngBlob(region)).then((ok) => {
+    record.onSystemClipboard = ok; // see clipboard.js's recordFallback
     if (!ok) showToast("Copied inside Pixi only. This browser can't copy images to other apps.");
   });
   return true;
@@ -2170,18 +2175,20 @@ export function cutActive() {
 
 /**
  * Paste (layer-context-menu): adds a new layer above the active one, as
- * one undo step. `blob` is the clipboard image, or null. Pixi's own last
- * copy comes back in place (and, for a whole layer, with its name,
- * opacity and blend); any other image is pasted 1:1 or scaled down to
- * fit, centred. With no image, Pixi's own last copy is used; with
- * neither, "Nothing to paste".
+ * one undo step. `blob` is the clipboard image, or null, in which case
+ * `fallback` (clipboard.js's recordFallback) is pasted instead. Pixi's
+ * own last copy comes back in place (and, for a whole layer, with its
+ * name, opacity and blend); any other image is pasted 1:1 or scaled down
+ * to fit, centred. With neither, "Nothing to paste".
  */
-export async function pasteImage(blob) {
+export async function pasteImage(blob, fallback = null) {
   const stack = state.layerStack;
-  if (stack.getLayers().length >= MAX_LAYERS) {
+  const atCap = () => {
+    if (stack.getLayers().length < MAX_LAYERS) return false;
     showToast(`Can't paste: ${MAX_LAYERS} layers is the maximum. Delete or merge a layer first.`);
-    return false;
-  }
+    return true;
+  };
+  if (atCap()) return false;
   const record = getRecord();
   let from = null;
   let data = null;
@@ -2194,8 +2201,10 @@ export async function pasteImage(blob) {
     const sameSize = record && image.width === record.width && image.height === record.height;
     if (sameSize && matchesRecord(record, imageToImageData(image))) from = record;
     else data = fitImageToCanvas(image, stack.width, stack.height, false).data;
-  } else if (record) {
-    from = record;
+    image.close?.(); // an ImageBitmap holds decoded memory until closed
+    if (atCap()) return false; // a layer may have been added while decoding
+  } else if (fallback) {
+    from = fallback;
   } else {
     showToast('Nothing to paste. Copy a layer or an image first.');
     return false;
@@ -2212,7 +2221,19 @@ export async function pasteImage(blob) {
 
 /** The menu's Paste: reads the system clipboard (Safari shows its Paste bubble), then pasteImage. */
 export function pasteFromClipboard() {
-  return readImage().then(pasteImage);
+  const canRead = !!navigator.clipboard?.read;
+  return readImage().then((blob) => pasteImage(blob, recordFallback(getRecord(), canRead)));
+}
+
+/**
+ * Whether Cmd/Ctrl+C/X/V act on the canvas: not while typing, while a
+ * modal (a <dialog> sheet or the confirm dialog) is open, or while page
+ * text is selected - copying that is the browser's job.
+ */
+function clipboardShortcutsApply() {
+  if (isTextEntry(document.activeElement)) return false;
+  if (document.querySelector('dialog[open], .confirm-overlay:not(.hidden)')) return false;
+  return !window.getSelection?.()?.toString();
 }
 
 /** Select Content: the selection becomes the box around the active layer's pixels. */

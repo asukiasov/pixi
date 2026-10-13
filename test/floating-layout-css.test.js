@@ -694,3 +694,25 @@ describe('Colour picker and swatches (2026-10-13 polish)', () => {
     assert.doesNotMatch(css, /\.color-picker-action \+ \.color-picker-action/);
   });
 });
+
+// A palette made, imported or left by Delete used to inherit the previous
+// palette's sideways scroll (only a menu pick reset it), so at 390px an
+// empty palette's hint started off-screen beside the palette button.
+describe('Colour bar scroll and empty hint', () => {
+  const ui = readFileSync(new URL('../js/color-library-ui.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+
+  test('the bar scrolls back to the start whenever a different palette renders', () => {
+    const render = ui.slice(ui.indexOf('function renderColorLibraryPanel()'));
+    const body = render.slice(0, render.indexOf('\n}\n'));
+    assert.match(body, /if \(active\?\.id !== renderedPaletteId\) \{\s*colorLibraryGrid\.scrollLeft = 0;\s*renderedPaletteId = active\?\.id;/);
+  });
+
+  test('the empty hint ellipsizes in the bar, with the full text as a tooltip', () => {
+    assert.match(ui, /empty\.title = empty\.textContent;/);
+    const rule = css.match(/\.color-bar \.color-library-empty \{[^}]*\}/)?.[0] ?? '';
+    assert.match(rule, /min-width: 0;/);
+    assert.match(rule, /text-overflow: ellipsis;/);
+    assert.match(rule, /white-space: nowrap;/);
+  });
+});

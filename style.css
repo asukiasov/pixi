@@ -1507,38 +1507,6 @@ textarea,
   opacity: 0.4;
 }
 
-/* Real image asset (assets/icons/layers_add.svg), not a font glyph or
-   hand-copied inline markup - see index.html's comment on #add-layer-
-   button. Rendered via CSS mask rather than <img> so it still recolors
-   with currentColor like every other icon button here (light/dark
-   theme, hover, disabled dimming) - an <img>'s pixels are opaque to
-   CSS, fixed at whatever colors the source file happens to use.
-   mask-mode: alpha (not the mask default, luminance) matters here
-   specifically: the source file draws its glyph in near-black with a
-   white accent for its own two-tone display, and under luminance
-   masking dark pixels read as "mostly transparent" - exactly backwards
-   from what a mask needs. Alpha mode goes off which pixels have ink at
-   all, regardless of what color that ink is, which is what actually
-   reproduces the glyph's shape. Sized like .rectangle-fill-icon
-   (smaller than the S 1.6rem button box - a filled shape with no font
-   side-bearing needs more headroom than a font glyph at the same
-   nominal size would). */
-.layers-add-icon {
-  display: block;
-  width: 1.1rem;
-  height: 1.1rem;
-  background-color: currentColor;
-  mask-image: url('assets/icons/layers_add.svg');
-  mask-mode: alpha;
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: contain;
-  -webkit-mask-image: url('assets/icons/layers_add.svg');
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-}
-
 /* Shared by .layers-panel-header and .color-library-header - the whole
    block is a click target that collapses/expands the panel down to just
    this header (Photoshop-accordion style), not only the chevron icon.
@@ -4841,7 +4809,7 @@ span.layer-lock-icon {
 /* ------------------------------------------------------------------
    Layers panel, Pixelmator Pro for iPad style (js/layers-ui.js): rows
    are rounded cards - grip, thumbnail, name over a detail line, ⋯ on the
-   active row, a visibility switch. Overrides the older Photoshop-style
+   active row, a visibility checkbox. Overrides the older Photoshop-style
    row rules above.
    ------------------------------------------------------------------ */
 
@@ -4939,13 +4907,12 @@ span.layer-lock-icon {
   flex: none;
   width: 22px;
   align-self: stretch;
-  /* Two columns of three dots. */
-  background-image: radial-gradient(circle, var(--color-text-secondary) 1.6px, transparent 2px);
-  background-size: 7px 7px;
-  background-position: center;
-  background-repeat: repeat;
-  -webkit-mask: linear-gradient(#000 0 0) center / 14px 21px no-repeat;
-  mask: linear-gradient(#000 0 0) center / 14px 21px no-repeat;
+  /* Two bars, the shape of Material's drag_handle; drawn in CSS so the
+     grip stays visible if the icon font fails. */
+  background:
+    linear-gradient(var(--color-text-secondary) 0 0) center calc(50% - 3px) / 14px 2px no-repeat,
+    linear-gradient(var(--color-text-secondary) 0 0) center calc(50% + 3px) / 14px 2px no-repeat;
+  border-radius: 1px;
   cursor: grab;
   /* The grip starts a drag, never a scroll. */
   touch-action: none;
@@ -5026,66 +4993,52 @@ span.layer-lock-icon {
   color: var(--color-accent);
 }
 
-/* Visibility: an iOS-style switch over a real checkbox. */
-.layer-switch {
-  position: relative;
+/* Visibility: a round accent checkbox (Pixelmator Pro), 44px hit area. */
+.layer-visibility {
   flex: none;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-width: 44px;
   min-height: 44px;
-  justify-content: center;
   cursor: pointer;
 }
 
-.layer-switch input {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.layer-switch-track {
-  position: relative;
-  width: 36px;
+.layer-visibility-check {
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-content: center;
+  width: 22px;
   height: 22px;
-  border-radius: 999px;
-  background: var(--color-border);
-  transition: background-color 150ms ease;
-}
-
-.layer-switch-track::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 18px;
-  height: 18px;
+  margin: 0;
+  border: 2px solid var(--color-text-secondary);
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
-  transition: transform 150ms ease;
+  background: transparent;
+  cursor: pointer;
 }
 
-.layer-switch input:checked + .layer-switch-track {
+.layer-visibility-check::after {
+  content: '';
+  width: 5px;
+  height: 10px;
+  border: solid transparent;
+  border-width: 0 2px 2px 0;
+  transform: translate(0, -1px) rotate(45deg);
+}
+
+.layer-visibility-check:checked {
+  border-color: var(--color-accent);
   background: var(--color-accent);
 }
 
-.layer-switch input:checked + .layer-switch-track::after {
-  transform: translateX(14px);
+.layer-visibility-check:checked::after {
+  border-color: #fff;
 }
 
-.layer-switch input:focus-visible + .layer-switch-track {
+.layer-visibility-check:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .layer-switch-track,
-  .layer-switch-track::after {
-    transition: none;
-  }
 }
 
 .layer-select-check {

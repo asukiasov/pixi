@@ -608,3 +608,25 @@ describe('Confirm dialog on glass (2026-10-13 polish)', () => {
     assert.match(css, /\.confirm-dialog-confirm \{[^}]*border-radius: 999px;[^}]*background: var\(--color-danger\)/);
   });
 });
+
+describe('Layers rows (2026-10-13 polish)', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+  const js = readFileSync(new URL('../js/layers-ui.js', import.meta.url), 'utf8');
+
+  test('Add layer uses the add_circle glyph, in the font subset', () => {
+    assert.match(html, /id="add-layer-button"[^>]*>\s*<span class="material-symbols-outlined" aria-hidden="true">add_circle<\/span>/);
+    assert.match(html, /icon_names=[^"]*\badd_circle\b/);
+    assert.doesNotMatch(css, /layers-add-icon|layers_add\.svg/);
+  });
+
+  test('visibility is a round checkbox, not a switch', () => {
+    assert.doesNotMatch(js, /role', 'switch'/);
+    assert.match(css, /\.layer-visibility-check \{[^}]*border-radius: 50%/);
+  });
+
+  test('the grip draws two bars (drag_handle), not dots', () => {
+    assert.doesNotMatch(css, /\.layer-grip \{[^}]*radial-gradient/);
+    assert.match(css, /\.layer-grip \{[^}]*linear-gradient/);
+  });
+});

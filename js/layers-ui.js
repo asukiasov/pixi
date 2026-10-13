@@ -1,5 +1,5 @@
 // The Layers panel, after Pixelmator Pro for iPad - rounded row cards
-// (thumbnail, name, detail line, visibility switch, ⋯ actions on the
+// (thumbnail, name, detail line, visibility checkbox, ⋯ actions on the
 // active row), one level of groups with a disclosure chevron, drag to
 // reorder by each row's grip, Select mode for touch multi-select, the
 // active layer's blend and opacity in a header row, and a group Opacity
@@ -246,20 +246,17 @@ function syncHeaderProperties() {
   headerOpacityReadout.textContent = `${state.opacityPercent}%`;
 }
 
-/** An on/off switch (a real checkbox with role="switch") for visibility. */
+/** Visibility: a round checkbox in the accent colour, checked = shown. */
 function buildVisibilitySwitch(name, visible, onChange) {
   const label = document.createElement('label');
-  label.className = 'layer-switch';
+  label.className = 'layer-visibility';
   const input = document.createElement('input');
   input.type = 'checkbox';
-  input.setAttribute('role', 'switch');
+  input.className = 'layer-visibility-check';
   input.checked = visible;
   input.setAttribute('aria-label', `Show ${name}`);
   input.addEventListener('change', () => onChange(input.checked));
-  const track = document.createElement('span');
-  track.className = 'layer-switch-track';
-  track.setAttribute('aria-hidden', 'true');
-  label.append(input, track);
+  label.append(input);
   return label;
 }
 
@@ -364,7 +361,7 @@ function bindNameTaps(label, key, onRename) {
 /**
  * One layer's row card: (Select mode's checkbox,) drag grip, thumbnail,
  * name over a detail line, the reference image's own toggles, ⋯ on the
- * active row, and the visibility switch. Every mutating handler calls
+ * active row, and the visibility checkbox. Every mutating handler calls
  * commit(), which re-renders the panel.
  */
 function buildLayerRow(layer, index, isActive, isMarked, layers) {
@@ -422,7 +419,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
     row.appendChild(check);
   }
 
-  // Dots drawn in CSS, not an icon glyph: the grip must stay pressable
+  // Bars drawn in CSS, not an icon glyph: the grip must stay pressable
   // even when the icon font fails to load (which hides glyphs).
   const grip = document.createElement('span');
   grip.className = 'layer-grip';
@@ -459,7 +456,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   return row;
 }
 
-/** A group's row: chevron (collapse), folder, name over "N layers", ⋯ and its visibility switch. */
+/** A group's row: chevron (collapse), folder, name over "N layers", ⋯ and its visibility checkbox. */
 function buildGroupRow(group, memberIndices) {
   const layerStack = getLayerStack();
   const row = document.createElement('div');

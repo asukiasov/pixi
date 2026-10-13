@@ -10,31 +10,46 @@
 // (the same DOM elements workspace.js's own bindDomOnce listens on) rather
 // than needing a workspace.js change - multiple listeners on one element
 // coexist fine.
+//
+// The toggle's icon follows the active shape tool (rectangle or ellipse).
 
 import { setShapeFilled } from './shape-tools.js';
 
 let filled = false;
+let tool = 'rectangle';
+
+/** Which of the toggle's four icons shows, for the active shape tool. */
+export function fillIconFor(activeTool, isFilled) {
+  return `${activeTool === 'ellipse' ? 'ellipse' : 'rectangle'}-${isFilled ? 'filled' : 'outline'}`;
+}
 
 export function initRectangleFill(root = document) {
   const panel = root.querySelector('#rectangle-options');
   const toggle = root.querySelector('#rectangle-fill-toggle');
-  const iconOutline = root.querySelector('#rectangle-fill-icon-outline');
-  const iconFilled = root.querySelector('#rectangle-fill-icon-filled');
   if (!toggle) return; // standalone-only (absent from lib/pixi.js's embed markup)
+  const icons = toggle.querySelectorAll('[data-fill-icon]');
 
-  function setFilled(next) {
-    filled = next;
+  function render() {
+    const key = fillIconFor(tool, filled);
+    for (const icon of icons) icon.classList.toggle('hidden', icon.dataset.fillIcon !== key);
     toggle.classList.toggle('active', filled);
-    iconOutline.classList.toggle('hidden', filled);
-    iconFilled.classList.toggle('hidden', !filled);
-    setShapeFilled(filled);
+    toggle.dataset.tooltip = tool === 'ellipse' ? 'Filled ellipse' : 'Filled rectangle';
   }
 
-  toggle.addEventListener('click', () => setFilled(!filled));
+  toggle.addEventListener('click', () => {
+    filled = !filled;
+    setShapeFilled(filled);
+    render();
+  });
 
   root.querySelectorAll('.tool-button[data-tool]').forEach((button) => {
     button.addEventListener('click', () => {
-      panel.classList.toggle('hidden', button.dataset.tool !== 'rectangle' && button.dataset.tool !== 'ellipse');
+      const next = button.dataset.tool;
+      panel.classList.toggle('hidden', next !== 'rectangle' && next !== 'ellipse');
+      if (next === 'rectangle' || next === 'ellipse') {
+        tool = next;
+        render();
+      }
     });
   });
 }

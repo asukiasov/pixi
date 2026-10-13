@@ -3568,7 +3568,9 @@ span.layer-lock-icon {
 }
 
 .workspace-screen[data-layout="floating"] .tool-options-filled[aria-pressed="true"] .tool-options-filled-off,
-.workspace-screen[data-layout="floating"] .tool-options-filled:not([aria-pressed="true"]) .tool-options-filled-on {
+.workspace-screen[data-layout="floating"] .tool-options-filled:not([aria-pressed="true"]) .tool-options-filled-on,
+.workspace-screen[data-layout="floating"][data-current-tool="ellipse"] .tool-options-filled .tool-options-shape-rectangle,
+.workspace-screen[data-layout="floating"]:not([data-current-tool="ellipse"]) .tool-options-filled .tool-options-shape-ellipse {
   display: none;
 }
 

@@ -2,6 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { PixelEngine } from '../lib/pixel-engine/engine.js';
 import { drawRectangle, drawEllipse, clipToSelection, setShapeFilled } from '../js/shape-tools.js';
+import { fillIconFor } from '../js/rectangle-fill-ui.js';
 
 describe('drawRectangle', () => {
   test('outline mode (default): draws only the perimeter', () => {
@@ -175,4 +176,16 @@ describe('drawEllipse', () => {
       }
     });
   }
+});
+
+describe('fillIconFor', () => {
+  test('Rectangle keeps the rectangle icons', () => {
+    assert.equal(fillIconFor('rectangle', false), 'rectangle-outline');
+    assert.equal(fillIconFor('rectangle', true), 'rectangle-filled');
+  });
+
+  test('Ellipse gets ellipse icons', () => {
+    assert.equal(fillIconFor('ellipse', false), 'ellipse-outline');
+    assert.equal(fillIconFor('ellipse', true), 'ellipse-filled');
+  });
 });

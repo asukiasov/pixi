@@ -577,8 +577,10 @@
              CDN, same source as the font, and swapped via visibility
              instead. -->
         <button type="button" id="rectangle-fill-toggle" class="tool-button icon-button" aria-label="Filled" data-tooltip="Filled rectangle">
-          <svg id="rectangle-fill-icon-outline" class="rectangle-fill-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M80-160v-640h800v640H80Zm80-80h640v-480H160v480Zm0 0v-480 480Z"/></svg>
-          <svg id="rectangle-fill-icon-filled" class="rectangle-fill-icon hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M80-160v-640h800v640H80Z"/></svg>
+          <svg class="rectangle-fill-icon" data-fill-icon="rectangle-outline" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Zm80-80h640v-480H160v480Zm0 0v-480 480Z"/></svg>
+          <svg class="rectangle-fill-icon hidden" data-fill-icon="rectangle-filled" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Z"/></svg>
+          <svg class="rectangle-fill-icon hidden" data-fill-icon="ellipse-outline" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path fill-rule="evenodd" d="M80-480a400 280 0 1 0 800 0a400 280 0 1 0-800 0Zm80 0a320 200 0 1 0 640 0a320 200 0 1 0-640 0Z"/></svg>
+          <svg class="rectangle-fill-icon hidden" data-fill-icon="ellipse-filled" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-480a400 280 0 1 0 800 0a400 280 0 1 0-800 0Z"/></svg>
         </button>
       </div>
 
@@ -1037,10 +1039,13 @@
           </div>
           <div class="tool-options-group" data-tools="rectangle ellipse">
             <!-- Source: #rectangle-fill-toggle (js/rectangle-fill-ui.js).
-                 Same two inline SVGs, swapped by [aria-pressed] in CSS. -->
+                 Same four inline SVGs, swapped in CSS by [aria-pressed]
+                 and the screen's data-current-tool. -->
             <button type="button" class="tool-button icon-button tool-options-filled" data-forward="rectangle-fill-toggle" aria-pressed="false" aria-label="Filled" data-tooltip="Filled shape">
-              <svg class="rectangle-fill-icon tool-options-filled-off" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Zm80-80h640v-480H160v480Zm0 0v-480 480Z"/></svg>
-              <svg class="rectangle-fill-icon tool-options-filled-on" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Z"/></svg>
+              <svg class="rectangle-fill-icon tool-options-filled-off tool-options-shape-rectangle" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Zm80-80h640v-480H160v480Zm0 0v-480 480Z"/></svg>
+              <svg class="rectangle-fill-icon tool-options-filled-on tool-options-shape-rectangle" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Z"/></svg>
+              <svg class="rectangle-fill-icon tool-options-filled-off tool-options-shape-ellipse" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path fill-rule="evenodd" d="M80-480a400 280 0 1 0 800 0a400 280 0 1 0-800 0Zm80 0a320 200 0 1 0 640 0a320 200 0 1 0-640 0Z"/></svg>
+              <svg class="rectangle-fill-icon tool-options-filled-on tool-options-shape-ellipse" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-480a400 280 0 1 0 800 0a400 280 0 1 0-800 0Z"/></svg>
             </button>
           </div>
           <div class="tool-options-group" data-tools="rectangle ellipse selection">

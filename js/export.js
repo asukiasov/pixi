@@ -1,4 +1,6 @@
 import { visibleAnchor } from './layout.js';
+import { writeImage } from './clipboard.js';
+import { showToast } from './toast.js';
 
 const SCALES = [1, 2, 4, 8];
 const FORMATS = ['png', 'webp', 'jpg'];
@@ -118,18 +120,24 @@ export function createLatestOnly() {
 }
 
 /**
- * Wires the Export popover (scale multiplier, format selector,
- * transparent-background override, Export action) in the Workspace
- * screen. Doesn't own or touch a LayerStack directly - reports the
- * user's export choice via `onExport(options)`, so workspace.js keeps
- * sole ownership of the current layer stack and its own download/
- * celebration behavior. `getProjectName()` is called at export time (not
- * cached when the popover opens) so a rename right before exporting is
- * still reflected. Scale, format, and the toggle reset to their defaults
- * (1x, PNG, off) every time the popover opens - they're transient UI
- * state, not saved with the project.
+ * Wires the Share popover (preview, scale, format, transparent-background
+ * override, and Copy/Download/Share) in the Workspace screen. Doesn't own
+ * a LayerStack: `render(options)` (from workspace.js) encodes the output
+ * Blob, and `onDownloaded()` runs workspace.js's celebration.
+ *
+ * The Blob is rendered ahead of time - on open and on every option
+ * change - because Safari rejects navigator.share() and
+ * clipboard.write() once an await has spent the click's user activation.
+ * The same Blob drives the preview and the size readout. When the format
+ * isn't PNG, a second PNG Blob is rendered for Copy (the clipboard only
+ * takes PNG reliably).
+ *
+ * Scale, format and the toggle reset to their defaults (1x, PNG, off)
+ * every time the popover opens - transient UI state, not saved with the
+ * project. `getProjectName()` is read at action time, so a rename right
+ * before sharing is still reflected in the filename.
  */
-export function initExport({ onExport, getProjectName, root = document }) {
+export function initExport({ render, onDownloaded = () => {}, getProjectName, getCanvasSize, root = document }) {
   const toggleButton = root.querySelector('#export-button');
   const panel = root.querySelector('#export-panel');
   const closeButton = root.querySelector('#export-close');
@@ -138,10 +146,41 @@ export function initExport({ onExport, getProjectName, root = document }) {
   const transparentCheckbox = root.querySelector('#export-transparent-background');
   const transparentLabel = root.querySelector('#export-transparent-label');
   const downloadButton = root.querySelector('#export-download');
+  const copyButton = root.querySelector('#export-copy');
+  const copyLabelText = root.querySelector('#export-copy-label');
+  const shareButton = root.querySelector('#export-share');
+  const previewImage = root.querySelector('#export-preview-image');
+  const previewName = root.querySelector('#export-preview-name');
+  const previewDimensions = root.querySelector('#export-preview-dimensions');
+  const previewSize = root.querySelector('#export-preview-size');
+  const actionButtons = [copyButton, downloadButton, shareButton].filter(Boolean);
+
+  // Hide what this browser can't do. Share is the primary (accent) action
+  // where there's a share sheet; elsewhere Download is.
+  const { canShare, canCopy } = shareCapabilities();
+  copyButton?.classList.toggle('hidden', !canCopy);
+  shareButton?.classList.toggle('hidden', !canShare);
+  shareButton?.classList.toggle('is-primary', canShare);
+  downloadButton.classList.toggle('is-primary', !canShare);
+
+  const latest = createLatestOnly();
+  // { blob, pngBlob, options } for the current options, or null while
+  // rendering / closed.
+  let rendered = null;
+  let previewUrl = null;
 
   function currentFormat() {
     const activeFormatButton = formatOptions.find((btn) => btn.classList.contains('active'));
     return FORMATS.includes(activeFormatButton?.dataset.format) ? activeFormatButton.dataset.format : 'png';
+  }
+
+  function currentScale() {
+    const activeScaleButton = scaleOptions.find((btn) => btn.classList.contains('active'));
+    return SCALES.includes(Number(activeScaleButton?.dataset.scale)) ? Number(activeScaleButton.dataset.scale) : 1;
+  }
+
+  function currentOptions() {
+    return { scale: currentScale(), format: currentFormat(), skipBackground: transparentCheckbox.checked };
   }
 
   // JPG has no alpha channel (see the export spec's Transparent-background
@@ -162,8 +201,58 @@ export function initExport({ onExport, getProjectName, root = document }) {
     syncTransparentToggleAvailability();
   }
 
+  function setBusy(busy) {
+    actionButtons.forEach((btn) => { btn.disabled = busy; });
+  }
+
+  function showPreview() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = rendered ? URL.createObjectURL(rendered.blob) : null;
+    if (previewImage) {
+      if (previewUrl) previewImage.src = previewUrl;
+      else previewImage.removeAttribute('src');
+    }
+    if (!rendered) return;
+    const { scale, format } = rendered.options;
+    const { width, height } = getCanvasSize();
+    if (previewName) previewName.textContent = getProjectName() || 'Untitled';
+    if (previewDimensions) previewDimensions.textContent = `${width * scale}×${height * scale} · ${format.toUpperCase()}`;
+    if (previewSize) previewSize.textContent = formatFileSize(rendered.blob.size);
+  }
+
+  async function refresh() {
+    const options = currentOptions();
+    if (copyLabelText) copyLabelText.textContent = copyLabel(options.format);
+    rendered = null;
+    setBusy(true);
+    let outcome;
+    try {
+      outcome = await latest.run(async () => {
+        const blob = await render(options);
+        const pngBlob = options.format === 'png' ? blob : await render({ ...options, format: 'png' });
+        if (!blob || !pngBlob) throw new Error('Image encoding returned no data');
+        return { blob, pngBlob };
+      });
+    } catch (err) {
+      console.error(err);
+      showToast("Couldn't prepare the image.", { type: 'error' });
+      return;
+    }
+    if (!outcome.current) return;
+    rendered = { ...outcome.result, options };
+    showPreview();
+    setBusy(false);
+  }
+
+  function filenameFor(options) {
+    return exportFilename(getProjectName(), options.scale, options.format);
+  }
+
   function close() {
     panel.classList.add('hidden');
+    latest.cancel();
+    rendered = null;
+    showPreview();
   }
 
   toggleButton.addEventListener('click', () => {
@@ -176,6 +265,7 @@ export function initExport({ onExport, getProjectName, root = document }) {
       // Floating layout: the toggle is hidden and this opens from the More
       // menu, so anchor to More instead (5b-top-bar-more).
       positionPanel(panel, visibleAnchor(toggleButton, root.querySelector('#more-button')));
+      refresh();
     } else {
       close();
     }
@@ -204,6 +294,7 @@ export function initExport({ onExport, getProjectName, root = document }) {
   scaleOptions.forEach((btn) => {
     btn.addEventListener('click', () => {
       scaleOptions.forEach((other) => other.classList.toggle('active', other === btn));
+      refresh();
     });
   });
 
@@ -211,18 +302,45 @@ export function initExport({ onExport, getProjectName, root = document }) {
     btn.addEventListener('click', () => {
       formatOptions.forEach((other) => other.classList.toggle('active', other === btn));
       syncTransparentToggleAvailability();
+      refresh();
     });
   });
 
+  transparentCheckbox.addEventListener('change', refresh);
+
   downloadButton.addEventListener('click', () => {
-    const activeScaleButton = scaleOptions.find((btn) => btn.classList.contains('active'));
-    const scale = SCALES.includes(Number(activeScaleButton?.dataset.scale))
-      ? Number(activeScaleButton.dataset.scale)
-      : 1;
-    const format = currentFormat();
-    const filename = `${sanitizeFilename(getProjectName())}@${scale}x.${format}`;
-    onExport({ scale, format, skipBackground: transparentCheckbox.checked, filename });
+    if (!rendered) return;
+    const url = URL.createObjectURL(rendered.blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filenameFor(rendered.options);
+    a.click();
+    URL.revokeObjectURL(url);
+    onDownloaded();
     close();
+  });
+
+  // Copy and Share call the browser API synchronously in the click, with
+  // the pre-rendered Blob - no await before it (see the doc comment).
+  copyButton?.addEventListener('click', () => {
+    if (!rendered) return;
+    writeImage(rendered.pngBlob).then((ok) => {
+      if (ok) showToast('Copied');
+      else showToast("Couldn't copy the image. Try Download instead.", { type: 'error' });
+    });
+  });
+
+  shareButton?.addEventListener('click', () => {
+    if (!rendered) return;
+    const file = new File([rendered.blob], filenameFor(rendered.options), { type: rendered.blob.type });
+    navigator.share({ files: [file], title: getProjectName() || 'Untitled' })
+      .then(close)
+      .catch((err) => {
+        // AbortError: the user dismissed the share sheet - not a failure.
+        if (err?.name === 'AbortError') return;
+        console.error(err);
+        showToast("Couldn't share. Try Download instead.", { type: 'error' });
+      });
   });
 
   return {

@@ -1930,16 +1930,9 @@ function bindDomOnce() {
   exportControls = initExport({
     root,
     getProjectName: () => state.projectName,
-    async onExport({ scale, format, skipBackground, filename }) {
-      const blob = await state.layerStack.toPNGBlob({ scale, format, skipBackground });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-      celebrateExport(state.exportButton);
-    },
+    getCanvasSize: () => ({ width: state.layerStack.width, height: state.layerStack.height }),
+    render: (options) => state.layerStack.toPNGBlob(options),
+    onDownloaded: () => celebrateExport(state.exportButton),
   });
 
   // Every action auto-saves, so there's nothing to lose by leaving — no

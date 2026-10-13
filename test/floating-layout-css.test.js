@@ -568,3 +568,25 @@ describe('Color Library popovers', () => {
     }
   });
 });
+
+describe('Glass menus and popovers (2026-10-13 polish)', () => {
+  test('FORMA_CLASSES puts glass on menus and popovers', async () => {
+    const { FORMA_CLASSES } = await import('../js/layout.js');
+    const glassSelectors = FORMA_CLASSES.filter(([, c]) => c.includes('glass')).map(([s]) => s).join(', ');
+    for (const s of ['.topbar-menu', '.canvas-settings-panel', '#color-picker-popover']) {
+      assert.ok(glassSelectors.includes(s), `${s} gets .glass`);
+    }
+  });
+
+  test('menu and popover box rules step aside for .glass', () => {
+    const src = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+    for (const sel of ['.topbar-menu:not(.hidden):not(:where(.glass))', '.canvas-settings-panel:not(:where(.glass))', '.color-picker-popover:not(:where(.glass))']) {
+      assert.ok(src.includes(sel), sel);
+    }
+  });
+
+  test('menu items have an inset rounded hover on the ghost fill', () => {
+    const src = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+    assert.match(src, /\.topbar-menu\.glass \.topbar-menu-item:not\(:disabled\):hover,\s*\.topbar-menu\.glass \.topbar-menu-item:focus-visible \{\s*background: var\(--ghost-hover\);/);
+  });
+});

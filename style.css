@@ -1172,11 +1172,14 @@ textarea,
   gap: 0.5rem;
   width: 15rem;
   padding: 0.6rem;
+  z-index: 60;
+}
+
+.canvas-settings-panel:not(:where(.glass)) {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-  z-index: 60;
 }
 
 .canvas-settings-row {
@@ -2118,16 +2121,23 @@ span.layer-lock-icon {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
   padding: 0.6rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   z-index: 60;
   /* The disc canvas is 232px; plus padding. */
   width: 16.25rem;
   max-height: calc(100vh - 16px);
   overflow-y: auto;
+}
+
+.color-picker-popover:not(:where(.glass)) {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.color-picker-popover.glass {
+  border-radius: 18px;
 }
 
 .color-picker-popover-header {
@@ -3320,8 +3330,8 @@ span.layer-lock-icon {
   outline-offset: -2px;
 }
 
-/* Opaque like the other popovers (.canvas-settings-panel), positioned by
-   js/topbar-menu.js. */
+/* Positioned by js/topbar-menu.js. Forma .glass in the floating layout
+   (js/layout.js); the box below is for a menu that isn't glass. */
 .workspace-screen[data-layout="floating"] .topbar-menu:not(.hidden) {
   position: fixed;
   z-index: 60;
@@ -3329,10 +3339,28 @@ span.layer-lock-icon {
   flex-direction: column;
   min-width: 13rem;
   padding: 0.35rem;
+  border-radius: 14px;
+}
+
+.workspace-screen[data-layout="floating"] .topbar-menu:not(.hidden):not(:where(.glass)) {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 0.6rem;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* On glass: rows are inset pills on the ghost fill, like Pixelmator's. */
+.topbar-menu.glass .topbar-menu-item {
+  border-radius: 9px;
+}
+
+.topbar-menu.glass .topbar-menu-item:not(:disabled):hover,
+.topbar-menu.glass .topbar-menu-item:focus-visible {
+  background: var(--ghost-hover);
+}
+
+.topbar-menu.glass .topbar-menu-separator {
+  margin: 0.3rem 0.6rem;
+  background: var(--glass-border);
 }
 
 .topbar-menu [role="group"] {

@@ -697,15 +697,15 @@ The Layers panel SHALL list layers top to bottom as rounded row cards
 layer), a live thumbnail, the name over a detail line ("Background",
 "Reference · Original"/"Pixelated", or the blend mode and opacity, e.g.
 "Normal · 100%"), the reference image layer's own toggles, and a
-visibility switch named "Show <layer>". The active row SHALL be
-highlighted and show a ⋯ button whose menu offers Rename, Opacity &
-Blend…, Duplicate (⌘J), Merge Down (⌘E), Group (⌘G) or Remove from Group,
+round visibility checkbox named "Show <layer>". The active row SHALL be
+highlighted and show a ⋯ button whose menu offers Rename, Duplicate (⌘J), Merge Down (⌘E), Group (⌘G) or Remove from Group,
 Move Up, Move Down and Delete Layer (confirmed; undoable). The header SHALL
-offer ⋯ (Select Layers, Add Reference Image…), the Layers title, Opacity &
-Blend for the active layer, Add layer and Close.
+offer ⋯ (Select Layers, Add Reference Image…), the Layers title, Add
+layer and Close, with the active layer's blend and opacity in a row
+beneath (see "Header blend and opacity").
 
-#### Scenario: Hiding with the switch
-- **WHEN** the user turns off Layer 2's switch
+#### Scenario: Hiding with the checkbox
+- **WHEN** the user unchecks Layer 2's visibility checkbox
 - **THEN** Layer 2 no longer composites, as one undoable step
 
 ### Requirement: Layer groups
@@ -715,7 +715,7 @@ layers, else the active one). Grouped layers SHALL be gathered, in order,
 at the topmost one's position. A group SHALL be listed as its own row
 above its members - a chevron to collapse or expand it, a folder, its
 name over "Group · N layers" (and its opacity when below 100%), ⋯ and a
-visibility switch - with its members indented beneath it and hidden
+visibility checkbox - with its members indented beneath it and hidden
 while it's collapsed. The group's ⋯ menu SHALL offer Rename, Opacity…,
 Ungroup, Move Group Up, Move Group Down and Delete Group (the group and
 its layers; confirmed; undoable). A hidden group SHALL hide its members;
@@ -735,8 +735,9 @@ undo/redo; projects from before groups open ungrouped.
   and the canvas is unchanged
 
 #### Scenario: Hiding a group
-- **WHEN** the user turns off a group's switch
-- **THEN** none of its layers composite, while their own switches stay on
+- **WHEN** the user unchecks a group's visibility checkbox
+- **THEN** none of its layers composite, while their own checkboxes stay
+  checked
 
 #### Scenario: Group opacity
 - **WHEN** a group holding one opaque black pixel is set to 50% opacity

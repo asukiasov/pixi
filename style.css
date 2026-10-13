@@ -1769,8 +1769,9 @@ textarea,
   outline: none;
 }
 
-/* Background layer (2g-background-layer) - locked in stacking position,
-   see buildLayerRow in js/workspace.js. `span.layer-lock-icon` (not just
+/* A user-locked layer's glyph at the start of its row's detail line
+   (layer-context-menu, buildLayerRow in js/layers-ui.js). The rule dates
+   from the Background layer's old lock icon. `span.layer-lock-icon` (not just
    `.layer-lock-icon`) (icon-button-size-system) - this element also
    carries the bare `.material-symbols-outlined` class, and the Google
    Fonts icon stylesheet (index.html's link, loaded after this file) ships
@@ -1782,7 +1783,9 @@ textarea,
    specificity just enough to win instead. */
 span.layer-lock-icon {
   flex: none;
+  margin-inline-end: 2px;
   font-size: 0.9rem;
+  vertical-align: -2px;
   color: var(--color-text-secondary);
 }
 
@@ -3297,6 +3300,61 @@ span.layer-lock-icon {
 .topbar-menu [role="group"] {
   display: flex;
   flex-direction: column;
+}
+
+/* One capsule of segments, icon over label: the layer menu's Cut/Copy/
+   Paste strip (layer-context-menu). Its own radius, not .glass-pill,
+   since js/layout.js adds and removes that class per layout. */
+.action-capsule {
+  display: flex;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ghost-hover);
+}
+
+.action-capsule-segment {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 52px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.action-capsule-segment + .action-capsule-segment {
+  border-inline-start: 1px solid var(--glass-border);
+}
+
+.action-capsule-segment:not(:disabled):hover {
+  background: var(--ghost-hover);
+}
+
+.action-capsule-segment:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.action-capsule-segment:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.action-capsule-segment .material-symbols-outlined {
+  font-size: 1.3rem;
+}
+
+/* Beats `.topbar-menu [role="group"]` above, which stacks groups in a column. */
+.topbar-menu .layer-menu-strip {
+  flex-direction: row;
+  margin-bottom: 0.3rem;
 }
 
 .topbar-menu-item {

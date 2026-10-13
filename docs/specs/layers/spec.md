@@ -684,16 +684,53 @@ The Layers panel SHALL list layers top to bottom as rounded row cards
 layer), a live thumbnail, the name over a detail line ("Background",
 "Reference · Original"/"Pixelated", or the blend mode and opacity, e.g.
 "Normal · 100%"), the reference image layer's own toggles, and a
-visibility switch named "Show <layer>". The active row SHALL be
-highlighted and show a ⋯ button whose menu offers Rename, Opacity &
-Blend…, Duplicate (⌘J), Merge Down (⌘E), Group (⌘G) or Remove from Group,
-Move Up, Move Down and Delete Layer (confirmed; undoable). The header SHALL
+visibility switch named "Show <layer>". A user-locked layer's detail line
+SHALL start with a lock glyph, read out as "Locked". The active row SHALL
+be highlighted and show a ⋯ button whose menu (after Pixelmator Pro for
+iPad) offers, in order: a capsule strip of Cut, Copy and Paste (icon over
+label; see the clipboard spec); Duplicate (⌘J), Lock or Unlock, and
+Rename; a separator and Select Content; a separator and Merge Down (⌘E),
+Group (⌘G) or Remove from Group, Move Up and Move Down; a separator and
+Delete Layer (confirmed; undoable). The header SHALL
 offer ⋯ (Select Layers, Add Reference Image…), the Layers title, Opacity &
 Blend for the active layer, Add layer and Close.
 
 #### Scenario: Hiding with the switch
 - **WHEN** the user turns off Layer 2's switch
 - **THEN** Layer 2 no longer composites, as one undoable step
+
+### Requirement: Layer lock
+The user SHALL be able to lock any layer except the reference image layer
+from its ⋯ menu (Lock; Unlock once locked), as one undoable step. A lock
+SHALL protect the layer's pixels only: every drawing tool, Move, the
+Transform popover's actions, selection Delete, Cut, and merging into or
+from the layer SHALL be refused, with the toast "Layer is locked. Unlock
+it from the layer's ⋯ menu." once per refused gesture and no undo step.
+Reordering, grouping, visibility, opacity, blend mode, Rename, Duplicate,
+Copy, Delete and canvas-wide resize, rotate and flip SHALL still work. The
+lock SHALL be saved with the project and kept by undo/redo; a duplicate of
+a locked layer SHALL start unlocked. It is separate from the Background
+layer's reorder lock.
+
+#### Scenario: Drawing on a locked layer
+- **WHEN** the active layer is locked and the user draws a pencil stroke
+- **THEN** the layer's pixels are unchanged, no undo step is added, and the
+  lock toast is shown once
+
+#### Scenario: Merge refused
+- **WHEN** the layer directly below the active one is locked
+- **THEN** Merge Down is disabled and ⌘E does nothing
+
+### Requirement: Select Content
+The layer ⋯ menu SHALL offer Select Content, which sets the selection to
+the smallest rectangle around the layer's non-transparent pixels (Pixi's
+selection is rectangular, so this is not an exact outline). It SHALL be
+disabled on an empty layer and is not an undo step.
+
+#### Scenario: Selecting a sprite
+- **WHEN** the active layer's only pixels fill x 2–4, y 3–4 and the user
+  chooses Select Content
+- **THEN** the selection is x 2, y 3, 3 × 2
 
 ### Requirement: Layer groups
 The user SHALL be able to put layers in groups, one level deep: from a

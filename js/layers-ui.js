@@ -1,8 +1,9 @@
 // The Layers panel, after Pixelmator Pro for iPad - rounded row cards
-// (thumbnail, name, detail line, visibility switch, ⋯ actions on the
+// (thumbnail, name, detail line, visibility checkbox, ⋯ actions on the
 // active row), one level of groups with a disclosure chevron, drag to
-// reorder by each row's grip, Select mode for touch multi-select, and an
-// Opacity & Blend popover. Also the reference image layer's controls.
+// reorder by each row's grip, Select mode for touch multi-select, the
+// active layer's blend and opacity in a header row, and a group Opacity
+// popover. Also the reference image layer's controls.
 // LayerStack (lib/pixel-engine/layers.js) does the work; this module is
 // purely the UI that calls it, via workspace.js's
 // getLayerStack/renderCanvas/commit/onWorkspaceReset/
@@ -13,8 +14,9 @@
 // indirection between the two files, just ordinary (circular) ES module
 // imports.
 
-import { getLayerStack, renderCanvas, commit, onWorkspaceReset, bindPanelHeaderCollapse } from './workspace.js';
-import { BLEND_MODES, REFERENCE_MODES } from '../lib/pixel-engine/layers.js';
+import { getLayerStack, renderCanvas, commit, onWorkspaceReset, bindPanelHeaderCollapse, copyActive, cutActive, pasteFromClipboard, selectActiveContent, getSelection } from './workspace.js';
+import { BLEND_MODES, REFERENCE_MODES, MAX_LAYERS } from '../lib/pixel-engine/layers.js';
+import { contentBounds } from '../lib/pixel-engine/transform.js';
 import { decodeImageFile, fitImageToCanvas, UNREADABLE_IMAGE_MESSAGE } from './image-import.js';
 import { confirmDialog } from './confirm-dialog.js';
 import { showToast } from './toast.js';
@@ -164,7 +166,7 @@ let layersPanelVisible = true;
 // Cmd/Ctrl- and Shift-click. Transient UI state.
 let selectMode = false;
 
-// What the Opacity & Blend popover is editing: { kind: 'layer' | 'group', id }.
+// What the group Opacity popover is editing: { kind: 'group', id }.
 let propertiesTarget = null;
 
 // The rows as shown, top to bottom, rebuilt by every render - for drag
@@ -178,7 +180,9 @@ let layersPanel = null;
 let layersPanelHeader = null;
 let layersPanelToggle = null;
 let layersPanelList = null;
-let layersPanelBlendSelect = null;
+let headerBlend = null;
+let headerOpacity = null;
+let headerOpacityReadout = null;
 let layersPanelOpacitySlider = null;
 let layersPanelOpacityNumber = null;
 let layersPanelOpacityPopover = null;
@@ -190,8 +194,6 @@ let selectCount = null;
 let selectGroupButton = null;
 let selectMergeButton = null;
 let layerMenu = null;
-
-const MAX_LAYERS = 8;
 
 function syncLayersCollapse() {
   const collapsed = !layersPanelVisible;
@@ -227,20 +229,33 @@ function layerDetail(layer) {
   return `${blendLabel(layer.blendMode)} · ${Math.round(layer.opacity * 100)}%`;
 }
 
-/** An on/off switch (a real checkbox with role="switch") for visibility. */
+/** What the header's blend and opacity controls show for the active layer. */
+export function headerPropertiesState(layer) {
+  if (!layer) return { blendMode: 'normal', opacityPercent: 100, disabled: true };
+  return { blendMode: layer.blendMode, opacityPercent: Math.round(layer.opacity * 100), disabled: !!layer.isReferenceImage };
+}
+
+function syncHeaderProperties() {
+  const layerStack = getLayerStack();
+  const state = headerPropertiesState(layerStack.getActiveLayer());
+  headerBlend.value = state.blendMode;
+  headerBlend.disabled = state.disabled;
+  headerOpacity.value = String(state.opacityPercent);
+  headerOpacity.disabled = state.disabled;
+  headerOpacityReadout.textContent = `${state.opacityPercent}%`;
+}
+
+/** Visibility: a round checkbox in the accent colour, checked = shown. */
 function buildVisibilitySwitch(name, visible, onChange) {
   const label = document.createElement('label');
-  label.className = 'layer-switch';
+  label.className = 'layer-visibility';
   const input = document.createElement('input');
   input.type = 'checkbox';
-  input.setAttribute('role', 'switch');
+  input.className = 'layer-visibility-check';
   input.checked = visible;
   input.setAttribute('aria-label', `Show ${name}`);
   input.addEventListener('change', () => onChange(input.checked));
-  const track = document.createElement('span');
-  track.className = 'layer-switch-track';
-  track.setAttribute('aria-hidden', 'true');
-  label.append(input, track);
+  label.append(input);
   return label;
 }
 
@@ -295,6 +310,7 @@ export function renderLayersPanel() {
   // this is just the matching disabled UI state.
   addReferenceImageButton.disabled = layers.length >= MAX_LAYERS || layers.some((l) => l.isReferenceImage);
   syncSelectBar(layers);
+  syncHeaderProperties();
   if (propertiesTarget && !layersPanelOpacityPopover.classList.contains('hidden')) syncPropertiesPopover();
 }
 
@@ -344,7 +360,7 @@ function bindNameTaps(label, key, onRename) {
 /**
  * One layer's row card: (Select mode's checkbox,) drag grip, thumbnail,
  * name over a detail line, the reference image's own toggles, ⋯ on the
- * active row, and the visibility switch. Every mutating handler calls
+ * active row, and the visibility checkbox. Every mutating handler calls
  * commit(), which re-renders the panel.
  */
 function buildLayerRow(layer, index, isActive, isMarked, layers) {
@@ -402,7 +418,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
     row.appendChild(check);
   }
 
-  // Dots drawn in CSS, not an icon glyph: the grip must stay pressable
+  // Bars drawn in CSS, not an icon glyph: the grip must stay pressable
   // even when the icon font fails to load (which hides glyphs).
   const grip = document.createElement('span');
   grip.className = 'layer-grip';
@@ -418,6 +434,11 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   const detail = document.createElement('span');
   detail.className = 'layer-detail';
   detail.textContent = layerDetail(layer);
+  if (layer.locked) {
+    // User pixel lock (layer-context-menu): a glyph on the detail line,
+    // clear of the name so renaming isn't in the way; read out as "Locked".
+    detail.insertAdjacentHTML('afterbegin', '<span class="material-symbols-outlined layer-lock-icon" aria-hidden="true">lock</span><span class="visually-hidden">Locked, </span>');
+  }
   text.append(nameLabel, detail);
   row.appendChild(text);
 
@@ -439,7 +460,7 @@ function buildLayerRow(layer, index, isActive, isMarked, layers) {
   return row;
 }
 
-/** A group's row: chevron (collapse), folder, name over "N layers", ⋯ and its visibility switch. */
+/** A group's row: chevron (collapse), folder, name over "N layers", ⋯ and its visibility checkbox. */
 function buildGroupRow(group, memberIndices) {
   const layerStack = getLayerStack();
   const row = document.createElement('div');
@@ -541,24 +562,74 @@ function buildReferenceToggles(layer) {
 /** Index of a layer by id right now (indices shift; ids don't). */
 const indexOf = (id) => getLayerStack().getLayers().findIndex((l) => l.id === id);
 
+/**
+ * Which layer ⋯ menu items are available (layer-context-menu). Pure:
+ * `hasContent` (any non-transparent pixel on the layer) and
+ * `selectionHasContent` (inside the selection) come precomputed from
+ * layerMenuItems. Cut needs a selection; Copy without one takes the
+ * whole layer.
+ */
+export function layerMenuState({ layer, layers, index, hasSelection, hasContent, selectionHasContent }) {
+  const atCap = layers.length >= MAX_LAYERS;
+  const ref = !!layer.isReferenceImage;
+  return {
+    cut: { disabled: ref || !!layer.locked || !hasSelection || !selectionHasContent },
+    copy: { disabled: ref || !(hasSelection ? selectionHasContent : hasContent) },
+    paste: { disabled: atCap },
+    duplicate: { disabled: atCap || ref },
+    lock: { hidden: ref, label: layer.locked ? 'Unlock' : 'Lock', icon: layer.locked ? 'lock_open' : 'lock' },
+    selectContent: { disabled: !hasContent },
+    merge: { disabled: mergeButtonState(layers, index, new Set()).disabled },
+    group: { disabled: !!layer.isBackground || ref },
+    moveUp: { disabled: !!layer.isBackground },
+    moveDown: { disabled: !!layer.isBackground },
+    delete: { disabled: layers.length <= 1 },
+  };
+}
+
+/**
+ * The layer ⋯ menu, after Pixelmator Pro for iPad: a Cut/Copy/Paste
+ * strip, then Duplicate/Lock/Rename, Select Content, Pixi's structure
+ * items, and Delete last.
+ */
 function layerMenuItems(layer, row) {
   const layerStack = getLayerStack();
   const layers = layerStack.getLayers();
   const index = indexOf(layer.id);
-  const locked = layer.isBackground || layer.isReferenceImage;
-  const merge = mergeButtonState(layers, index, new Set());
+  const { engine } = layer;
+  const selection = getSelection();
+  const s = layerMenuState({
+    layer,
+    layers,
+    index,
+    hasSelection: !!selection,
+    hasContent: !!contentBounds(engine, { x: 0, y: 0, width: engine.width, height: engine.height }),
+    selectionHasContent: !!selection && !!contentBounds(engine, selection),
+  });
   return [
+    {
+      type: 'strip',
+      label: 'Edit',
+      items: [
+        { label: 'Cut', icon: 'content_cut', disabled: s.cut.disabled, onSelect: cutActive },
+        { label: 'Copy', icon: 'content_copy', disabled: s.copy.disabled, onSelect: copyActive },
+        { label: 'Paste', icon: 'content_paste', disabled: s.paste.disabled, onSelect: pasteFromClipboard },
+      ],
+    },
+    { label: 'Duplicate', icon: 'library_add', shortcut: '⌘J', disabled: s.duplicate.disabled, onSelect: duplicateActiveLayer },
+    ...(s.lock.hidden ? [] : [{ label: s.lock.label, icon: s.lock.icon, onSelect: () => apply(() => layerStack.setLocked(indexOf(layer.id), !layer.locked)) }]),
     { label: 'Rename', icon: 'edit', onSelect: () => startRename(row, layer.name, (name) => layerStack.renameLayer(indexOf(layer.id), name), { restoreFocus: true, key: layer.id }) },
-    { label: 'Opacity & Blend…', icon: 'tune', disabled: layer.isReferenceImage, onSelect: (anchor) => openProperties({ kind: 'layer', id: layer.id }, anchor) },
-    { label: 'Duplicate', icon: 'content_copy', shortcut: '⌘J', disabled: layers.length >= MAX_LAYERS || layer.isReferenceImage, onSelect: duplicateActiveLayer },
-    { label: 'Merge Down', icon: 'merge', shortcut: '⌘E', disabled: merge.disabled, onSelect: () => apply(() => layerStack.mergeDown(indexOf(layer.id))) },
+    'separator',
+    { label: 'Select Content', icon: 'select', disabled: s.selectContent.disabled, onSelect: selectActiveContent },
+    'separator',
+    { label: 'Merge Down', icon: 'merge', shortcut: '⌘E', disabled: s.merge.disabled, onSelect: () => apply(() => layerStack.mergeDown(indexOf(layer.id))) },
     layer.groupId
       ? { label: 'Remove from Group', icon: 'folder_off', onSelect: () => apply(() => removeFromGroup(layer.id)) }
-      : { label: 'Group', icon: 'create_new_folder', shortcut: '⌘G', disabled: locked, onSelect: () => apply(() => layerStack.groupLayers([indexOf(layer.id)])) },
-    { label: 'Move Up', icon: 'arrow_upward', disabled: layer.isBackground, onSelect: () => apply(() => layerStack.moveLayerUp(indexOf(layer.id))) },
-    { label: 'Move Down', icon: 'arrow_downward', disabled: layer.isBackground, onSelect: () => apply(() => layerStack.moveLayerDown(indexOf(layer.id))) },
+      : { label: 'Group', icon: 'create_new_folder', shortcut: '⌘G', disabled: s.group.disabled, onSelect: () => apply(() => layerStack.groupLayers([indexOf(layer.id)])) },
+    { label: 'Move Up', icon: 'arrow_upward', disabled: s.moveUp.disabled, onSelect: () => apply(() => layerStack.moveLayerUp(indexOf(layer.id))) },
+    { label: 'Move Down', icon: 'arrow_downward', disabled: s.moveDown.disabled, onSelect: () => apply(() => layerStack.moveLayerDown(indexOf(layer.id))) },
     'separator',
-    { label: 'Delete Layer', icon: 'delete', danger: true, disabled: layers.length <= 1, onSelect: () => deleteLayerWithConfirm(layer) },
+    { label: 'Delete Layer', icon: 'delete', danger: true, disabled: s.delete.disabled, onSelect: () => deleteLayerWithConfirm(layer) },
   ];
 }
 
@@ -632,10 +703,12 @@ async function deleteLayerWithConfirm(layer) {
 
 /**
  * Shows #layer-menu filled with `items` beside `anchor` (a row's ⋯).
- * Items: { label, icon, shortcut?, disabled?, danger?, onSelect(anchor) }
- * or 'separator'. Arrow keys move, Escape closes back to the anchor, an
- * outside press closes it. One menu, rebuilt per open, so nothing piles
- * up listeners on re-rendered rows.
+ * Items: { label, icon, shortcut?, disabled?, danger?, onSelect(anchor) },
+ * 'separator', or { type: 'strip', label, items } - a capsule of items
+ * shown icon over label (the Cut/Copy/Paste strip). Arrow keys move
+ * through every item in order, strip included; Escape closes back to the
+ * anchor, an outside press closes it. One menu, rebuilt per open, so
+ * nothing piles up listeners on re-rendered rows.
  */
 function openContextMenu(anchor, items) {
   layerMenu.innerHTML = '';
@@ -647,24 +720,16 @@ function openContextMenu(anchor, items) {
       layerMenu.appendChild(sep);
       continue;
     }
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'topbar-menu-item' + (item.danger ? ' topbar-menu-item-danger' : '');
-    button.setAttribute('role', 'menuitem');
-    button.disabled = !!item.disabled;
-    button.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">${item.icon}</span>`;
-    button.append(item.label);
-    if (item.shortcut) {
-      const kbd = document.createElement('kbd');
-      kbd.className = 'topbar-menu-shortcut';
-      kbd.textContent = item.shortcut;
-      button.appendChild(kbd);
+    if (item.type === 'strip') {
+      const strip = document.createElement('div');
+      strip.className = 'action-capsule layer-menu-strip';
+      strip.setAttribute('role', 'group');
+      strip.setAttribute('aria-label', item.label);
+      for (const segment of item.items) strip.appendChild(menuButton(segment, anchor, 'action-capsule-segment'));
+      layerMenu.appendChild(strip);
+      continue;
     }
-    button.addEventListener('click', () => {
-      closeContextMenu({ restoreFocus: false });
-      item.onSelect(anchor);
-    });
-    layerMenu.appendChild(button);
+    layerMenu.appendChild(menuButton(item, anchor, 'topbar-menu-item' + (item.danger ? ' topbar-menu-item-danger' : '')));
   }
   layerMenu.classList.remove('hidden');
   layerMenu.anchor = anchor;
@@ -679,6 +744,32 @@ function openContextMenu(anchor, items) {
   layerMenu.style.left = `${left}px`;
   layerMenu.style.top = `${top}px`;
   layerMenu.querySelector('[role="menuitem"]:not(:disabled)')?.focus();
+}
+
+/** One menu button: icon, label, optional shortcut; closes the menu, then runs onSelect. */
+function menuButton(item, anchor, className) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = className;
+  button.setAttribute('role', 'menuitem');
+  button.disabled = !!item.disabled;
+  button.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">${item.icon}</span>`;
+  const label = document.createElement('span');
+  label.textContent = item.label;
+  button.appendChild(label);
+  if (item.shortcut) {
+    const kbd = document.createElement('kbd');
+    kbd.className = 'topbar-menu-shortcut';
+    kbd.textContent = item.shortcut;
+    button.appendChild(kbd);
+  }
+  button.addEventListener('click', () => {
+    // Synchronous through onSelect: Copy/Cut/Paste reach the clipboard
+    // API inside this click, which Safari requires.
+    closeContextMenu({ restoreFocus: false });
+    item.onSelect(anchor);
+  });
+  return button;
 }
 
 function closeContextMenu({ restoreFocus = true } = {}) {
@@ -794,25 +885,12 @@ function startDrag(e, layer, row) {
   grip.addEventListener('pointercancel', end);
 }
 
-/** Fills the Opacity & Blend popover from its target (a layer or a group). */
+/** Fills the group Opacity popover from its target group. */
 function syncPropertiesPopover() {
-  const layerStack = getLayerStack();
-  const title = layersPanelOpacityPopover.querySelector('#layer-properties-title');
-  const blendRow = layersPanelOpacityPopover.querySelector('#layer-properties-blend-row');
-  if (propertiesTarget.kind === 'group') {
-    const group = layerStack.getGroup(propertiesTarget.id);
-    if (!group) return closeLayersOpacityPopover();
-    title.textContent = group.name;
-    blendRow.hidden = true;
-    setOpacityFields(Math.round(group.opacity * 100));
-  } else {
-    const layer = layerStack.getLayers()[indexOf(propertiesTarget.id)];
-    if (!layer) return closeLayersOpacityPopover();
-    title.textContent = layer.name;
-    blendRow.hidden = false;
-    layersPanelBlendSelect.value = layer.blendMode;
-    setOpacityFields(Math.round(layer.opacity * 100));
-  }
+  const group = getLayerStack().getGroup(propertiesTarget.id);
+  if (!group) return closeLayersOpacityPopover();
+  layersPanelOpacityPopover.querySelector('#layer-properties-title').textContent = group.name;
+  setOpacityFields(Math.round(group.opacity * 100));
 }
 
 function setOpacityFields(percent) {
@@ -820,7 +898,7 @@ function setOpacityFields(percent) {
   layersPanelOpacityNumber.value = String(percent);
 }
 
-/** Opens Opacity & Blend for `target`, beside `anchor`, kept on screen. */
+/** Opens the group Opacity popover for `target`, beside `anchor`, kept on screen. */
 function openProperties(target, anchor) {
   propertiesTarget = target;
   syncPropertiesPopover();
@@ -844,14 +922,15 @@ export function closeLayersOpacityPopover() {
 /**
  * What the Merge button would do right now - the same choice
  * mergeMarkedOrActiveDown makes: the marked set when 2+ layers are
- * marked (marking already refuses locked layers), else the active layer
- * down, refused for the bottom layer or when either layer is the
- * Background/reference image layer (LayerStack.mergeDown's own rules).
+ * marked (marking already refuses the Background and reference layers;
+ * a user-locked one among them disables it), else the active layer down,
+ * refused for the bottom layer or when either layer is the Background,
+ * reference image or a user-locked layer (LayerStack's own merge rules).
  */
 export function mergeButtonState(layers, activeIndex, markedIds) {
-  const markedCount = layers.filter((l) => markedIds.has(l.id)).length;
-  if (markedCount >= 2) return { disabled: false, label: `Merge ${markedCount} layers` };
-  const locked = (l) => !l || l.isBackground || l.isReferenceImage;
+  const marked = layers.filter((l) => markedIds.has(l.id));
+  if (marked.length >= 2) return { disabled: marked.some((l) => l.locked), label: `Merge ${marked.length} layers` };
+  const locked = (l) => !l || l.isBackground || l.isReferenceImage || !!l.locked;
   const disabled = activeIndex <= 0 || locked(layers[activeIndex]) || locked(layers[activeIndex - 1]);
   return { disabled, label: 'Merge down' };
 }
@@ -916,7 +995,6 @@ export function initLayers(root = document) {
   layersPanelHeader = root.querySelector('#layers-panel-header');
   layersPanelToggle = root.querySelector('#layers-panel-toggle');
   layersPanelList = root.querySelector('#layers-panel-list');
-  layersPanelBlendSelect = root.querySelector('#layers-panel-blend-select');
   layersPanelOpacitySlider = root.querySelector('#layers-panel-opacity-slider');
   layersPanelOpacityNumber = root.querySelector('#layers-panel-opacity-number');
   layersPanelOpacityPopover = root.querySelector('#layers-panel-opacity-popover');
@@ -979,35 +1057,40 @@ export function initLayers(root = document) {
     closeContextMenu({ restoreFocus: false });
   });
 
-  // Opacity & Blend: header tune button = the active layer.
-  root.querySelector('#layers-properties-button').addEventListener('click', (e) => {
-    const layer = getLayerStack().getActiveLayer();
-    if (!layersPanelOpacityPopover.classList.contains('hidden')) {
-      closeLayersOpacityPopover();
-      return;
-    }
-    openProperties({ kind: 'layer', id: layer.id }, e.currentTarget);
-  });
+  // The active layer's blend and opacity, in the header row.
+  headerBlend = root.querySelector('#layers-header-blend');
+  headerOpacity = root.querySelector('#layers-header-opacity');
+  headerOpacityReadout = root.querySelector('#layers-header-opacity-readout');
   for (const mode of BLEND_MODES) {
     const option = document.createElement('option');
     option.value = mode;
     option.textContent = blendLabel(mode);
-    layersPanelBlendSelect.appendChild(option);
+    headerBlend.appendChild(option);
   }
-  layersPanelBlendSelect.addEventListener('change', () => {
-    if (propertiesTarget?.kind !== 'layer') return;
-    getLayerStack().setBlendMode(indexOf(propertiesTarget.id), layersPanelBlendSelect.value);
+  headerBlend.addEventListener('change', () => {
+    const layerStack = getLayerStack();
+    layerStack.setBlendMode(layerStack.getActiveIndex(), headerBlend.value);
     renderCanvas();
     commit();
   });
+  // Live while dragging; one undo step for the final value.
+  const setActiveOpacity = (commitChange) => {
+    const layerStack = getLayerStack();
+    const percent = Number(headerOpacity.value);
+    layerStack.setOpacity(layerStack.getActiveIndex(), percent / 100);
+    headerOpacityReadout.textContent = `${percent}%`;
+    renderCanvas();
+    if (commitChange) commit();
+  };
+  headerOpacity.addEventListener('input', () => setActiveOpacity(false));
+  headerOpacity.addEventListener('change', () => setActiveOpacity(true));
 
   function applyOpacity(value, { commitChange } = {}) {
     if (!propertiesTarget) return;
     const clamped = Math.max(0, Math.min(100, value));
     const layerStack = getLayerStack();
     // Live while dragging/typing; commit only the final value.
-    if (propertiesTarget.kind === 'group') layerStack.setGroupOpacity(propertiesTarget.id, clamped / 100);
-    else layerStack.setOpacity(indexOf(propertiesTarget.id), clamped / 100);
+    layerStack.setGroupOpacity(propertiesTarget.id, clamped / 100);
     setOpacityFields(clamped);
     renderCanvas();
     if (commitChange) commit();
@@ -1019,7 +1102,7 @@ export function initLayers(root = document) {
   document.addEventListener('pointerdown', (e) => {
     if (layersPanelOpacityPopover.classList.contains('hidden')) return;
     if (layersPanelOpacityPopover.contains(e.target)) return;
-    if (e.target.closest?.('#layers-properties-button, #layer-menu')) return;
+    if (e.target.closest?.('#layer-menu')) return;
     closeLayersOpacityPopover();
   });
   document.addEventListener('keydown', (e) => {

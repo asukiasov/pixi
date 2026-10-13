@@ -6,35 +6,55 @@
 // repo) - merged back wired directly (no extension-hook indirection) per
 // docs/history/2026-08-24-merge-pixi-pro-into-standard/design.md.
 //
-// Panel visibility: adds its own click listener to every tool-rail button
-// (the same DOM elements workspace.js's own bindDomOnce listens on) rather
-// than needing a workspace.js change - multiple listeners on one element
-// coexist fine.
+// Panel visibility follows the active tool through syncRectangleFillTool,
+// which js/workspace.js's applyToolScopedUI calls on every tool change
+// (rail click, R/O shortcut, overflow menu, start-up tool) - not from
+// rail-button clicks, which a shortcut never fires.
+//
+// The toggle's icon follows the active shape tool (rectangle or ellipse).
 
 import { setShapeFilled } from './shape-tools.js';
 
 let filled = false;
+let tool = 'rectangle';
+let panel = null;
+let toggle = null;
+let icons = [];
+
+/** Which of the toggle's four icons shows, for the active shape tool. */
+export function fillIconFor(activeTool, isFilled) {
+  return `${activeTool === 'ellipse' ? 'ellipse' : 'rectangle'}-${isFilled ? 'filled' : 'outline'}`;
+}
+
+function render() {
+  const key = fillIconFor(tool, filled);
+  for (const icon of icons) icon.classList.toggle('hidden', icon.dataset.fillIcon !== key);
+  toggle.classList.toggle('active', filled);
+  toggle.setAttribute('aria-pressed', String(filled));
+  toggle.dataset.tooltip = tool === 'ellipse' ? 'Filled ellipse' : 'Filled rectangle';
+}
 
 export function initRectangleFill(root = document) {
-  const panel = root.querySelector('#rectangle-options');
-  const toggle = root.querySelector('#rectangle-fill-toggle');
-  const iconOutline = root.querySelector('#rectangle-fill-icon-outline');
-  const iconFilled = root.querySelector('#rectangle-fill-icon-filled');
+  panel = root.querySelector('#rectangle-options');
+  toggle = root.querySelector('#rectangle-fill-toggle');
   if (!toggle) return; // standalone-only (absent from lib/pixi.js's embed markup)
+  icons = [...toggle.querySelectorAll('[data-fill-icon]')];
+  toggle.setAttribute('aria-pressed', 'false');
 
-  function setFilled(next) {
-    filled = next;
-    toggle.classList.toggle('active', filled);
-    iconOutline.classList.toggle('hidden', filled);
-    iconFilled.classList.toggle('hidden', !filled);
+  toggle.addEventListener('click', () => {
+    filled = !filled;
     setShapeFilled(filled);
-  }
-
-  toggle.addEventListener('click', () => setFilled(!filled));
-
-  root.querySelectorAll('.tool-button[data-tool]').forEach((button) => {
-    button.addEventListener('click', () => {
-      panel.classList.toggle('hidden', button.dataset.tool !== 'rectangle' && button.dataset.tool !== 'ellipse');
-    });
+    render();
   });
+}
+
+/** Shows the Filled toggle for Rectangle and Ellipse, with that tool's icons. */
+export function syncRectangleFillTool(activeTool) {
+  if (!toggle) return;
+  const isShape = activeTool === 'rectangle' || activeTool === 'ellipse';
+  panel.classList.toggle('hidden', !isShape);
+  if (isShape) {
+    tool = activeTool;
+    render();
+  }
 }

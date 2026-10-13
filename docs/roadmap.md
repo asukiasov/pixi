@@ -436,6 +436,12 @@ and can ship at any time.
   becomes Color Library's default palette, and the row is removed. Its
   Rainbow swatch (Brush-only, mutually exclusive with the Color Library
   sequence) becomes a toggle in the tool-options bar.
+- **Layer context menu** (done 2026-10-13; item 8 of the 2026-10-13
+  feedback's Part C): the layer ⋯ menu after Pixelmator Pro for iPad, a
+  Cut/Copy/Paste capsule strip on the system clipboard (paste adds a new
+  layer), a pixel Lock, Select Content, regrouped items. Design:
+  `docs/superpowers/specs/2026-10-13-layer-context-menu-design.md`. Item 7
+  (a visible Merge button) is still open.
 
 Follow-ups after 5h:
 
@@ -683,6 +689,10 @@ reversed, or stopped applying. Kept for the record.
     on `#square-constraint-toggle`'s existing single-shared-control
     pattern (tool-scoped visibility: shown for Pencil/Brush, hidden
     otherwise) instead of two DOM instances driving one flag.
+  - ~~Glass menus, popovers and confirm dialog; Layers header
+    blend/opacity; round swatches; Ellipse fill icon (2026-10-13).~~
+    Next: Transform categories and rotation dial, then Copy/Cut/Paste
+    and Merge.
 
   A dated, per-finding audit register (id/severity/state, one row per
   issue) lives under `docs/audits/` going forward - e.g.

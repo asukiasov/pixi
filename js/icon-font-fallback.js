@@ -16,6 +16,8 @@
 
 const FONT_SPEC = '24px "Material Symbols Outlined"';
 const DEFAULT_TIMEOUT_MS = 3000;
+// index.html's Google Fonts <link> for the icon font.
+const ICON_STYLESHEET = 'link[href*="Material+Symbols"]';
 
 /**
  * Given a `document.fonts`-like object (or a falsy stand-in for browsers
@@ -53,14 +55,34 @@ export function checkIconFontLoaded(fontSet, { timeoutMs = DEFAULT_TIMEOUT_MS } 
 }
 
 /**
+ * Resolves once the icon font's <link> has settled: true when it loaded
+ * (its `sheet` is set), false when it errored or didn't load within the
+ * timeout, null when there's no such link to wait for. Until it loads, no
+ * matching @font-face exists, so fonts.load() would resolve [] - which
+ * checkIconFontLoaded reads as a failure. WebKit runs the app's module
+ * before this cross-origin stylesheet arrives, and hid every icon for
+ * the session because of that.
+ */
+export function waitForStylesheet(link, { timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+  if (!link) return Promise.resolve(null);
+  if (link.sheet) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    link.addEventListener('load', () => resolve(true));
+    link.addEventListener('error', () => resolve(false));
+    setTimeout(() => resolve(false), timeoutMs);
+  });
+}
+
+/**
  * Wires the check up to <html>.classList - the DOM-touching half. Only
  * ever adds the class, never removes it (there's nothing to recover
  * from mid-session - if the font eventually loads, the page still
  * showed broken text for that window, so a fallback isn't a smoother
  * experience to leave the app in).
  */
-export async function initIconFontFallback(doc = document) {
-  const loaded = await checkIconFontLoaded(doc.fonts);
+export async function initIconFontFallback(doc = document, options = {}) {
+  const sheetLoaded = await waitForStylesheet(doc.querySelector?.(ICON_STYLESHEET), options);
+  const loaded = sheetLoaded === false ? false : await checkIconFontLoaded(doc.fonts, options);
   if (loaded === false) {
     doc.documentElement.classList.add('icon-font-failed');
   }

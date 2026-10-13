@@ -2,6 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { PixelEngine } from '../lib/pixel-engine/engine.js';
 import { drawRectangle, drawEllipse, clipToSelection, setShapeFilled } from '../js/shape-tools.js';
+import { fillIconFor, initRectangleFill, syncRectangleFillTool } from '../js/rectangle-fill-ui.js';
 
 describe('drawRectangle', () => {
   test('outline mode (default): draws only the perimeter', () => {
@@ -175,4 +176,75 @@ describe('drawEllipse', () => {
       }
     });
   }
+});
+
+describe('fillIconFor', () => {
+  test('Rectangle keeps the rectangle icons', () => {
+    assert.equal(fillIconFor('rectangle', false), 'rectangle-outline');
+    assert.equal(fillIconFor('rectangle', true), 'rectangle-filled');
+  });
+
+  test('Ellipse gets ellipse icons', () => {
+    assert.equal(fillIconFor('ellipse', false), 'ellipse-outline');
+    assert.equal(fillIconFor('ellipse', true), 'ellipse-filled');
+  });
+});
+
+// A minimal stand-in for the docked #rectangle-options markup (no DOM in
+// node --test): just the classList/dataset/attribute calls the module uses.
+function fakeElement(attrs = {}) {
+  const classes = new Set(attrs.hidden ? ['hidden'] : []);
+  const attributes = {};
+  return {
+    dataset: { ...(attrs.dataset ?? {}) },
+    classList: {
+      contains: (c) => classes.has(c),
+      toggle: (c, force) => { const on = force ?? !classes.has(c); if (on) classes.add(c); else classes.delete(c); return on; },
+    },
+    setAttribute: (n, v) => { attributes[n] = String(v); },
+    getAttribute: (n) => attributes[n] ?? null,
+    addEventListener: () => {},
+  };
+}
+
+function fakeFillRoot() {
+  const panel = fakeElement({ hidden: true });
+  const icons = ['rectangle-outline', 'rectangle-filled', 'ellipse-outline', 'ellipse-filled']
+    .map((key) => fakeElement({ dataset: { fillIcon: key } }));
+  const toggle = { ...fakeElement(), querySelectorAll: () => icons };
+  const root = {
+    querySelector: (sel) => ({ '#rectangle-options': panel, '#rectangle-fill-toggle': toggle })[sel] ?? null,
+    querySelectorAll: () => [],
+  };
+  const shown = () => icons.find((i) => !i.classList.contains('hidden')).dataset.fillIcon;
+  return { root, panel, toggle, shown };
+}
+
+// Every tool change (rail click, O/R shortcut, overflow menu, start-up
+// tool) goes through workspace.js's applyToolScopedUI, which calls this.
+describe('syncRectangleFillTool', () => {
+  test('Ellipse shows the Filled toggle with ellipse icons', () => {
+    const { root, panel, shown } = fakeFillRoot();
+    initRectangleFill(root);
+    syncRectangleFillTool('ellipse');
+    assert.equal(panel.classList.contains('hidden'), false);
+    assert.equal(shown(), 'ellipse-outline');
+  });
+
+  test('Rectangle shows rectangle icons; other tools hide the toggle', () => {
+    const { root, panel, shown } = fakeFillRoot();
+    initRectangleFill(root);
+    syncRectangleFillTool('ellipse');
+    syncRectangleFillTool('rectangle');
+    assert.equal(shown(), 'rectangle-outline');
+    syncRectangleFillTool('pencil');
+    assert.equal(panel.classList.contains('hidden'), true);
+  });
+
+  test('workspace.js calls it from applyToolScopedUI', async () => {
+    const { readFileSync } = await import('node:fs');
+    const ws = readFileSync(new URL('../js/workspace.js', import.meta.url), 'utf8');
+    const body = ws.slice(ws.indexOf('function applyToolScopedUI()'));
+    assert.match(body.slice(0, body.indexOf('\n}\n')), /syncRectangleFillTool\(state\.currentTool\)/);
+  });
 });

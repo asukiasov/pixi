@@ -34,7 +34,7 @@
        keep it sorted alphabetically — the Google Fonts API 400s the whole
        request (breaking every icon on the page, not just an unsorted one)
        if icon_names isn't in alphabetical order. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&icon_names=add,align_horizontal_center,align_horizontal_left,align_horizontal_right,align_vertical_bottom,align_vertical_center,align_vertical_top,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check,check_box,check_box_outline_blank,chevron_right,circle,close,colorize,content_copy,create_new_folder,crop_free,dark_mode,delete,dock_to_right,download,drag_indicator,drive_file_move,edit,error,expand_more,fiber_manual_record,flip,folder,folder_off,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,handyman,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,layers,library_add,light_mode,lock,merge,more_horiz,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,settings,swap_horiz,transform,tune,undo,unfold_more,visibility,visibility_off" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&icon_names=add,add_circle,align_horizontal_center,align_horizontal_left,align_horizontal_right,align_vertical_bottom,align_vertical_center,align_vertical_top,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check,check_box,check_box_outline_blank,chevron_right,circle,close,colorize,content_copy,content_cut,content_paste,create_new_folder,crop_free,dark_mode,delete,dock_to_right,download,drag_indicator,drive_file_move,edit,error,expand_more,fiber_manual_record,flip,folder,folder_off,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,handyman,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,layers,library_add,light_mode,lock,lock_open,merge,more_horiz,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,select,settings,swap_horiz,transform,tune,undo,unfold_more,visibility,visibility_off" />
 </head>
 <body>
   <main id="screen-gallery" class="screen home-screen">
@@ -510,8 +510,8 @@
             <button type="button" id="color-picker-previous" class="color-picker-previous" aria-label="Back to the previous color" data-tooltip="Previous color"></button>
             <span id="color-picker-current" class="color-picker-current" aria-hidden="true"></span>
           </div>
-          <button type="button" id="color-picker-close" class="icon-button" aria-label="Close">
-            <span class="material-symbols-outlined">close</span>
+          <button type="button" id="color-picker-close" class="color-picker-close" aria-label="Close">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
           </button>
         </div>
         <div class="color-picker-tabs" role="tablist" aria-label="Color picker">
@@ -552,14 +552,14 @@
           <span class="color-picker-history-label" id="color-picker-history-label">History</span>
           <div id="color-picker-history" class="color-picker-history" role="group" aria-labelledby="color-picker-history-label"></div>
         </div>
-        <div class="color-picker-actions">
+        <div class="color-picker-actions" role="group" aria-label="Color actions">
           <!-- "Add to palette" - wired in js/color-library-ui.js. -->
-          <button type="button" id="color-picker-add" class="tool-button">
-            <span class="material-symbols-outlined" aria-hidden="true">add</span> Add to palette
+          <button type="button" id="color-picker-add" class="color-picker-action">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span><span>Add to palette</span>
           </button>
           <!-- Ramp from the colour being edited -> #ramp-preview-row. -->
-          <button type="button" id="color-picker-generate-ramp" class="tool-button">
-            <span class="material-symbols-outlined" aria-hidden="true">gradient</span> Ramp
+          <button type="button" id="color-picker-generate-ramp" class="color-picker-action">
+            <span class="material-symbols-outlined" aria-hidden="true">gradient</span><span>Ramp</span>
           </button>
         </div>
       </div>
@@ -577,8 +577,10 @@
              CDN, same source as the font, and swapped via visibility
              instead. -->
         <button type="button" id="rectangle-fill-toggle" class="tool-button icon-button" aria-label="Filled" data-tooltip="Filled rectangle">
-          <svg id="rectangle-fill-icon-outline" class="rectangle-fill-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M80-160v-640h800v640H80Zm80-80h640v-480H160v480Zm0 0v-480 480Z"/></svg>
-          <svg id="rectangle-fill-icon-filled" class="rectangle-fill-icon hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M80-160v-640h800v640H80Z"/></svg>
+          <svg class="rectangle-fill-icon" data-fill-icon="rectangle-outline" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Zm80-80h640v-480H160v480Zm0 0v-480 480Z"/></svg>
+          <svg class="rectangle-fill-icon hidden" data-fill-icon="rectangle-filled" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Z"/></svg>
+          <svg class="rectangle-fill-icon hidden" data-fill-icon="ellipse-outline" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path fill-rule="evenodd" d="M80-480a400 280 0 1 0 800 0a400 280 0 1 0-800 0Zm80 0a320 200 0 1 0 640 0a320 200 0 1 0-640 0Z"/></svg>
+          <svg class="rectangle-fill-icon hidden" data-fill-icon="ellipse-filled" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-480a400 280 0 1 0 800 0a400 280 0 1 0-800 0Z"/></svg>
         </button>
       </div>
 
@@ -1037,10 +1039,13 @@
           </div>
           <div class="tool-options-group" data-tools="rectangle ellipse">
             <!-- Source: #rectangle-fill-toggle (js/rectangle-fill-ui.js).
-                 Same two inline SVGs, swapped by [aria-pressed] in CSS. -->
+                 Same four inline SVGs, swapped in CSS by [aria-pressed]
+                 and the screen's data-current-tool. -->
             <button type="button" class="tool-button icon-button tool-options-filled" data-forward="rectangle-fill-toggle" aria-pressed="false" aria-label="Filled" data-tooltip="Filled shape">
-              <svg class="rectangle-fill-icon tool-options-filled-off" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Zm80-80h640v-480H160v480Zm0 0v-480 480Z"/></svg>
-              <svg class="rectangle-fill-icon tool-options-filled-on" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Z"/></svg>
+              <svg class="rectangle-fill-icon tool-options-filled-off tool-options-shape-rectangle" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Zm80-80h640v-480H160v480Zm0 0v-480 480Z"/></svg>
+              <svg class="rectangle-fill-icon tool-options-filled-on tool-options-shape-rectangle" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-160v-640h800v640H80Z"/></svg>
+              <svg class="rectangle-fill-icon tool-options-filled-off tool-options-shape-ellipse" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path fill-rule="evenodd" d="M80-480a400 280 0 1 0 800 0a400 280 0 1 0-800 0Zm80 0a320 200 0 1 0 640 0a320 200 0 1 0-640 0Z"/></svg>
+              <svg class="rectangle-fill-icon tool-options-filled-on tool-options-shape-ellipse" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-480a400 280 0 1 0 800 0a400 280 0 1 0-800 0Z"/></svg>
             </button>
           </div>
           <div class="tool-options-group" data-tools="rectangle ellipse selection">
@@ -1172,18 +1177,20 @@
             </button>
             <h2>Layers</h2>
             <span class="material-symbols-outlined panel-collapse-chevron">expand_more</span>
-            <button type="button" id="layers-properties-button" class="tool-button icon-button" aria-label="Opacity and blend mode" data-tooltip="Opacity &amp; Blend">
-              <span class="material-symbols-outlined" aria-hidden="true">tune</span>
-            </button>
-            <!-- "layers_add" isn't a Material Symbols glyph - CSS-masked
-                 asset (assets/icons/layers_add.svg), see .layers-add-icon. -->
             <button type="button" id="add-layer-button" class="tool-button icon-button" aria-label="Add layer" data-tooltip="Add layer">
-              <span class="layers-add-icon"></span>
+              <span class="material-symbols-outlined" aria-hidden="true">add_circle</span>
             </button>
             <button type="button" class="tool-button icon-button panel-close floating-only" aria-label="Close Layers" data-tooltip="Close">
               <span class="material-symbols-outlined" aria-hidden="true">close</span>
             </button>
           </div>
+        </div>
+        <!-- The active layer's blend mode and opacity, always visible,
+             after Pixelmator Pro (js/layers-ui.js). -->
+        <div id="layers-header-properties" class="layers-header-properties">
+          <select id="layers-header-blend" class="layers-header-blend" aria-label="Blend mode"></select>
+          <input type="range" id="layers-header-opacity" class="layers-header-opacity" min="0" max="100" value="100" aria-label="Opacity" />
+          <output id="layers-header-opacity-readout" class="layers-header-opacity-readout" for="layers-header-opacity">100%</output>
         </div>
         <!-- Select mode (header ⋯ > Select Layers): rows get checkboxes. -->
         <div id="layers-select-bar" class="layers-select-bar hidden" role="toolbar" aria-label="Selected layers">
@@ -1203,16 +1210,12 @@
          pattern #color-picker-popover uses (see openColorPicker in
          js/workspace.js). Lives outside .right-sidebar so its own
          overflow-y:auto can't clip it. -->
-    <!-- Opacity & Blend (js/layers-ui.js) for one layer or group - opened
-         from the header's tune button or a row's ⋯ menu. Groups have no
-         blend mode, so that row hides for them. -->
+    <!-- Opacity for one group, opened from the group's ⋯ menu. A layer's
+         blend and opacity live in the panel's header row. -->
     <div id="layers-panel-opacity-popover" class="canvas-settings-panel layer-properties-popover hidden" role="dialog" aria-labelledby="layer-properties-title">
       <div class="canvas-settings-row canvas-settings-header-row">
         <h2 id="layer-properties-title">Layer 1</h2>
       </div>
-      <label class="layer-properties-row" id="layer-properties-blend-row">Blend
-        <select id="layers-panel-blend-select" class="layers-panel-blend-select"></select>
-      </label>
       <div class="layer-properties-row">
         <label for="layers-panel-opacity-slider">Opacity</label>
         <input type="range" id="layers-panel-opacity-slider" class="layers-panel-opacity-slider" min="0" max="100" value="100" />

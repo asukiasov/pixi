@@ -17,9 +17,12 @@ under the tool-options bar: a palette button (the palette's name and a
 chevron) first, then every colour of the active palette as a swatch on one
 row that scrolls sideways, then the Rainbow swatch and an "add current
 colour" (+) button. The swatch matching the current foreground colour SHALL
-be marked and scrolled into view. On a phone-width window the palette
-button SHALL show only its chevron (its name stays in its accessible
-label).
+be marked with a ring and scrolled into view. Swatches SHALL be round
+everywhere they appear (colour bar, colour picker's Palettes tab and
+History, import and ramp previews), and the active swatch SHALL be ringed.
+On a phone-width window the palette button SHALL show only its chevron
+(its name stays in its accessible label). The palette menu's list of
+palettes SHALL scroll on its own once it outgrows its maximum height.
 
 #### Scenario: Bar shows the active palette's colors
 - **WHEN** the Workspace is open

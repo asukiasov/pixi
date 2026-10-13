@@ -71,3 +71,52 @@ describe('initIconFontFallback', () => {
     assert.equal(doc.documentElement.classList.contains('icon-font-failed'), false);
   });
 });
+
+// WebKit ran the check before the Google Fonts stylesheet had registered
+// any @font-face, so load() resolved [] and every icon was hidden for the
+// session. The check now waits for the icon <link> to settle first.
+describe('initIconFontFallback waits for the icon stylesheet', () => {
+  function fakeLink({ sheet = null } = {}) {
+    const listeners = {};
+    return {
+      sheet,
+      addEventListener: (type, fn) => { listeners[type] = fn; },
+      fire(type) { if (type === 'load') this.sheet = {}; listeners[type]?.(); },
+    };
+  }
+  function fakeDoc(link, fonts) {
+    const classes = new Set();
+    return {
+      fonts,
+      querySelector: (sel) => (sel.includes('Material+Symbols') ? link : null),
+      documentElement: { classList: { add: (c) => classes.add(c), contains: (c) => classes.has(c) } },
+    };
+  }
+  // Faces exist only once the stylesheet has loaded, as in a browser.
+  const fontsFor = (link) => ({ load: async () => (link.sheet ? [{ family: 'Material Symbols Outlined' }] : []) });
+
+  test('a stylesheet still loading is not a failure', async () => {
+    const link = fakeLink();
+    const doc = fakeDoc(link, fontsFor(link));
+    const done = initIconFontFallback(doc, { timeoutMs: 1000 });
+    setTimeout(() => link.fire('load'), 5);
+    await done;
+    assert.equal(doc.documentElement.classList.contains('icon-font-failed'), false);
+  });
+
+  test('an already loaded stylesheet is checked straight away', async () => {
+    const link = fakeLink({ sheet: {} });
+    const doc = fakeDoc(link, fontsFor(link));
+    await initIconFontFallback(doc, { timeoutMs: 1000 });
+    assert.equal(doc.documentElement.classList.contains('icon-font-failed'), false);
+  });
+
+  test('a stylesheet that errors hides the ligature text', async () => {
+    const link = fakeLink();
+    const doc = fakeDoc(link, fontsFor(link));
+    const done = initIconFontFallback(doc, { timeoutMs: 1000 });
+    setTimeout(() => link.fire('error'), 5);
+    await done;
+    assert.equal(doc.documentElement.classList.contains('icon-font-failed'), true);
+  });
+});

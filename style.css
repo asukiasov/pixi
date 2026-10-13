@@ -1172,11 +1172,14 @@ textarea,
   gap: 0.5rem;
   width: 15rem;
   padding: 0.6rem;
+  z-index: 60;
+}
+
+.canvas-settings-panel:not(:where(.glass)) {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-  z-index: 60;
 }
 
 .canvas-settings-row {
@@ -1504,38 +1507,6 @@ textarea,
   opacity: 0.4;
 }
 
-/* Real image asset (assets/icons/layers_add.svg), not a font glyph or
-   hand-copied inline markup - see index.html's comment on #add-layer-
-   button. Rendered via CSS mask rather than <img> so it still recolors
-   with currentColor like every other icon button here (light/dark
-   theme, hover, disabled dimming) - an <img>'s pixels are opaque to
-   CSS, fixed at whatever colors the source file happens to use.
-   mask-mode: alpha (not the mask default, luminance) matters here
-   specifically: the source file draws its glyph in near-black with a
-   white accent for its own two-tone display, and under luminance
-   masking dark pixels read as "mostly transparent" - exactly backwards
-   from what a mask needs. Alpha mode goes off which pixels have ink at
-   all, regardless of what color that ink is, which is what actually
-   reproduces the glyph's shape. Sized like .rectangle-fill-icon
-   (smaller than the S 1.6rem button box - a filled shape with no font
-   side-bearing needs more headroom than a font glyph at the same
-   nominal size would). */
-.layers-add-icon {
-  display: block;
-  width: 1.1rem;
-  height: 1.1rem;
-  background-color: currentColor;
-  mask-image: url('assets/icons/layers_add.svg');
-  mask-mode: alpha;
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: contain;
-  -webkit-mask-image: url('assets/icons/layers_add.svg');
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-}
-
 /* Shared by .layers-panel-header and .color-library-header - the whole
    block is a click target that collapses/expands the panel down to just
    this header (Photoshop-accordion style), not only the chevron icon.
@@ -1609,76 +1580,6 @@ textarea,
   border-top: 1px solid var(--color-surface);
   border-bottom: 1px solid var(--color-surface);
   background: var(--color-surface-alt);
-}
-
-/* Takes the row's remaining width (Opacity next to it is sized to its
-   own compact content instead - see .layers-panel-opacity-toggle).
-   appearance: none + a custom background-image chevron, not the native
-   OS control - Safari otherwise renders <select> with its own puffy
-   chrome that ignores the dark background/border set here. */
-.layers-panel-blend-select {
-  width: auto;
-  flex: 1 1 auto;
-  min-width: 0;
-  appearance: none;
-  -webkit-appearance: none;
-  background: var(--color-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23a0a0a5' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") no-repeat right 0.3rem center / 1rem;
-  background-color: var(--color-surface);
-  color: inherit;
-  border: 1px solid var(--color-border);
-  border-radius: 0.3rem;
-  font-size: 0.75rem;
-  padding: 0.25rem 1.4rem 0.25rem 0.4rem;
-}
-
-/* Same control, light theme: the chevron above is baked into a data-URI
-   (can't be parameterized with a CSS var inside the URL string), so the
-   whole background shorthand is restated here with a darker chevron fill
-   for contrast against the light surface. */
-:root[data-theme="light"] .layers-panel-blend-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%236c6c70' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
-}
-
-/* Opens #layers-panel-opacity-popover on click - see openLayersOpacityPopover
-   in js/workspace.js. Icon, not the word "Opacity" - reclaims space at
-   the sidebar's narrowest clamped width (see .right-sidebar); a tooltip
-   (data-tooltip) still names it, same icon-only convention the Pencil
-   Size/Opacity sliders use. Sized to its own content (flex: none), not
-   flex-grown to fill the row - Blend mode above takes the rest instead.
-   appearance: none - Safari otherwise renders <button> with its own
-   native chrome (visibly lighter background, rounder corners) that
-   overrides the dark background/border set here. */
-.layers-panel-opacity-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  flex: none;
-  appearance: none;
-  -webkit-appearance: none;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 0.3rem;
-  color: inherit;
-  font: inherit;
-  padding: 0.25rem 0.4rem;
-  cursor: pointer;
-}
-
-/* Hover feedback (button-hover-states). */
-.layers-panel-opacity-toggle:hover {
-  background: var(--color-surface-alt);
-}
-
-.layers-panel-opacity-icon {
-  flex: none;
-  font-size: 1rem;
-  color: var(--color-text-secondary);
-}
-
-.layers-panel-opacity-readout {
-  flex: none;
-  font-size: 0.75rem;
-  white-space: nowrap;
 }
 
 /* Popover holding the actual slider + a number field for direct entry -
@@ -1868,8 +1769,9 @@ textarea,
   outline: none;
 }
 
-/* Background layer (2g-background-layer) - locked in stacking position,
-   see buildLayerRow in js/workspace.js. `span.layer-lock-icon` (not just
+/* A user-locked layer's glyph at the start of its row's detail line
+   (layer-context-menu, buildLayerRow in js/layers-ui.js). The rule dates
+   from the Background layer's old lock icon. `span.layer-lock-icon` (not just
    `.layer-lock-icon`) (icon-button-size-system) - this element also
    carries the bare `.material-symbols-outlined` class, and the Google
    Fonts icon stylesheet (index.html's link, loaded after this file) ships
@@ -1881,7 +1783,9 @@ textarea,
    specificity just enough to win instead. */
 span.layer-lock-icon {
   flex: none;
+  margin-inline-end: 2px;
   font-size: 0.9rem;
+  vertical-align: -2px;
   color: var(--color-text-secondary);
 }
 
@@ -1992,24 +1896,26 @@ span.layer-lock-icon {
 .palette-swatch {
   width: 1.75rem;
   height: 1.75rem;
-  border-radius: 0.3rem;
-  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  border: none;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
   flex: none;
   padding: 0;
 }
 
+/* Outer accent ring with a surface-coloured gap, so it shows on any colour. */
 .palette-swatch.active {
-  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-accent);
 }
 
-/* Hover feedback (button-hover-states) - a border-color shift, not a
+/* Hover feedback (button-hover-states) - a ring, not a
    background fill like the icon/tool buttons above, since a swatch's
    background IS the color it represents and can't be repurposed for
    hover without misrepresenting that color. :not(.active) so hovering
    a swatch never reads as "this one's no longer selected" by
-   overwriting the accent border the .active rule above sets. */
+   overwriting the accent ring the .active rule above sets. */
 .palette-swatch:not(.active):hover {
-  border-color: var(--color-text-secondary);
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-text-secondary);
 }
 
 .palette-swatch.rainbow-swatch {
@@ -2118,16 +2024,23 @@ span.layer-lock-icon {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
   padding: 0.6rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   z-index: 60;
   /* The disc canvas is 232px; plus padding. */
   width: 16.25rem;
   max-height: calc(100vh - 16px);
   overflow-y: auto;
+}
+
+.color-picker-popover:not(:where(.glass)) {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.color-picker-popover.glass {
+  border-radius: 18px;
 }
 
 .color-picker-popover-header {
@@ -2389,20 +2302,21 @@ span.layer-lock-icon {
 .color-library-swatch {
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 0.25rem;
-  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  border: none;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
   padding: 0;
   cursor: pointer;
 }
 
 .color-library-swatch.active {
-  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-accent);
 }
 
 /* Hover feedback (button-hover-states) - same reasoning as
    .palette-swatch:hover. */
 .color-library-swatch:not(.active):hover {
-  border-color: var(--color-text-secondary);
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-text-secondary);
 }
 
 /* Edit-colors mode (4c-delete-palette-color) - every swatch shows a ×
@@ -2410,8 +2324,7 @@ span.layer-lock-icon {
    with a dark outline so it reads on any swatch color, light or dark. */
 .color-library-grid.editing .color-library-swatch {
   position: relative;
-  border-style: dashed;
-  border-color: var(--color-text-secondary);
+  border: 2px dashed var(--color-text-secondary);
 }
 
 .color-library-grid.editing .color-library-swatch::after {
@@ -2903,21 +2816,34 @@ span.layer-lock-icon {
 .confirm-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.35);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
 }
 
+/* Forma .glass (set in js/confirm-dialog.js). */
 .confirm-dialog {
+  position: relative;
   width: 20rem;
   max-width: calc(100vw - 2rem);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 0.7rem;
-  padding: 1.2rem;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  padding: 1.25rem;
+  border-radius: 18px;
+}
+
+/* No blurred ::before: WebKit drops .confirm-overlay's blur under a second
+   backdrop-filter, leaving the cards crisp behind. The dialog paints the
+   tint itself, over the scrim's blur. */
+.confirm-dialog.glass {
+  background: var(--glass-tint);
+  box-shadow: var(--glass-highlight), var(--float-shadow);
+}
+
+.confirm-dialog.glass::before {
+  display: none;
 }
 
 .confirm-dialog-title {
@@ -2939,10 +2865,44 @@ span.layer-lock-icon {
   gap: 0.6rem;
 }
 
+.confirm-dialog-actions button {
+  min-height: 44px;
+  font: inherit;
+  font-weight: 600;
+}
+
+.confirm-dialog-cancel {
+  border: 1px solid var(--glass-border);
+}
+
 .confirm-dialog-confirm {
+  padding: 0 1.25rem;
+  border: none;
+  border-radius: 999px;
   background: var(--color-danger);
-  border-color: var(--color-danger);
   color: #fff;
+  cursor: pointer;
+}
+
+.confirm-dialog-confirm:hover {
+  filter: brightness(1.08);
+}
+
+.confirm-dialog-confirm:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .confirm-overlay {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .confirm-dialog.glass {
+    background: var(--color-surface);
+  }
 }
 
 /* Paw Parade easter egg (js/gallery.js) - 7 rapid clicks on the Gallery's
@@ -3320,8 +3280,8 @@ span.layer-lock-icon {
   outline-offset: -2px;
 }
 
-/* Opaque like the other popovers (.canvas-settings-panel), positioned by
-   js/topbar-menu.js. */
+/* Positioned by js/topbar-menu.js. Forma .glass in the floating layout
+   (js/layout.js); the box below is for a menu that isn't glass. */
 .workspace-screen[data-layout="floating"] .topbar-menu:not(.hidden) {
   position: fixed;
   z-index: 60;
@@ -3329,15 +3289,88 @@ span.layer-lock-icon {
   flex-direction: column;
   min-width: 13rem;
   padding: 0.35rem;
+  border-radius: 14px;
+}
+
+.workspace-screen[data-layout="floating"] .topbar-menu:not(.hidden):not(:where(.glass)) {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 0.6rem;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* On glass: rows are inset pills on the ghost fill, like Pixelmator's. */
+.topbar-menu.glass .topbar-menu-item {
+  border-radius: 9px;
+}
+
+.topbar-menu.glass .topbar-menu-item:not(:disabled):hover,
+.topbar-menu.glass .topbar-menu-item:focus-visible {
+  background: var(--ghost-hover);
+}
+
+.topbar-menu.glass .topbar-menu-separator {
+  margin: 0.3rem 0.6rem;
+  background: var(--glass-border);
 }
 
 .topbar-menu [role="group"] {
   display: flex;
   flex-direction: column;
+}
+
+/* One capsule of segments, icon over label: the layer menu's Cut/Copy/
+   Paste strip (layer-context-menu). Its own radius, not .glass-pill,
+   since js/layout.js adds and removes that class per layout. */
+.action-capsule {
+  display: flex;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ghost-hover);
+}
+
+.action-capsule-segment {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 52px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.action-capsule-segment + .action-capsule-segment {
+  border-inline-start: 1px solid var(--glass-border);
+}
+
+.action-capsule-segment:not(:disabled):hover {
+  background: var(--ghost-hover);
+}
+
+.action-capsule-segment:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.action-capsule-segment:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.action-capsule-segment .material-symbols-outlined {
+  font-size: 1.3rem;
+}
+
+/* Beats `.topbar-menu [role="group"]` above, which stacks groups in a column. */
+.topbar-menu .layer-menu-strip {
+  flex-direction: row;
+  margin-bottom: 0.3rem;
 }
 
 .topbar-menu-item {
@@ -3609,7 +3642,9 @@ span.layer-lock-icon {
 }
 
 .workspace-screen[data-layout="floating"] .tool-options-filled[aria-pressed="true"] .tool-options-filled-off,
-.workspace-screen[data-layout="floating"] .tool-options-filled:not([aria-pressed="true"]) .tool-options-filled-on {
+.workspace-screen[data-layout="floating"] .tool-options-filled:not([aria-pressed="true"]) .tool-options-filled-on,
+.workspace-screen[data-layout="floating"][data-current-tool="ellipse"] .tool-options-filled .tool-options-shape-rectangle,
+.workspace-screen[data-layout="floating"]:not([data-current-tool="ellipse"]) .tool-options-filled .tool-options-shape-ellipse {
   display: none;
 }
 
@@ -4411,7 +4446,7 @@ span.layer-lock-icon {
 .standard-library-swatches span {
   width: 14px;
   height: 14px;
-  border-radius: 3px;
+  border-radius: 50%;
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
 }
 
@@ -4484,11 +4519,23 @@ span.layer-lock-icon {
   display: none;
 }
 
+.color-bar .color-library-empty {
+  flex: 1 1 auto;
+  min-width: 0;
+  align-self: center;
+  padding: 0 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .color-bar .color-library-swatch {
   flex: none;
   width: 1.75rem;
   height: 1.75rem;
   aspect-ratio: auto;
+  /* Room for the 4px active ring inside the bar's scroller. */
+  margin: 4px 2px;
 }
 
 .color-bar .color-library-empty {
@@ -4514,6 +4561,7 @@ span.layer-lock-icon {
 .palette-menu-list {
   max-height: min(45vh, 22rem);
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .palette-menu-item-name {
@@ -4649,7 +4697,7 @@ span.layer-lock-icon {
 .color-picker-compare {
   display: flex;
   height: 1.9rem;
-  border-radius: 0.5rem;
+  border-radius: 999px;
   overflow: hidden;
   box-shadow: inset 0 0 0 1px var(--color-border);
 }
@@ -4667,19 +4715,56 @@ span.layer-lock-icon {
   cursor: pointer;
 }
 
+/* A ghost circle, styled here rather than via .ghost-button since
+   js/layout.js adds and removes that class per layout. */
+.color-picker-close {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--ghost-hover);
+  color: inherit;
+  cursor: pointer;
+}
+
+.color-picker-close:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.color-picker-close .material-symbols-outlined {
+  font-size: 1.1rem;
+}
+
+/* 2rem looks right in the header; the hit area still reaches 44px. */
+.color-picker-close::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+/* Pill segmented control: 34px segments in a 40px pill, no gaps worth
+   missing between them. */
 .color-picker-tabs {
   display: flex;
   gap: 2px;
-  padding: 2px;
-  border-radius: 0.5rem;
-  background: var(--color-surface-alt);
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--ghost-hover);
 }
 
 .color-picker-tab {
   flex: 1;
-  min-height: 36px;
+  min-height: 34px;
   border: none;
-  border-radius: 0.4rem;
+  border-radius: 999px;
   background: transparent;
   color: var(--color-text-secondary);
   font: inherit;
@@ -4691,7 +4776,7 @@ span.layer-lock-icon {
 .color-picker-tab[aria-selected="true"] {
   background: var(--color-surface);
   color: var(--color-text);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.2);
 }
 
 .color-picker-tab:focus-visible {
@@ -4761,9 +4846,34 @@ span.layer-lock-icon {
   font-weight: 600;
 }
 
+/* Thin rounded track; the whole <label> row is the hit target. */
 .color-value-row input[type="range"] {
   width: 100%;
+  height: 6px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--color-border);
   accent-color: var(--color-accent);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.color-value-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
+}
+
+.color-value-row input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
 }
 
 .color-value-row output {
@@ -4801,7 +4911,7 @@ span.layer-lock-icon {
 .color-picker-history-swatch {
   aspect-ratio: 1;
   border: none;
-  border-radius: 4px;
+  border-radius: 50%;
   padding: 0;
   cursor: pointer;
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
@@ -4832,29 +4942,91 @@ span.layer-lock-icon {
   color: var(--color-text-muted);
 }
 
+/* Two separate ghost pills, icon beside label. Their own radius, not
+   .glass-pill, since js/layout.js adds and removes that class per layout. */
 .color-picker-actions {
   display: flex;
-  gap: 0.4rem;
+  gap: 8px;
 }
 
-.color-picker-actions .tool-button {
+.color-picker-action {
   flex: 1;
-  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
-.color-picker-actions .material-symbols-outlined {
-  flex: none;
-  width: 1.25rem;
-  overflow: hidden;
-  font-size: 1.25rem;
+.color-picker-action:hover {
+  background: var(--ghost-hover);
+}
+
+.color-picker-action:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.color-picker-action .material-symbols-outlined {
+  font-size: 1.15rem;
 }
 
 /* ------------------------------------------------------------------
    Layers panel, Pixelmator Pro for iPad style (js/layers-ui.js): rows
    are rounded cards - grip, thumbnail, name over a detail line, ⋯ on the
-   active row, a visibility switch. Overrides the older Photoshop-style
+   active row, a visibility checkbox. Overrides the older Photoshop-style
    row rules above.
    ------------------------------------------------------------------ */
+
+/* The active layer's blend and opacity, under the title. */
+.layers-header-properties {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 2.6rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.layers-header-blend {
+  min-height: 44px;
+  padding: 0 0.5rem;
+  border: none;
+  border-radius: 9px;
+  background: var(--ghost-hover);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.layers-header-opacity {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+.layers-header-opacity-readout {
+  text-align: end;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.layers-header-properties :disabled {
+  opacity: 0.5;
+}
+
 .layers-panel-list {
   position: relative;
   gap: 4px;
@@ -4910,13 +5082,12 @@ span.layer-lock-icon {
   flex: none;
   width: 22px;
   align-self: stretch;
-  /* Two columns of three dots. */
-  background-image: radial-gradient(circle, var(--color-text-secondary) 1.6px, transparent 2px);
-  background-size: 7px 7px;
-  background-position: center;
-  background-repeat: repeat;
-  -webkit-mask: linear-gradient(#000 0 0) center / 14px 21px no-repeat;
-  mask: linear-gradient(#000 0 0) center / 14px 21px no-repeat;
+  /* Two bars, the shape of Material's drag_handle; drawn in CSS so the
+     grip stays visible if the icon font fails. */
+  background:
+    linear-gradient(var(--color-text-secondary) 0 0) center calc(50% - 3px) / 14px 2px no-repeat,
+    linear-gradient(var(--color-text-secondary) 0 0) center calc(50% + 3px) / 14px 2px no-repeat;
+  border-radius: 1px;
   cursor: grab;
   /* The grip starts a drag, never a scroll. */
   touch-action: none;
@@ -4997,66 +5168,52 @@ span.layer-lock-icon {
   color: var(--color-accent);
 }
 
-/* Visibility: an iOS-style switch over a real checkbox. */
-.layer-switch {
-  position: relative;
+/* Visibility: a round accent checkbox (Pixelmator Pro), 44px hit area. */
+.layer-visibility {
   flex: none;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-width: 44px;
   min-height: 44px;
-  justify-content: center;
   cursor: pointer;
 }
 
-.layer-switch input {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.layer-switch-track {
-  position: relative;
-  width: 36px;
+.layer-visibility-check {
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-content: center;
+  width: 22px;
   height: 22px;
-  border-radius: 999px;
-  background: var(--color-border);
-  transition: background-color 150ms ease;
-}
-
-.layer-switch-track::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 18px;
-  height: 18px;
+  margin: 0;
+  border: 2px solid var(--color-text-secondary);
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
-  transition: transform 150ms ease;
+  background: transparent;
+  cursor: pointer;
 }
 
-.layer-switch input:checked + .layer-switch-track {
+.layer-visibility-check::after {
+  content: '';
+  width: 5px;
+  height: 10px;
+  border: solid transparent;
+  border-width: 0 2px 2px 0;
+  transform: translate(0, -1px) rotate(45deg);
+}
+
+.layer-visibility-check:checked {
+  border-color: var(--color-accent);
   background: var(--color-accent);
 }
 
-.layer-switch input:checked + .layer-switch-track::after {
-  transform: translateX(14px);
+.layer-visibility-check:checked::after {
+  border-color: #fff;
 }
 
-.layer-switch input:focus-visible + .layer-switch-track {
+.layer-visibility-check:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .layer-switch-track,
-  .layer-switch-track::after {
-    transition: none;
-  }
 }
 
 .layer-select-check {

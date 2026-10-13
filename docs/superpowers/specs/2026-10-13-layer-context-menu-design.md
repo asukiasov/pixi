@@ -152,9 +152,11 @@ Other rules:
   works in Safari.
 - **Reading from the menu's Paste.** Uses `navigator.clipboard.read()`.
   Safari shows its own "Paste" bubble, which the user taps, and Chromium
-  may ask for permission once. If `clipboard.read` is missing, the menu
-  Paste uses the in-app record only, or shows "Nothing to paste" if there
-  is none.
+  may ask for permission once.
+- **One fallback rule for both.** Paste uses the clipboard's image when
+  there is one. If there's no image (or no way to read one), it uses
+  Pixi's own last copy. If there's neither, the toast is "Nothing to
+  paste".
 
 ### Coordination with Share & Export
 
@@ -162,7 +164,7 @@ Other rules:
   `js/clipboard.js` as `writeImage(blobPromise)`. Whichever branch merges
   second reuses the other's helper rather than adding a second one.
 - The Export branch doesn't bind ⌘C or ⌘V, so this branch owns those keys.
-- The shared `.action-capsule` classes (section 4) suit Export's
+- The `.action-capsule` classes (section 5) suit Export's
   Copy/Download/Share row too.
 
 ## 3. Lock
@@ -213,8 +215,9 @@ the layer's pixels is refused. Everything else still works:
 - The menu item reads "Lock" (`lock`) or, on a locked layer, "Unlock"
   (`lock_open`). Toggling is one undo step, committed as the visibility
   toggle is.
-- A locked row shows a small `lock` glyph next to its name. It's
-  `aria-hidden`, and the row's accessible name gains ", locked".
+- A locked row shows a small `lock` glyph at the start of its detail line,
+  under the name, so it doesn't get in the way of renaming. The glyph is
+  `aria-hidden`, and a visually hidden "Locked" is read out instead.
 
 ## 4. Select Content
 
@@ -252,16 +255,17 @@ the layer's pixels is refused. Everything else still works:
   `contentBounds`, which `layerMenuItems()` passes in as a precomputed
   boolean, so the state function stays pure.
 
-**Shared capsule CSS** (`style.css`):
+**Capsule CSS** (`style.css`):
 
-- `.color-picker-actions` / `.color-picker-action` become the shared
-  `.action-capsule` / `.action-capsule-segment`. The colour picker's
-  Add/Ramp markup switches to the new names, and the old selectors are
-  removed.
+- New `.action-capsule` / `.action-capsule-segment` classes, with the look
+  the colour picker's Add/Ramp capsule had at `50a62ef`: one rounded
+  capsule, segments with the icon over the label, divided by a 1px
+  `--glass-border` line. The colour picker itself is left alone, because a
+  parallel change is restyling Add/Ramp as two separate pills.
 - It has its own `border-radius: 999px` and is not `.glass-pill`, because
   `js/layout.js` toggles that class per layout.
-- Segments are at least 52px tall (the hit-target floor is 44px), divided
-  by a 1px `--glass-border` line, with hover and focus-visible as today.
+- Segments are at least 52px tall (the hit-target floor is 44px), with
+  hover and focus-visible states.
 - `.action-capsule-segment:disabled` gets `opacity: 0.4` and
   `cursor: default`, with no hover background.
 

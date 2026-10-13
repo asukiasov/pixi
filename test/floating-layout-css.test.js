@@ -630,3 +630,32 @@ describe('Layers rows (2026-10-13 polish)', () => {
     assert.match(css, /\.layer-grip \{[^}]*linear-gradient/);
   });
 });
+
+describe('Colour picker and swatches (2026-10-13 polish)', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+  const rule = (sel) => {
+    const at = css.indexOf(`\n${sel} {`);
+    assert.notEqual(at, -1, `${sel} not found`);
+    return css.slice(at, css.indexOf('}', at));
+  };
+
+  test('every swatch is round', () => {
+    for (const sel of ['.palette-swatch', '.color-library-swatch', '.standard-library-swatches span', '.color-picker-palette-swatch,\n.color-picker-history-swatch']) {
+      assert.match(rule(sel), /border-radius: 50%/, sel);
+    }
+  });
+
+  test('tabs are a pill segmented control, the compare chip a pill', () => {
+    assert.match(rule('.color-picker-tabs'), /border-radius: 999px/);
+    assert.match(rule('.color-picker-tab'), /border-radius: 999px/);
+    assert.match(rule('.color-picker-compare'), /border-radius: 999px/);
+  });
+
+  test('close is a ghost circle; actions are one capsule of two segments', () => {
+    assert.match(html, /id="color-picker-close" class="color-picker-close"/);
+    assert.match(html, /<div class="color-picker-actions" role="group" aria-label="Color actions">/);
+    assert.match(rule('.color-picker-actions'), /border-radius: 999px/);
+    assert.match(html, /id="color-picker-add" class="color-picker-action"/);
+  });
+});

@@ -510,8 +510,8 @@
             <button type="button" id="color-picker-previous" class="color-picker-previous" aria-label="Back to the previous color" data-tooltip="Previous color"></button>
             <span id="color-picker-current" class="color-picker-current" aria-hidden="true"></span>
           </div>
-          <button type="button" id="color-picker-close" class="icon-button" aria-label="Close">
-            <span class="material-symbols-outlined">close</span>
+          <button type="button" id="color-picker-close" class="color-picker-close" aria-label="Close">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
           </button>
         </div>
         <div class="color-picker-tabs" role="tablist" aria-label="Color picker">
@@ -552,14 +552,14 @@
           <span class="color-picker-history-label" id="color-picker-history-label">History</span>
           <div id="color-picker-history" class="color-picker-history" role="group" aria-labelledby="color-picker-history-label"></div>
         </div>
-        <div class="color-picker-actions">
+        <div class="color-picker-actions" role="group" aria-label="Color actions">
           <!-- "Add to palette" - wired in js/color-library-ui.js. -->
-          <button type="button" id="color-picker-add" class="tool-button">
-            <span class="material-symbols-outlined" aria-hidden="true">add</span> Add to palette
+          <button type="button" id="color-picker-add" class="color-picker-action">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span><span>Add to palette</span>
           </button>
           <!-- Ramp from the colour being edited -> #ramp-preview-row. -->
-          <button type="button" id="color-picker-generate-ramp" class="tool-button">
-            <span class="material-symbols-outlined" aria-hidden="true">gradient</span> Ramp
+          <button type="button" id="color-picker-generate-ramp" class="color-picker-action">
+            <span class="material-symbols-outlined" aria-hidden="true">gradient</span><span>Ramp</span>
           </button>
         </div>
       </div>

@@ -42,8 +42,10 @@ const all = rules(css);
 const formaSelector = (cls) => FORMA_CLASSES.filter(([, classes]) => classes.includes(cls)).map(([selector]) => selector).join(', ');
 
 describe('glass card (5a)', () => {
+  // The confirm dialog's dimmed scrim is the one exception: it blurs the
+  // page behind a modal, it isn't a glass surface.
   test('style.css has no backdrop-filter: the blur lives in Forma UI', () => {
-    assert.doesNotMatch(css, /backdrop-filter/);
+    assert.doesNotMatch(css.replace(/\.confirm-overlay \{[^}]*\}/g, ''), /backdrop-filter/);
   });
 
   test('glass tokens exist for both themes', () => {
@@ -588,5 +590,21 @@ describe('Glass menus and popovers (2026-10-13 polish)', () => {
   test('menu items have an inset rounded hover on the ghost fill', () => {
     const src = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
     assert.match(src, /\.topbar-menu\.glass \.topbar-menu-item:not\(:disabled\):hover,\s*\.topbar-menu\.glass \.topbar-menu-item:focus-visible \{\s*background: var\(--ghost-hover\);/);
+  });
+});
+
+describe('Confirm dialog on glass (2026-10-13 polish)', () => {
+  const js = readFileSync(new URL('../js/confirm-dialog.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+
+  test('the dialog is glass, Cancel a ghost pill', () => {
+    assert.match(js, /class="confirm-dialog glass"/);
+    assert.match(js, /class="ghost-button ghost-text glass-pill confirm-dialog-cancel"/);
+    assert.match(js, /class="confirm-dialog-confirm"/);
+  });
+
+  test('the backdrop dims and blurs; the confirm is a red pill', () => {
+    assert.match(css, /\.confirm-overlay \{[^}]*backdrop-filter: blur\(6px\)/);
+    assert.match(css, /\.confirm-dialog-confirm \{[^}]*border-radius: 999px;[^}]*background: var\(--color-danger\)/);
   });
 });

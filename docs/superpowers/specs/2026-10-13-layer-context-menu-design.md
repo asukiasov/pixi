@@ -119,10 +119,12 @@ Where the pasted image goes depends on where it came from:
 Other rules:
 
 - **Layer cap.** At the 8-layer cap, the menu's Paste is disabled and ⌘V
-  shows the toast "Can't paste: 8 layers is the maximum".
-- **Nothing to paste.** If the clipboard has no image, or reading it fails,
-  the toast is "Nothing to paste". This includes the user dismissing
-  Safari's Paste bubble.
+  shows the toast "Can't paste: 8 layers is the maximum. Delete or merge a
+  layer first."
+- **Nothing to paste.** When there's neither a clipboard image nor a Pixi
+  copy (see the fallback rule below), the toast is "Nothing to paste. Copy
+  a layer or an image first." Dismissing Safari's Paste bubble counts as
+  no clipboard image.
 - **Paste stays enabled** (below the cap). A browser can't check what's on
   the clipboard without reading it, so it can't be greyed out the way
   Pixelmator greys it out.
@@ -144,17 +146,26 @@ Other rules:
   inside the click or keydown handler, and the PNG encodes inside the
   promise. Safari accepts a promise here, which keeps the user-gesture
   requirement satisfied without encoding ahead of time.
-- **Writing when `ClipboardItem` is missing.** The in-app record is still
-  set, so pasting inside Pixi works, and the toast is "Copied inside Pixi
-  only".
+- **Writing when `ClipboardItem` is missing, or the write fails.** The
+  in-app record is still set, so pasting inside Pixi works, and the toast
+  is "Copied inside Pixi only. This browser can't copy images to other
+  apps."
 - **Reading with ⌘V.** Uses the `paste` event's
   `clipboardData.files` / `items`. This needs no permission prompt and
   works in Safari.
 - **Reading from the menu's Paste.** Uses `navigator.clipboard.read()`.
   Safari shows its own "Paste" bubble, which the user taps, and Chromium
-  may ask for permission once. If `clipboard.read` is missing, the menu
-  Paste uses the in-app record only, or shows "Nothing to paste" if there
-  is none.
+  may ask for permission once.
+- **One fallback rule for both.** Paste uses the clipboard's image when
+  there is one. With no image, it uses Pixi's own last copy only if that
+  copy never reached the system clipboard (`ClipboardItem` missing or the
+  write refused), or if the clipboard can't be read at all. A copy that
+  did reach the clipboard is stale once the clipboard holds something
+  else, such as text copied elsewhere. Otherwise the toast is "Nothing to
+  paste. Copy a layer or an image first." (`recordFallback` in
+  `js/clipboard.js`.)
+- **Not behind a modal.** ⌘C, ⌘X and ⌘V do nothing while a `<dialog>`
+  sheet or the confirm dialog is open, or while page text is selected.
 
 ### Coordination with Share & Export
 
@@ -162,7 +173,7 @@ Other rules:
   `js/clipboard.js` as `writeImage(blobPromise)`. Whichever branch merges
   second reuses the other's helper rather than adding a second one.
 - The Export branch doesn't bind ⌘C or ⌘V, so this branch owns those keys.
-- The shared `.action-capsule` classes (section 4) suit Export's
+- The `.action-capsule` classes (section 5) suit Export's
   Copy/Download/Share row too.
 
 ## 3. Lock
@@ -205,16 +216,17 @@ the layer's pixels is refused. Everything else still works:
     `disabled` for a locked layer, so the popover greys out.
   - selection Delete
   - Cut
-- On a refusal: show the toast "Layer is locked" once per gesture, change
-  nothing, and commit nothing.
+- On a refusal: show the toast "Layer is locked. Unlock it from the
+  layer's ⋯ menu." once per gesture, change nothing, and commit nothing.
 
 **UI:**
 
 - The menu item reads "Lock" (`lock`) or, on a locked layer, "Unlock"
   (`lock_open`). Toggling is one undo step, committed as the visibility
   toggle is.
-- A locked row shows a small `lock` glyph next to its name. It's
-  `aria-hidden`, and the row's accessible name gains ", locked".
+- A locked row shows a small `lock` glyph at the start of its detail line,
+  under the name, so it doesn't get in the way of renaming. The glyph is
+  `aria-hidden`, and a visually hidden "Locked" is read out instead.
 
 ## 4. Select Content
 
@@ -252,16 +264,17 @@ the layer's pixels is refused. Everything else still works:
   `contentBounds`, which `layerMenuItems()` passes in as a precomputed
   boolean, so the state function stays pure.
 
-**Shared capsule CSS** (`style.css`):
+**Capsule CSS** (`style.css`):
 
-- `.color-picker-actions` / `.color-picker-action` become the shared
-  `.action-capsule` / `.action-capsule-segment`. The colour picker's
-  Add/Ramp markup switches to the new names, and the old selectors are
-  removed.
+- New `.action-capsule` / `.action-capsule-segment` classes, with the look
+  the colour picker's Add/Ramp capsule had at `50a62ef`: one rounded
+  capsule, segments with the icon over the label, divided by a 1px
+  `--glass-border` line. The colour picker itself is left alone, because a
+  parallel change is restyling Add/Ramp as two separate pills.
 - It has its own `border-radius: 999px` and is not `.glass-pill`, because
   `js/layout.js` toggles that class per layout.
-- Segments are at least 52px tall (the hit-target floor is 44px), divided
-  by a 1px `--glass-border` line, with hover and focus-visible as today.
+- Segments are at least 52px tall (the hit-target floor is 44px), with
+  hover and focus-visible states.
 - `.action-capsule-segment:disabled` gets `opacity: 0.4` and
   `cursor: default`, with no hover background.
 

@@ -590,19 +590,27 @@ Pro for iPad style):
   `#layers-select-group`, `#layers-select-merge`, `#layers-select-done`.
 - `#layers-panel-list` (role list) — `.layer-row` cards: `.layer-grip`
   (two CSS-drawn bars, drag to reorder; none on Background), thumbnail,
-  `.layer-name` (double-tap / Enter / F2 to rename) over `.layer-detail`,
+  `.layer-name` (double-tap / Enter / F2 to rename) over `.layer-detail`
+  (starts with `span.layer-lock-icon` on a user-locked layer),
   reference toggles, `.layer-more-button` (active row only → `#layer-menu`),
   `.layer-visibility` (a round accent checkbox, checked = shown, 44px hit
   area). `.in-group` rows are indented under their `.layer-group-row`
   (chevron, folder, name, "Group · N layers", ⋯, checkbox). `.layer-drop-indicator` shows the drop
   point while dragging.
 - `#layer-menu` — one shared menu filled per use with a row's or group's
-  actions (arrow keys, Escape, outside press).
+  actions (arrow keys, Escape, outside press). A layer's menu starts with
+  `.action-capsule.layer-menu-strip` (role group "Edit"): three
+  `.action-capsule-segment` menu items, Cut / Copy / Paste, icon over
+  label. Then Duplicate, Lock/Unlock, Rename | Select Content | Merge
+  Down, Group / Remove from Group, Move Up, Move Down | Delete Layer.
+  `.action-capsule` is a reusable capsule of segments (its own radius,
+  never `.glass-pill`).
 - `#layers-panel-opacity-popover` — a group's Opacity, from its ⋯ menu:
   `#layer-properties-title`, `#layers-panel-opacity-slider` +
   `#layers-panel-opacity-number`. (A layer's blend and opacity are in the
   header row; its ⋯ menu has no Opacity & Blend item.)
-- Shortcuts: ⌘J duplicate, ⌘E merge, ⌘G group.
+- Shortcuts: ⌘J duplicate, ⌘E merge, ⌘G group, ⌘C copy, ⌘X cut (needs a
+  selection), ⌘V paste (as a new layer).
 
 ---
 

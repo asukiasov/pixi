@@ -80,18 +80,31 @@ readable, since the bubble is small.
 ### Generator output
 
 AI image generators rarely hit exact pixel sizes or transparency, and
-rarely keep frames aligned. Their sheets are post-processed into the specs
-above: each frame is cropped, aligned on a fixed point of the head (the
-"+" mark), the white background removed, and the frames packed into the
-sheet. Stray bits (the dots of a drawn line) are assigned to their frame
-by hand when they sit between two characters. The source image stays in
-this folder.
+rarely keep frames aligned. `scripts/mascot-sprite.py` turns a generated
+sheet into the sprite:
+
+```sh
+python3 scripts/mascot-sprite.py docs/mascot/<tool>.png assets/mascot/<tool>.png --preview /tmp/<tool>-preview.png
+```
+
+It removes the white background, finds the characters, gives each loose
+bit (dots, crumbs, splashes) to the nearest character, aligns every frame
+on the head's "+" mark, and crops every tool at the same scale, so the
+axolotl is the same size in all of them. It prints each frame's margins:
+check none is negative (cut off), and look at the preview. It needs
+Pillow and numpy, which are dev-only. The source sheet stays in this
+folder as `<tool>.png`.
 
 ## Status
 
 | Tool | Source | Sprite | Meets specs |
 |---|---|---|---|
 | pencil | `pencil-sprite-2.png` (5 frames; `pencil-sprite-1.png` was the earlier 3-frame version) | `assets/mascot/pencil.png` | Yes: 5 × 256 × 256, 51 KB |
+| eraser | `eraser.png` | `assets/mascot/eraser.png` | Yes: 5 × 256 × 256, 56 KB |
+| bucket | `bucket.png` | `assets/mascot/bucket.png` | Yes: 5 × 256 × 256, 59 KB |
+| brush | `brush.png` | `assets/mascot/brush.png` | Yes: 5 × 256 × 256, 59 KB (paint stroke in frame 4 nearly touches the bottom edge) |
+| rectangle | `rectangle.png` | `assets/mascot/rectangle.png` | Yes: 5 × 256 × 256, 50 KB |
+| line, ellipse, selection, move, hand, eyedropper | — | — | Not made yet |
 
 ## Gemini prompt
 

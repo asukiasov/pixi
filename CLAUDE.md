@@ -32,7 +32,8 @@ tool (`js/mascot.js`, sprites in `assets/mascot/<tool>.png`). Built tool by
 tool; Pencil first. Sprite specs (5 frames recommended, 200 ms each, 256 ×
 256 per frame in one row, transparent PNG, frame count per tool in
 `MASCOT_SPRITES`), the per-tool status table, and the Gemini prompt for new
-sprites are in `docs/mascot/README.md`. Follow those specs for every new
+sprites are in `docs/mascot/README.md`; `scripts/mascot-sprite.py` turns a
+generated sheet into a sprite. Follow those specs for every new
 sprite, and update its status table when one is added.
 
 ## Process: Superpowers skills

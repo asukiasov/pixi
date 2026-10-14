@@ -13,7 +13,7 @@ When the user picks a tool that has a mascot sprite (click or keyboard
 shortcut), the app SHALL show a bubble at the top centre of the
 workspace, just below the top bar, playing that tool's sprite as a
 looping animation. The bubble SHALL disappear after 3 seconds. Tools with
-a sprite: Pencil.
+a sprite: Pencil, Eraser, Bucket, Brush, Rectangle.
 
 #### Scenario: Picking the Pencil
 - **WHEN** the user picks the Pencil while another tool is active

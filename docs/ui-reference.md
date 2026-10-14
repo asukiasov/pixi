@@ -453,7 +453,7 @@ in `js/workspace.js`):
 bubble top-centre, below the top bar, looping the axolotl using that tool
 for 3 s (200 ms a frame). Decorative: `aria-hidden`, `pointer-events:
 none`, hidden with the interface; reduced motion shows the last frame.
-Tools with a sprite: Pencil. Sprites and specs: `assets/mascot/`,
+Tools with a sprite: Pencil, Eraser, Bucket, Brush, Rectangle. Sprites and specs: `assets/mascot/`,
 `docs/mascot/README.md`; spec: `docs/specs/tool-mascot/spec.md`.
 
 ### Foreground/Background swatches (`.fg-bg-swatches`)

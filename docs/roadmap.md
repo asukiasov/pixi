@@ -549,10 +549,8 @@ owner generates each sprite (Gemini prompt and sprite specs in
 `docs/mascot/README.md`), it is cleaned up to the specs, then enabled in
 `MASCOT_SPRITES` (`js/mascot.js`). Spec: `docs/specs/tool-mascot/spec.md`.
 
-- **Pencil** — done (5 frames).
-- **Eraser** — next; sprite being generated.
-- Remaining: Bucket, Brush, Line, Rectangle, Ellipse, Selection, Move,
-  Hand, Eyedropper.
+- **Done** (5 frames each): Pencil, Eraser, Bucket, Brush, Rectangle.
+- **Remaining**: Line, Ellipse, Selection, Move, Hand, Eyedropper.
 
 Status: in progress.
 

@@ -1,6 +1,6 @@
 // Mascot bubble - Pixi's axolotl pops up top-centre for a few seconds
 // when the user picks a tool, playing that tool's short sprite loop.
-// Pencil only for now; each tool gets its own strip in assets/mascot/
+// Not every tool has one yet; each tool gets its own strip in assets/mascot/
 // (256 x 256 frames side by side - specs in docs/mascot/README.md).
 //
 // Purely decorative: aria-hidden, never takes pointer input (so it can't
@@ -12,7 +12,13 @@
 
 export const MASCOT_DURATION = 3000;
 // Tool id -> frame count of assets/mascot/<tool>.png.
-export const MASCOT_SPRITES = { pencil: { frames: 5 } };
+export const MASCOT_SPRITES = {
+  pencil: { frames: 5 },
+  eraser: { frames: 5 },
+  bucket: { frames: 5 },
+  brush: { frames: 5 },
+  rectangle: { frames: 5 },
+};
 export const MASCOT_TOOLS = Object.keys(MASCOT_SPRITES);
 
 /**
@@ -69,14 +75,22 @@ export function initMascot(screen) {
 
   controller = createMascotController({
     onShow(tool) {
-      strip.src = `assets/mascot/${tool}.png`;
-      sprite.style.setProperty('--mascot-frames', MASCOT_SPRITES[tool].frames);
-      // Restart the frame loop and the pop-in from frame 1.
       bubble.classList.remove('is-visible');
-      void bubble.offsetWidth;
-      bubble.classList.add('is-visible');
+      // Pops in once its sprite has loaded, so a first pick never flashes
+      // the previous tool's frame.
+      strip.onload = () => {
+        strip.onload = null;
+        sprite.style.setProperty('--mascot-frames', MASCOT_SPRITES[tool].frames);
+        // Restart the frame loop and the pop-in from frame 1.
+        void bubble.offsetWidth;
+        bubble.classList.add('is-visible');
+      };
+      const src = `assets/mascot/${tool}.png`;
+      if (strip.getAttribute('src') === src && strip.complete) strip.onload();
+      else strip.src = src;
     },
     onHide() {
+      strip.onload = null;
       bubble.classList.remove('is-visible');
     },
   });

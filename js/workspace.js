@@ -32,6 +32,7 @@ import { isAutoHideTool } from './prefs.js';
 import { syncToolButtons } from './tool-rail.js';
 import { getColorSequenceColor, setLibrarySequenceEnabled, syncColorLibraryActiveSwatch, getColorPalettes } from './color-library-ui.js';
 import { initColorPicker } from './color-picker.js';
+import { mascotToolPicked } from './mascot.js';
 
 const BRUSH_EDITOR_SIZE = 9; // fixed grid size for the custom-brush editor, matches Heart's width
 
@@ -1512,6 +1513,9 @@ function bindDomOnce() {
       if (button.dataset.tool === 'eyedropper' && state.currentTool !== 'eyedropper') {
         state.toolBeforeEyedropper = state.currentTool;
       }
+      // Only here, on a user pick - not in selectTool(), which also runs
+      // when the Eyedropper hands control back.
+      mascotToolPicked(button.dataset.tool, state.currentTool);
       selectTool(button.dataset.tool);
     });
   });

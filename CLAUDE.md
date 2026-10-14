@@ -26,6 +26,15 @@ editor). Company description, positioning, audience, and voice are in
 `docs/brand.md`. Use it for any user-facing copy and for shared naming
 across Forma's apps.
 
+**Mascot**: a pink axolotl pops up in a glass bubble at the top centre for
+3 s when the user picks a tool, playing a short loop of itself using that
+tool (`js/mascot.js`, sprites in `assets/mascot/<tool>.png`). Built tool by
+tool; Pencil first. Sprite specs (5 frames recommended, 200 ms each, 256 ×
+256 per frame in one row, transparent PNG, frame count per tool in
+`MASCOT_SPRITES`), the per-tool status table, and the Gemini prompt for new
+sprites are in `docs/mascot/README.md`. Follow those specs for every new
+sprite, and update its status table when one is added.
+
 ## Process: Superpowers skills
 
 There is no OpenSpec any more. Superpowers skills drive the whole workflow,

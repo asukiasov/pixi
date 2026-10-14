@@ -541,6 +541,21 @@ Note for 5h's docked deletion: once the docked layout is gone, the
 
 Status: step 1 planned, not started.
 
+## Tool mascot
+
+The axolotl mascot pops up in a bubble for 3 s when the user picks a tool,
+playing a short loop of itself using that tool. Built tool by tool: the
+owner generates each sprite (Gemini prompt and sprite specs in
+`docs/mascot/README.md`), it is cleaned up to the specs, then enabled in
+`MASCOT_SPRITES` (`js/mascot.js`). Spec: `docs/specs/tool-mascot/spec.md`.
+
+- **Pencil** — done (5 frames).
+- **Eraser** — next; sprite being generated.
+- Remaining: Bucket, Brush, Line, Rectangle, Ellipse, Selection, Move,
+  Hand, Eyedropper.
+
+Status: in progress.
+
 ## On demand — revisit when a real need shows up
 
 Not scheduled into a phase on purpose: each is real work with no

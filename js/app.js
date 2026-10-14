@@ -12,6 +12,7 @@ import { initColorLibrary } from './color-library-ui.js';
 import { initLayers, closeLayersOpacityPopover } from './layers-ui.js';
 import { initTransform } from './transform-ui.js';
 import { initToasts } from './toast.js';
+import { initMascot } from './mascot.js';
 import { applyLayout, measureClearInsets } from './layout.js';
 import { initFloatingTopbar } from './floating-topbar.js';
 import { initToolOptionsBar } from './tool-options-bar.js';
@@ -148,6 +149,8 @@ initTransform();
 // especially) can miss announcements in a live region that was only just
 // inserted - see js/toast.js.
 initToasts();
+// The tool mascot bubble, inside the workspace so hide-all-UI hides it.
+initMascot(screens.workspace);
 
 function showScreen(name) {
   for (const [key, el] of Object.entries(screens)) {

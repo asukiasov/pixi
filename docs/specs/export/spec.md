@@ -224,7 +224,7 @@ accepts PNG reliably; when WebP or JPG is selected the button SHALL read
 "Copy PNG" instead of "Copy". JPG's flatten-to-white does not apply to the
 copied PNG. On success, an info toast "Copied" SHALL be shown and the
 popover SHALL stay open; on failure, an error toast "Couldn't copy the
-image." SHALL be shown.
+image. Try Download instead." SHALL be shown.
 
 #### Scenario: Copying with JPG selected
 - **WHEN** the user selects JPG and clicks "Copy PNG"

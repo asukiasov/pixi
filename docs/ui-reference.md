@@ -493,11 +493,12 @@ Spec: `color-library` (FG/BG model), `canvas-creation`/`layers`
   `#export-preview-dimensions`, `#export-preview-size`), scale
   1x/2x/4x/8x (`.export-scale-option[data-scale]`), format PNG/WebP/JPG
   (`.export-format-option[data-format]`), `#export-transparent-background`
-  checkbox, and an action row of `.export-action-button`s: `#export-copy`
+  checkbox, and an `.action-capsule.export-actions` row of
+  `.action-capsule-segment`s: `#export-copy`
   ("Copy" / "Copy PNG", label in `#export-copy-label`; hidden without
   clipboard image support), `#export-download` ("Download"),
   `#export-share` ("Share"; hidden without Web Share files support). The
-  primary action gets `.primary`. Output is pre-rendered on open and on
+  primary action gets `.is-primary`. Output is pre-rendered on open and on
   every option change. Transient state, resets to defaults each time it
   opens (not persisted with the project). Spec: `export`.
 - `#timelapse-review-panel` (drawing-timelapse-recording) — popover

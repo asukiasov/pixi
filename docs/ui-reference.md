@@ -149,7 +149,7 @@ full name in `title`), `#zoom-pill` (current %, plus the view angle when turned,
 "2100% · 90°"; opens `#zoom-menu`: 100%/Fit/Fill/Zoom out/Zoom in/Rotate
 View Left/Rotate View Right/Reset Rotation), `#transform-toggle`, Undo,
 Redo, and
-`#more-button` (opens `#more-menu`: Canvas settings, Export, Record
+`#more-button` (opens `#more-menu`: Canvas settings, Share / Export, Record
 timelapse, Tile preview, Prefs, Theme Light/Dark/System, Hide interface). The
 buttons those menus replace, and `.bottom-bar`, stay in the DOM but are
 `display: none`; menu items forward clicks to them (`data-forward`), so
@@ -349,7 +349,7 @@ Icon-only buttons, left-to-right. No hover/selected motion effects
 | `#symmetry-toggle` | flip | Symmetry/mirror drawing mode | 4-state cycle (off/horizontal/vertical/both) on each click, no popover - see below |
 | `#layers-panel-toggle` | layers | Collapse/expand Layers panel | mirrors Layers panel header's own collapse state |
 | `#canvas-settings-toggle` | settings | Open Canvas Settings popover | anchored popover, see below |
-| `#export-button` | download | Open Export popover | anchored popover, see below |
+| `#export-button` | ios_share | Open Share popover | anchored popover, see below |
 | `#record-toggle` | fiber_manual_record | Start/stop timelapse recording | on/off, opens `#timelapse-review-panel` on stop if any frames were captured; see below |
 | `#tile-preview-toggle` | grid_view | 3x3 seamless-tile preview | on/off, no popover - see below |
 | *(spacer)* | | | pushes the rest right |
@@ -488,12 +488,18 @@ Spec: `color-library` (FG/BG model), `canvas-creation`/`layers`
   `#canvas-settings-name` (project name), `#canvas-settings-width/height`
   + `#canvas-settings-apply` ("Resize"), `#canvas-settings-rotate-ccw`/
   `-cw` (rotate_left/rotate_right). Spec: `canvas-settings`.
-- `#export-panel` — popover anchored to `#export-button`: scale
+- `#export-panel` — Share popover anchored to `#export-button`: preview
+  row (`#export-preview-image` over a checkerboard, `#export-preview-name`,
+  `#export-preview-dimensions`, `#export-preview-size`), scale
   1x/2x/4x/8x (`.export-scale-option[data-scale]`), format PNG/WebP/JPG
   (`.export-format-option[data-format]`), `#export-transparent-background`
-  checkbox, `#export-download` ("Export"). Transient state, resets to
-  defaults each time it opens (not persisted with the project). Spec:
-  `export`.
+  checkbox, and an action row of `.export-action-button`s: `#export-copy`
+  ("Copy" / "Copy PNG", label in `#export-copy-label`; hidden without
+  clipboard image support), `#export-download` ("Download"),
+  `#export-share` ("Share"; hidden without Web Share files support). The
+  primary action gets `.primary`. Output is pre-rendered on open and on
+  every option change. Transient state, resets to defaults each time it
+  opens (not persisted with the project). Spec: `export`.
 - `#timelapse-review-panel` (drawing-timelapse-recording) — popover
   anchored to `#record-toggle`, opened when recording is stopped with at
   least one captured frame (never for an empty recording).

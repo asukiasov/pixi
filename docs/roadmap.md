@@ -432,6 +432,16 @@ and can ship at any time.
   - Process: brainstorming → design doc → plan; TDD for the
     remember-last logic and preset/Custom syncing; `web-design-guidelines`
     pass; update `docs/specs`, `docs/ui-reference.md`.
+- **Share and export** — done 2026-10-13 (design in
+  `docs/superpowers/specs/2026-10-13-share-export-design.md`). The Export
+  popover becomes a Share popover, after Procreate's Share menu and
+  Pixelmator Pro's export preview: a live preview with dimensions and file
+  size, then Copy (PNG to clipboard), Download, and Share (the system
+  share sheet via Web Share, shown only where the browser supports
+  sharing files). The output is pre-rendered so Safari's user-activation
+  rule doesn't block Share/Copy. Options still reset on open. Not in
+  scope: a `.pixi` project file, layers as separate PNGs, sharing the
+  timelapse.
 - **5i — Palette merge** (independent): the fixed 16-swatch `#palette-row`
   becomes Color Library's default palette, and the row is removed. Its
   Rainbow swatch (Brush-only, mutually exclusive with the Color Library

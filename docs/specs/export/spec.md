@@ -2,35 +2,35 @@
 
 ## Purpose
 
-Lets a user export the current project as an image at a chosen scale and
-format, and optionally with a transparent background regardless of how the
-canvas itself was set up, instead of always downloading a single
-native-resolution PNG with a fixed name and the canvas's own background
-baked in.
+Lets a user get the current project out of Pixi as an image at a chosen
+scale and format, optionally with a transparent background, by copying it
+to the clipboard, downloading it, or handing it to the operating system's
+share sheet - with a preview and file size of exactly what will go out.
 
 ## Requirements
 
-### Requirement: Export popover
-Export SHALL open as a popover anchored to the Export control in the top
-bar, using the same anchored-popover behavior as Canvas Settings
-(positioned below the control, flipping above if that would overflow the
-viewport, clamped horizontally, closable via an explicit close button,
-clicking outside, Escape, or re-clicking the Export control) rather than
-downloading immediately on click.
+### Requirement: Share popover
+Share SHALL open as a popover anchored to the Share control in the top
+bar (icon `ios_share`, label "Share"; in the floating layout, the More
+menu's "Share / Export" item), using the same anchored-popover behavior
+as Canvas Settings (positioned below the control, flipping above if that
+would overflow the viewport, clamped horizontally, closable via an
+explicit close button, clicking outside, Escape, or re-clicking the
+control) rather than downloading immediately on click.
 
-#### Scenario: Opening the Export popover
-- **WHEN** the user clicks the Export control in the top bar
-- **THEN** the Export popover opens showing the scale multiplier, format
-  selector, and transparent-background controls, with no file downloaded
-  yet
+#### Scenario: Opening the Share popover
+- **WHEN** the user clicks the Share control
+- **THEN** the popover opens showing the preview, the scale multiplier,
+  format selector, transparent-background control, and the action row,
+  with no file downloaded, copied, or shared yet
 
 #### Scenario: Closing without exporting
-- **WHEN** the Export popover is open and the user presses Escape, clicks
+- **WHEN** the Share popover is open and the user presses Escape, clicks
   outside it, or clicks its close button
-- **THEN** the popover closes and no file is downloaded
+- **THEN** the popover closes and nothing is downloaded, copied, or shared
 
 ### Requirement: Scale multiplier
-The Export popover SHALL offer a choice of 1x, 2x, 4x, or 8x scale, default
+The Share popover SHALL offer a choice of 1x, 2x, 4x, or 8x scale, default
 1x. The exported PNG's pixel dimensions SHALL be the canvas's native width
 and height multiplied by the chosen scale, with each source pixel rendered
 as a solid block of scale×scale output pixels (nearest-neighbor, no
@@ -47,7 +47,7 @@ smoothing/interpolation).
   adjacent source pixels)
 
 ### Requirement: Transparent-background override
-The Export popover SHALL offer a "Transparent background" toggle, off by
+The Share popover SHALL offer a "Transparent background" toggle, off by
 default. When on, the Background layer (see the `layers` capability, if the
 project has one) SHALL be composited as fully transparent for this export
 only, instead of filling with its background color. When off, export SHALL
@@ -89,7 +89,7 @@ before JPG was selected (it stays off until the user turns it on again).
   Format selector) regardless of its prior state
 
 ### Requirement: Format selector
-The Export popover SHALL offer a choice of PNG (default), WebP, or JPG.
+The Share popover SHALL offer a choice of PNG (default), WebP, or JPG.
 PNG and WebP preserve the alpha channel from compositing (including any
 transparency from the "Transparent background" toggle or a
 transparent-background canvas). JPG has no alpha channel: exporting as JPG
@@ -159,3 +159,73 @@ never baked into exported output.
   "Transparent background" toggle
 - **THEN** the reference image layer is excluded from the result in every
   case, exactly as if it did not exist for export purposes
+
+### Requirement: Preview and size
+The Share popover SHALL show a preview of the exact file the current
+options produce, drawn with hard pixel edges over a checkerboard, together
+with the project name, the output dimensions and format
+(`<width×scale>×<height×scale> · <FORMAT>`), and the encoded file size
+(exact bytes under 1 KB, `~N KB` under 1 MB, `N.N MB` above). The preview
+and size SHALL update whenever scale, format, or the transparent-background
+toggle changes; while the new output is being prepared, the action buttons
+SHALL be disabled. If several changes overlap, only the newest one's
+output SHALL be shown and used.
+
+#### Scenario: Changing scale updates the preview
+- **WHEN** the popover is open on a 32×32 project at 1x PNG and the user
+  selects 8x
+- **THEN** the dimensions read `256×256 · PNG` and the size reflects the
+  8x file
+
+### Requirement: Action row
+The Share popover SHALL offer Copy, Download, and Share actions in one row,
+in that order. Share SHALL be shown only when the browser can share files
+(`navigator.canShare({ files })`), and Copy only when it can write images
+to the clipboard (`navigator.clipboard.write` and `ClipboardItem`). The
+rightmost visible action SHALL be styled as the primary action: Share
+where available, otherwise Download. Each action SHALL use the output
+already prepared for the current options, without re-encoding at click
+time.
+
+#### Scenario: Browser without a share sheet
+- **WHEN** the browser does not support sharing files
+- **THEN** the Share action is hidden and Download is the primary action
+
+### Requirement: Download
+Download SHALL save the prepared file under the name defined by the
+Export filename requirement, run the export celebration, and close the
+popover.
+
+#### Scenario: Downloading
+- **WHEN** the user selects 4x and WebP on a project named "My Sprite" and
+  clicks Download
+- **THEN** a file named `My Sprite@4x.webp` is saved and the popover closes
+
+### Requirement: Share
+Share SHALL hand the prepared file (named per the Export filename
+requirement, titled with the project name) to the operating system's share
+sheet. If the user dismisses the sheet, nothing else SHALL happen and the
+popover SHALL stay open. If sharing fails for any other reason, an error
+toast "Couldn't share. Try Download instead." SHALL be shown. After a
+completed share the popover SHALL close.
+
+#### Scenario: Sharing to Photos on iPad
+- **WHEN** the user taps Share on iPad Safari and picks Save Image
+- **THEN** the image is saved to Photos and the popover closes
+
+#### Scenario: Dismissing the share sheet
+- **WHEN** the user opens the share sheet and dismisses it
+- **THEN** no error is shown and the popover stays open
+
+### Requirement: Copy
+Copy SHALL write a PNG image at the chosen scale and transparency to the
+clipboard, whatever format is selected, because the clipboard only
+accepts PNG reliably; when WebP or JPG is selected the button SHALL read
+"Copy PNG" instead of "Copy". JPG's flatten-to-white does not apply to the
+copied PNG. On success, an info toast "Copied" SHALL be shown and the
+popover SHALL stay open; on failure, an error toast "Couldn't copy the
+image." SHALL be shown.
+
+#### Scenario: Copying with JPG selected
+- **WHEN** the user selects JPG and clicks "Copy PNG"
+- **THEN** a PNG of the image is on the clipboard and "Copied" is shown

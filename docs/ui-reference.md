@@ -171,7 +171,8 @@ group (rows are `<label>`s, 48px tall; switches are
 drawn as value plus `unfold_more` chevrons; labels in Title Case).
 Groups: **Tools** - Customize Tools… (a `<button>` drawn as a row,
 `chevron_right` at the end; opens the Customize Tools sheet on top of
-Prefs); **Layout** - Tools Side and Panels Side (Left/Right each,
+Prefs), Show Mascot (`#prefs-show-mascot`, default on; the tool mascot
+bubble below); **Layout** - Tools Side and Panels Side (Left/Right each,
 independent; this replaces the roadmap's single handedness flag);
 **Open When a Project Opens** - Layers (the pinned card); **Drawing** - Hide Interface While Drawing, Show Brush Cursor (`#prefs-brush-cursor`, default on; `data-brush-cursor` on the Workspace screen, overlay `.brush-cursor` from `js/canvas-view.js`, footprint/outline in `js/brush-cursor.js`), Draw Only With Apple Pencil (`#prefs-pencil-only`, default on; palm rejection in `js/canvas-view.js` via `js/pointer-policy.js`). Every change applies at once and is saved; Done, Escape or
 a press on the backdrop closes the sheet and focus returns to More.
@@ -453,6 +454,8 @@ in `js/workspace.js`):
 bubble top-centre, below the top bar, looping the axolotl using that tool
 for 3 s (200 ms a frame). Decorative: `aria-hidden`, `pointer-events:
 none`, hidden with the interface; reduced motion shows the last frame.
+Off with Prefs → Show Mascot (`showMascot`; turning it off hides a
+showing bubble at once).
 Tools with a sprite: Pencil, Eraser, Bucket, Brush, Rectangle, Line. Sprites and specs: `assets/mascot/`,
 `docs/mascot/README.md`; spec: `docs/specs/tool-mascot/spec.md`.
 

@@ -6,7 +6,8 @@ short loop of itself using that tool. Pencil is the first one; the rest are
 added tool by tool.
 
 - Code: `js/mascot.js` (timing logic, tested in `test/mascot.test.js`),
-  styles under "Tool mascot bubble" in `style.css`.
+  styles under "Tool mascot bubble" in `style.css`. Users can turn it off
+  in Prefs → Show Mascot (`showMascot` in `js/prefs.js`).
 - Shipped sprites: `assets/mascot/<tool>.png`.
 - This folder (`docs/mascot/`): source artwork and generator output. It is
   not loaded by the app.

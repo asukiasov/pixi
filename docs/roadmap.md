@@ -552,6 +552,8 @@ owner generates each sprite (Gemini prompt and sprite specs in
 - **Done** (5 frames each): Pencil, Eraser, Bucket, Brush, Rectangle,
   Line.
 - **Remaining**: Ellipse, Selection, Move, Hand, Eyedropper.
+- **Show Mascot** pref (Prefs → Tools, default on) turns it off.
+  Design: `docs/superpowers/specs/2026-10-14-mascot-pref-design.md`.
 
 Status: in progress.
 

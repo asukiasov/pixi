@@ -30,12 +30,15 @@ describe('createMascotController', () => {
   let clock;
   let events;
   let mascot;
+  let enabled;
 
   beforeEach(() => {
     clock = fakeTimers();
     events = [];
+    enabled = true;
     mascot = createMascotController({
       tools: ['pencil'],
+      isEnabled: () => enabled,
       onShow: (tool) => events.push(['show', tool]),
       onHide: () => events.push(['hide']),
       setTimer: clock.setTimer,
@@ -95,6 +98,29 @@ describe('createMascotController', () => {
   test('hide() while nothing is showing does nothing', () => {
     mascot.hide();
     assert.deepEqual(events, []);
+  });
+
+  test('turned off (Show Mascot pref), picking a tool shows nothing', () => {
+    enabled = false;
+    mascot.toolPicked('pencil', 'eraser');
+    assert.deepEqual(events, []);
+  });
+
+  test('turned off while showing, the next pick still hides it and shows nothing', () => {
+    mascot.toolPicked('pencil', 'eraser');
+    enabled = false;
+    mascot.toolPicked('eraser', 'pencil');
+    mascot.toolPicked('pencil', 'eraser');
+    assert.deepEqual(events, [['show', 'pencil'], ['hide']]);
+  });
+
+  test('turned back on, the next pick shows it again', () => {
+    enabled = false;
+    mascot.toolPicked('pencil', 'eraser');
+    enabled = true;
+    mascot.toolPicked('eraser', 'pencil');
+    mascot.toolPicked('pencil', 'eraser');
+    assert.deepEqual(events, [['show', 'pencil']]);
   });
 });
 

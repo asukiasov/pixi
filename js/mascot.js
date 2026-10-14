@@ -26,9 +26,12 @@ export const MASCOT_TOOLS = Object.keys(MASCOT_SPRITES);
  * Pure mascot lifetime. toolPicked(tool, previousTool) shows the bubble
  * for `tool` if it has a mascot and isn't already the active tool, and
  * hides it MASCOT_DURATION later; picking any other tool hides it at once.
+ * While isEnabled() is false (the Show Mascot pref is off) a pick only
+ * hides it.
  */
 export function createMascotController({
   tools = MASCOT_TOOLS,
+  isEnabled = () => true,
   onShow = () => {},
   onHide = () => {},
   setTimer = (fn, ms) => setTimeout(fn, ms),
@@ -48,7 +51,7 @@ export function createMascotController({
   function toolPicked(tool, previousTool) {
     if (tool === previousTool) return;
     hide();
-    if (!tools.includes(tool)) return;
+    if (!isEnabled() || !tools.includes(tool)) return;
     showing = true;
     onShow(tool);
     timer = setTimer(hide, MASCOT_DURATION);
@@ -59,8 +62,11 @@ export function createMascotController({
 
 let controller = null;
 
-/** Builds the bubble inside `screen` and returns the controller. */
-export function initMascot(screen) {
+/**
+ * Builds the bubble inside `screen` and returns the controller.
+ * `isEnabled` is read on every pick (js/app.js passes the Show Mascot pref).
+ */
+export function initMascot(screen, { isEnabled } = {}) {
   const bubble = document.createElement('div');
   bubble.className = 'mascot-bubble glass';
   bubble.setAttribute('aria-hidden', 'true');
@@ -75,6 +81,7 @@ export function initMascot(screen) {
   screen.append(bubble);
 
   controller = createMascotController({
+    isEnabled,
     onShow(tool) {
       bubble.classList.remove('is-visible');
       // Pops in once its sprite has loaded, so a first pick never flashes

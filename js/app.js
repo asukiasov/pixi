@@ -119,6 +119,7 @@ initSelectionBar({ onCanvasViewChange, currentSelectionClientRect });
 // change to setPrefs: it applies at once and never re-fits the canvas;
 // pins take effect on the next project open.
 let toolOverflow = null;
+let mascot = null;
 function setPrefs(next) {
   prefs = next;
   savePrefs(prefsStorage, prefs);
@@ -126,6 +127,8 @@ function setPrefs(next) {
   applyRailTools(railToolsEl, prefs.railTools, toolOverflowButton);
   toolOverflow?.refresh();
   canvasView?.setPencilOnly(prefs.pencilOnly);
+  // Turned off while the bubble shows: it goes at once.
+  if (!prefs.showMascot) mascot?.hide();
 }
 const getPrefs = () => prefs;
 initPrefsSheet({ getPrefs, setPrefs });
@@ -150,7 +153,8 @@ initTransform();
 // inserted - see js/toast.js.
 initToasts();
 // The tool mascot bubble, inside the workspace so hide-all-UI hides it.
-initMascot(screens.workspace);
+// Read on every pick, so the Show Mascot pref applies at once.
+mascot = initMascot(screens.workspace, { isEnabled: () => prefs.showMascot });
 
 function showScreen(name) {
   for (const [key, el] of Object.entries(screens)) {

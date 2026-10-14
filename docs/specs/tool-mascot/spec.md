@@ -48,3 +48,21 @@ motion requested, it SHALL show a single still frame instead of the loop.
 #### Scenario: Drawing under the bubble
 - **WHEN** the bubble is showing and the user draws where it sits
 - **THEN** the stroke lands on the canvas as if the bubble were not there
+
+### Requirement: Can be turned off
+The Prefs sheet SHALL have a Show Mascot switch in its Tools group, on
+by default and saved with the other prefs. While it is off, picking a
+tool SHALL NOT show the bubble.
+
+#### Scenario: Picking a tool with Show Mascot off
+- **WHEN** Show Mascot is off and the user picks the Pencil
+- **THEN** no bubble appears
+
+#### Scenario: Turning it off while the bubble shows
+- **WHEN** the bubble is showing and the user turns Show Mascot off
+- **THEN** the bubble hides at once
+
+#### Scenario: Turning it back on
+- **WHEN** the user turns Show Mascot back on
+- **THEN** nothing appears until the next tool pick, which shows the
+  bubble as usual

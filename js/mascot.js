@@ -18,6 +18,7 @@ export const MASCOT_SPRITES = {
   bucket: { frames: 5 },
   brush: { frames: 5 },
   rectangle: { frames: 5 },
+  line: { frames: 5 },
 };
 export const MASCOT_TOOLS = Object.keys(MASCOT_SPRITES);
 

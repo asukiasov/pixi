@@ -93,7 +93,8 @@ on the head's "+" mark, and crops every tool at the same scale, so the
 axolotl is the same size in all of them. It prints each frame's margins:
 check none is negative (cut off), and look at the preview. It needs
 Pillow and numpy, which are dev-only. The source sheet stays in this
-folder as `<tool>.png`.
+folder as `<tool>.png`. `Gemini_Generated_Image_*.jpeg` are earlier
+drafts, kept for reference.
 
 ## Status
 
@@ -104,7 +105,8 @@ folder as `<tool>.png`.
 | bucket | `bucket.png` | `assets/mascot/bucket.png` | Yes: 5 × 256 × 256, 59 KB |
 | brush | `brush.png` | `assets/mascot/brush.png` | Yes: 5 × 256 × 256, 59 KB (paint stroke in frame 4 nearly touches the bottom edge) |
 | rectangle | `rectangle.png` | `assets/mascot/rectangle.png` | Yes: 5 × 256 × 256, 50 KB |
-| line, ellipse, selection, move, hand, eyedropper | — | — | Not made yet |
+| line | `line.png` | `assets/mascot/line.png` | Yes: 5 × 256 × 256, 51 KB |
+| ellipse, selection, move, hand, eyedropper | — | — | Not made yet |
 
 ## Gemini prompt
 

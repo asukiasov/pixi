@@ -918,16 +918,16 @@
            Copy/Share (which Safari only allows inside the click) all use the
            same ready Blob. Scale, format and the transparent-background
            toggle reset to their defaults every time it opens. -->
-      <div id="export-panel" class="canvas-settings-panel export-panel hidden">
+      <div id="export-panel" class="canvas-settings-panel export-panel hidden" role="dialog" aria-labelledby="export-title">
         <div class="canvas-settings-row canvas-settings-header-row">
-          <h2>Share</h2>
+          <h2 id="export-title">Share</h2>
           <button type="button" id="export-close" class="icon-button" aria-label="Close">
             <span class="material-symbols-outlined">close</span>
           </button>
         </div>
         <div class="canvas-settings-row export-preview-row">
           <div class="export-preview-frame">
-            <img id="export-preview-image" alt="" />
+            <img id="export-preview-image" alt="" width="72" height="72" />
           </div>
           <div class="export-preview-meta">
             <span id="export-preview-name" class="export-preview-name"></span>

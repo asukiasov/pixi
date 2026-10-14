@@ -29,7 +29,8 @@ describe('Share popover markup', () => {
       ]) {
         assert.match(source, new RegExp(`id="${id}"`), `missing #${id}`);
       }
-      assert.match(source, /<h2>Share<\/h2>/);
+      assert.match(source, /<h2 id="export-title">Share<\/h2>/);
+      assert.match(source, /id="export-panel"[^>]*role="dialog"[^>]*aria-labelledby="export-title"/);
       assert.doesNotMatch(source, /<\/span> Export\s*<\/button>/);
     });
   }

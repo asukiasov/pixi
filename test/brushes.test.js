@@ -4,6 +4,28 @@ import { PixelEngine } from '../lib/pixel-engine/engine.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid, patternToPixels, brushFromRows, editorPaintValue } from '../js/brushes.js';
 
 describe('BRUSHES registry', () => {
+  test('is the eight Core brushes, in order', () => {
+    assert.deepEqual(BRUSHES.map((b) => b.id), ['heart', 'circle', 'square', 'diamond', 'star', 'plus', 'soft-round', 'spray']);
+  });
+
+  test('every Core brush is 3-16 px, in bounds, and has pixels', () => {
+    for (const brush of BRUSHES) {
+      assert.ok(brush.width >= 3 && brush.width <= 16, `${brush.id} width`);
+      assert.ok(brush.height >= 3 && brush.height <= 16, `${brush.id} height`);
+      assert.ok(brush.pixels.length > 0, `${brush.id} has pixels`);
+      for (const [x, y, a = 1] of brush.pixels) {
+        assert.ok(x >= 0 && x < brush.width && y >= 0 && y < brush.height, `${brush.id} (${x},${y}) in bounds`);
+        assert.ok(a > 0 && a <= 1, `${brush.id} opacity ${a}`);
+      }
+    }
+  });
+
+  test('Soft Round has partial pixels and a full centre', () => {
+    const soft = BRUSHES.find((b) => b.id === 'soft-round');
+    assert.ok(soft.pixels.some(([, , a]) => a !== undefined && a < 1));
+    assert.ok(soft.pixels.some(([x, y, a]) => x === 3 && y === 3 && a === undefined));
+  });
+
   test('includes a Heart brush with a well-formed pattern', () => {
     const heart = BRUSHES.find((b) => b.id === 'heart');
     assert.ok(heart);

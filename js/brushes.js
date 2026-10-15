@@ -1,4 +1,5 @@
-// Predefined (or user-drawn custom) pixel-art patterns placeable with one
+// Predefined (the Core set, or added Standard Brushes packs) or user-drawn
+// custom pixel-art patterns, each pixel full or partly opaque, placeable with one
 // click, or dragged as a repeating trail. DOM-free, no engine.js changes
 // needed — placement relies on PixelEngine.setPixel's existing bounds
 // check to silently clip out-of-canvas pixels. Adding a built-in brush is
@@ -26,6 +27,44 @@ const CIRCLE_PATTERN = [
   '.XXX.',
 ];
 
+const SQUARE_PATTERN = ['XXXXX', 'XXXXX', 'XXXXX', 'XXXXX', 'XXXXX'];
+
+const DIAMOND_PATTERN = ['..X..', '.XXX.', 'XXXXX', '.XXX.', '..X..'];
+
+const STAR_PATTERN = [
+  '...X...',
+  '..XXX..',
+  'XXXXXXX',
+  '.XXXXX.',
+  '..XXX..',
+  '.XX.XX.',
+  'XX...XX',
+];
+
+const PLUS_PATTERN = ['..X..', '..X..', 'XXXXX', '..X..', '..X..'];
+
+// Opacity falls off from a solid centre (digits are 10%-90%).
+const SOFT_ROUND_PATTERN = [
+  '..121..',
+  '.35653.',
+  '158X851',
+  '26XXX62',
+  '158X851',
+  '.35653.',
+  '..121..',
+];
+
+// Scattered dots, some partial, for an airbrush-like spray.
+const SPRAY_PATTERN = [
+  '.5..X..',
+  '...7..X',
+  'X.....5',
+  '..X.4..',
+  '6.....X',
+  '..5.X..',
+  'X...6..',
+];
+
 const LEVEL_CHARS = '123456789';
 
 /**
@@ -50,9 +89,17 @@ export function brushFromRows(id, name, rows) {
   return { id, name, width: rows[0].length, height: rows.length, pixels: patternToPixels(rows) };
 }
 
+// The Core set: always in the brush palette, can't be deleted. Themed
+// packs are added separately (js/standard-brushes.js).
 export const BRUSHES = [
   brushFromRows('heart', 'Heart', HEART_PATTERN),
   brushFromRows('circle', 'Circle', CIRCLE_PATTERN),
+  brushFromRows('square', 'Square', SQUARE_PATTERN),
+  brushFromRows('diamond', 'Diamond', DIAMOND_PATTERN),
+  brushFromRows('star', 'Star', STAR_PATTERN),
+  brushFromRows('plus', 'Plus', PLUS_PATTERN),
+  brushFromRows('soft-round', 'Soft Round', SOFT_ROUND_PATTERN),
+  brushFromRows('spray', 'Spray', SPRAY_PATTERN),
 ];
 
 /**

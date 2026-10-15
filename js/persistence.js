@@ -266,9 +266,11 @@ export async function deleteProject(id) {
  * immediately. `userId` is always null today - no auth exists yet (Phase 3
  * adds Supabase Auth, per docs/roadmap.md); reserving the field now
  * means "owned by the signed-in user" later is a matter of setting it, not
- * a schema change.
+ * a schema change. `packInfo`, when the brush comes from a Standard
+ * Brushes pack (js/standard-brushes.js), adds pack, packName, packBrushId
+ * and packIndex - not indexed, so no schema change.
  */
-export async function createCustomBrush(name, width, height, pixels) {
+export async function createCustomBrush(name, width, height, pixels, packInfo = null) {
   const record = {
     id: generateId(),
     name,
@@ -278,6 +280,10 @@ export async function createCustomBrush(name, width, height, pixels) {
     userId: null,
     createdAt: Date.now(),
   };
+  if (packInfo) {
+    const { pack, packName, packBrushId, packIndex } = packInfo;
+    Object.assign(record, { pack, packName, packBrushId, packIndex });
+  }
   await db.customBrushes.put(record);
   return record;
 }

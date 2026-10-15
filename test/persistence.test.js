@@ -248,6 +248,20 @@ describe('deleteProject', () => {
 });
 
 describe('createCustomBrush', () => {
+  test('saves pack info when given, and nothing extra when not', async () => {
+    const packInfo = { pack: 'nature', packName: 'Nature', packBrushId: 'leaf', packIndex: 1 };
+    const fromPack = await createCustomBrush('Leaf', 3, 3, [[1, 1, 0.5]], packInfo);
+    const [stored] = (await listCustomBrushes()).filter((b) => b.id === fromPack.id);
+    assert.equal(stored.pack, 'nature');
+    assert.equal(stored.packName, 'Nature');
+    assert.equal(stored.packBrushId, 'leaf');
+    assert.equal(stored.packIndex, 1);
+    assert.deepEqual(stored.pixels, [[1, 1, 0.5]]);
+
+    const plain = await createCustomBrush('Mine', 3, 3, [[0, 0]]);
+    assert.equal('pack' in plain, false);
+  });
+
   test('creates a record with id, name, dimensions, pixels, and a null userId', async () => {
     const pixels = [[0, 0], [1, 1]];
     const record = await createCustomBrush('My Brush', 2, 2, pixels);

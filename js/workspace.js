@@ -5,7 +5,7 @@ import { TimelapseRecorder, captureFrame, encodeTimelapseVideo, isTimelapseSuppo
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
 import { drawRectangle, drawEllipse, clipToSelection } from './shape-tools.js';
 import { cursorFootprint, footprintOutlinePath } from './brush-cursor.js';
-import { flipRegion, rotateRegion, contentBounds, alignOffset, moveRegion } from '../lib/pixel-engine/transform.js';
+import { flipRegion, rotateRegion, rotateRegionFree, contentBounds, alignOffset, moveRegion } from '../lib/pixel-engine/transform.js';
 import { bresenhamLine, strokeFreehandThick } from '../lib/pixel-engine/engine.js';
 import { confirmDialog } from './confirm-dialog.js';
 import { initSymmetry, applySymmetryTransform } from './symmetry-ui.js';
@@ -299,6 +299,9 @@ async function autoSave() {
 }
 
 export function commit() {
+  // Another edit landed mid-preview (a shortcut while the dial has
+  // focus): the previewed rotation stays, as part of that edit.
+  if (rotatePreview) endRotatePreview();
   state.undoStack.push(state.layerStack.snapshot());
   updateUndoRedoButtons();
   autoSave();
@@ -323,6 +326,7 @@ export function commit() {
 
 /** Shared by the Undo button and the Cmd/Ctrl+Z keyboard shortcut. */
 function performUndo() {
+  cancelRotate();
   const snapshot = state.undoStack.undo();
   if (snapshot) {
     state.layerStack.restore(snapshot);
@@ -339,6 +343,7 @@ function performUndo() {
 
 /** Shared by the Redo button and the Cmd/Ctrl+Shift+Z (or Ctrl+Y) shortcut. */
 function performRedo() {
+  cancelRotate();
   const snapshot = state.undoStack.redo();
   if (snapshot) {
     state.layerStack.restore(snapshot);
@@ -443,6 +448,13 @@ function clearSelection() {
   if (!state.selection) return;
   state.selection = null;
   state.canvasView.setSelectionRect(null);
+  updateSelectionControls();
+}
+
+/** Moves the selection to `next` (null clears it) after a transform moved its content. */
+function followSelection(next) {
+  state.selection = next;
+  state.canvasView.setSelectionRect(next);
   updateSelectionControls();
 }
 
@@ -2100,11 +2112,7 @@ export function transformActiveLayer(op) {
     if (!dx && !dy) return; // already there - no empty undo step
     next = moveRegion(engine, rect, dx, dy);
   }
-  if (state.selection) {
-    state.selection = next;
-    state.canvasView.setSelectionRect(next);
-    updateSelectionControls();
-  }
+  if (state.selection) followSelection(next);
   state.canvasView.render();
   commit();
 }
@@ -2249,6 +2257,62 @@ export function selectActiveContent() {
 export function onWorkspaceReset(fn) {
   workspaceResetListeners.push(fn);
 }
+
+// Rotate popover's dial (js/transform-ui.js). A free-angle rotation is
+// drawn into the active layer itself, from a copy of its pixels taken on
+// the first previewRotate, so what you see is what Apply commits. It
+// becomes an undo step only on applyRotate; cancelRotate puts the copy
+// back. Undo/redo and any other commit end it too (see commit(),
+// performUndo()), and onRotateEnd tells the popover to reset its dial.
+let rotatePreview = null;
+const rotateEndListeners = [];
+
+function endRotatePreview() {
+  rotatePreview = null;
+  for (const fn of rotateEndListeners) fn();
+}
+
+export function onRotateEnd(fn) {
+  rotateEndListeners.push(fn);
+}
+
+/** Shows the target turned by `degrees`; `quality` 'fast' (dragging) or 'smooth'. */
+export function previewRotate(degrees, quality) {
+  if (!rotatePreview) {
+    if (getTransformTarget().disabled) return;
+    const engine = state.layerStack.getActiveLayer().engine;
+    rotatePreview = { engine, pixels: engine.data.slice(), selection: state.selection };
+  }
+  const { engine, pixels, selection } = rotatePreview;
+  engine.data.set(pixels);
+  const rect = selection ?? { x: 0, y: 0, width: engine.width, height: engine.height };
+  const next = rotateRegionFree(engine, rect, degrees, quality);
+  if (selection) followSelection(next);
+  state.canvasView.render();
+}
+
+/** Commits the rotation at `degrees` as one undo step (none at 0°). */
+export function applyRotate(degrees) {
+  if (!rotatePreview) return;
+  previewRotate(degrees, 'smooth');
+  rotatePreview = null;
+  if (degrees % 360) commit();
+}
+
+/** Puts the pixels and selection back as they were before the preview. */
+export function cancelRotate() {
+  if (!rotatePreview) return;
+  const { engine, pixels, selection } = rotatePreview;
+  engine.data.set(pixels);
+  if (selection) followSelection(selection);
+  state.canvasView.render();
+  endRotatePreview();
+}
+
+// A new project's engines replace the previewed one - nothing to restore.
+onWorkspaceReset(() => {
+  if (rotatePreview) endRotatePreview();
+});
 
 /**
  * Subscribes `fn()` to every canvas view change - pan, zoom, pinch,

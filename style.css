@@ -4512,38 +4512,105 @@ span.layer-lock-icon {
   display: none;
 }
 
-/* Transform popover (js/transform-ui.js) - Canvas Settings' popover look
-   with two labelled rows of 44px icon buttons. Sized to its widest row
-   (five buttons) rather than the shared 15rem. */
+/* Align and Rotate popovers (js/transform-ui.js) - Canvas Settings'
+   popover look with rows of 44px icon buttons, sized to their content
+   rather than the shared 15rem. */
 .transform-panel {
   width: auto;
 }
 
-.transform-section-heading {
-  margin: 0.25rem 0 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-.transform-row {
+.transform-row,
+.rotate-flip-row {
   gap: 0.25rem;
 }
 
-.transform-row .tool-button {
-  min-width: 44px;
-  min-height: 44px;
+.rotate-flip-row {
+  justify-content: center;
 }
 
-.transform-text-button {
-  font-variant-numeric: tabular-nums;
+.transform-row .tool-button,
+.rotate-dial-row .tool-button {
+  min-width: 44px;
+  min-height: 44px;
 }
 
 /* "flip" mirrors left-right; turned a quarter it reads as top-bottom. */
 .transform-icon-quarter {
   transform: rotate(90deg);
+}
+
+.rotate-dial-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+/* The bezel: a ring with a knob dot on its rim at --dial-angle (0 at the
+   top, clockwise), the angle in the middle. Dragged around its centre
+   (js/rotate-dial.js), so the page mustn't scroll or zoom under it. */
+.rotate-dial {
+  --dial-angle: 0deg;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 7rem;
+  height: 7rem;
+  border-radius: 50%;
+  background: var(--color-track);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.rotate-dial:active {
+  cursor: grabbing;
+}
+
+.rotate-dial:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.rotate-dial[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rotate-dial-knob {
+  position: absolute;
+  inset: 0;
+  transform: rotate(var(--dial-angle));
+  pointer-events: none;
+}
+
+.rotate-dial-knob::before {
+  content: '';
+  position: absolute;
+  top: 0.45rem;
+  left: 50%;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-left: -0.375rem;
+  border-radius: 50%;
+  background: var(--color-text);
+}
+
+.rotate-dial-value {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.rotate-actions {
+  align-self: stretch;
+}
+
+.rotate-actions .action-capsule-segment {
+  flex: 1;
+  justify-content: center;
 }
 
 /* Standard Libraries sheet (js/color-library-ui.js) - a Prefs sheet whose

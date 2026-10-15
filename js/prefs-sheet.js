@@ -22,6 +22,7 @@ export function initPrefsSheet({ getPrefs, setPrefs, root = document }) {
   const autoHide = sheet.querySelector('#prefs-auto-hide');
   const brushCursor = sheet.querySelector('#prefs-brush-cursor');
   const pencilOnly = sheet.querySelector('#prefs-pencil-only');
+  const showMascot = sheet.querySelector('#prefs-show-mascot');
   const pins = [...sheet.querySelectorAll('[data-pin]')];
 
   function sync() {
@@ -31,6 +32,7 @@ export function initPrefsSheet({ getPrefs, setPrefs, root = document }) {
     autoHide.checked = prefs.autoHide;
     brushCursor.checked = prefs.brushCursor;
     pencilOnly.checked = prefs.pencilOnly;
+    showMascot.checked = prefs.showMascot;
     for (const pin of pins) pin.checked = prefs.pinned[pin.dataset.pin];
   }
 
@@ -39,7 +41,7 @@ export function initPrefsSheet({ getPrefs, setPrefs, root = document }) {
     for (const pin of pins) pinned[pin.dataset.pin] = pin.checked;
     // Over the current prefs, so fields this sheet doesn't show
     // (railTools, edited by Customize Tools) are kept.
-    return { ...getPrefs(), toolsSide: toolsSide.value, panelsSide: panelsSide.value, pinned, autoHide: autoHide.checked, brushCursor: brushCursor.checked, pencilOnly: pencilOnly.checked };
+    return { ...getPrefs(), toolsSide: toolsSide.value, panelsSide: panelsSide.value, pinned, autoHide: autoHide.checked, brushCursor: brushCursor.checked, pencilOnly: pencilOnly.checked, showMascot: showMascot.checked };
   }
 
   sheet.addEventListener('change', () => setPrefs(read()));

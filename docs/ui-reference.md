@@ -147,7 +147,7 @@ Home and More are glass circles, the title is bare text, the zoom pill
 and the Undo/Redo `.topbar-group` are glass pills) and is slim: Back, `#topbar-title` (read-only project name, truncated,
 full name in `title`), `#zoom-pill` (current %, plus the view angle when turned, e.g.
 "2100% · 90°"; opens `#zoom-menu`: 100%/Fit/Fill/Zoom out/Zoom in/Rotate
-View Left/Rotate View Right/Reset Rotation), `#transform-toggle`, Undo,
+View Left/Rotate View Right/Reset Rotation), `#align-toggle`, `#rotate-toggle`, Undo,
 Redo, and
 `#more-button` (opens `#more-menu`: Canvas settings, Share / Export, Record
 timelapse, Tile preview, Prefs, Theme Light/Dark/System, Hide interface). The
@@ -171,7 +171,8 @@ group (rows are `<label>`s, 48px tall; switches are
 drawn as value plus `unfold_more` chevrons; labels in Title Case).
 Groups: **Tools** - Customize Tools… (a `<button>` drawn as a row,
 `chevron_right` at the end; opens the Customize Tools sheet on top of
-Prefs); **Layout** - Tools Side and Panels Side (Left/Right each,
+Prefs), Show Mascot (`#prefs-show-mascot`, default on; the tool mascot
+bubble below); **Layout** - Tools Side and Panels Side (Left/Right each,
 independent; this replaces the roadmap's single handedness flag);
 **Open When a Project Opens** - Layers (the pinned card); **Drawing** - Hide Interface While Drawing, Show Brush Cursor (`#prefs-brush-cursor`, default on; `data-brush-cursor` on the Workspace screen, overlay `.brush-cursor` from `js/canvas-view.js`, footprint/outline in `js/brush-cursor.js`), Draw Only With Apple Pencil (`#prefs-pencil-only`, default on; palm rejection in `js/canvas-view.js` via `js/pointer-policy.js`). Every change applies at once and is saved; Done, Escape or
 a press on the backdrop closes the sheet and focus returns to More.
@@ -353,7 +354,8 @@ Icon-only buttons, left-to-right. No hover/selected motion effects
 | `#record-toggle` | fiber_manual_record | Start/stop timelapse recording | on/off, opens `#timelapse-review-panel` on stop if any frames were captured; see below |
 | `#tile-preview-toggle` | grid_view | 3x3 seamless-tile preview | on/off, no popover - see below |
 | *(spacer)* | | | pushes the rest right |
-| `#transform-toggle` | transform | Transform popover (`#transform-panel`, `js/transform-ui.js`) | rotate/flip/align the selection or active layer; spec `layer-transform` |
+| `#align-toggle` | align_horizontal_center | Align popover (`#align-panel`, `js/transform-ui.js`) | align the selection or active layer to the canvas; spec `layer-transform` |
+| `#rotate-toggle` | rotate_right | Rotate popover (`#rotate-panel`, `js/transform-ui.js`) | rotation dial (free angle, RotSprite, snaps to 15°), ±90°, flips, Reset/Apply; spec `layer-transform` |
 | `#undo-button` | undo | Undo | disabled when nothing to undo |
 | `#redo-button` | redo | Redo | disabled when nothing to redo |
 | `#right-sidebar-toggle` | dock_to_right | Hide/show whole right sidebar | slides open/closed (AUD-11, 2026-08-17); respects `prefers-reduced-motion` |
@@ -453,6 +455,8 @@ in `js/workspace.js`):
 bubble top-centre, below the top bar, looping the axolotl using that tool
 for 3 s (200 ms a frame). Decorative: `aria-hidden`, `pointer-events:
 none`, hidden with the interface; reduced motion shows the last frame.
+Off with Prefs → Show Mascot (`showMascot`; turning it off hides a
+showing bubble at once).
 Tools with a sprite: Pencil, Eraser, Bucket, Brush, Rectangle, Line. Sprites and specs: `assets/mascot/`,
 `docs/mascot/README.md`; spec: `docs/specs/tool-mascot/spec.md`.
 

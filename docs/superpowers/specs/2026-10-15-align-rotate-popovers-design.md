@@ -74,8 +74,9 @@ what Apply commits.
   region's pixels and the selection.
 - While dragging (and on each arrow-key step), it restores the snapshot
   and draws a **nearest-neighbour** rotation of it (fast).
-- On pointer release, on a key press that ends a run of steps, and on the
-  ↶ / ↷ buttons, it redraws with **RotSprite** at the current angle.
+- On pointer release, on every arrow-key step, and on the ↶ / ↷
+  buttons, it redraws with **RotSprite** at the current angle (fast
+  enough at 128px for a single step).
 - Apply commits whatever the last RotSprite draw produced. If a drag is
   still in progress, it runs RotSprite first.
 - Angles that are a multiple of 90° use the existing exact
@@ -91,7 +92,8 @@ what Apply commits.
   down).
 - Pixels landing off the canvas are lost; Undo restores them.
 - The part of the original target area that the rotated content doesn't
-  cover becomes transparent.
+  cover becomes transparent. Transparent pixels of the result (the
+  corners of the rotated box) don't overwrite what's under them.
 - With a selection, the selection becomes the result's box, clamped to
   the canvas. If that leaves nothing on the canvas, the selection clears
   (as today).
@@ -106,23 +108,32 @@ New `lib/pixel-engine/rotsprite.js`. Its functions are pure, take RGBA
 
 - `scale2x(data, w, h)` → `{ data, width: 2w, height: 2h }`: the EPX /
   Scale2x rule, comparing whole RGBA pixels.
+- `rotatedSize(w, h, degrees)` → `{ width, height }`. At multiples of
+  90° it's exact (swapped at 90° and 270°). Otherwise it's `ceil` of
+  `|w cos| + |h sin|` (and the same for height), bumped by 1 where needed
+  so the parity matches `w` (or `h` when the turn is closer to a quarter
+  than to upright). With matching parity, output pixel centres line up
+  with source pixel centres, so a lone pixel never vanishes.
 - `rotateNearest(data, w, h, degrees)` → `{ data, width, height }`: an
-  inverse-mapped nearest-neighbour rotation about the centre. The output
-  size is the rotated bounding box (`ceil` of `|w cos| + |h sin|`, and so
-  on). Samples that fall outside the source are transparent.
+  inverse-mapped nearest-neighbour rotation about the centre, at
+  `rotatedSize`. Samples that fall outside the source are transparent.
 - `rotSprite(data, w, h, degrees)` → `{ data, width, height }`:
   1. Run `scale2x` three times (8×).
-  2. `rotateNearest` the 8× image.
-  3. Downsample by 8, taking the **centre sample** of each 8×8 cell
-     (the standard RotSprite downsample). Its output size matches
-     `rotateNearest` at 1×.
+  2. For each 1× output pixel, inverse-rotate its centre into the 8×
+     image and take that one sample. This is the same as rotating the 8×
+     image and keeping the centre sample of each 8×8 cell, without
+     building the rotated 8× image. The output size is `rotatedSize` at
+     1×.
+  Multiples of 90° return `rotateNearest`, which is exact.
 
 `lib/pixel-engine/transform.js` gets
-`rotateRegionFree(engine, rect, degrees, { quality })` →
-`{ rect, data }`. It reads the region, rotates it (`'fast'` = nearest,
-`'smooth'` = RotSprite), clears the source region, and writes the result
-centred on the original centre, clipped to the canvas. It returns the
-unclamped result rect, which the caller clamps.
+`rotateRegionFree(engine, rect, degrees, quality)`. It returns the new
+rect, clamped to the canvas (null if it fell off), like `rotateRegion`.
+At 0° it changes nothing. Other multiples of 90° delegate to
+`rotateRegion`. Any other angle reads the region, rotates it (`'fast'` =
+nearest, `'smooth'` = RotSprite), clears the source region, and writes
+the result's opaque pixels centred on the original centre (rounding down),
+clipped to the canvas.
 
 Performance budget: 128×128 at 8× is 1024×1024, about 1M pixels per
 nearest pass. That's acceptable on release but not per drag frame, which
@@ -136,8 +147,9 @@ is why drag frames use nearest at 1×.
 - `js/rotate-dial.js` (+ test): pure helpers `angleFromPointer(cx, cy,
   x, y)`, `snapAngle(deg)` and `wrapAngle(deg)`, plus `initRotateDial(el,
   onInput, onCommit)`, which handles the pointer capture and keys.
-- `js/workspace.js`: `beginRotatePreview()`,
-  `previewRotate(degrees, quality)`, `applyRotate()`, `cancelRotate()`.
+- `js/workspace.js`: `previewRotate(degrees, quality)`,
+  `applyRotate(degrees)`, `cancelRotate()` and `onRotateCancel(fn)`. Undo
+  and Redo cancel a pending rotation first.
   `transformActiveLayer` stays for flip and align.
 - `js/transform-ui.js`: wires both popovers (Align and Rotate) and their
   mutual exclusion. It keeps its file name.

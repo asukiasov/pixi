@@ -2517,6 +2517,21 @@ span.layer-lock-icon {
   margin-bottom: 0;
 }
 
+.brush-editor-opacity-label {
+  font-size: 0.85rem;
+}
+
+#brush-editor-opacity {
+  flex: 1;
+  min-width: 0;
+}
+
+.brush-editor-opacity-readout {
+  min-width: 4ch;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Title + Import icon button on one line (2o-image-import-refinements) -
    same space-between pattern as .canvas-settings-header-row. */
 .brush-editor-header-row {
@@ -2587,8 +2602,9 @@ span.layer-lock-icon {
   padding: 0;
 }
 
+/* Each painted cell is shaded by its own opacity (--cell-alpha, 0-1). */
 .brush-editor-cell.on {
-  background: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) calc(var(--cell-alpha, 1) * 100%), var(--color-surface));
 }
 
 .selection-controls {

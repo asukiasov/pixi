@@ -317,6 +317,23 @@
         </div>
       </div>
     </dialog>
+    <!-- Standard Brushes (js/standard-brushes-ui.js, packs from
+         js/standard-brushes.js): brush packs that ship with Pixi, added to
+         the brush palette; Restore brings back deleted ones. -->
+    <dialog id="standard-brushes-sheet" class="prefs-sheet" aria-labelledby="standard-brushes-title">
+      <div class="prefs-sheet-inner">
+        <header class="prefs-header">
+          <h2 id="standard-brushes-title" class="prefs-title">Standard Brushes</h2>
+          <button type="button" id="standard-brushes-done" class="prefs-done" aria-label="Done">
+            <span class="material-symbols-outlined" aria-hidden="true">check</span>
+          </button>
+        </header>
+        <div class="prefs-body">
+          <p class="prefs-note">Adds a pack's brushes to your brush palette. Restore brings back ones you deleted.</p>
+          <div id="standard-brushes-list" class="prefs-group standard-brushes-list" aria-live="polite"></div>
+        </div>
+      </div>
+    </dialog>
 
     <dialog id="prefs-sheet" class="prefs-sheet" aria-labelledby="prefs-title">
       <div class="prefs-sheet-inner">
@@ -738,6 +755,9 @@
           <button type="button" id="delete-brush-button" class="tool-button icon-button" disabled aria-label="Delete selected brush" data-tooltip="Delete selected brush">
             <span class="material-symbols-outlined">delete</span>
           </button>
+          <button type="button" id="standard-brushes-button" class="tool-button icon-button" aria-label="Standard Brushes" aria-haspopup="dialog" data-tooltip="Standard Brushes">
+            <span class="material-symbols-outlined" aria-hidden="true">library_add</span>
+          </button>
         </div>
 
         <div id="brush-editor-panel" class="brush-editor-panel hidden">
@@ -763,6 +783,11 @@
             <label class="brush-editor-size-label">H
               <input type="number" id="brush-editor-height" min="3" value="9" />
             </label>
+          </div>
+          <div class="brush-editor-row">
+            <label class="brush-editor-opacity-label" for="brush-editor-opacity">Opacity</label>
+            <input type="range" id="brush-editor-opacity" min="1" max="100" value="100" />
+            <span id="brush-editor-opacity-readout" class="brush-editor-opacity-readout" aria-hidden="true">100%</span>
           </div>
           <div id="brush-editor-grid" class="brush-editor-grid"></div>
           <div class="brush-editor-row">

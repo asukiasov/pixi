@@ -11,7 +11,10 @@ instead of drawing them freehand every time.
 ### Requirement: Brush picker
 The Brush tool SHALL offer a picker of available brush shapes as a titled
 thumbnail grid; selecting one makes it the current brush. The system ships
-with two built-in shapes (Heart, Circle). In the app the picker is the
+with eight Core brushes (Heart, Circle, Square, Diamond, Star, Plus, Soft
+Round, Spray), always present. The picker groups brushes into sections:
+Core, then each added Standard Brushes pack in pack order, then My Brushes
+(user-made or imported); empty sections are hidden. In the app the picker is the
 brush palette, a popover opened from the tool-options bar's brush button
 while the Brush tool is active (see `floating-workspace`'s Brush palette
 requirement); in a docked embed it is the Brushes panel, visible only
@@ -21,6 +24,11 @@ while the Brush tool is the current tool.
 - **WHEN** the user selects the Heart brush from the picker
 - **THEN** Heart becomes the current brush for subsequent placements
 
+#### Scenario: Picker sections
+- **WHEN** the user has added the Nature pack and made one brush
+- **THEN** the picker shows Core, Nature and My Brushes sections in that
+  order
+
 #### Scenario: Picker follows tool selection
 - **WHEN** the user switches to a tool other than Brush
 - **THEN** the picker is hidden (the brush palette closes)
@@ -28,7 +36,8 @@ while the Brush tool is the current tool.
 ### Requirement: Brush thumbnails show the pattern, not the name
 Each entry in the Brush picker SHALL show a black-on-white pixel preview
 of the brush's own pattern (scaled up, crisp/unblurred) rather than its
-name as text. The name remains available as a tooltip/title.
+name as text. The name remains available as a tooltip/title. Partial
+pixels are drawn at their own opacity, so soft brushes read as grey.
 
 #### Scenario: Picker shows pattern previews
 - **WHEN** the Brushes panel is open
@@ -47,14 +56,20 @@ pattern, alongside Heart.
 ### Requirement: Place a brush
 Tapping the canvas with the Brush tool active SHALL place the current
 brush's pattern on the active layer, centered on the tapped point, with
-every "on" pixel of the pattern set to the current draw color and every
-"off" pixel left untouched.
+every pixel of the pattern drawn in the current draw color at that pixel's
+own opacity: a full pixel replaces what is there, a partial pixel blends
+over it. Pixels outside the pattern are left untouched.
 
 #### Scenario: Placing the Heart brush
 - **WHEN** the user taps the canvas with the Heart brush and a color
   selected
 - **THEN** the heart pattern appears on the active layer at that location,
   in the selected color, and pixels not part of the pattern are unchanged
+
+#### Scenario: Placing a soft brush
+- **WHEN** the user places black with a brush whose pixel is at 50%
+  opacity over a white pixel
+- **THEN** that pixel becomes mid grey
 
 #### Scenario: Placement near a canvas edge
 - **WHEN** the user places a brush close enough to a canvas edge that part
@@ -82,7 +97,9 @@ undo purposes — one Undo reverts the whole drag, not brush-by-brush.
 Dragging with the Brush tool active SHALL place the current brush
 repeatedly along the drag path (using the same line-interpolation the Line
 tool uses, so fast drags don't skip gaps), spaced according to the current
-Spacing setting, instead of only placing once per tap.
+Spacing setting, instead of only placing once per tap. Overlapping
+placements within one drag build up (each blends over the last); there is
+no per-drag limit.
 
 #### Scenario: Dragging places a trail of brushes
 - **WHEN** the user drags the Brush tool across the canvas with Spacing at
@@ -117,7 +134,9 @@ Rainbow's hue step), producing a spinning/pinwheel trail. Rotation applies
 per placement, the same placements Spacing governs — a placement skipped
 by Spacing does not consume a step of the rotation sequence either. A
 single tap (no drag) always places the brush at its base (0-degree)
-orientation, regardless of the Rotation setting.
+orientation, regardless of the Rotation setting. Each pixel keeps its
+opacity when rotated; when two pixels land on one cell, the more opaque
+wins.
 
 #### Scenario: Dragging with rotation set produces a rotating trail
 - **WHEN** the user sets Rotation to 30 and drags the Brush tool
@@ -246,8 +265,11 @@ state.
 
 ### Requirement: Custom brush creation
 The Brushes panel SHALL offer an "add brush" control that opens a
-pixel-grid editor (a grid the user clicks or drags across to toggle cells
-on/off, independent of any project's canvas). Before drawing, the editor
+pixel-grid editor (a grid the user clicks or drags across to paint cells,
+independent of any project's canvas). An Opacity row (1-100%, default
+100%) sets what a press paints: a press sets a cell to that opacity, or
+clears it if it already holds exactly that; a drag paints what the first
+press did. Cells are shaded by their opacity. Before drawing, the editor
 SHALL let the user choose the grid's width and height, each independently
 constrained to a minimum of 3 and a maximum of the current project's
 canvas width/height respectively (so a brush can never be larger than the
@@ -256,11 +278,10 @@ control that opens a file picker (`image/*`); choosing an image decodes
 it - via the browser's standard bitmap decoder, falling back to an
 `<img>`-element-based decode when that fails (covering formats such as
 SVG that the standard decoder doesn't support) - and pre-fills the grid
-at the editor's current width/height by thresholding the image to on/off
-cells, instead of starting blank - alpha-based (mostly-opaque
-downsampled regions become "on") when the image has any transparency,
-falling back to brightness-based thresholding (darker regions become
-"on") when the image is fully opaque. The imported result is a
+at the editor's current width/height, instead of starting blank, with each
+cell's opacity taken from the image: its alpha when the image has any
+transparency, or its darkness (darker is more opaque) when the image is
+fully opaque. Cells under 5% are off. The imported result is a
 monochrome silhouette only - the image's own colors are discarded,
 matching every other brush's "placed in the current drawing color"
 behavior. Changing the grid's size SHALL re-grid from a blank pattern
@@ -295,15 +316,15 @@ Canceling discards it (imported or hand-drawn).
 #### Scenario: Importing a transparent-background image
 - **WHEN** the user imports a PNG icon with a transparent background and
   an opaque silhouette
-- **THEN** the editor's grid pre-fills with "on" cells matching the
-  opaque region and "off" cells matching the transparent region, at the
-  editor's current width/height
+- **THEN** the editor's grid pre-fills with cells whose opacity follows
+  the image's alpha (opaque region full, transparent region off, soft
+  edges partial), at the editor's current width/height
 
 #### Scenario: Importing a fully-opaque image
 - **WHEN** the user imports a JPG or other image with no transparency
-- **THEN** the editor's grid pre-fills using brightness thresholding
-  (darker regions become "on") instead of producing an all-"on" solid
-  block
+- **THEN** the editor's grid pre-fills with cells whose opacity follows
+  the image's darkness (darker is more opaque) instead of producing a
+  solid block
 
 #### Scenario: Imported brush uses the current drawing color, not the image's colors
 - **WHEN** the user saves a brush created from an imported image and
@@ -333,8 +354,8 @@ Canceling discards it (imported or hand-drawn).
 A saved custom brush SHALL be stored locally (IndexedDB) and available in
 every project, not just the one open when it was created — the same way
 built-in brushes are available everywhere. Deleting a custom brush SHALL
-remove it from the picker in every project going forward. Built-in brushes
-(Heart, Circle) cannot be deleted.
+remove it from the picker in every project going forward. Core brushes
+cannot be deleted; pack brushes and the user's own can.
 
 #### Scenario: A custom brush is available in a different project
 - **WHEN** the user creates a custom brush while project A is open, then
@@ -346,3 +367,29 @@ remove it from the picker in every project going forward. Built-in brushes
 - **THEN** it no longer appears in any project's picker, and existing
   brush strokes already placed with it are unaffected (only the picker
   entry is removed, not past canvas content)
+
+### Requirement: Standard Brushes
+The brush palette's toolbar SHALL offer a Standard Brushes button that
+opens a sheet listing the brush packs that ship with Pixi: Shapes, Nature,
+Texture & Dither, Soft, and Game & UI. The list is downloaded from
+`assets/brushes/standard.json`, with a built-in copy used offline or when
+the file is unusable. Each pack shows previews of its brushes and an Add,
+Restore (some of its brushes were deleted) or Added (all present) button.
+Adding copies only the pack's missing brushes into the user's brushes,
+never duplicates; deleted pack brushes can be restored in their original
+order. Nothing is added automatically. Not in the docked embed.
+
+#### Scenario: Adding a pack
+- **WHEN** the user presses Add on Nature
+- **THEN** Nature's brushes appear in a Nature section after Core, and the
+  row shows Added
+
+#### Scenario: Restoring a deleted brush
+- **WHEN** the user deletes Leaf from an added Nature pack and reopens the
+  sheet
+- **THEN** Nature shows Restore, and pressing it brings Leaf back in its
+  original position without duplicating the others
+
+#### Scenario: Offline fallback
+- **WHEN** `assets/brushes/standard.json` can't be downloaded
+- **THEN** the sheet lists the built-in packs

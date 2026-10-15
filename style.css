@@ -2458,6 +2458,21 @@ span.layer-lock-icon {
   padding: 0 0.5rem 0.5rem;
 }
 
+/* Section titles (Core, each added pack, My Brushes) span the grid. */
+.brush-section-heading {
+  grid-column: 1 / -1;
+  margin: 0.35rem 0 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.brush-section-heading:first-child {
+  margin-top: 0;
+}
+
 .brush-swatch {
   width: 100%;
   aspect-ratio: 1;
@@ -2515,6 +2530,21 @@ span.layer-lock-icon {
 
 .brush-editor-row:last-child {
   margin-bottom: 0;
+}
+
+.brush-editor-opacity-label {
+  font-size: 0.85rem;
+}
+
+#brush-editor-opacity {
+  flex: 1;
+  min-width: 0;
+}
+
+.brush-editor-opacity-readout {
+  min-width: 4ch;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Title + Import icon button on one line (2o-image-import-refinements) -
@@ -2587,8 +2617,9 @@ span.layer-lock-icon {
   padding: 0;
 }
 
+/* Each painted cell is shaded by its own opacity (--cell-alpha, 0-1). */
 .brush-editor-cell.on {
-  background: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) calc(var(--cell-alpha, 1) * 100%), var(--color-surface));
 }
 
 .selection-controls {
@@ -4666,6 +4697,23 @@ span.layer-lock-icon {
 .standard-library-add {
   min-width: 5rem;
   min-height: 44px;
+}
+
+.standard-brush-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+/* Sized to the brush in pixels; scaled up crisply and letterboxed. */
+.standard-brush-previews canvas {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  background: #ffffff;
+  border-radius: 3px;
+  outline: 1px solid rgb(0 0 0 / 0.12);
 }
 
 /* ------------------------------------------------------------------

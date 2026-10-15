@@ -2,7 +2,9 @@ import { UndoStack } from '../lib/pixel-engine/undo.js';
 import { saveProject, renameProject, createCustomBrush, listCustomBrushes, deleteCustomBrush, _activeAdapter } from './persistence.js';
 import { initExport, sanitizeFilename } from './export.js';
 import { TimelapseRecorder, captureFrame, encodeTimelapseVideo, isTimelapseSupported } from './timelapse.js';
-import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from './brushes.js';
+import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid, editorPaintValue } from './brushes.js';
+import { drawBrushPreview } from './brush-preview.js';
+import { brushSections, BUILT_IN_BRUSH_PACKS } from './standard-brushes.js';
 import { drawRectangle, drawEllipse, clipToSelection } from './shape-tools.js';
 import { cursorFootprint, footprintOutlinePath } from './brush-cursor.js';
 import { flipRegion, rotateRegion, rotateRegionFree, contentBounds, alignOffset, moveRegion } from '../lib/pixel-engine/transform.js';
@@ -13,6 +15,7 @@ import { initPixelPerfect } from './pixel-perfect-ui.js';
 import { initRectangleFill, syncRectangleFillTool } from './rectangle-fill-ui.js';
 import { initPencilOpacity, getPencilOpacity } from './pencil-opacity-ui.js';
 import { initBrushImport } from './brush-import-ui.js';
+import { initStandardBrushes } from './standard-brushes-ui.js';
 import { initCanvasSettings } from './canvas-settings.js';
 // Layers and Color Library are permanent parts of the app, not optional
 // plugins - these two imports create a deliberate circular dependency
@@ -529,43 +532,55 @@ function setUiHidden(hidden, { keepCanvasStill = true } = {}) {
 }
 
 /**
- * Draws a black-on-white preview of `brush`'s pattern (not its name) into a
+ * Draws a black-on-white preview of `brush`'s pattern, each pixel at its
+ * opacity (js/brush-preview.js), (not its name) into a
  * small canvas sized to the brush's own pixel dimensions, then scaled up by
  * CSS with `image-rendering: pixelated` so it stays crisp at any swatch size.
  */
 function buildBrushPreviewCanvas(brush) {
-  const canvas = document.createElement('canvas');
+  const canvas = drawBrushPreview(document.createElement('canvas'), brush);
   canvas.className = 'brush-swatch-preview';
-  canvas.width = brush.width;
-  canvas.height = brush.height;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, brush.width, brush.height);
-  ctx.fillStyle = '#000000';
-  for (const [x, y] of brush.pixels) {
-    ctx.fillRect(x, y, 1, 1);
-  }
   return canvas;
 }
 
-/** Rebuilds the Brushes panel grid from `allBrushes`, marking the current one active. */
+// Pack sections in the palette follow the shipped pack order.
+const BRUSH_PACK_ORDER = BUILT_IN_BRUSH_PACKS.map((pack) => pack.id);
+
+/**
+ * Rebuilds the brush palette from `allBrushes` in sections (Core, each
+ * added Standard Brushes pack, My Brushes - js/standard-brushes.js's
+ * brushSections), marking the current one active. Pack and user brushes
+ * are both `isCustom` (stored in customBrushes), so both can be deleted.
+ */
 function renderBrushesPanel() {
   brushesPanelGrid.innerHTML = '';
-  allBrushes.forEach((brush) => {
-    const swatch = document.createElement('button');
-    swatch.type = 'button';
-    swatch.className = 'brush-swatch' + (brush.id === state.currentBrush?.id ? ' active' : '');
-    swatch.title = brush.name;
-    swatch.appendChild(buildBrushPreviewCanvas(brush));
-    swatch.addEventListener('click', () => {
-      state.currentBrush = brush;
-      refreshBrushCursor();
-      syncBrushPickerButton();
-      brushesPanelGrid.querySelectorAll('.brush-swatch').forEach((s) => s.classList.toggle('active', s === swatch));
-      deleteBrushButton.disabled = !brush.isCustom;
-    });
-    brushesPanelGrid.appendChild(swatch);
-  });
+  const sections = brushSections(BRUSHES, allBrushes.filter((b) => b.isCustom), BRUSH_PACK_ORDER);
+  for (const section of sections) {
+    const heading = document.createElement('h3');
+    heading.className = 'brush-section-heading';
+    heading.textContent = section.title;
+    brushesPanelGrid.appendChild(heading);
+    for (const brush of section.brushes) {
+      const swatch = document.createElement('button');
+      swatch.type = 'button';
+      swatch.className = 'brush-swatch' + (brush.id === state.currentBrush?.id ? ' active' : '');
+      swatch.title = brush.name;
+      swatch.setAttribute('aria-label', brush.name);
+      swatch.setAttribute('aria-pressed', String(brush.id === state.currentBrush?.id));
+      swatch.appendChild(buildBrushPreviewCanvas(brush));
+      swatch.addEventListener('click', () => {
+        state.currentBrush = brush;
+        refreshBrushCursor();
+        syncBrushPickerButton();
+        brushesPanelGrid.querySelectorAll('.brush-swatch').forEach((s) => {
+          s.classList.toggle('active', s === swatch);
+          s.setAttribute('aria-pressed', String(s === swatch));
+        });
+        deleteBrushButton.disabled = !brush.isCustom;
+      });
+      brushesPanelGrid.appendChild(swatch);
+    }
+  }
   deleteBrushButton.disabled = !state.currentBrush?.isCustom;
   syncBrushPickerButton();
 }
@@ -576,9 +591,7 @@ function syncBrushPickerButton() {
   const preview = root.querySelector('#brush-picker-preview');
   const brush = state.currentBrush;
   if (!button || !preview || !brush) return;
-  preview.width = brush.width;
-  preview.height = brush.height;
-  preview.getContext('2d').drawImage(buildBrushPreviewCanvas(brush), 0, 0);
+  drawBrushPreview(preview, brush);
   button.setAttribute('aria-label', `Brush: ${brush.name}`);
 }
 
@@ -593,7 +606,7 @@ async function loadCustomBrushes() {
 // (Color Library panel rendering) live in js/color-library-ui.js.
 
 function makeEmptyBrushEditorGrid(width, height) {
-  return Array.from({ length: height }, () => Array(width).fill(false));
+  return Array.from({ length: height }, () => Array(width).fill(0));
 }
 
 /**
@@ -609,7 +622,9 @@ function brushEditorCellSizePx(width, height) {
 
 let brushEditorGridState = null;
 let brushEditorPainting = false;
-let brushEditorPaintValue = true;
+let brushEditorPaintValue = 1;
+// The editor's Opacity row (#brush-editor-opacity): what a press paints.
+let brushEditorOpacity = 1;
 let brushEditorWidth = BRUSH_EDITOR_SIZE;
 let brushEditorHeight = BRUSH_EDITOR_SIZE;
 
@@ -622,12 +637,18 @@ export function getBrushEditorSize() {
 // layer's own state) live in js/layers-ui.js, alongside the rest of the
 // Layers panel.
 
+/** Shows a cell's opacity: `.on` when painted, shaded by --cell-alpha. */
+function paintBrushEditorCell(cell, value) {
+  cell.classList.toggle('on', value > 0);
+  cell.style.setProperty('--cell-alpha', String(value));
+}
+
 /**
- * Overwrites brushEditorGridState and the grid's DOM 'on' classes with
- * `grid` (same grid[y][x] boolean shape as makeEmptyBrushEditorGrid).
+ * Overwrites brushEditorGridState and the grid's DOM cells with `grid`
+ * (same shape as makeEmptyBrushEditorGrid: grid[y][x] opacity, 0 = off).
  * Called directly by js/brush-import-ui.js's Brush editor "Import from
  * image" (thresholding a decoded image via js/brush-import.js's
- * thresholdToGrid) to apply its result, including on every subsequent
+ * imageToOpacityGrid) to apply its result, including on every subsequent
  * width/height change - see bindBrushEditorOnce's width/height 'change'
  * listeners, and js/brush-import-ui.js's own listeners on the same inputs
  * which re-derive from its remembered source image. Assumes
@@ -640,7 +661,7 @@ export function setBrushEditorGrid(grid) {
   gridEl.querySelectorAll('.brush-editor-cell').forEach((cell) => {
     const x = Number(cell.dataset.x);
     const y = Number(cell.dataset.y);
-    cell.classList.toggle('on', brushEditorGridState[y][x]);
+    paintBrushEditorCell(cell, brushEditorGridState[y][x]);
   });
 }
 
@@ -738,6 +759,15 @@ function bindBrushEditorOnce() {
   const clearButton = root.querySelector('#brush-editor-clear');
   const cancelButton = root.querySelector('#brush-editor-cancel');
   const saveButton = root.querySelector('#brush-editor-save');
+  const opacityInput = root.querySelector('#brush-editor-opacity');
+  const opacityReadout = root.querySelector('#brush-editor-opacity-readout');
+  if (opacityInput) {
+    opacityInput.addEventListener('input', () => {
+      brushEditorOpacity = Number(opacityInput.value) / 100;
+      if (opacityReadout) opacityReadout.textContent = `${opacityInput.value}%`;
+    });
+    bindSliderWheel(opacityInput);
+  }
 
   // Changing size re-grids from scratch - a brand-new brush each time.
   // (js/brush-import-ui.js adds its own listener here too - see
@@ -760,9 +790,9 @@ function bindBrushEditorOnce() {
     if (!cell) return;
     const x = Number(cell.dataset.x);
     const y = Number(cell.dataset.y);
-    if (isFirst) brushEditorPaintValue = !brushEditorGridState[y][x];
+    if (isFirst) brushEditorPaintValue = editorPaintValue(brushEditorGridState[y][x], brushEditorOpacity);
     brushEditorGridState[y][x] = brushEditorPaintValue;
-    cell.classList.toggle('on', brushEditorPaintValue);
+    paintBrushEditorCell(cell, brushEditorPaintValue);
   }
 
   grid.addEventListener('pointerdown', (e) => {
@@ -784,7 +814,7 @@ function bindBrushEditorOnce() {
     // button to forget its remembered source image too, so a resize
     // after Clear doesn't keep re-pixelating from a stale import.
     brushEditorGridState = makeEmptyBrushEditorGrid(brushEditorWidth, brushEditorHeight);
-    grid.querySelectorAll('.brush-editor-cell').forEach((c) => c.classList.remove('on'));
+    grid.querySelectorAll('.brush-editor-cell').forEach((c) => paintBrushEditorCell(c, 0));
   });
 
   cancelButton.addEventListener('click', () => closeBrushEditor());
@@ -1524,6 +1554,11 @@ function bindDomOnce() {
   // Closes like the other popovers: a press outside it or Escape. Only
   // where there's a brush button to reopen it (not in the docked embed).
   if (brushPickerButton && !globalListenersBound) {
+    // Re-place it when it grows or shrinks (sections added, editor opened)
+    // so it stays on screen.
+    new ResizeObserver(() => {
+      if (!brushesPanel.classList.contains('collapsed')) positionBrushPalette(root.querySelector('#brush-picker-button'));
+    }).observe(brushesPanel);
     document.addEventListener('pointerdown', (e) => {
       if (brushesPanel.classList.contains('collapsed')) return;
       if (brushesPanel.contains(e.target) || root.querySelector('#brush-picker-button')?.contains(e.target)) return;
@@ -1533,6 +1568,8 @@ function bindDomOnce() {
     });
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape' || brushesPanel.classList.contains('collapsed')) return;
+      // Escape in a dialog opened from the palette closes only that dialog.
+      if (e.target.closest?.('dialog[open], .confirm-overlay')) return;
       setBrushesCardOpen(false);
       root.querySelector('#brush-picker-button')?.focus();
     });
@@ -1997,6 +2034,7 @@ function bindDomOnce() {
   initRectangleFill(root);
   initPencilOpacity(root);
   initBrushImport(root);
+  initStandardBrushes(root, { onBrushesChanged: loadCustomBrushes });
   canvasSettingsControls = initCanvasSettings({
     onResize(width, height) {
       resizeCanvas(width, height);

@@ -1,6 +1,6 @@
 // Brush editor "Import from image": wires the #brush-editor-import button
 // (index.html, inside #brush-editor-panel) to js/brush-import.js's
-// thresholdToGrid via workspace.js's setBrushEditorGrid/getBrushEditorSize.
+// imageToOpacityGrid via workspace.js's setBrushEditorGrid/getBrushEditorSize.
 // Restored from the Standard/Pro split (docs/history/2026-08-
 // 21-split-pixi-pro-repo) - merged back wired directly (no extension-hook
 // indirection) per docs/history/2026-08-24-merge-pixi-pro-into-standard/
@@ -27,7 +27,7 @@ import { setBrushEditorGrid, getBrushEditorSize } from './workspace.js';
 import { decodeImageFile, downsampleToImageData, UNREADABLE_IMAGE_MESSAGE } from './image-import.js';
 import { showToast } from './toast.js';
 import { hasTransparency } from './image-import-extras.js';
-import { thresholdToGrid } from './brush-import.js';
+import { imageToOpacityGrid } from './brush-import.js';
 
 let sourceImage = null;
 
@@ -47,7 +47,7 @@ export function initBrushImport(root = document) {
     const { width, height } = getBrushEditorSize();
     const useAlpha = hasTransparency(sourceImage);
     const imageData = downsampleToImageData(sourceImage, width, height);
-    setBrushEditorGrid(thresholdToGrid(imageData, width, height, useAlpha));
+    setBrushEditorGrid(imageToOpacityGrid(imageData, width, height, useAlpha));
   }
 
   importButton.addEventListener('click', () => importInput.click());

@@ -531,11 +531,12 @@ textarea,
 .tile-preview {
   --cols: 2;
   --rows: 2;
+  --ratio: 1;
   display: block;
-  width: 100%;
-  max-width: 5.5rem;
-  max-height: 5.5rem;
-  aspect-ratio: 1;
+  /* Fits a 5.5rem box at the tile's W/H: narrow tiles shrink in width
+     (aspect-ratio alone gets clamped back to square by max-height). */
+  width: min(100%, 5.5rem, 5.5rem * var(--ratio));
+  aspect-ratio: var(--ratio);
   margin-bottom: 0.35rem;
   border-radius: 6px;
   box-shadow: 0 0 0 1px var(--glass-border);

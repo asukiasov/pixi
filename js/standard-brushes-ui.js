@@ -56,7 +56,8 @@ async function renderPacks(listEl, packs, onBrushesChanged) {
       }
       await onBrushesChanged();
       await renderPacks(listEl, packs, onBrushesChanged);
-      listEl.querySelector('.standard-library-add:not(:disabled)')?.focus();
+      // The next pack to add, or Done once every pack is added.
+      (listEl.querySelector('.standard-library-add:not(:disabled)') ?? listEl.closest('dialog')?.querySelector('#standard-brushes-done'))?.focus();
     });
     item.append(label, button);
     listEl.appendChild(item);

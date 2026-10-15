@@ -452,6 +452,13 @@ and can ship at any time.
   layer), a pixel Lock, Select Content, regrouped items. Design:
   `docs/superpowers/specs/2026-10-13-layer-context-menu-design.md`. Item 7
   (a visible Merge button) is still open.
+- ~~**Standard brush packs**~~ — **done** 2026-10-15: brush pixels have
+  their own opacity (editor Opacity row, soft image import, overlapping
+  stamps build up); the Core set grows to eight; five Standard Brushes
+  packs (Shapes, Nature, Texture & Dither, Soft, Game & UI) are added
+  from a sheet in the brush palette, like Standard Libraries; the palette
+  groups brushes into sections. Design:
+  `docs/superpowers/specs/2026-10-15-standard-brush-packs-design.md`.
 
 Follow-ups after 5h:
 

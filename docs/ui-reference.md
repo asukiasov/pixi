@@ -294,7 +294,14 @@ brush palette popover (`#brushes-panel.brush-popover`, opened from
 the current brush; `setBrushesCardOpen()` in `js/workspace.js` toggles
 `.collapsed` and positions it above the button; `.hidden` stays the
 Brush-tool scoping; it closes on its close button, Escape, a press
-outside, a tool switch or a project open). The card is open or closed -
+outside, a tool switch or a project open; it re-places itself when it
+grows. Its grid has section headings (`.brush-section-heading`: Core,
+each added pack, My Brushes); its toolbar has Add, Delete and Standard
+Brushes (`#standard-brushes-button`, opens `#standard-brushes-sheet`,
+`js/standard-brushes-ui.js`, rows reuse
+`.standard-library-row`/`.standard-library-add` with previews in
+`.standard-brush-previews`); the brush editor has an Opacity row
+(`#brush-editor-opacity`)). The card is open or closed -
 no collapse-to-header: `.collapsed` means "not displayed", and the
 `.panel-close` button closes it (focus moves to the rail button). Rail
 state is mirrored from the card's class by a `MutationObserver`. The card

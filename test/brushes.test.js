@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { PixelEngine } from '../lib/pixel-engine/engine.js';
-import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid } from '../js/brushes.js';
+import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid, patternToPixels, brushFromRows, editorPaintValue } from '../js/brushes.js';
 
 describe('BRUSHES registry', () => {
   test('includes a Heart brush with a well-formed pattern', () => {
@@ -169,5 +169,93 @@ describe('rainbowColor', () => {
     for (const hue of [0, 45, 90, 200, 359]) {
       assert.equal(rainbowColor(hue)[3], 255);
     }
+  });
+});
+describe('patternToPixels', () => {
+  test('reads X as full, 1-9 as 10%-90%, and skips dots', () => {
+    assert.deepEqual(patternToPixels(['X5.', '.19']), [
+      [0, 0],
+      [1, 0, 0.5],
+      [1, 1, 0.1],
+      [2, 1, 0.9],
+    ]);
+  });
+});
+
+describe('brushFromRows', () => {
+  test('builds a brush with size taken from the rows', () => {
+    const brush = brushFromRows('dot', 'Dot', ['...', '.X.', '...']);
+    assert.deepEqual(brush, { id: 'dot', name: 'Dot', width: 3, height: 3, pixels: [[1, 1]] });
+  });
+});
+
+describe('pixelsFromGrid with opacity', () => {
+  test('stores a below 1 as a third value, drops 0, rounds to 2 decimals', () => {
+    const grid = [
+      [1, 0.5, 0],
+      [0.333333, true, false],
+    ];
+    assert.deepEqual(pixelsFromGrid(grid), [
+      [0, 0],
+      [1, 0, 0.5],
+      [0, 1, 0.33],
+      [1, 1],
+    ]);
+  });
+});
+
+describe('editorPaintValue', () => {
+  test('paints the current opacity, or clears a cell that already holds it', () => {
+    assert.equal(editorPaintValue(0, 0.5), 0.5);
+    assert.equal(editorPaintValue(1, 0.5), 0.5);
+    assert.equal(editorPaintValue(0.5, 0.5), 0);
+    assert.equal(editorPaintValue(1, 1), 0);
+  });
+});
+
+describe('placeBrush with opacity', () => {
+  test('a 50% pixel blends over what is there', () => {
+    const engine = new PixelEngine(5, 5, 'white');
+    const brush = { id: 'p', name: 'P', width: 1, height: 1, pixels: [[0, 0, 0.5]] };
+    placeBrush(engine, 2, 2, brush, [0, 0, 0, 255]);
+    assert.deepEqual(engine.getPixel(2, 2), [128, 128, 128, 255]);
+  });
+
+  test('overlapping stamps build up', () => {
+    const engine = new PixelEngine(5, 5, 'white');
+    const brush = { id: 'p', name: 'P', width: 1, height: 1, pixels: [[0, 0, 0.5]] };
+    placeBrush(engine, 2, 2, brush, [0, 0, 0, 255]);
+    placeBrush(engine, 2, 2, brush, [0, 0, 0, 255]);
+    assert.deepEqual(engine.getPixel(2, 2), [64, 64, 64, 255]);
+  });
+
+  test('a 100% pixel still writes the colour exactly, even a translucent one', () => {
+    const engine = new PixelEngine(5, 5, 'white');
+    const brush = { id: 'p', name: 'P', width: 1, height: 1, pixels: [[0, 0]] };
+    placeBrush(engine, 2, 2, brush, [255, 0, 0, 128]);
+    assert.deepEqual(engine.getPixel(2, 2), [255, 0, 0, 128]);
+  });
+
+  test('rotation keeps each pixel\'s opacity', () => {
+    const engine = new PixelEngine(10, 10, 'transparent');
+    // A 3x1 bar, soft at both ends, turned upright by 90 degrees.
+    const brush = { id: 'bar', name: 'Bar', width: 3, height: 1, pixels: [[0, 0, 0.5], [1, 0], [2, 0, 0.5]] };
+    placeBrush(engine, 5, 5, brush, [0, 0, 0, 255], 90);
+    assert.deepEqual(engine.getPixel(5, 4), [0, 0, 0, 128]);
+    assert.deepEqual(engine.getPixel(5, 5), [0, 0, 0, 255]);
+    assert.deepEqual(engine.getPixel(5, 6), [0, 0, 0, 128]);
+  });
+
+  test('the transform hook receives each pixel\'s opacity', () => {
+    const engine = new PixelEngine(10, 10, 'transparent');
+    const brush = { id: 'p', name: 'P', width: 1, height: 1, pixels: [[0, 0, 0.5]] };
+    const seen = [];
+    const record = (applyPixel) => (x, y, alpha) => {
+      seen.push(alpha);
+      applyPixel(x, y, alpha);
+    };
+    placeBrush(engine, 3, 3, brush, [0, 0, 0, 255], 0, record);
+    assert.deepEqual(seen, [0.5]);
+    assert.deepEqual(engine.getPixel(3, 3), [0, 0, 0, 128]);
   });
 });

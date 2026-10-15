@@ -26,47 +26,60 @@ const CIRCLE_PATTERN = [
   '.XXX.',
 ];
 
-function patternToPixels(rows) {
+const LEVEL_CHARS = '123456789';
+
+/**
+ * Reads a string grid into brush pixels: `X` is a full pixel `[x, y]`,
+ * `1`-`9` a partial one `[x, y, a]` at 10%-90% opacity, `.` is off. Used
+ * for the Core brushes here and for Standard Brushes packs
+ * (js/standard-brushes.js).
+ */
+export function patternToPixels(rows) {
   const pixels = [];
   rows.forEach((row, y) => {
     [...row].forEach((cell, x) => {
       if (cell === 'X') pixels.push([x, y]);
+      else if (LEVEL_CHARS.includes(cell)) pixels.push([x, y, Number(cell) / 10]);
     });
   });
   return pixels;
 }
 
+/** A brush from a string grid (see patternToPixels), sized to the grid. */
+export function brushFromRows(id, name, rows) {
+  return { id, name, width: rows[0].length, height: rows.length, pixels: patternToPixels(rows) };
+}
+
 export const BRUSHES = [
-  {
-    id: 'heart',
-    name: 'Heart',
-    width: HEART_PATTERN[0].length,
-    height: HEART_PATTERN.length,
-    pixels: patternToPixels(HEART_PATTERN),
-  },
-  {
-    id: 'circle',
-    name: 'Circle',
-    width: CIRCLE_PATTERN[0].length,
-    height: CIRCLE_PATTERN.length,
-    pixels: patternToPixels(CIRCLE_PATTERN),
-  },
+  brushFromRows('heart', 'Heart', HEART_PATTERN),
+  brushFromRows('circle', 'Circle', CIRCLE_PATTERN),
 ];
 
 /**
- * Converts a 2D boolean grid (grid[y][x] === true means "on") from the
- * custom-brush editor into the same `pixels: [[x, y], ...]` format
- * built-in brushes use, so a custom brush works identically everywhere
- * else in the code.
+ * Converts a 2D grid of opacities (0 = off, 1 = full; `true`/`false` also
+ * accepted) from the custom-brush editor into the same
+ * `pixels: [[x, y] | [x, y, a], ...]` format built-in brushes use, so a
+ * custom brush works identically everywhere else in the code.
  */
 export function pixelsFromGrid(grid) {
   const pixels = [];
   grid.forEach((row, y) => {
-    row.forEach((on, x) => {
-      if (on) pixels.push([x, y]);
+    row.forEach((cell, x) => {
+      const alpha = Math.round(Number(cell) * 100) / 100;
+      if (alpha <= 0) return;
+      pixels.push(alpha >= 1 ? [x, y] : [x, y, alpha]);
     });
   });
   return pixels;
+}
+
+/**
+ * What a press on a brush-editor cell holding `current` paints: the
+ * editor's `opacity`, or 0 (clear) when the cell already holds exactly
+ * that opacity - so at 100% a press still toggles a cell on and off.
+ */
+export function editorPaintValue(current, opacity) {
+  return current === opacity ? 0 : opacity;
 }
 
 /**
@@ -79,6 +92,8 @@ export function pixelsFromGrid(grid) {
  * onto the same rounded destination cell, or leave small gaps versus the
  * original silhouette - an inherent tradeoff of rotating a grid pattern
  * rather than a vector shape, acceptable for a pixel-art brush trail.
+ * Each pixel keeps its opacity; when two land on the same cell the more
+ * opaque one wins.
  */
 function rotatedBrushPixels(brush, angleDegrees) {
   if (!angleDegrees) return brush.pixels;
@@ -87,20 +102,17 @@ function rotatedBrushPixels(brush, angleDegrees) {
   const sin = Math.sin(angleRad);
   const cx = (brush.width - 1) / 2;
   const cy = (brush.height - 1) / 2;
-  const seen = new Set();
-  const pixels = [];
-  for (const [x, y] of brush.pixels) {
+  const byCell = new Map();
+  for (const [x, y, alpha = 1] of brush.pixels) {
     const dx = x - cx;
     const dy = y - cy;
     const rx = Math.round(dx * cos - dy * sin + cx);
     const ry = Math.round(dx * sin + dy * cos + cy);
     const key = `${rx},${ry}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      pixels.push([rx, ry]);
-    }
+    const previous = byCell.get(key);
+    if (!previous || alpha > previous[2]) byCell.set(key, [rx, ry, alpha]);
   }
-  return pixels;
+  return [...byCell.values()];
 }
 
 /**
@@ -118,14 +130,21 @@ function rotatedBrushPixels(brush, angleDegrees) {
  * since placeBrush is Brush's one placement seam, mirroring the "wrap
  * applyPixel, don't fork the stroke tracer" approach from design.md for
  * Brush's own (non-applyPixel-shaped) placement API.
+ *
+ * Each pixel is drawn at its own opacity: a full pixel replaces what is
+ * there with `rgba` exactly, a partial one blends over it with
+ * setPixelBlended, so overlapping stamps build up. The per-pixel function
+ * is called as `(x, y, alpha)`; symmetry's wrapper passes the third
+ * argument through.
  */
 export function placeBrush(engine, centerX, centerY, brush, rgba, angleDegrees = 0, applyPixelTransform = null) {
   const topLeftX = centerX - Math.floor(brush.width / 2);
   const topLeftY = centerY - Math.floor(brush.height / 2);
-  const setPixel = (x, y) => engine.setPixel(x, y, rgba);
+  const setPixel = (x, y, alpha = 1) =>
+    alpha >= 1 ? engine.setPixel(x, y, rgba) : engine.setPixelBlended(x, y, rgba, alpha);
   const place = applyPixelTransform ? applyPixelTransform(setPixel, engine) : setPixel;
-  for (const [dx, dy] of rotatedBrushPixels(brush, angleDegrees)) {
-    place(topLeftX + dx, topLeftY + dy);
+  for (const [dx, dy, alpha = 1] of rotatedBrushPixels(brush, angleDegrees)) {
+    place(topLeftX + dx, topLeftY + dy, alpha);
   }
 }
 

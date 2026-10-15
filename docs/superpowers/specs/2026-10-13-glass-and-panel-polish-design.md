@@ -5,7 +5,8 @@ Part A of the 2026-10-13 UI feedback (ten items, split into three specs):
 - **A. Glass and panel polish** (this doc): items 1, 2, 3, 4, 9, 10.
 - **B. Transform**: items 5 (Transform popover in categories, after
   Pixelmator Pro's Arrange and Curve's Style) and 6 (rotation dial).
-  Separate spec, after A.
+  Done 2026-10-15 as separate Align and Rotate popovers: see
+  `2026-10-15-align-rotate-popovers-design.md`.
 - **C. Edit actions**: items 7 (a visible Merge button) and 8 (Copy, Cut,
   Paste with icons). Separate spec, after B.
 

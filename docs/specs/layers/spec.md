@@ -717,7 +717,7 @@ Close, with the active layer's blend and opacity in a row beneath (see
 The user SHALL be able to lock any layer except the reference image layer
 from its ⋯ menu (Lock; Unlock once locked), as one undoable step. A lock
 SHALL protect the layer's pixels only: every drawing tool, Move, the
-Transform popover's actions, selection Delete, Cut, and merging into or
+Align and Rotate popovers' actions, selection Delete, Cut, and merging into or
 from the layer SHALL be refused, with the toast "Layer is locked. Unlock
 it from the layer's ⋯ menu." once per refused gesture and no undo step.
 Reordering, grouping, visibility, opacity, blend mode, Rename, Duplicate,

@@ -4,6 +4,7 @@ import { initExport, sanitizeFilename } from './export.js';
 import { TimelapseRecorder, captureFrame, encodeTimelapseVideo, isTimelapseSupported } from './timelapse.js';
 import { BRUSHES, placeBrush, rainbowColor, pixelsFromGrid, editorPaintValue } from './brushes.js';
 import { drawBrushPreview } from './brush-preview.js';
+import { brushSections, BUILT_IN_BRUSH_PACKS } from './standard-brushes.js';
 import { drawRectangle, drawEllipse, clipToSelection } from './shape-tools.js';
 import { cursorFootprint, footprintOutlinePath } from './brush-cursor.js';
 import { flipRegion, rotateRegion, rotateRegionFree, contentBounds, alignOffset, moveRegion } from '../lib/pixel-engine/transform.js';
@@ -14,6 +15,7 @@ import { initPixelPerfect } from './pixel-perfect-ui.js';
 import { initRectangleFill, syncRectangleFillTool } from './rectangle-fill-ui.js';
 import { initPencilOpacity, getPencilOpacity } from './pencil-opacity-ui.js';
 import { initBrushImport } from './brush-import-ui.js';
+import { initStandardBrushes } from './standard-brushes-ui.js';
 import { initCanvasSettings } from './canvas-settings.js';
 // Layers and Color Library are permanent parts of the app, not optional
 // plugins - these two imports create a deliberate circular dependency
@@ -520,24 +522,44 @@ function buildBrushPreviewCanvas(brush) {
   return canvas;
 }
 
-/** Rebuilds the Brushes panel grid from `allBrushes`, marking the current one active. */
+// Pack sections in the palette follow the shipped pack order.
+const BRUSH_PACK_ORDER = BUILT_IN_BRUSH_PACKS.map((pack) => pack.id);
+
+/**
+ * Rebuilds the brush palette from `allBrushes` in sections (Core, each
+ * added Standard Brushes pack, My Brushes - js/standard-brushes.js's
+ * brushSections), marking the current one active. Pack and user brushes
+ * are both `isCustom` (stored in customBrushes), so both can be deleted.
+ */
 function renderBrushesPanel() {
   brushesPanelGrid.innerHTML = '';
-  allBrushes.forEach((brush) => {
-    const swatch = document.createElement('button');
-    swatch.type = 'button';
-    swatch.className = 'brush-swatch' + (brush.id === state.currentBrush?.id ? ' active' : '');
-    swatch.title = brush.name;
-    swatch.appendChild(buildBrushPreviewCanvas(brush));
-    swatch.addEventListener('click', () => {
-      state.currentBrush = brush;
-      refreshBrushCursor();
-      syncBrushPickerButton();
-      brushesPanelGrid.querySelectorAll('.brush-swatch').forEach((s) => s.classList.toggle('active', s === swatch));
-      deleteBrushButton.disabled = !brush.isCustom;
-    });
-    brushesPanelGrid.appendChild(swatch);
-  });
+  const sections = brushSections(BRUSHES, allBrushes.filter((b) => b.isCustom), BRUSH_PACK_ORDER);
+  for (const section of sections) {
+    const heading = document.createElement('h3');
+    heading.className = 'brush-section-heading';
+    heading.textContent = section.title;
+    brushesPanelGrid.appendChild(heading);
+    for (const brush of section.brushes) {
+      const swatch = document.createElement('button');
+      swatch.type = 'button';
+      swatch.className = 'brush-swatch' + (brush.id === state.currentBrush?.id ? ' active' : '');
+      swatch.title = brush.name;
+      swatch.setAttribute('aria-label', brush.name);
+      swatch.setAttribute('aria-pressed', String(brush.id === state.currentBrush?.id));
+      swatch.appendChild(buildBrushPreviewCanvas(brush));
+      swatch.addEventListener('click', () => {
+        state.currentBrush = brush;
+        refreshBrushCursor();
+        syncBrushPickerButton();
+        brushesPanelGrid.querySelectorAll('.brush-swatch').forEach((s) => {
+          s.classList.toggle('active', s === swatch);
+          s.setAttribute('aria-pressed', String(s === swatch));
+        });
+        deleteBrushButton.disabled = !brush.isCustom;
+      });
+      brushesPanelGrid.appendChild(swatch);
+    }
+  }
   deleteBrushButton.disabled = !state.currentBrush?.isCustom;
   syncBrushPickerButton();
 }
@@ -1511,6 +1533,11 @@ function bindDomOnce() {
   // Closes like the other popovers: a press outside it or Escape. Only
   // where there's a brush button to reopen it (not in the docked embed).
   if (brushPickerButton && !globalListenersBound) {
+    // Re-place it when it grows or shrinks (sections added, editor opened)
+    // so it stays on screen.
+    new ResizeObserver(() => {
+      if (!brushesPanel.classList.contains('collapsed')) positionBrushPalette(root.querySelector('#brush-picker-button'));
+    }).observe(brushesPanel);
     document.addEventListener('pointerdown', (e) => {
       if (brushesPanel.classList.contains('collapsed')) return;
       if (brushesPanel.contains(e.target) || root.querySelector('#brush-picker-button')?.contains(e.target)) return;
@@ -1520,6 +1547,8 @@ function bindDomOnce() {
     });
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape' || brushesPanel.classList.contains('collapsed')) return;
+      // Escape in a dialog opened from the palette closes only that dialog.
+      if (e.target.closest?.('dialog[open], .confirm-overlay')) return;
       setBrushesCardOpen(false);
       root.querySelector('#brush-picker-button')?.focus();
     });
@@ -1981,6 +2010,7 @@ function bindDomOnce() {
   initRectangleFill(root);
   initPencilOpacity(root);
   initBrushImport(root);
+  initStandardBrushes(root, { onBrushesChanged: loadCustomBrushes });
   canvasSettingsControls = initCanvasSettings({
     onResize(width, height) {
       resizeCanvas(width, height);

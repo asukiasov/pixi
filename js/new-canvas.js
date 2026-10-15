@@ -52,7 +52,7 @@ export function initNewCanvasScreen({ onCanvasCreated, onCancel, getLast, saveLa
     const cells = Math.min(1, GRID_MAX / Math.max(width, height));
     preview.style.setProperty('--cols', Math.max(1, Math.round(width * cells)));
     preview.style.setProperty('--rows', Math.max(1, Math.round(height * cells)));
-    preview.style.aspectRatio = `${width} / ${height}`;
+    preview.style.setProperty('--ratio', width / height);
     const label = document.createElement('span');
     label.className = 'tile-name';
     label.textContent = name;

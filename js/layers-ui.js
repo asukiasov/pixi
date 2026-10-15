@@ -187,6 +187,7 @@ let layersPanelOpacitySlider = null;
 let layersPanelOpacityNumber = null;
 let layersPanelOpacityPopover = null;
 let addLayerButton = null;
+let mergeLayerButton = null;
 let addReferenceImageButton = null;
 let addReferenceImageInput = null;
 let selectBar = null;
@@ -284,6 +285,12 @@ export function renderLayersPanel() {
   const layerStack = getLayerStack();
   const layers = layerStack.getLayers();
   const activeIndex = layerStack.getActiveIndex();
+  if (mergeLayerButton) {
+    const merge = mergeButtonState(layers, activeIndex, markedLayerIds);
+    mergeLayerButton.disabled = merge.disabled;
+    mergeLayerButton.setAttribute('aria-label', merge.label);
+    mergeLayerButton.dataset.tooltip = `${merge.label} (⌘E)`;
+  }
   layersPanelList.innerHTML = '';
   layersPanelList.classList.toggle('selecting', selectMode);
   displayItems = [];
@@ -1000,6 +1007,7 @@ export function initLayers(root = document) {
   layersPanelOpacityNumber = root.querySelector('#layers-panel-opacity-number');
   layersPanelOpacityPopover = root.querySelector('#layers-panel-opacity-popover');
   addLayerButton = root.querySelector('#add-layer-button');
+  mergeLayerButton = root.querySelector('#merge-layer-button');
   addReferenceImageButton = root.querySelector('#add-reference-image-button');
   addReferenceImageInput = root.querySelector('#add-reference-image-input');
   selectBar = root.querySelector('#layers-select-bar');
@@ -1111,6 +1119,7 @@ export function initLayers(root = document) {
   });
 
   addLayerButton.addEventListener('click', () => apply(() => getLayerStack().addLayer()));
+  mergeLayerButton?.addEventListener('click', () => mergeMarkedOrActiveDown());
 
   // Decode via the shared image-import helper, but skip Color Library
   // import's downsample/pixelate/quantize step entirely -

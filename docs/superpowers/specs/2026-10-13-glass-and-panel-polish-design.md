@@ -8,7 +8,8 @@ Part A of the 2026-10-13 UI feedback (ten items, split into three specs):
   Done 2026-10-15 as separate Align and Rotate popovers: see
   `2026-10-15-align-rotate-popovers-design.md`.
 - **C. Edit actions**: items 7 (a visible Merge button) and 8 (Copy, Cut,
-  Paste with icons). Separate spec, after B.
+  Paste with icons). Done 2026-10-15: Merge in the Layers header, Cut and
+  Copy on the selection bar; see `2026-10-15-visible-edit-actions-design.md`.
 
 This change is CSS and markup only. It adds no new behaviour, except that
 blend mode and opacity move from a popover into the Layers header.

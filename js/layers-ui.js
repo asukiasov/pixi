@@ -14,7 +14,7 @@
 // indirection between the two files, just ordinary (circular) ES module
 // imports.
 
-import { getLayerStack, renderCanvas, commit, onWorkspaceReset, bindPanelHeaderCollapse, copyActive, cutActive, pasteFromClipboard, selectActiveContent, getSelection } from './workspace.js';
+import { getLayerStack, renderCanvas, commit, onWorkspaceReset, bindPanelHeaderCollapse, copyActive, cutActive, pasteFromClipboard, selectActiveContent, getSelection, updateSelectionControls } from './workspace.js';
 import { BLEND_MODES, REFERENCE_MODES, MAX_LAYERS } from '../lib/pixel-engine/layers.js';
 import { contentBounds } from '../lib/pixel-engine/transform.js';
 import { decodeImageFile, fitImageToCanvas, UNREADABLE_IMAGE_MESSAGE } from './image-import.js';
@@ -280,6 +280,7 @@ export function renderLayersPanel() {
   // initLayers() runs only from js/app.js - a Pixi.mount() embed has no
   // Layers panel, but commit() still calls this on every stroke.
   if (!layersPanelList) return;
+  updateSelectionControls();
   const layerStack = getLayerStack();
   const layers = layerStack.getLayers();
   const activeIndex = layerStack.getActiveIndex();

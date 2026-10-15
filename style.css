@@ -3952,7 +3952,7 @@ span.layer-lock-icon {
   justify-content: center;
   min-width: var(--rail-button-size);
   min-height: var(--rail-button-size);
-  padding: 0 1.1rem;
+  padding: 0;
   flex: none;
   border-radius: 999px;
   white-space: nowrap;
@@ -3961,6 +3961,14 @@ span.layer-lock-icon {
 .workspace-screen[data-layout="floating"] #selection-bar .tool-button:not(:where(.ghost-button)) {
   background: transparent;
   border-color: transparent;
+}
+
+.workspace-screen[data-layout="floating"] #selection-bar .selection-bar-divider {
+  align-self: stretch;
+  width: 1px;
+  margin-block: 0.4rem;
+  background: currentColor;
+  opacity: 0.2;
 }
 
 

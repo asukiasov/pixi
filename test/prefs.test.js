@@ -37,6 +37,7 @@ describe('normalizePrefs', () => {
       pencilOnly: true,
       showMascot: true,
       railTools: ['move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'hand', 'eyedropper'],
+      newCanvas: { width: 32, height: 32, background: 'transparent' },
     });
   });
 
@@ -94,7 +95,7 @@ describe('loadPrefs / savePrefs', () => {
 
   test('round trip', () => {
     const storage = fakeStorage();
-    const prefs = { toolsSide: 'right', panelsSide: 'left', pinned: { colors: false, brushes: true, layers: false }, autoHide: true, brushCursor: false, pencilOnly: false, showMascot: false, railTools: ['pencil', 'move'] };
+    const prefs = { toolsSide: 'right', panelsSide: 'left', pinned: { colors: false, brushes: true, layers: false }, autoHide: true, brushCursor: false, pencilOnly: false, showMascot: false, railTools: ['pencil', 'move'], newCanvas: { width: 8, height: 8, background: 'white' } };
     savePrefs(storage, prefs);
     assert.equal(PREFS_STORAGE_KEY, 'pixi-prefs');
     assert.deepEqual(loadPrefs(storage), prefs);
@@ -124,5 +125,29 @@ describe('isAutoHideTool', () => {
 
   test('other tools never do', () => {
     for (const tool of ['selection', 'move', 'hand', 'bucket', 'eyedropper', undefined]) assert.equal(isAutoHideTool(tool), false, String(tool));
+  });
+});
+
+describe('newCanvas (last New Canvas choice)', () => {
+  test('keeps a valid size and background', () => {
+    const raw = { newCanvas: { width: 24, height: 96, background: 'white' } };
+    assert.deepEqual(normalizePrefs(raw).newCanvas, { width: 24, height: 96, background: 'white' });
+  });
+
+  test('clamps and rounds the size to 1-256', () => {
+    const raw = { newCanvas: { width: 999, height: 0.4, background: 'white' } };
+    assert.deepEqual(normalizePrefs(raw).newCanvas, { width: 256, height: 1, background: 'white' });
+  });
+
+  test('each bad field falls back on its own', () => {
+    const raw = { newCanvas: { width: 'big', height: 64, background: 'pink' } };
+    assert.deepEqual(normalizePrefs(raw).newCanvas, { width: 32, height: 64, background: 'transparent' });
+    assert.deepEqual(normalizePrefs({ newCanvas: 7 }).newCanvas, DEFAULT_PREFS.newCanvas);
+  });
+
+  test('round-trips through storage', () => {
+    const storage = fakeStorage();
+    savePrefs(storage, { ...DEFAULT_PREFS, newCanvas: { width: 16, height: 128, background: 'white' } });
+    assert.deepEqual(loadPrefs(storage).newCanvas, { width: 16, height: 128, background: 'white' });
   });
 });

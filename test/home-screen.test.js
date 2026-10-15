@@ -89,3 +89,26 @@ describe('home screen theme setting', () => {
     assert.match(block('.home-theme'), /position:\s*absolute/);
   });
 });
+
+describe('New Canvas redesign', () => {
+  const markup = () => screen('screen-new-canvas');
+
+  test('preset grid and inspector side by side, stacked on phones', () => {
+    assert.match(markup(), /id="size-presets" class="size-tiles" role="group"/);
+    assert.match(markup(), /<form class="new-canvas-inspector"/);
+    assert.match(block('.new-canvas-body'), /grid-template-columns: minmax\(0, 1fr\) 16\.25rem/);
+    assert.match(css, /@media \(max-width: 640px\)[\s\S]*?\.new-canvas-actions \{[^}]*position: sticky;[^}]*bottom: 0/);
+  });
+
+  test('inspector: size with swap, background tiles, Cancel and Create', () => {
+    const html = markup();
+    for (const id of ['custom-width', 'custom-height', 'swap-size', 'cancel-new-canvas', 'create-canvas-button']) {
+      assert.match(html, new RegExp(`id="${id}"`));
+    }
+    assert.match(html, /class="picture-tile" data-background="transparent" aria-pressed="true"/);
+    assert.match(html, /class="picture-tile" data-background="white" aria-pressed="false"/);
+    assert.doesNotMatch(html, /type="radio"/);
+    assert.match(html, /id="cancel-new-canvas" class="ghost-button ghost-text"/);
+    assert.match(html, /type="submit" id="create-canvas-button" class="primary-button"/);
+  });
+});

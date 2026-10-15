@@ -9,7 +9,9 @@ producing an empty canvas the Workspace can draw on.
 
 ### Requirement: Size selection
 The New Canvas screen SHALL offer size presets of 16×16, 32×32, 64×64, and
-128×128, and SHALL also accept a custom width and height.
+128×128 as picture tiles, preceded by a "Last used" tile, and SHALL also
+accept a custom width and height. Each tile SHALL preview the chosen
+background with a pixel grid at its size.
 
 #### Scenario: User picks a preset size
 - **WHEN** the user selects the 32×32 preset
@@ -24,9 +26,22 @@ The New Canvas screen SHALL offer size presets of 16×16, 32×32, 64×64, and
 - **THEN** the value is clamped to the nearest valid bound (1 or 256) before the
   canvas is created
 
+#### Scenario: Typed sizes select their tile
+- **WHEN** the user types a size that equals a square preset
+- **THEN** that preset's tile is selected
+- **WHEN** the size matches no preset but equals the last-used size
+- **THEN** the "Last used" tile is selected
+- **WHEN** the size matches neither
+- **THEN** a selected "Custom W×H" tile appears after the presets
+
+#### Scenario: Swapping width and height
+- **WHEN** the width and height differ and the user taps the swap button
+- **THEN** the two values are exchanged and the selected tile re-syncs; the
+  swap button is hidden for square sizes
+
 ### Requirement: Background selection
 The New Canvas screen SHALL let the user choose a transparent or a white
-background for the new canvas.
+background for the new canvas, as two picture tiles.
 
 #### Scenario: Transparent background
 - **WHEN** the user selects "transparent" and creates the canvas
@@ -35,6 +50,19 @@ background for the new canvas.
 #### Scenario: White background
 - **WHEN** the user selects "white" and creates the canvas
 - **THEN** every pixel starts opaque white
+
+### Requirement: Remember the last choice
+Creating a canvas SHALL store its size and background in the preferences,
+and the New Canvas screen SHALL open with that size and background, on the
+"Last used" tile (32×32 transparent before any canvas is created).
+
+#### Scenario: Reopening New Canvas
+- **WHEN** the user created a 40×20 white canvas and later opens New Canvas
+- **THEN** "Last used" is selected with W 40, H 20 and the White background
+
+### Requirement: Cancel
+The New Canvas screen SHALL offer Cancel, which returns to the Gallery
+without creating a project.
 
 ### Requirement: Hand-off to Workspace
 Creating a canvas SHALL immediately switch the app to the Workspace screen with
@@ -65,7 +93,10 @@ NOT require confirmation — there is nothing to lose.
 ### Requirement: New Canvas presentation
 The New Canvas screen SHALL show the same decorative artwork and scrim as
 the Gallery, with its form in a centred frosted-glass card that falls
-back to an opaque card when the user prefers reduced transparency.
+back to an opaque card when the user prefers reduced transparency. The
+card holds the preset tiles on the left and an inspector (~260px: preset
+summary, size, background, Cancel/Create) on the right; on phones they
+stack and Cancel/Create stay pinned to the bottom of the screen.
 
 #### Scenario: Moving from the Gallery to New Canvas
 - **WHEN** the user taps "New Canvas" in the Gallery

@@ -243,7 +243,7 @@ function showGallery() {
 
 const gallery = initGallery({
   onNewCanvas: () => {
-    showScreen('newCanvas');
+    showNewCanvas();
     navigate({ screen: 'newCanvas' });
   },
   async onOpenProject(id) {
@@ -254,12 +254,27 @@ const gallery = initGallery({
   },
 });
 
-initNewCanvasScreen({
+const newCanvasScreen = initNewCanvasScreen({
   onCanvasCreated({ layerStack, projectId, projectName }) {
     openWorkspace({ layerStack, projectId, projectName });
     navigate({ screen: 'workspace', projectId });
   },
+  onCancel() {
+    showGallery();
+    navigate({ screen: 'gallery' });
+  },
+  getLast: () => prefs.newCanvas,
+  saveLast(newCanvas) {
+    prefs = { ...prefs, newCanvas };
+    savePrefs(prefsStorage, prefs);
+  },
 });
+
+/** Shows the New Canvas screen with the last size and background selected. */
+function showNewCanvas() {
+  newCanvasScreen.open();
+  showScreen('newCanvas');
+}
 
 // Reacts to Back/Forward (and any other external hash change) by
 // re-deriving the visible screen from the URL. This only ever updates
@@ -281,7 +296,7 @@ onRouteChange(async (route) => {
     return;
   }
   if (route.screen === 'newCanvas') {
-    showScreen('newCanvas');
+    showNewCanvas();
     return;
   }
   showGallery();
@@ -304,7 +319,7 @@ async function boot() {
   }
 
   if (route.screen === 'newCanvas') {
-    showScreen('newCanvas');
+    showNewCanvas();
     return;
   }
 

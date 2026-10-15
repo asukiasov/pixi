@@ -470,12 +470,12 @@ textarea,
 .new-canvas-card {
   position: relative;
   --glass-blur: 28px;
-  width: min(100%, 30rem);
+  width: min(100%, 52rem);
   margin: auto 0;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
 }
 
 /* Kept for a non-glass card; Forma .glass's radius wins on the glass one. */
@@ -488,27 +488,210 @@ textarea,
   font-size: 1.6rem;
 }
 
-.new-canvas-card .primary-button {
-  margin-top: 1rem;
-  border-radius: 999px;
+/* Preset grid left, ~260px inspector right; stacked on phones below. */
+.new-canvas-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 16.25rem;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.size-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 0.75rem;
+}
+
+/* A picture tile (preset sizes and backgrounds): a preview, then its
+   name and size; the selected one gets an accent ring. */
+.picture-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.6rem 0.5rem 0.5rem;
+  border: none;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.picture-tile:hover {
+  background: var(--ghost-hover);
+}
+
+.picture-tile:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.tile-preview {
+  --cols: 2;
+  --rows: 2;
+  display: block;
+  width: 100%;
+  max-width: 5.5rem;
+  max-height: 5.5rem;
+  aspect-ratio: 1;
+  margin-bottom: 0.35rem;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px var(--glass-border);
+}
+
+/* The pixel grid at the tile's size over the chosen background (the
+   gallery thumbnails' checkerboard, or white). */
+.size-tile .tile-preview {
+  --grid: rgba(0, 0, 0, 0.14);
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: calc(100% / var(--cols)) calc(100% / var(--rows));
+  background-color: #fff;
+}
+
+.size-tile .tile-preview[data-background="transparent"] {
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px),
+    repeating-conic-gradient(#e2e2e2 0 25%, #cfcfcf 0 50%);
+  background-size:
+    calc(100% / var(--cols)) calc(100% / var(--rows)),
+    calc(100% / var(--cols)) calc(100% / var(--rows)),
+    12px 12px;
+}
+
+.background-tiles .tile-preview[data-background="transparent"] {
+  background: repeating-conic-gradient(#e2e2e2 0 25%, #cfcfcf 0 50%) 0 0 / 12px 12px;
+}
+
+.background-tiles .tile-preview[data-background="white"] {
+  background: #fff;
+}
+
+.picture-tile[aria-pressed="true"] .tile-preview {
+  box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent);
+}
+
+.tile-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.tile-size {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.new-canvas-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 16px;
+  background: var(--ghost-hover);
+}
+
+.new-canvas-summary {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
   font-weight: 600;
 }
 
-.field-group h2 {
-  font-size: 0.9rem;
+.new-canvas-summary-size {
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.field-group {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+
+.field-group legend {
+  padding: 0;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-text-secondary);
   margin-bottom: 0.5rem;
 }
 
-.preset-row {
-  display: flex;
-  flex-wrap: wrap;
+.background-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
 }
 
-.preset-button,
+.background-tiles .tile-preview {
+  max-width: 3.5rem;
+}
+
+.new-canvas-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.new-canvas-actions .primary-button {
+  margin-top: 0;
+  padding: 0.6rem 1.4rem;
+  font-size: 1rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* Phones: the grid above the inspector, the card scrolls, and the
+   Cancel/Create row stays pinned to the bottom of the screen. */
+@media (max-width: 640px) {
+  #screen-new-canvas {
+    align-items: stretch;
+    padding: 0.75rem 1rem 0;
+  }
+
+  .new-canvas-card {
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Keeps a focused field clear of the pinned Cancel/Create row. */
+    scroll-padding-bottom: 5rem;
+    padding-bottom: 0;
+  }
+
+  .new-canvas-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .new-canvas-inspector {
+    padding: 0;
+    background: none;
+  }
+
+  .size-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .new-canvas-actions {
+    position: sticky;
+    bottom: 0;
+    margin: 0 -1.5rem;
+    padding: 0.75rem 1.5rem max(0.75rem, env(safe-area-inset-bottom));
+    background: var(--color-overlay);
+  }
+
+  .new-canvas-actions > * {
+    flex: 1;
+  }
+}
+
 .tool-button:not(:where(.ghost-button, .glass)) {
   padding: 0.6rem 1rem;
   border: 1px solid var(--color-border);
@@ -518,7 +701,6 @@ textarea,
 
 /* Not for a Forma .ghost-button, whose own font and colour win; a .glass
    button (Home, More) keeps these. */
-.preset-button,
 .tool-button:not(:where(.ghost-button)) {
   color: inherit;
   font-size: 1rem;
@@ -530,14 +712,13 @@ textarea,
   cursor: pointer;
 }
 
-.preset-button.active,
 .tool-button.active:not(:where(.ghost-button, .glass)) {
   background: var(--color-accent);
   border-color: var(--color-accent);
 }
 
 /* Hover feedback (button-hover-states) - every boxed button in the app
-   shares this one base (.preset-button, .tool-button), so one rule pair
+   shares this one base (.tool-button), so one rule pair
    covers all of them: topbar/tool-rail icons, Save/Cancel/Resize/Rotate
    text buttons, Color Library/Brushes action buttons, etc. :not(:disabled)
    - a disabled button darkening further on hover would read as if
@@ -545,12 +726,10 @@ textarea,
    --color-accent-strong, the same token .active already darkens to
    elsewhere) instead of the plain surface shift, so the accent fill
    doesn't just look like it turned back to unselected. */
-.preset-button:not(:disabled):hover,
 .tool-button:not(:disabled):hover:not(:where(.ghost-button, .glass)) {
   background: var(--color-surface-alt);
 }
 
-.preset-button.active:not(:disabled):hover,
 .tool-button.active:not(:disabled):hover:not(:where(.ghost-button, .glass)) {
   background: var(--color-accent-strong);
   border-color: var(--color-accent-strong);
@@ -558,17 +737,39 @@ textarea,
 
 .custom-size-row {
   display: flex;
-  gap: 1rem;
-  margin-top: 0.75rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.custom-size-row label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1;
+  color: var(--color-text-secondary);
+}
+
+/* Holds its slot while hidden (square sizes) so W/H don't jump. */
+.custom-size-row #swap-size[hidden] {
+  display: inline-flex;
+  visibility: hidden;
 }
 
 .custom-size-row input {
-  width: 5rem;
-  padding: 0.4rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.45rem 0.5rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  color: inherit;
-  border-radius: 0.4rem;
+  color: var(--color-text);
+  border-radius: 0.5rem;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.custom-size-row input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
 }
 
 /* .primary-button now in forma-ui/components.css */

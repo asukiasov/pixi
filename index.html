@@ -90,32 +90,53 @@
     <div class="home-backdrop" aria-hidden="true">
       <img src="assets/home-bg.webp" alt="" width="1376" height="768" decoding="async" />
     </div>
+    <!-- New Canvas redesign (Pixelmator Pro's New Document): preset tiles
+         on the left, the inspector on the right; stacked on phones with
+         Cancel/Create pinned to the bottom. js/new-canvas.js renders the
+         tiles from js/new-canvas-state.js. -->
     <div class="new-canvas-card glass">
-      <h1>New Canvas</h1>
+      <h1 id="new-canvas-title">New Canvas</h1>
 
-      <section class="field-group">
-        <h2>Size</h2>
-        <div class="preset-row" id="size-presets">
-          <button type="button" class="preset-button" data-size="16">16×16</button>
-          <button type="button" class="preset-button" data-size="32">32×32</button>
-          <button type="button" class="preset-button" data-size="64">64×64</button>
-          <button type="button" class="preset-button" data-size="128">128×128</button>
-        </div>
-        <div class="custom-size-row">
-          <label>W <input type="number" id="custom-width" name="custom-width" autocomplete="off" min="1" max="256" placeholder="e.g. 24…" /></label>
-          <label>H <input type="number" id="custom-height" name="custom-height" autocomplete="off" min="1" max="256" placeholder="e.g. 96…" /></label>
-        </div>
-      </section>
+      <div class="new-canvas-body">
+        <div id="size-presets" class="size-tiles" role="group" aria-labelledby="new-canvas-title"></div>
 
-      <section class="field-group">
-        <h2>Background</h2>
-        <div class="preset-row" id="background-choice">
-          <label><input type="radio" name="background" value="transparent" checked /> Transparent</label>
-          <label><input type="radio" name="background" value="white" /> White</label>
-        </div>
-      </section>
+        <form class="new-canvas-inspector" id="new-canvas-form" novalidate>
+          <p class="new-canvas-summary" aria-live="polite">
+            <span id="new-canvas-preset-name">Last used</span>
+            <span id="new-canvas-preset-size" class="new-canvas-summary-size"></span>
+          </p>
 
-      <button type="button" id="create-canvas-button" class="primary-button">Create</button>
+          <fieldset class="field-group">
+            <legend>Size</legend>
+            <div class="custom-size-row">
+              <label>W <input type="number" id="custom-width" name="custom-width" autocomplete="off" inputmode="numeric" min="1" max="256" /></label>
+              <button type="button" id="swap-size" class="ghost-button" aria-label="Swap width and height" data-tooltip="Swap width and height">
+                <span class="material-symbols-outlined" aria-hidden="true">swap_horiz</span>
+              </button>
+              <label>H <input type="number" id="custom-height" name="custom-height" autocomplete="off" inputmode="numeric" min="1" max="256" /></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="field-group">
+            <legend>Background</legend>
+            <div class="background-tiles" id="background-choice">
+              <button type="button" class="picture-tile" data-background="transparent" aria-pressed="true">
+                <span class="tile-preview" data-background="transparent" aria-hidden="true"></span>
+                <span class="tile-name">Transparent</span>
+              </button>
+              <button type="button" class="picture-tile" data-background="white" aria-pressed="false">
+                <span class="tile-preview" data-background="white" aria-hidden="true"></span>
+                <span class="tile-name">White</span>
+              </button>
+            </div>
+          </fieldset>
+
+          <div class="new-canvas-actions">
+            <button type="button" id="cancel-new-canvas" class="ghost-button ghost-text">Cancel</button>
+            <button type="submit" id="create-canvas-button" class="primary-button">Create</button>
+          </div>
+        </form>
+      </div>
     </div>
   </main>
 

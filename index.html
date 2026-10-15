@@ -203,10 +203,13 @@
       <!-- One glass pill in the floating layout; display:contents in the
            docked one. -->
       <div class="topbar-group">
-        <!-- Transform popover (rotate/flip/align the selection or layer),
-             js/transform-ui.js. -->
-        <button type="button" id="transform-toggle" class="tool-button icon-button" aria-label="Transform" data-tooltip="Transform" aria-haspopup="true" aria-expanded="false" aria-controls="transform-panel">
-          <span class="material-symbols-outlined" aria-hidden="true">transform</span>
+        <!-- Align and Rotate popovers (align / flip / rotate the selection
+             or layer), js/transform-ui.js. -->
+        <button type="button" id="align-toggle" class="tool-button icon-button" aria-label="Align" data-tooltip="Align" aria-haspopup="true" aria-expanded="false" aria-controls="align-panel">
+          <span class="material-symbols-outlined" aria-hidden="true">align_horizontal_center</span>
+        </button>
+        <button type="button" id="rotate-toggle" class="tool-button icon-button" aria-label="Rotate" data-tooltip="Rotate" aria-haspopup="true" aria-expanded="false" aria-controls="rotate-panel">
+          <span class="material-symbols-outlined" aria-hidden="true">rotate_right</span>
         </button>
         <button type="button" id="undo-button" class="tool-button icon-button" disabled aria-label="Undo" data-tooltip="Undo">
           <span class="material-symbols-outlined">undo</span>
@@ -867,33 +870,16 @@
         </div>
       </div>
 
-      <!-- Transform popover, anchored below #transform-toggle
-           (js/transform-ui.js). Acts on the selection if there is one,
-           else the whole active layer; the title says which. -->
-      <div id="transform-panel" class="canvas-settings-panel transform-panel hidden" role="dialog" aria-labelledby="transform-title">
+      <!-- Align popover, anchored below #align-toggle (js/transform-ui.js).
+           Acts on the selection if there is one, else the whole active
+           layer; the title says which. -->
+      <div id="align-panel" class="canvas-settings-panel transform-panel hidden" role="dialog" aria-labelledby="align-title">
         <div class="canvas-settings-row canvas-settings-header-row">
-          <h2 id="transform-title">Transform Layer</h2>
-          <button type="button" id="transform-close" class="icon-button" aria-label="Close">
+          <h2 id="align-title">Align Layer</h2>
+          <button type="button" class="icon-button transform-close" aria-label="Close">
             <span class="material-symbols-outlined">close</span>
           </button>
         </div>
-        <h3 class="transform-section-heading">Rotate &amp; Flip</h3>
-        <div class="canvas-settings-row transform-row">
-          <button type="button" class="tool-button icon-button" data-transform="rotate-ccw" aria-label="Rotate 90° left" data-tooltip="Rotate 90° left">
-            <span class="material-symbols-outlined" aria-hidden="true">rotate_left</span>
-          </button>
-          <button type="button" class="tool-button icon-button" data-transform="rotate-cw" aria-label="Rotate 90° right" data-tooltip="Rotate 90° right">
-            <span class="material-symbols-outlined" aria-hidden="true">rotate_right</span>
-          </button>
-          <button type="button" class="tool-button transform-text-button" data-transform="rotate-180" aria-label="Rotate 180°" data-tooltip="Rotate 180°">180°</button>
-          <button type="button" class="tool-button icon-button" data-transform="flip-horizontal" aria-label="Flip horizontal" data-tooltip="Flip horizontal">
-            <span class="material-symbols-outlined" aria-hidden="true">flip</span>
-          </button>
-          <button type="button" class="tool-button icon-button" data-transform="flip-vertical" aria-label="Flip vertical" data-tooltip="Flip vertical">
-            <span class="material-symbols-outlined transform-icon-quarter" aria-hidden="true">flip</span>
-          </button>
-        </div>
-        <h3 class="transform-section-heading">Align to Canvas</h3>
         <div class="canvas-settings-row transform-row">
           <button type="button" class="tool-button icon-button" data-transform="align-left" aria-label="Align left" data-tooltip="Align left">
             <span class="material-symbols-outlined" aria-hidden="true">align_horizontal_left</span>
@@ -915,6 +901,44 @@
           <button type="button" class="tool-button icon-button" data-transform="align-bottom" aria-label="Align bottom" data-tooltip="Align bottom">
             <span class="material-symbols-outlined" aria-hidden="true">align_vertical_bottom</span>
           </button>
+        </div>
+      </div>
+
+      <!-- Rotate popover, anchored below #rotate-toggle (js/transform-ui.js).
+           The dial previews a free-angle rotation in the layer itself
+           (js/rotate-dial.js, js/workspace.js's previewRotate); Apply
+           commits it, Reset or closing puts the pixels back. Flips apply
+           at once, and wait while a rotation is pending. -->
+      <div id="rotate-panel" class="canvas-settings-panel transform-panel hidden" role="dialog" aria-labelledby="rotate-title">
+        <div class="canvas-settings-row canvas-settings-header-row">
+          <h2 id="rotate-title">Rotate Layer</h2>
+          <button type="button" class="icon-button transform-close" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="rotate-dial-row">
+          <button type="button" class="tool-button icon-button" data-rotate-step="-90" aria-label="Rotate 90° left" data-tooltip="Rotate 90° left">
+            <span class="material-symbols-outlined" aria-hidden="true">rotate_left</span>
+          </button>
+          <div id="rotate-dial" class="rotate-dial" role="slider" tabindex="0" aria-label="Rotation" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0" aria-valuetext="0 degrees">
+            <span class="rotate-dial-knob" aria-hidden="true"></span>
+            <span class="rotate-dial-value" aria-hidden="true">0°</span>
+          </div>
+          <button type="button" class="tool-button icon-button" data-rotate-step="90" aria-label="Rotate 90° right" data-tooltip="Rotate 90° right">
+            <span class="material-symbols-outlined" aria-hidden="true">rotate_right</span>
+          </button>
+        </div>
+        <div class="canvas-settings-row transform-row rotate-flip-row">
+          <button type="button" class="tool-button icon-button" data-transform="flip-horizontal" aria-label="Flip horizontal" data-tooltip="Flip horizontal">
+            <span class="material-symbols-outlined" aria-hidden="true">flip</span>
+          </button>
+          <button type="button" class="tool-button icon-button" data-transform="flip-vertical" aria-label="Flip vertical" data-tooltip="Flip vertical">
+            <span class="material-symbols-outlined transform-icon-quarter" aria-hidden="true">flip</span>
+          </button>
+        </div>
+        <div class="action-capsule rotate-actions" role="group" aria-label="Rotation">
+          <button type="button" id="rotate-reset" class="action-capsule-segment" disabled>Reset</button>
+          <button type="button" id="rotate-apply" class="action-capsule-segment is-primary" disabled>Apply</button>
         </div>
       </div>
 

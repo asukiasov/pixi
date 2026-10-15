@@ -14,7 +14,7 @@
 // indirection between the two files, just ordinary (circular) ES module
 // imports.
 
-import { getLayerStack, renderCanvas, commit, onWorkspaceReset, bindPanelHeaderCollapse, copyActive, cutActive, pasteFromClipboard, selectActiveContent, getSelection } from './workspace.js';
+import { getLayerStack, renderCanvas, commit, onWorkspaceReset, bindPanelHeaderCollapse, copyActive, cutActive, pasteFromClipboard, selectActiveContent, getSelection, updateSelectionControls } from './workspace.js';
 import { BLEND_MODES, REFERENCE_MODES, MAX_LAYERS } from '../lib/pixel-engine/layers.js';
 import { contentBounds } from '../lib/pixel-engine/transform.js';
 import { decodeImageFile, fitImageToCanvas, UNREADABLE_IMAGE_MESSAGE } from './image-import.js';
@@ -187,6 +187,7 @@ let layersPanelOpacitySlider = null;
 let layersPanelOpacityNumber = null;
 let layersPanelOpacityPopover = null;
 let addLayerButton = null;
+let mergeLayerButton = null;
 let addReferenceImageButton = null;
 let addReferenceImageInput = null;
 let selectBar = null;
@@ -280,9 +281,16 @@ export function renderLayersPanel() {
   // initLayers() runs only from js/app.js - a Pixi.mount() embed has no
   // Layers panel, but commit() still calls this on every stroke.
   if (!layersPanelList) return;
+  updateSelectionControls();
   const layerStack = getLayerStack();
   const layers = layerStack.getLayers();
   const activeIndex = layerStack.getActiveIndex();
+  if (mergeLayerButton) {
+    const merge = mergeButtonState(layers, activeIndex, markedLayerIds);
+    mergeLayerButton.disabled = merge.disabled;
+    mergeLayerButton.setAttribute('aria-label', merge.label);
+    mergeLayerButton.dataset.tooltip = `${merge.label} (⌘E)`;
+  }
   layersPanelList.innerHTML = '';
   layersPanelList.classList.toggle('selecting', selectMode);
   displayItems = [];
@@ -999,6 +1007,7 @@ export function initLayers(root = document) {
   layersPanelOpacityNumber = root.querySelector('#layers-panel-opacity-number');
   layersPanelOpacityPopover = root.querySelector('#layers-panel-opacity-popover');
   addLayerButton = root.querySelector('#add-layer-button');
+  mergeLayerButton = root.querySelector('#merge-layer-button');
   addReferenceImageButton = root.querySelector('#add-reference-image-button');
   addReferenceImageInput = root.querySelector('#add-reference-image-input');
   selectBar = root.querySelector('#layers-select-bar');
@@ -1110,6 +1119,7 @@ export function initLayers(root = document) {
   });
 
   addLayerButton.addEventListener('click', () => apply(() => getLayerStack().addLayer()));
+  mergeLayerButton?.addEventListener('click', () => mergeMarkedOrActiveDown());
 
   // Decode via the shared image-import helper, but skip Color Library
   // import's downsample/pixelate/quantize step entirely -

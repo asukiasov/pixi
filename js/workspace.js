@@ -21,7 +21,7 @@ import { initCanvasSettings } from './canvas-settings.js';
 // ES modules support this fine as long as neither side calls the other's
 // exports at module-evaluation time, only from inside function bodies
 // invoked later - true of every call site below.
-import { renderLayersPanel, clearLayerMarksAndRefresh, mergeMarkedOrActiveDown, duplicateActiveLayer, groupMarkedOrActive } from './layers-ui.js';
+import { renderLayersPanel, clearLayerMarksAndRefresh, mergeMarkedOrActiveDown, duplicateActiveLayer, groupMarkedOrActive, layerMenuState } from './layers-ui.js';
 import { isHideUiShortcut } from './hide-ui.js';
 import { showToast } from './toast.js';
 import { cropToContent, matchesRecord, placeOnCanvas, setRecord, getRecord, recordFallback, regionToPngBlob, writeImage, readImage, imageFromPasteEvent, imageToImageData } from './clipboard.js';
@@ -435,8 +435,29 @@ function pencilOrEraserApplyPixel(engine) {
 // and is preserved, not incremented, across mirrored copies of one
 // placement.
 
-function updateSelectionControls() {
+/**
+ * Shows the selection controls while there's a selection, and sets Cut
+ * and Copy's enabled state from the layer menu's rules (layerMenuState).
+ * Also run from renderLayersPanel(), so a stroke or an active-layer change
+ * refreshes it.
+ */
+export function updateSelectionControls() {
   state.selectionControlsEl.classList.toggle('hidden', !state.selection);
+  if (!state.selection || !state.selectionCutButton) return;
+  const layers = state.layerStack.getLayers();
+  const index = state.layerStack.getActiveIndex();
+  const layer = layers[index];
+  if (!layer) return;
+  const s = layerMenuState({
+    layer,
+    layers,
+    index,
+    hasSelection: true,
+    hasContent: true,
+    selectionHasContent: !!contentBounds(layer.engine, state.selection),
+  });
+  state.selectionCutButton.disabled = s.cut.disabled;
+  state.selectionCopyButton.disabled = s.copy.disabled;
 }
 
 /**
@@ -1962,6 +1983,9 @@ function bindDomOnce() {
   state.selectionClearButton.addEventListener('click', clearSelection);
 
   state.selectionDeleteButton.addEventListener('click', deleteSelectionPixels);
+  // Synchronous: the clipboard write must start inside the click (clipboard.js's writeImage).
+  state.selectionCutButton.addEventListener('click', () => cutActive());
+  state.selectionCopyButton.addEventListener('click', () => copyActive());
 
   // Restored merge-pixi-pro-into-standard features (symmetry, pixel-
   // perfect, Rectangle Filled, Pencil/Eraser Opacity, Brush import from
@@ -2560,6 +2584,8 @@ export function initWorkspace({
     selectionControlsEl: root.querySelector('#selection-controls'),
     selectionClearButton: root.querySelector('#selection-clear-button'),
     selectionDeleteButton: root.querySelector('#selection-delete-button'),
+    selectionCutButton: root.querySelector('#selection-cut-button'),
+    selectionCopyButton: root.querySelector('#selection-copy-button'),
   };
 
   if (domBoundRoot !== root) {

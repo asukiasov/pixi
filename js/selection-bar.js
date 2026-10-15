@@ -1,8 +1,9 @@
 // Floating layout's selection action bar (5f-selection-action-bar). Wired
 // once from js/app.js, only in the floating layout.
 //
-// Clear selection and Delete are proxies for #selection-clear-button and
-// #selection-delete-button (data-forward="<id>"), like the 5d bar. Whether
+// Cut, Copy, Delete and Clear selection are proxies for the
+// #selection-controls buttons (data-forward="<id>"), like the 5d bar, and
+// mirror their disabled state. Whether
 // the bar shows is CSS-only: it reads #selection-controls' .hidden back
 // with :has(), and the workspace screen's data-selection-drag hides it
 // during Select/Move drags. This module only places it: centred above the
@@ -65,7 +66,13 @@ export function initSelectionBar({ root = document, onCanvasViewChange, currentS
   if (!bar || !screen || !source) return;
 
   for (const proxy of bar.querySelectorAll('button[data-forward]')) {
-    proxy.addEventListener('click', () => root.querySelector(`#${proxy.dataset.forward}`)?.click());
+    const target = root.querySelector(`#${proxy.dataset.forward}`);
+    proxy.addEventListener('click', () => target?.click());
+    if (!target) continue;
+    // Cut/Copy are disabled when there's nothing under the selection.
+    const sync = () => { proxy.disabled = target.disabled; };
+    sync();
+    new MutationObserver(sync).observe(target, { attributes: true, attributeFilter: ['disabled'] });
   }
 
   // The clear area and outer box only change when a card or the screen

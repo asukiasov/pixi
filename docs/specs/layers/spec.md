@@ -604,7 +604,18 @@ active layer down into the layer directly below it.
 ### Requirement: Merge without a keyboard
 Merging SHALL be reachable on touch devices: the active row's ⋯ menu SHALL
 offer Merge Down (disabled when it would be refused), and Select mode's
-Merge SHALL merge the selected layers (2 or more).
+Merge SHALL merge the selected layers (2 or more). The Layers header SHALL
+also have a Merge button, before Add layer, that does what Cmd/Ctrl+E
+does: it merges the marked layers when 2 or more are marked, else merges
+the active layer down. Its label and tooltip SHALL read "Merge down" or
+"Merge N layers" (with "(⌘E)" in the tooltip), and it SHALL be disabled
+when that merge would be refused.
+
+#### Scenario: Merge button in the header
+- **WHEN** the active layer is above another ordinary layer and the user
+  clicks the Layers header's Merge button
+- **THEN** the active layer is merged into the layer below as one undo
+  step, and on the bottom layer the button is disabled
 
 #### Scenario: Merge Down from the row menu
 - **WHEN** no layers are selected, the active layer is above another

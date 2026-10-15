@@ -2,6 +2,7 @@
 // goes, as a pure function of client-pixel rectangles.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { placeSelectionBar } from '../js/selection-bar.js';
 
 const rect = (left, top, width, height) => ({ left, top, width, height, right: left + width, bottom: top + height });
@@ -126,5 +127,22 @@ describe('placeSelectionBar', () => {
     assert.ok(Number.isInteger(place.x) && Number.isInteger(place.y));
     assert.equal(place.x, 351);
     assert.equal(place.y, 241);
+  });
+});
+
+describe('selection bar markup', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+  const bar = html.match(/<div id="selection-bar"[\s\S]*?<\/div>/)[0];
+  test('proxies are cut, copy, delete, clear - icon-only, labelled', () => {
+    const forwards = [...bar.matchAll(/data-forward="([^"]+)"/g)].map((m) => m[1]);
+    assert.deepEqual(forwards, ['selection-cut-button', 'selection-copy-button', 'selection-delete-button', 'selection-clear-button']);
+    for (const btn of bar.match(/<button[\s\S]*?<\/button>/g)) {
+      assert.match(btn, /aria-label="[^"]+"/);
+      assert.match(btn, /icon-button/);
+    }
+  });
+  test('docked source has Cut and Copy', () => {
+    assert.match(html, /id="selection-cut-button"/);
+    assert.match(html, /id="selection-copy-button"/);
   });
 });

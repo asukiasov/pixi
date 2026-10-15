@@ -1,5 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 // workspace.js reads `document` at module load (see layers-marking.test.js);
 // these tests only call pure functions.
@@ -58,4 +59,17 @@ test('mergeButtonState: a locked layer among the marked disables Merge', () => {
   const layers = [L(), L({ locked: true }), L()];
   assert.equal(mergeButtonState(layers, 2, new Set([layers[1].id, layers[2].id])).disabled, true);
   assert.equal(mergeButtonState(layers, 2, new Set([layers[0].id, layers[2].id])).disabled, false);
+});
+
+test('Layers header has a Merge button before Add layer', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const header = html.match(/<div class="panel-header-top">[\s\S]*?id="add-layer-button"/g).find((h) => h.includes('Layers</h2>'));
+  assert.match(header, /id="merge-layer-button"[^>]*aria-label="Merge down"/);
+});
+
+test('mergeButtonState labels: Merge down, Merge N layers', () => {
+  const layers = [L(), L(), L()];
+  assert.equal(mergeButtonState(layers, 2, new Set()).label, 'Merge down');
+  assert.equal(mergeButtonState(layers, 2, new Set([layers[0].id, layers[1].id, layers[2].id])).label, 'Merge 3 layers');
+  assert.equal(mergeButtonState(layers, 0, new Set()).disabled, true);
 });

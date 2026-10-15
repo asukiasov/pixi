@@ -450,8 +450,9 @@ and can ship at any time.
   feedback's Part C): the layer ⋯ menu after Pixelmator Pro for iPad, a
   Cut/Copy/Paste capsule strip on the system clipboard (paste adds a new
   layer), a pixel Lock, Select Content, regrouped items. Design:
-  `docs/superpowers/specs/2026-10-13-layer-context-menu-design.md`. Item 7
-  (a visible Merge button) is still open.
+  `docs/superpowers/specs/2026-10-13-layer-context-menu-design.md`. Items 7
+  and the selection-bar half of 8 done 2026-10-15
+  (`docs/superpowers/specs/2026-10-15-visible-edit-actions-design.md`).
 
 Follow-ups after 5h:
 
@@ -718,8 +719,8 @@ reversed, or stopped applying. Kept for the record.
   - ~~Glass menus, popovers and confirm dialog; Layers header
     blend/opacity; round swatches; Ellipse fill icon (2026-10-13).~~
     ~~Transform split into Align and Rotate popovers, with a rotation
-    dial (2026-10-15).~~ Next: Copy/Cut/Paste
-    and Merge.
+    dial (2026-10-15).~~ ~~Copy/Cut/Paste and Merge
+    (2026-10-15).~~
 
   A dated, per-finding audit register (id/severity/state, one row per
   issue) lives under `docs/audits/` going forward - e.g.

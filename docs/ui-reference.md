@@ -307,11 +307,16 @@ Wiring: `js/panel-rail.js` (once, from `js/app.js`). The docked
 sidebar, its collapse-to-header and its top bar toggles are unchanged.
 
 **Floating selection action bar (5f-selection-action-bar).** In the
-floating layout Clear selection and Delete sit in `#selection-bar`, a
-small glass pill (borderless pill buttons, Pixelmator-style) next to the selection instead of in the palette card
-(so the palette card no longer changes height). Its two buttons are
-proxies (`data-forward`) for `#selection-clear-button` and
-`#selection-delete-button`. Show/hide is CSS-only: the bar is
+floating layout Cut, Copy, Delete and Clear selection sit in
+`#selection-bar`, a small glass pill of icon-only buttons (content_cut,
+content_copy, a `.selection-bar-divider`, delete, deselect; tooltips carry
+the shortcuts) next to the selection instead of in the palette card (so
+the palette card no longer changes height). Its buttons are proxies
+(`data-forward`) for `#selection-cut-button`, `#selection-copy-button`,
+`#selection-delete-button` and `#selection-clear-button`, and mirror
+their `disabled` (Cut/Copy are disabled when nothing is under the
+selection; `updateSelectionControls()` in `js/workspace.js` sets that
+from `layerMenuState` and runs on every `renderLayersPanel()`). Show/hide is CSS-only: the bar is
 `display: none` while the source `#selection-controls` has `.hidden`
 (`:has()`), and `visibility: hidden` while the workspace screen has
 `data-selection-drag`, which `js/workspace.js` sets during a Select drag
@@ -599,7 +604,9 @@ Pro for iPad style):
 - `#layers-panel-header` — `#layers-panel-menu-button` (⋯ → `#layers-panel-menu`:
   `#layers-select-mode-button` Select Layers, `#add-reference-image-button`
   Add Reference Image… → `#add-reference-image-input`), "Layers",
-  `#add-layer-button` (add_circle), close.
+  `#merge-layer-button` (merge; label/tooltip from `mergeButtonState`:
+  "Merge down" or "Merge N layers", "(⌘E)"; calls
+  `mergeMarkedOrActiveDown`), `#add-layer-button` (add_circle), close.
 - `#layers-header-properties` — the active layer's blend and opacity,
   always visible under the title: `#layers-header-blend` (select, sized to
   its longest mode), `#layers-header-opacity` (slider, live; one undo step

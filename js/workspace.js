@@ -606,7 +606,7 @@ export function getBrushEditorSize() {
  * `grid` (same grid[y][x] boolean shape as makeEmptyBrushEditorGrid).
  * Called directly by js/brush-import-ui.js's Brush editor "Import from
  * image" (thresholding a decoded image via js/brush-import.js's
- * thresholdToGrid) to apply its result, including on every subsequent
+ * imageToOpacityGrid) to apply its result, including on every subsequent
  * width/height change - see bindBrushEditorOnce's width/height 'change'
  * listeners, and js/brush-import-ui.js's own listeners on the same inputs
  * which re-derive from its remembered source image. Assumes

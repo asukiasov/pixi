@@ -2073,7 +2073,7 @@ let canvasSettingsControls = null;
  */
 const workspaceResetListeners = [];
 /**
- * What the Transform popover (js/transform-ui.js) would act on: the
+ * What the Align and Rotate popovers (js/transform-ui.js) would act on: the
  * selection if there is one, else the active layer. `disabled` for the
  * reference image layer and a locked layer; `alignDisabled` too when there's nothing to
  * align (no pixels in the target) or the target is the opaque
@@ -2089,7 +2089,7 @@ export function getTransformTarget() {
 }
 
 /**
- * Runs a Transform popover action on the selection (if any) or the whole
+ * Runs an Align or Rotate popover action on the selection (if any) or the whole
  * active layer, as one undo step. `op` is { kind: 'flip', axis },
  * { kind: 'rotate', turn } or { kind: 'align', edge } - see
  * lib/pixel-engine/transform.js. The selection follows the content (a

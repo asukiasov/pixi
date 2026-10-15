@@ -4127,15 +4127,24 @@ span.layer-lock-icon {
 }
 
 .prefs-section-heading {
-  margin: 1rem 0.25rem 0.5rem;
+  margin: 1.75rem 0.25rem 0.5rem;
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--color-text-secondary);
 }
 
+.prefs-section:first-child .prefs-section-heading {
+  margin-top: 1rem;
+}
+
 .prefs-group {
   border-radius: 14px;
   background: var(--prefs-fill);
+}
+
+/* iOS-style gap between one setting's card (or its note) and the next. */
+.prefs-section > :is(.prefs-group, .prefs-note) + .prefs-group {
+  margin-top: 1.25rem;
 }
 
 .prefs-row {

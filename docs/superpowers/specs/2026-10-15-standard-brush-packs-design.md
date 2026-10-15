@@ -52,9 +52,10 @@ per pixel instead of `setPixel`.
 - Rotation carries each pixel's `a`. When two source pixels round onto the
   same cell, the higher `a` wins.
 
-**Previews.** Picker thumbnails (`buildBrushPreviewCanvas`), the
-tool-options brush button and the brush cursor footprint draw each pixel
-black at its `a` on white, so soft brushes read as grey.
+**Previews.** Picker thumbnails, the tool-options brush button and the
+Standard Brushes sheet draw each pixel black at its `a` on white, so soft
+brushes read as grey (shared `js/brush-preview.js`). The brush cursor is an
+outline of the pixels the dab touches, so it is unchanged.
 
 **Image import (behaviour change).** `thresholdToGrid` becomes a mapping
 to opacity per cell instead of on/off:
@@ -65,14 +66,16 @@ to opacity per cell instead of on/off:
 
 ## 2. Brush editor
 
-- New **Opacity** row (0–100%, default 100%) using the shared `.slider`
-  component. It sets the value painted into cells.
+- New **Opacity** row: a range input (1–100%, default 100%) with a %
+  readout, like Pencil's `#pencil-opacity-slider`. It sets the value
+  painted into cells.
 - Clicking a cell sets it to the current opacity. Clicking a cell that
   already holds exactly that value clears it, so at 100% a click still
   toggles on/off as today. A drag paints whatever the first click did
   (set to the opacity, or clear).
-- Each cell is drawn black at its own opacity, matching the picker
-  preview.
+- Each painted cell is shaded by its own opacity (the editor's accent
+  colour mixed toward the empty-cell colour), so partial cells read as
+  lighter.
 - The editor grid state becomes `grid[y][x]` = number in [0, 1] (0 = off).
   `pixelsFromGrid` emits `[x, y]` for 1 and `[x, y, a]` below 1.
 
@@ -118,9 +121,11 @@ offline or when the download is unusable).
   with `cache: 'no-cache'`, falls back to the built-in packs.
 
 **Adding a pack.** Each missing brush is written to `customBrushes` as a
-normal custom brush plus `pack` and `packBrushId` fields. These fields are
+normal custom brush plus `pack`, `packName`, `packBrushId` and `packIndex`
+fields. These fields are
 not indexed, so the Dexie schema version does not change.
-`createCustomBrush` gains an optional `{ pack, packBrushId }` argument.
+`createCustomBrush` gains an optional
+`{ pack, packName, packBrushId, packIndex }` argument.
 Adding never creates duplicates.
 
 ### Standard Brushes sheet
@@ -128,19 +133,20 @@ Adding never creates duplicates.
 - A `prefs-sheet` dialog, `#standard-brushes-sheet`, built like
   `#standard-libraries-sheet`.
 - Opened from a new **Standard Brushes** icon button in the brush popover
-  toolbar (next to Add and Delete), and from a top-bar menu item next to
-  Standard Libraries.
+  toolbar (next to Add and Delete). Not in the palette menu, which is
+  colour-only. Not in the docked embed (`lib/pixi.js`).
 - One row per pack: name, a strip of the first few brush previews, and one
-  button: **Add**, **Restore**, or disabled **Added ✓**.
+  button: **Add**, **Restore**, or disabled **Added** (the same wording as Standard Libraries).
 
 ### Picker
 
 - The brush grid is split into sections with small headings: **Core**,
   then each added pack (in pack order), then **My Brushes** (user-made or
   imported). Empty sections are hidden.
-- Pack brushes found in `customBrushes` whose pack is no longer in the
-  pack list still show, under a heading named after their `pack` id's last
-  known name (stored as `packName` on the record when added).
+- Pack brushes are ordered within their section by `packIndex` (their
+  position in the pack, stored when added). Pack brushes whose pack is no
+  longer in the list still show, under their stored `packName`, after the
+  known packs.
 - Delete is enabled for pack and My Brushes brushes, disabled for Core.
 
 ### Existing users

@@ -65,15 +65,25 @@ Spec: `gallery`. Implementation: `js/gallery.js`, `js/gallery-format.js`.
 
 The Gallery's backdrop, with the form in a centred `.new-canvas-card.glass`.
 
-- **Size** (`#size-presets`): `.preset-button[data-size]` for 16/32/64/128,
-  plus `#custom-width`/`#custom-height` number inputs (1–256) for a
-  custom size.
-- **Background** (`#background-choice`): radio group, `transparent`
-  (default) or `white`.
-- `#create-canvas-button` — "Create", primary button → creates the
-  project and navigates to Workspace.
+Pixelmator Pro's New Document layout: preset tiles left, a ~260px
+inspector (`form#new-canvas-form.new-canvas-inspector`) right; at ≤640px
+they stack and `.new-canvas-actions` is sticky at the bottom.
 
-Spec: `canvas-creation`. Implementation: `js/new-canvas.js`.
+- **Preset tiles** (`#size-presets`, `role="group"`): `.picture-tile.size-tile`
+  buttons with `aria-pressed`, rendered by JS — "Last used", 16/32/64/128,
+  and "Custom W×H" only while the size matches neither. Each has a
+  `.tile-preview` (background + pixel grid, at most 32 cells a side).
+- **Summary**: `#new-canvas-preset-name` and `#new-canvas-preset-size`.
+- **Size**: `#custom-width`/`#custom-height` (1–256) and `#swap-size`
+  (`swap_horiz`, hidden when square).
+- **Background** (`#background-choice`): `.picture-tile[data-background]`,
+  `transparent` or `white`, `aria-pressed`.
+- `#cancel-new-canvas` — ghost text button → Gallery.
+- `#create-canvas-button` — "Create", primary submit → creates the
+  project, remembers size/background (`prefs.newCanvas`), opens Workspace.
+
+Spec: `canvas-creation`. Implementation: `js/new-canvas.js`, state in
+`js/new-canvas-state.js`.
 
 ## Workspace (`#screen-workspace`)
 

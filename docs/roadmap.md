@@ -409,7 +409,8 @@ and can ship at any time.
   same backdrop. Reuses the 5a `.glass` card, light and dark. No secondary
   hero action: the app has no "open an image as a project" flow. Verified
   headless in Chromium and WebKit at 1180×820, 768×1024 and 390×844.
-- **New Canvas redesign** (planned 2026-10-05, not started): follows
+- **New Canvas redesign** — done 2026-10-15 (design + plan in
+  `docs/superpowers/specs/2026-10-15-new-canvas-redesign-design.md`): follows
   Pixelmator Pro's New Document screen
   (`docs/Screenshots of other apps/other screens/create new doc.png`).
   The card widens to two areas: a preset grid on the left, an inspector
@@ -498,7 +499,7 @@ Follow-ups after 5h:
 
 Status: in progress - 5a–5g, Customize Tools, the 5h switch-on, the
 embed mount fix, the home screen redesign and its theme setting done.
-Next: the rest of 5h (docked deletion); New Canvas redesign planned.
+Next: the rest of 5h (docked deletion).
 Visual direction for all floating work: Pixelmator's airy, frosted-glass
 look (references in `docs/Screenshots of other apps/`), keeping Pixi's
 own panel arrangement.

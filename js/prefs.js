@@ -3,7 +3,8 @@
 // interface hides while drawing, whether the brush cursor shows, whether only the Apple Pencil
 // draws (palm rejection, js/pointer-policy.js), whether the tool mascot pops up
 // (js/mascot.js), and which tools the rail shows
-// (Customize Tools, js/rail-tools.js). Kept DOM-free so it's unit-testable (see
+// (Customize Tools, js/rail-tools.js), and the last New Canvas size and
+// background (js/new-canvas.js). Kept DOM-free so it's unit-testable (see
 // test/prefs.test.js); js/prefs-sheet.js is the Prefs sheet that edits
 // them. Standalone app only: wired from js/app.js, which Pixi.mount()
 // embeds never load.
@@ -14,6 +15,7 @@
 // session only.
 
 import { DEFAULT_RAIL_TOOLS, normalizeRailTools } from './rail-tools.js';
+import { clampSize } from './new-canvas-state.js';
 
 /**
  * @typedef {{
@@ -25,6 +27,7 @@ import { DEFAULT_RAIL_TOOLS, normalizeRailTools } from './rail-tools.js';
  *   pencilOnly: boolean,
  *   showMascot: boolean,
  *   railTools: string[],
+ *   newCanvas: { width: number, height: number, background: 'transparent' | 'white' },
  * }} Prefs
  */
 
@@ -32,6 +35,7 @@ export const PREFS_STORAGE_KEY = 'pixi-prefs';
 
 const SIDES = ['left', 'right'];
 const CARDS = ['colors', 'brushes', 'layers'];
+const BACKGROUNDS = ['transparent', 'white'];
 
 // Tools whose strokes hide the interface while auto-hide is on. The rest
 // are taps (Bucket, Eyedropper), pan (Hand), or have their own drag
@@ -47,7 +51,18 @@ export const DEFAULT_PREFS = Object.freeze({
   pencilOnly: true,
   showMascot: true,
   railTools: DEFAULT_RAIL_TOOLS,
+  newCanvas: Object.freeze({ width: 32, height: 32, background: 'transparent' }),
 });
+
+function normalizeNewCanvas(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  const size = (value, fallback) => (Number.isFinite(value) ? clampSize(value) : fallback);
+  return {
+    width: size(source.width, DEFAULT_PREFS.newCanvas.width),
+    height: size(source.height, DEFAULT_PREFS.newCanvas.height),
+    background: BACKGROUNDS.includes(source.background) ? source.background : DEFAULT_PREFS.newCanvas.background,
+  };
+}
 
 /** A complete, valid prefs object from anything; each field falls back on its own. */
 export function normalizePrefs(raw) {
@@ -66,6 +81,7 @@ export function normalizePrefs(raw) {
     pencilOnly: typeof source.pencilOnly === 'boolean' ? source.pencilOnly : DEFAULT_PREFS.pencilOnly,
     showMascot: typeof source.showMascot === 'boolean' ? source.showMascot : DEFAULT_PREFS.showMascot,
     railTools: normalizeRailTools(source.railTools),
+    newCanvas: normalizeNewCanvas(source.newCanvas),
   };
 }
 

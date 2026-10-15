@@ -717,7 +717,8 @@ reversed, or stopped applying. Kept for the record.
     otherwise) instead of two DOM instances driving one flag.
   - ~~Glass menus, popovers and confirm dialog; Layers header
     blend/opacity; round swatches; Ellipse fill icon (2026-10-13).~~
-    Next: Transform categories and rotation dial, then Copy/Cut/Paste
+    ~~Transform split into Align and Rotate popovers, with a rotation
+    dial (2026-10-15).~~ Next: Copy/Cut/Paste
     and Merge.
 
   A dated, per-finding audit register (id/severity/state, one row per

@@ -3,51 +3,83 @@
 ## Purpose
 
 Rotate, flip and align the pixels of the active layer, or of the current
-selection, from a Transform popover - the per-layer counterpart to Canvas
+selection, from the Align and Rotate popovers - the per-layer counterpart to Canvas
 Settings' Rotate, which turns the whole canvas. Pixel work lives in
-`lib/pixel-engine/transform.js`; the popover is `js/transform-ui.js`.
+`lib/pixel-engine/transform.js`; the popovers are `js/transform-ui.js`,
+the dial `js/rotate-dial.js`, RotSprite `lib/pixel-engine/rotsprite.js`.
 
 ## Requirements
 
-### Requirement: Transform popover
-The top bar SHALL offer a Transform button that opens a popover with two
-labelled groups: Rotate & Flip (Rotate 90° left, Rotate 90° right, Rotate
-180°, Flip horizontal, Flip vertical) and Align to Canvas (left, centre,
-right, top, middle, bottom). Its title SHALL say what it acts on:
-"Transform Selection" while a selection exists, otherwise "Transform
-Layer". It SHALL stay open between actions and close on its close button,
-Escape, or a press outside it. Every action SHALL be one undoable step.
+### Requirement: Align and Rotate popovers
+The top bar SHALL offer an Align button and a Rotate button, each opening
+its own popover; opening one SHALL close the other. Align SHALL hold
+Align left, centre, right, top, middle and bottom. Rotate SHALL hold a
+rotation dial between Rotate 90° left and Rotate 90° right, Flip
+horizontal and Flip vertical below it, and Reset and Apply. Titles SHALL
+say what they act on: "Align Selection" / "Rotate Selection" while a
+selection exists, otherwise "Align Layer" / "Rotate Layer". A popover
+SHALL stay open between actions and close on its close button, Escape,
+or a press outside it. Every align, flip and Apply SHALL be one undoable
+step.
 
 #### Scenario: Title follows the target
-- **WHEN** the user opens Transform with no selection
-- **THEN** the title is "Transform Layer"; with a selection it is
-  "Transform Selection"
+- **WHEN** the user opens Rotate with no selection
+- **THEN** the title is "Rotate Layer"; with a selection it is
+  "Rotate Selection"
 
 #### Scenario: Reference image layer
-- **WHEN** the active layer is the reference image layer
-- **THEN** every Transform action is disabled
+- **WHEN** the active layer is the reference image layer or locked
+- **THEN** every Align and Rotate control is disabled
+
+### Requirement: Rotation dial
+The dial SHALL set an angle in whole degrees from -180 to 180, positive
+clockwise, by dragging around its centre, or with the arrow keys (1°;
+Shift, 15°; Home, 0°). It SHALL snap to a multiple of 15° within 3° of
+it. Rotate 90° left and right SHALL change the angle by 90° without
+applying it. While the angle is not 0° the target SHALL show the
+rotation, and the flips SHALL be disabled. Apply SHALL commit it as one
+undo step and return the dial to 0°. Reset SHALL restore the pixels and
+selection and return the dial to 0°. Closing the popover, Undo or Redo
+with a rotation pending SHALL do the same as Reset.
+
+#### Scenario: Cancel by closing
+- **WHEN** the user turns the dial to 30° and presses Escape
+- **THEN** the layer is as it was and no undo step was added
+
+#### Scenario: Snap
+- **WHEN** the user drags the dial to 43°
+- **THEN** it reads 45°
 
 ### Requirement: Rotate and flip
-Flips SHALL mirror the target's pixels in place. Rotate 180° SHALL turn
-them in place. A 90° rotation SHALL turn the target about its centre,
-swapping its width and height; the turned area SHALL be centred on the
-same point (rounding down), pixels landing off the canvas SHALL be lost
-(Undo restores them), and the area the content left SHALL become
-transparent. With a selection, the selection SHALL become the turned
-area, clamped to the canvas.
+Flips SHALL mirror the target's pixels in place. A rotation SHALL turn
+the target about its centre; the turned content SHALL fill the box
+around it, centred on the same point (rounding down). Quarter turns SHALL
+be exact (a 90° turn swaps width and height). Other angles SHALL be
+resampled with RotSprite and SHALL add no colours that weren't in the
+target; transparent pixels of the result SHALL NOT overwrite what's
+under them. Pixels landing off the canvas SHALL be lost (Undo restores
+them), and the area the content left SHALL become transparent. With a
+selection, the selection SHALL become the turned area, clamped to the
+canvas.
 
 #### Scenario: Flip a layer
 - **WHEN** the user taps Flip horizontal with no selection
 - **THEN** the whole active layer is mirrored left to right
 
 #### Scenario: Rotate a selection
-- **WHEN** a 6x8 selection is active and the user taps Rotate 90° left
+- **WHEN** a 6x8 selection is active and the user taps Rotate 90° left, then
+  Apply
 - **THEN** its content turns a quarter left about the selection's centre
   and the selection becomes the 8x6 area it now occupies
 
 #### Scenario: Four quarter turns
 - **WHEN** the user rotates a square target 90° right four times
 - **THEN** the pixels are back where they started
+
+#### Scenario: Free angle
+- **WHEN** the user applies 45° to a selection holding one pixel
+- **THEN** that pixel stays where it was, nothing else on the layer
+  changes, and the selection grows to the rotated box
 
 ### Requirement: Align to canvas
 Align SHALL move the target's content so the box around its

@@ -147,7 +147,7 @@ Home and More are glass circles, the title is bare text, the zoom pill
 and the Undo/Redo `.topbar-group` are glass pills) and is slim: Back, `#topbar-title` (read-only project name, truncated,
 full name in `title`), `#zoom-pill` (current %, plus the view angle when turned, e.g.
 "2100% · 90°"; opens `#zoom-menu`: 100%/Fit/Fill/Zoom out/Zoom in/Rotate
-View Left/Rotate View Right/Reset Rotation), `#transform-toggle`, Undo,
+View Left/Rotate View Right/Reset Rotation), `#align-toggle`, `#rotate-toggle`, Undo,
 Redo, and
 `#more-button` (opens `#more-menu`: Canvas settings, Share / Export, Record
 timelapse, Tile preview, Prefs, Theme Light/Dark/System, Hide interface). The
@@ -354,7 +354,8 @@ Icon-only buttons, left-to-right. No hover/selected motion effects
 | `#record-toggle` | fiber_manual_record | Start/stop timelapse recording | on/off, opens `#timelapse-review-panel` on stop if any frames were captured; see below |
 | `#tile-preview-toggle` | grid_view | 3x3 seamless-tile preview | on/off, no popover - see below |
 | *(spacer)* | | | pushes the rest right |
-| `#transform-toggle` | transform | Transform popover (`#transform-panel`, `js/transform-ui.js`) | rotate/flip/align the selection or active layer; spec `layer-transform` |
+| `#align-toggle` | align_horizontal_center | Align popover (`#align-panel`, `js/transform-ui.js`) | align the selection or active layer to the canvas; spec `layer-transform` |
+| `#rotate-toggle` | rotate_right | Rotate popover (`#rotate-panel`, `js/transform-ui.js`) | rotation dial (free angle, RotSprite, snaps to 15°), ±90°, flips, Reset/Apply; spec `layer-transform` |
 | `#undo-button` | undo | Undo | disabled when nothing to undo |
 | `#redo-button` | redo | Redo | disabled when nothing to redo |
 | `#right-sidebar-toggle` | dock_to_right | Hide/show whole right sidebar | slides open/closed (AUD-11, 2026-08-17); respects `prefers-reduced-motion` |

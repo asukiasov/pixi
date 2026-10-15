@@ -34,6 +34,10 @@ active layer, exactly as the selection bar's Delete does, as one undo
 step. With no selection Cut SHALL be disabled in the menu and Cmd/Ctrl+X
 SHALL do nothing. Cut SHALL be refused on a locked layer.
 
+Cut and Copy SHALL also be on the selection action bar (and the docked
+layout's selection controls) whenever there is a selection, enabled by the
+same rules as the layer menu's.
+
 #### Scenario: No selection
 - **WHEN** there is no selection
 - **THEN** Cut is disabled in the menu, and Cmd/Ctrl+X changes nothing

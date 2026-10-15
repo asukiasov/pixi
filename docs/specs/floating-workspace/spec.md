@@ -705,10 +705,15 @@ faces the canvas, fully on screen.
 
 ### Requirement: Selection action bar
 In the floating layout the Workspace SHALL show a selection action bar: a
-floating card holding Clear selection and Delete, in that order. Each
-SHALL have exactly the effect of the existing control it replaces: Clear
-selection removes the selection, and Delete makes the selected pixels of
-the active layer transparent and keeps the selection. The bar SHALL be
+floating card holding icon-only Cut, Copy, Delete and Clear selection, in
+that order, with a divider after Copy. Each SHALL have an accessible name
+and a tooltip with its shortcut ("Cut (⌘X)", "Copy (⌘C)", "Delete",
+"Clear selection (⌘D)"), and SHALL have exactly the effect of the existing
+control it replaces: Cut and Copy act as the clipboard spec's Cut and
+Copy, Clear selection removes the selection, and Delete makes the
+selected pixels of the active layer transparent and keeps the selection.
+Cut and Copy SHALL be disabled when there are no pixels under the
+selection on the active layer, and Cut also on a locked layer. The bar SHALL be
 shown whenever a selection exists, whichever tool is active, and SHALL NOT
 be shown when there is none, however the selection was removed (Clear
 selection, Escape, Cmd/Ctrl+D, a tap outside the selection with the
@@ -716,16 +721,22 @@ Select tool, or opening a project). While a selection is being drawn with
 the Select tool, or dragged with the Move tool, the bar SHALL be hidden,
 and SHALL reappear when the gesture ends or is cancelled if a selection
 then exists. The bar SHALL be hidden along with the rest of the interface
-while the interface is hidden. In the floating layout Clear selection and
-Delete SHALL NOT be shown anywhere else, including the palette card.
+while the interface is hidden. In the floating layout these buttons SHALL
+NOT be shown anywhere else, including the palette card.
 Showing, moving or hiding the bar SHALL NOT move or re-fit the canvas.
 
 #### Scenario: Making a selection
 - **WHEN** the Select tool is active in the floating layout and the user
   drags out a selection and releases
 - **THEN** the selection action bar appears next to the selection with
-  Clear selection and Delete, and the palette card shows no selection
-  controls
+  Cut, Copy, Delete and Clear selection, and the palette card shows no
+  selection controls
+
+#### Scenario: Nothing under the selection
+- **WHEN** the user selects an area of the active layer that has no
+  pixels
+- **THEN** Cut and Copy on the selection action bar are disabled, and
+  they become enabled once the user draws inside the selection
 
 #### Scenario: Hidden while drawing the selection
 - **WHEN** the user is dragging out a selection with the Select tool

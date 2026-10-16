@@ -1,3 +1,12 @@
+---
+title: "Supabase database reference"
+description: "Supabase project config, Postgres schema, and Storage layout for the later auth/sync phase. Nothing here is implemented yet."
+type: reference
+status: reference-only
+related:
+  - docs/roadmap.md
+---
+
 # Supabase / Database Reference
 
 Status: **reference only** — nothing in this document is implemented yet.

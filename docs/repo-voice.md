@@ -1,3 +1,13 @@
+---
+title: "Repo voice"
+description: "How Pixi's public GitHub docs talk: tone and language rules for README, CONTRIBUTING, docs/, and issue/PR templates."
+type: standard
+status: active
+related:
+  - docs/repo-docs-research.md
+  - docs/brand.md
+---
+
 # Repo voice — how Pixi's public docs talk
 
 The language standard for anything a developer reads on Pixi's public

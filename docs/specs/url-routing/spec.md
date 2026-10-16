@@ -1,3 +1,10 @@
+---
+title: "url-routing specification"
+description: "Keeping the URL hash in sync with the current screen for reload, bookmarks, and Back/Forward."
+type: spec
+status: active
+---
+
 # url-routing Specification
 
 ## Purpose

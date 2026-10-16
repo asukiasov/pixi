@@ -1,3 +1,10 @@
+---
+title: "gallery specification"
+description: "The Gallery home screen for seeing, resuming, and starting projects."
+type: spec
+status: active
+---
+
 # gallery Specification
 
 ## Purpose

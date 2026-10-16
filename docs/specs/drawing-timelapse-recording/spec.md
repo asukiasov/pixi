@@ -1,3 +1,10 @@
+---
+title: "drawing-timelapse-recording specification"
+description: "Opt-in, client-side recording of the drawing process as a replayable video."
+type: spec
+status: active
+---
+
 # drawing-timelapse-recording Specification
 
 ## Purpose

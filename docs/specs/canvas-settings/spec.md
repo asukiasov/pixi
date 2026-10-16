@@ -1,3 +1,10 @@
+---
+title: "canvas-settings specification"
+description: "Renaming a project and changing its canvas dimensions or orientation after creation."
+type: spec
+status: active
+---
+
 # canvas-settings Specification
 
 ## Purpose

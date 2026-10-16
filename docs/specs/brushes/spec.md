@@ -1,3 +1,10 @@
+---
+title: "brushes specification"
+description: "Placing predefined or custom-drawn pixel patterns with one click, filled with the current draw color."
+type: spec
+status: active
+---
+
 # brushes Specification
 
 ## Purpose

@@ -1,3 +1,12 @@
+---
+title: "pixel-engine-library specification"
+description: "The standalone lib/pixel-engine/ folder usable outside the Pixi app."
+type: spec
+status: active
+related:
+  - lib/pixel-engine/README.md
+---
+
 # pixel-engine-library Specification
 
 ## Purpose

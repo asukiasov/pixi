@@ -1,3 +1,13 @@
+---
+title: "Public repo docs research"
+description: "Comparison of five public GitHub repos' docs, used to ground the writing-repo-docs skill in real practice."
+type: research
+status: reference-only
+related:
+  - docs/repo-docs-plan.md
+  - docs/repo-voice.md
+---
+
 # Public repo docs — research notes
 
 Comparative analysis of five public GitHub repos, done to ground

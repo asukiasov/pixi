@@ -1,3 +1,10 @@
+---
+title: "clipboard specification"
+description: "Cut, Copy, and Paste of pixels between layers, projects, and other apps via the system clipboard."
+type: spec
+status: active
+---
+
 # clipboard Specification
 
 ## Purpose

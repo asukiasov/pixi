@@ -1,3 +1,10 @@
+---
+title: "status-messages specification"
+description: "Toast messages for failures and undoable actions, and which failures to report."
+type: spec
+status: active
+---
+
 # status-messages Specification
 
 ## Purpose

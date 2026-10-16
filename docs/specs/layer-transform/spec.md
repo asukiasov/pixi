@@ -1,3 +1,10 @@
+---
+title: "layer-transform specification"
+description: "Rotating, flipping, and aligning the active layer or selection from the Align and Rotate popovers."
+type: spec
+status: active
+---
+
 # layer-transform Specification
 
 ## Purpose

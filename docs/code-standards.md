@@ -1,3 +1,12 @@
+---
+title: "Code standards"
+description: "Naming, style, and testing conventions derived from the actual code in js/, lib/, and test/."
+type: standard
+status: active
+related:
+  - docs/architecture-standards.md
+---
+
 # Code Standards
 
 Derived from the codebase (`js/`, `lib/`, `test/`) on 2026-08-21, red-teamed

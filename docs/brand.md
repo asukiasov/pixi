@@ -1,3 +1,12 @@
+---
+title: "Forma brand identity"
+description: "Forma's company description, positioning, audience, strategy, and voice; the source for user-facing copy and shared naming across Pixi and Lines."
+type: reference
+status: active
+related:
+  - docs/repo-voice.md
+---
+
 # Forma — Brand Identity & Strategy
 
 Forma is the company behind Pixi and Lines: fast, web-native graphics

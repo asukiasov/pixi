@@ -1,3 +1,10 @@
+---
+title: "pluggable-storage-adapter specification"
+description: "The storage adapter interface that lets a host app supply its own persistence backend."
+type: spec
+status: active
+---
+
 # pluggable-storage-adapter Specification
 
 ## Purpose

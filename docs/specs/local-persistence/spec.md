@@ -1,3 +1,10 @@
+---
+title: "local-persistence specification"
+description: "Automatic saving of projects to IndexedDB so reloading never loses work."
+type: spec
+status: active
+---
+
 # local-persistence Specification
 
 ## Purpose

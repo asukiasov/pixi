@@ -1,3 +1,10 @@
+---
+title: "layers specification"
+description: "Multiple stacked layers that can be drawn, hidden, reordered, and blended independently."
+type: spec
+status: active
+---
+
 # layers Specification
 
 ## Purpose

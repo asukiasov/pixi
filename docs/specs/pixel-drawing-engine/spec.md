@@ -1,3 +1,10 @@
+---
+title: "pixel-drawing-engine specification"
+description: "Core drawing: pencil, eraser, fill, undo/redo, and pixel-accurate rendering by touch or mouse."
+type: spec
+status: active
+---
+
 # pixel-drawing-engine Specification
 
 ## Purpose

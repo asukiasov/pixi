@@ -1,3 +1,10 @@
+---
+title: "canvas-creation specification"
+description: "The New Canvas screen: choosing size and background to start an empty drawing."
+type: spec
+status: active
+---
+
 # canvas-creation Specification
 
 ## Purpose

@@ -1,3 +1,10 @@
+---
+title: "canvas-navigation specification"
+description: "Zooming, fitting, and panning the canvas view."
+type: spec
+status: active
+---
+
 # canvas-navigation Specification
 
 ## Purpose

@@ -1,3 +1,12 @@
+---
+title: "tool-mascot specification"
+description: "The axolotl mascot bubble that appears when the user picks a tool."
+type: spec
+status: active
+related:
+  - docs/mascot/README.md
+---
+
 # tool-mascot Specification
 
 ## Purpose

@@ -1,3 +1,10 @@
+---
+title: "shape-tools specification"
+description: "Line and rectangle tools and the rectangular selection that scopes drawing."
+type: spec
+status: active
+---
+
 # shape-tools Specification
 
 ## Purpose

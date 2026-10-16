@@ -1,3 +1,12 @@
+---
+title: "Mascot sprites"
+description: "Sprite specs, per-tool status table, and the generation prompt for the axolotl tool mascot."
+type: guide
+status: active
+related:
+  - docs/specs/tool-mascot/spec.md
+---
+
 # Mascot sprites
 
 Pixi's mascot is a pink axolotl. When the user picks a tool, it pops up in a

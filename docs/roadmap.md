@@ -1,3 +1,14 @@
+---
+title: "Pixi Roadmap"
+description: "Phase-by-phase build order, the screens each phase covers, and what is shipped, open, or not yet scheduled."
+type: plan
+status: active
+related:
+  - docs/specs/
+  - docs/superpowers/specs/
+  - docs/superpowers/plans/
+---
+
 # Pixi Roadmap
 
 Phase-level plan for the project. Each phase becomes one or more changes,

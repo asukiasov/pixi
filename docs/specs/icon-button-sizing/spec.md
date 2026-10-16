@@ -1,3 +1,10 @@
+---
+title: "icon-button-sizing specification"
+description: "The shared XS–XL icon-button size scale and its no-overflow rule."
+type: spec
+status: active
+---
+
 # icon-button-sizing Specification
 
 ## Purpose

@@ -44,6 +44,15 @@ from design through merge.
 - Requirements (what exists today): `docs/specs/<capability>/spec.md`.
 - Phase-level plan (what order things get built in): `docs/roadmap.md`.
 - Past change proposals, kept for reference: `docs/history/`.
+- Core docs (`docs/*.md`, `docs/mascot/README.md`, every
+  `docs/specs/*/spec.md`) start with YAML frontmatter: `title`,
+  `description` (one line: what the doc covers), `type`
+  (`spec` | `plan` | `reference` | `standard` | `guide` | `research`),
+  `status` (`active` | `reference-only`), and optional `related` (repo
+  paths). Add it to any new core doc, and keep `description` accurate when
+  a doc's scope changes. Public GitHub-facing files (README, CONTRIBUTING,
+  `lib/**/README.md`) and dated docs (audits, history, superpowers) don't
+  get it.
 - New feature / behavior change: `brainstorming` → design doc in
   `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` → `writing-plans`
   (plan in `docs/superpowers/plans/`) → implement with

@@ -1,3 +1,12 @@
+---
+title: "embeddable-editor-api specification"
+description: "Embedding a Pixi editor in a host page with Pixi.mount() and reading image data back."
+type: spec
+status: active
+related:
+  - lib/README.md
+---
+
 # embeddable-editor-api Specification
 
 ## Purpose

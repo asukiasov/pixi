@@ -1,3 +1,10 @@
+---
+title: "symmetry-drawing specification"
+description: "Live horizontal/vertical mirroring of Pencil, Eraser, and Brush strokes."
+type: spec
+status: active
+---
+
 # symmetry-drawing Specification
 
 ## Purpose

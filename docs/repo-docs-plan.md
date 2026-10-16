@@ -1,3 +1,13 @@
+---
+title: "Public repo docs plan"
+description: "Checklist of the public repo docs Pixi needs and the status of each; update the status column as items ship."
+type: plan
+status: active
+related:
+  - docs/repo-docs-research.md
+  - docs/repo-voice.md
+---
+
 # Public repo docs — what Pixi needs
 
 Concrete checklist derived from [`repo-docs-research.md`](repo-docs-research.md)

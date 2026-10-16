@@ -1,3 +1,10 @@
+---
+title: "color-library specification"
+description: "Named, locally saved color palettes and the colour bar that shows the active palette."
+type: spec
+status: active
+---
+
 # color-library Specification
 
 ## Purpose

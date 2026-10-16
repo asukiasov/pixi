@@ -1,3 +1,12 @@
+---
+title: "Architecture standards"
+description: "Module boundaries, dependency direction, extension points, and the constraints of the no-build-step stack."
+type: standard
+status: active
+related:
+  - docs/code-standards.md
+---
+
 # Architecture Standards
 
 Structural rules this repo follows — which module may depend on which,

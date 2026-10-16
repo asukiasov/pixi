@@ -1,3 +1,12 @@
+---
+title: "UI reference"
+description: "Catalog of every screen and control in Pixi and where it lives in the DOM; used for UX audits and onboarding. Specs win on behavior."
+type: reference
+status: active
+related:
+  - docs/specs/
+---
+
 # UI reference — screens, tools, and controls
 
 A catalog of every screen and control in Pixi's UI, kept as a reference for

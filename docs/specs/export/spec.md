@@ -1,3 +1,10 @@
+---
+title: "export specification"
+description: "Exporting the project as an image at a chosen scale and format, via copy, download, or share sheet."
+type: spec
+status: active
+---
+
 # export Specification
 
 ## Purpose

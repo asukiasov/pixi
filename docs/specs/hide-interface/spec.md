@@ -1,3 +1,10 @@
+---
+title: "hide-interface specification"
+description: "Hiding all workspace chrome so only the canvas shows, and bringing it back."
+type: spec
+status: active
+---
+
 # hide-interface Specification
 
 ## Purpose

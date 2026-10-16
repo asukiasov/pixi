@@ -1,3 +1,10 @@
+---
+title: "floating-workspace specification"
+description: "The floating Workspace layout: full-screen canvas, floating cards, the shared card look, and canvas fitting."
+type: spec
+status: active
+---
+
 # floating-workspace Specification
 
 ## Purpose

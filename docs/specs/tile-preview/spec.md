@@ -1,3 +1,10 @@
+---
+title: "tile-preview specification"
+description: "A live 3×3 repeated preview for checking that art tiles seamlessly."
+type: spec
+status: active
+---
+
 # tile-preview Specification
 
 ## Purpose

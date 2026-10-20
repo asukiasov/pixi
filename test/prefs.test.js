@@ -36,7 +36,7 @@ describe('normalizePrefs', () => {
       brushCursor: true,
       pencilOnly: true,
       showMascot: true,
-      railTools: ['move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'hand', 'eyedropper'],
+      railTools: ['move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'lasso', 'hand', 'eyedropper'],
       newCanvas: { width: 32, height: 32, background: 'transparent' },
     });
   });

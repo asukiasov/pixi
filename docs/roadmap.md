@@ -577,6 +577,15 @@ owner generates each sprite (Gemini prompt and sprite specs in
 
 Status: in progress.
 
+## Selection tools
+
+- ~~**Lasso selection**~~ — **done** 2026-10-20: Ellipse Select, Lasso and
+  Polygonal Lasso as separate tools beside Rectangle Select, a pixel-mask
+  selection under all four, and sticky New / Add / Subtract (Shift / Alt
+  per shape). Select Content became exact. Design:
+  `docs/superpowers/specs/2026-10-20-lasso-selection-design.md`.
+- Not yet scheduled: Magic Wand, Intersect mode.
+
 ## On demand — revisit when a real need shows up
 
 Not scheduled into a phase on purpose: each is real work with no

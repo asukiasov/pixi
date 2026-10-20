@@ -34,7 +34,7 @@
        keep it sorted alphabetically — the Google Fonts API 400s the whole
        request (breaking every icon on the page, not just an unsorted one)
        if icon_names isn't in alphabetical order. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&icon_names=add,add_circle,align_horizontal_center,align_horizontal_left,align_horizontal_right,align_vertical_bottom,align_vertical_center,align_vertical_top,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_off,blur_on,brightness_auto,brush,check,check_box,check_box_outline_blank,chevron_right,circle,close,colorize,content_copy,content_cut,content_paste,create_new_folder,crop_free,dark_mode,delete,deselect,dock_to_right,download,drag_indicator,drive_file_move,edit,error,expand_more,fiber_manual_record,flip,folder,folder_off,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,handyman,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,ios_share,layers,library_add,light_mode,lock,lock_open,merge,more_horiz,opacity,palette,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,select,settings,swap_horiz,transform,tune,undo,unfold_more,visibility,visibility_off" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&icon_names=add,add_circle,align_horizontal_center,align_horizontal_left,align_horizontal_right,align_vertical_bottom,align_vertical_center,align_vertical_top,arrow_downward,arrow_selector_tool,arrow_upward,back_hand,blur_circular,blur_off,blur_on,brightness_auto,brush,check,check_box,check_box_outline_blank,chevron_right,circle,close,colorize,content_copy,content_cut,content_paste,create_new_folder,crop_free,dark_mode,delete,deselect,dock_to_right,download,drag_indicator,drive_file_move,edit,error,expand_more,fiber_manual_record,flip,folder,folder_off,format_color_fill,fullscreen,fullscreen_exit,gradient,grid_on,grid_view,handyman,home,horizontal_rule,image,image_arrow_up,info,ink_eraser,ios_share,lasso_select,layers,library_add,light_mode,lock,lock_open,merge,more_horiz,opacity,palette,pentagon,playlist_add,rectangle,redo,remove,restart_alt,rotate_left,rotate_right,select,settings,swap_horiz,transform,tune,undo,unfold_more,visibility,visibility_off" />
 </head>
 <body>
   <main id="screen-gallery" class="screen home-screen">
@@ -507,8 +507,17 @@
         <button type="button" class="tool-button" aria-pressed="false" data-tool="ellipse" aria-label="Ellipse" data-tooltip="Ellipse" data-shortcut="O">
           <span class="material-symbols-outlined">circle</span>
         </button>
-        <button type="button" class="tool-button" aria-pressed="false" data-tool="selection" aria-label="Select" data-tooltip="Select (click outside or Esc to deselect)" data-shortcut="M">
+        <button type="button" class="tool-button" aria-pressed="false" data-tool="selection" aria-label="Rectangle Select" data-tooltip="Rectangle Select (click outside or Esc to deselect)" data-shortcut="M">
           <span class="material-symbols-outlined">crop_free</span>
+        </button>
+        <button type="button" class="tool-button" aria-pressed="false" data-tool="ellipse-select" aria-label="Ellipse Select" data-tooltip="Ellipse Select" data-shortcut="Shift+M">
+          <span class="material-symbols-outlined" aria-hidden="true">blur_circular</span>
+        </button>
+        <button type="button" class="tool-button" aria-pressed="false" data-tool="lasso" aria-label="Lasso" data-tooltip="Lasso (drag around an area)" data-shortcut="Q">
+          <span class="material-symbols-outlined" aria-hidden="true">lasso_select</span>
+        </button>
+        <button type="button" class="tool-button" aria-pressed="false" data-tool="polygon-lasso" aria-label="Polygonal Lasso" data-tooltip="Polygonal Lasso (click corners, click the first one or press Enter to close)" data-shortcut="Shift+Q">
+          <span class="material-symbols-outlined" aria-hidden="true">pentagon</span>
         </button>
         <button type="button" class="tool-button" aria-pressed="false" data-tool="hand" aria-label="Hand (pan)" data-tooltip="Hand" data-shortcut="H">
           <span class="material-symbols-outlined">back_hand</span>
@@ -638,6 +647,14 @@
            Selection, an on/off equivalent of holding Shift while
            dragging (see squareDragCurrent/shiftHeld in js/workspace.js)
            for touchscreens, which have no Shift key. -->
+      <!-- New / Add / Subtract for the four select tools (sticky; Shift or
+           Alt/Option at drag start overrides it for one shape). -->
+      <div id="selection-mode-options" class="rectangle-options hidden" role="group" aria-label="Selection mode">
+        <button type="button" id="selection-mode-new" class="tool-button active" data-selection-mode="new" aria-label="New selection" data-tooltip="New selection">New</button>
+        <button type="button" id="selection-mode-add" class="tool-button" data-selection-mode="add" aria-label="Add to selection" data-tooltip="Add to selection (hold Shift)">Add</button>
+        <button type="button" id="selection-mode-subtract" class="tool-button" data-selection-mode="subtract" aria-label="Subtract from selection" data-tooltip="Subtract from selection (hold Alt/Option)">Subtract</button>
+      </div>
+
       <div id="square-constraint-options" class="rectangle-options hidden">
         <button type="button" id="square-constraint-toggle" class="tool-button square-constraint-button" aria-label="1:1 proportion" data-tooltip="1:1 proportion (like holding Shift)">1:1</button>
       </div>
@@ -1143,7 +1160,13 @@
               <svg class="rectangle-fill-icon tool-options-filled-on tool-options-shape-ellipse" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="M80-480a400 280 0 1 0 800 0a400 280 0 1 0-800 0Z"/></svg>
             </button>
           </div>
-          <div class="tool-options-group" data-tools="rectangle ellipse selection">
+          <div class="tool-options-group" data-tools="selection ellipse-select lasso polygon-lasso" role="group" aria-label="Selection mode">
+            <!-- Source: #selection-mode-options (js/workspace.js). -->
+            <button type="button" class="tool-button" data-forward="selection-mode-new" aria-pressed="true" aria-label="New selection" data-tooltip="New selection">New</button>
+            <button type="button" class="tool-button" data-forward="selection-mode-add" aria-pressed="false" aria-label="Add to selection" data-tooltip="Add to selection (hold Shift)">Add</button>
+            <button type="button" class="tool-button" data-forward="selection-mode-subtract" aria-pressed="false" aria-label="Subtract from selection" data-tooltip="Subtract from selection (hold Alt/Option)">Subtract</button>
+          </div>
+          <div class="tool-options-group" data-tools="rectangle ellipse selection ellipse-select">
             <!-- Source: #square-constraint-toggle (js/workspace.js). -->
             <button type="button" class="tool-button square-constraint-button" data-forward="square-constraint-toggle" aria-pressed="false" aria-label="1:1 proportion" data-tooltip="1:1 proportion (like holding Shift)">1:1</button>
           </div>

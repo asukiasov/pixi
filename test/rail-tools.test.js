@@ -14,25 +14,25 @@ import {
 } from '../js/rail-tools.js';
 
 describe('tool ids', () => {
-  test('ten tools in rail order, each labelled', () => {
-    assert.deepEqual([...TOOL_IDS], ['move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'hand', 'eyedropper']);
+  test('every tool in rail order, each labelled', () => {
+    assert.deepEqual([...TOOL_IDS], ['move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'ellipse-select', 'lasso', 'polygon-lasso', 'hand', 'eyedropper']);
     for (const id of TOOL_IDS) assert.equal(typeof TOOL_LABELS[id], 'string', id);
-    assert.equal(TOOL_LABELS.selection, 'Select');
+    assert.equal(TOOL_LABELS.selection, 'Rectangle Select');
   });
 
-  test('the default rail is every tool', () => {
-    assert.deepEqual([...DEFAULT_RAIL_TOOLS], [...TOOL_IDS]);
+  test('the default rail is every tool but Ellipse Select and Polygonal Lasso', () => {
+    assert.deepEqual([...DEFAULT_RAIL_TOOLS], ['move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'lasso', 'hand', 'eyedropper']);
   });
 });
 
 describe('normalizeRailTools', () => {
   test('non-arrays give a fresh default', () => {
-    for (const raw of [undefined, null, 'pencil', {}, 3]) assert.deepEqual(normalizeRailTools(raw), [...TOOL_IDS]);
+    for (const raw of [undefined, null, 'pencil', {}, 3]) assert.deepEqual(normalizeRailTools(raw), [...DEFAULT_RAIL_TOOLS]);
     assert.notEqual(normalizeRailTools(undefined), DEFAULT_RAIL_TOOLS);
   });
 
   test('keeps order, drops unknowns and duplicates', () => {
-    assert.deepEqual(normalizeRailTools(['hand', 'lasso', 'pencil', 'hand', 7]), ['hand', 'pencil']);
+    assert.deepEqual(normalizeRailTools(['hand', 'lariat', 'pencil', 'hand', 7]), ['hand', 'pencil']);
   });
 
   test('an empty rail stays empty', () => {
@@ -42,7 +42,7 @@ describe('normalizeRailTools', () => {
 
 describe('list operations', () => {
   test('overflowTools is the rest, in default order', () => {
-    assert.deepEqual(overflowTools(['hand', 'move']), ['pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'eyedropper']);
+    assert.deepEqual(overflowTools(['hand', 'move']), ['pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'ellipse-select', 'lasso', 'polygon-lasso', 'eyedropper']);
     assert.deepEqual(overflowTools([...TOOL_IDS]), []);
   });
 
@@ -70,7 +70,7 @@ describe('list operations', () => {
   });
 
   test('isDefaultRail', () => {
-    assert.equal(isDefaultRail([...TOOL_IDS]), true);
+    assert.equal(isDefaultRail([...DEFAULT_RAIL_TOOLS]), true);
     assert.equal(isDefaultRail(insertTool([...TOOL_IDS], 'move', 1)), false);
     assert.equal(isDefaultRail(TOOL_IDS.slice(1)), false);
     assert.equal(isDefaultRail([]), false);

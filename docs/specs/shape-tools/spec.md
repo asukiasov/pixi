@@ -1,6 +1,6 @@
 ---
 title: "shape-tools specification"
-description: "Line and rectangle tools and the rectangular selection that scopes drawing."
+description: "Line and rectangle tools, and the select tools (Rectangle, Ellipse, Lasso, Polygonal Lasso) whose pixel-mask selection scopes drawing."
 type: spec
 status: active
 ---
@@ -164,9 +164,48 @@ the Selection tool active, by pressing Escape, or by pressing Cmd/Ctrl+D
   currently active, and the browser's default action for that shortcut
   (bookmarking the page) does not occur
 
+### Requirement: Free-form select tools
+Besides Rectangle Select (the Selection tool above, shortcut M), the
+Workspace SHALL offer three more select tools, each its own tool button:
+Ellipse Select (Shift+M) selects the pixels a filled Ellipse dragged the
+same way would cover; Lasso (Q) selects the freehand shape dragged, closed
+from the last point back to the first; Polygonal Lasso (Shift+Q) places a
+corner per click or tap (dragging moves the corner until release) and
+closes when the first corner is clicked again, the last corner is clicked
+again, or Enter is pressed. Escape drops an unfinished polygon without
+clearing the selection, as does switching tool. A Lasso or polygon shape
+SHALL select every pixel its outline passes through plus every pixel
+inside it (both loops of a self-crossing shape). A selection is a pixel
+mask, not a rectangle; it is not saved with the project. Lasso and Rectangle
+Select sit on the default rail; Ellipse Select and Polygonal Lasso start
+in ⋯ More tools.
+
+#### Scenario: Lasso a shape
+- **WHEN** the user drags a triangle with the Lasso
+- **THEN** exactly the pixels on and inside the triangle are selected,
+  outlined on the canvas by their exact edge
+
+#### Scenario: A Lasso click
+- **WHEN** the user clicks with the Lasso without dragging, in New mode
+- **THEN** the selection is cleared and no 1x1 selection is made
+
+### Requirement: New, Add and Subtract
+The four select tools SHALL share a sticky New / Add / Subtract mode,
+shown in the tool-options bar while any of them is active. New replaces
+the selection, Add unions the shape with it, Subtract removes the shape
+from it (removing everything leaves no selection). Holding Shift when a
+drag or polygon starts SHALL Add and holding Alt/Option SHALL Subtract,
+for that shape only. Shift held as a Rectangle or Ellipse Select drag
+starts means Add, not the 1:1 constraint.
+
+#### Scenario: Adding a lasso shape to a rectangle
+- **WHEN** a rectangle is selected and the user lassos another area with
+  Shift held at the start
+- **THEN** the selection is both areas
+
 ### Requirement: Drawing is clipped to an active selection
 While a selection is active, pencil, eraser, bucket, brush, line, and
-rectangle SHALL only affect pixels within the selection; attempts to draw
+rectangle SHALL only affect pixels within the selection's exact shape; attempts to draw
 outside it SHALL have no effect.
 
 #### Scenario: Drawing outside an active selection

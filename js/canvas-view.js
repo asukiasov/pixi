@@ -20,7 +20,10 @@ const TILE_OFFSETS = [
 ];
 
 import { pointerDownAction } from './pointer-policy.js';
+import { isRectangular, selectionPaths } from './selection-mask.js';
 import { containerToLocal, transformAround, snapAngle, angleDelta, rotatedSize, centredPan } from './view-transform.js';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
 export class CanvasView {
   #canvasEl;
@@ -55,6 +58,7 @@ export class CanvasView {
 
   #selectionOverlayEl;
   #selectionRect = null;
+  #selectionShapeEl;
   // Brush cursor (js/brush-cursor.js): an SVG in grid units laid over the
   // canvas, its two paths (light under dark) holding the footprint outline.
   #cursorEl;
@@ -155,11 +159,22 @@ export class CanvasView {
     // topmost sibling, as it always was.
     this.#selectionOverlayEl = document.createElement('div');
     this.#selectionOverlayEl.className = 'selection-overlay hidden';
+    // A non-rectangular selection (Ellipse Select, Lasso, Add/Subtract)
+    // is drawn as SVG paths over its box instead of the box's outline.
+    this.#selectionShapeEl = document.createElementNS(SVG_NS, 'svg');
+    this.#selectionShapeEl.setAttribute('class', 'selection-shape');
+    this.#selectionShapeEl.setAttribute('aria-hidden', 'true');
+    this.#selectionShapeEl.setAttribute('preserveAspectRatio', 'none');
+    for (const part of ['selection-shape-fill', 'selection-shape-outline']) {
+      const path = document.createElementNS(SVG_NS, 'path');
+      path.setAttribute('class', part);
+      this.#selectionShapeEl.appendChild(path);
+    }
+    this.#selectionOverlayEl.appendChild(this.#selectionShapeEl);
     this.#wrapperEl.appendChild(this.#selectionOverlayEl);
 
     // Above the selection marquee. Hover is reported for mouse and pen
     // only: a finger has no hover and covers whatever is under it.
-    const SVG_NS = 'http://www.w3.org/2000/svg';
     this.#cursorEl = document.createElementNS(SVG_NS, 'svg');
     this.#cursorEl.setAttribute('class', 'brush-cursor hidden');
     this.#cursorEl.setAttribute('aria-hidden', 'true');
@@ -543,7 +558,9 @@ export class CanvasView {
 
   /**
    * Shows (and positions) or hides the selection overlay. `rect` is in
-   * grid coordinates: { x, y, width, height }, or null to hide it.
+   * grid coordinates: { x, y, width, height }, or null to hide it - or a
+   * js/selection-mask.js selection, whose exact shape is outlined when
+   * it isn't a plain rectangle.
    */
   setSelectionRect(rect) {
     this.#selectionRect = rect;
@@ -552,6 +569,14 @@ export class CanvasView {
       return;
     }
     this.#selectionOverlayEl.classList.remove('hidden');
+    const shaped = !!rect.mask && !isRectangular(rect);
+    this.#selectionOverlayEl.classList.toggle('is-shaped', shaped);
+    if (shaped) {
+      const { fill, outline } = selectionPaths(rect);
+      this.#selectionShapeEl.setAttribute('viewBox', `${rect.x} ${rect.y} ${rect.width} ${rect.height}`);
+      this.#selectionShapeEl.firstChild.setAttribute('d', fill);
+      this.#selectionShapeEl.lastChild.setAttribute('d', outline);
+    }
     this.#selectionOverlayEl.style.left = `${rect.x * this.#baseScale}px`;
     this.#selectionOverlayEl.style.top = `${rect.y * this.#baseScale}px`;
     this.#selectionOverlayEl.style.width = `${rect.width * this.#baseScale}px`;

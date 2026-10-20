@@ -7,7 +7,8 @@
 
 /** Every tool, in the rail's default order. */
 export const TOOL_IDS = Object.freeze([
-  'move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'hand', 'eyedropper',
+  'move', 'pencil', 'eraser', 'bucket', 'brush', 'line', 'rectangle', 'ellipse', 'selection', 'ellipse-select', 'lasso', 'polygon-lasso', 'hand',
+  'eyedropper',
 ]);
 
 /** Short names for the ⋯ menu and the Customize Tools sheet. */
@@ -20,13 +21,16 @@ export const TOOL_LABELS = Object.freeze({
   line: 'Line',
   rectangle: 'Rectangle',
   ellipse: 'Ellipse',
-  selection: 'Select',
+  selection: 'Rectangle Select',
+  'ellipse-select': 'Ellipse Select',
+  lasso: 'Lasso',
+  'polygon-lasso': 'Polygonal Lasso',
   hand: 'Hand',
   eyedropper: 'Eyedropper',
 });
 
-/** Every tool on the rail, so nothing changes until someone customizes. */
-export const DEFAULT_RAIL_TOOLS = TOOL_IDS;
+/** The default rail: every tool but Ellipse Select and Polygonal Lasso, which start in ⋯. */
+export const DEFAULT_RAIL_TOOLS = Object.freeze(TOOL_IDS.filter((id) => id !== 'ellipse-select' && id !== 'polygon-lasso'));
 
 /**
  * Known ids in the given order, without duplicates; anything that isn't
@@ -63,7 +67,7 @@ export function removeTool(rail, id) {
 }
 
 export function isDefaultRail(rail) {
-  return rail.length === TOOL_IDS.length && rail.every((id, i) => id === TOOL_IDS[i]);
+  return rail.length === DEFAULT_RAIL_TOOLS.length && rail.every((id, i) => id === DEFAULT_RAIL_TOOLS[i]);
 }
 
 /**

@@ -36,7 +36,7 @@ describe('Share popover markup', () => {
   }
 
   test('ios_share is in the icon font subset', () => {
-    assert.match(html, /icon_names=[^"]*\bink_eraser,ios_share,layers\b/);
+    assert.match(html, /icon_names=[^"]*\bink_eraser,ios_share,lasso_select,layers\b/);
   });
 
   test('More menu item reads Share / Export', () => {

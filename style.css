@@ -1361,6 +1361,35 @@ textarea,
   pointer-events: none;
 }
 
+/* Non-rectangular selections: the SVG draws the exact pixels and edges. */
+.selection-shape {
+  display: none;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.selection-overlay.is-shaped {
+  outline: none;
+  background: none;
+}
+
+.selection-overlay.is-shaped .selection-shape {
+  display: block;
+}
+
+.selection-shape-fill {
+  fill: var(--color-accent-soft);
+}
+
+.selection-shape-outline {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1px;
+  stroke-dasharray: 3 2;
+  vector-effect: non-scaling-stroke;
+}
+
 /* Popover, not a docked bottom panel - position:fixed + JS (each user's
    own positionPanel - js/export.js's for the Export popover this class
    is shared with; js/canvas-settings.js for the Canvas Settings popover
@@ -3922,6 +3951,7 @@ span.layer-lock-icon {
   #pencil-options,
   #rectangle-options,
   #square-constraint-options,
+  #selection-mode-options,
   #library-sequence-options,
   #pixel-perfect-toggle,
   #symmetry-toggle,
@@ -3972,7 +4002,10 @@ span.layer-lock-icon {
 .workspace-screen[data-layout="floating"][data-current-tool="brush"] .tool-options-group[data-tools~="brush"],
 .workspace-screen[data-layout="floating"][data-current-tool="rectangle"] .tool-options-group[data-tools~="rectangle"],
 .workspace-screen[data-layout="floating"][data-current-tool="ellipse"] .tool-options-group[data-tools~="ellipse"],
-.workspace-screen[data-layout="floating"][data-current-tool="selection"] .tool-options-group[data-tools~="selection"] {
+.workspace-screen[data-layout="floating"][data-current-tool="selection"] .tool-options-group[data-tools~="selection"],
+.workspace-screen[data-layout="floating"][data-current-tool="ellipse-select"] .tool-options-group[data-tools~="ellipse-select"],
+.workspace-screen[data-layout="floating"][data-current-tool="lasso"] .tool-options-group[data-tools~="lasso"],
+.workspace-screen[data-layout="floating"][data-current-tool="polygon-lasso"] .tool-options-group[data-tools~="polygon-lasso"] {
   display: flex;
 }
 

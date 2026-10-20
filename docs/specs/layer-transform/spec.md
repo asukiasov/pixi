@@ -92,7 +92,8 @@ canvas.
 Align SHALL move the target's content so the box around its
 non-transparent pixels touches the chosen canvas edge, or is centred on
 the canvas (an odd remainder rounds down). Without a selection the whole
-layer moves; with one, the selection's contents move and the selection
+layer moves; with one, the selection's contents (only its selected
+pixels, for a non-rectangular one) move and the selection
 moves with them, like the Move tool. Align SHALL be disabled when the
 target has no non-transparent pixels, and for the Background layer
 without a selection (its content always fills the canvas). An align that

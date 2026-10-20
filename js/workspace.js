@@ -8,7 +8,8 @@ import { brushSections, BUILT_IN_BRUSH_PACKS } from './standard-brushes.js';
 import { drawRectangle, drawEllipse, clipToSelection } from './shape-tools.js';
 import { cursorFootprint, footprintOutlinePath } from './brush-cursor.js';
 import { flipRegion, rotateRegion, rotateRegionFree, contentBounds, alignOffset, moveRegion } from '../lib/pixel-engine/transform.js';
-import { bresenhamLine, strokeFreehandThick } from '../lib/pixel-engine/engine.js';
+import { PixelEngine, bresenhamLine, strokeFreehandThick } from '../lib/pixel-engine/engine.js';
+import { rectSelection, ellipseSelection, polygonSelection, combineSelections, isSelected, translateSelection, alphaSelection, selectionToRGBA } from './selection-mask.js';
 import { confirmDialog } from './confirm-dialog.js';
 import { initSymmetry, applySymmetryTransform } from './symmetry-ui.js';
 import { initPixelPerfect } from './pixel-perfect-ui.js';
@@ -87,23 +88,47 @@ function normalizeHex(value) {
  * the click was outside it.
  */
 function isPointInSelection(point, selection) {
-  if (!selection) return true;
-  return (
-    point.x >= selection.x &&
-    point.x < selection.x + selection.width &&
-    point.y >= selection.y &&
-    point.y < selection.y + selection.height
-  );
+  return isSelected(selection, point.x, point.y);
 }
 
-/** Normalizes a two-point drag into a rect, in either drag direction. */
-function pointsToRect(a, b) {
-  return {
-    x: Math.min(a.x, b.x),
-    y: Math.min(a.y, b.y),
-    width: Math.abs(a.x - b.x) + 1,
-    height: Math.abs(a.y - b.y) + 1,
-  };
+/** The four select tools (Rectangle, Ellipse, Lasso, Polygonal Lasso). */
+const SELECT_TOOLS = ['selection', 'ellipse-select', 'lasso', 'polygon-lasso'];
+
+/**
+ * A copy of `engine` with everything outside `selection` cleared: what a
+ * selection's Move, Copy or transform carries, so unselected pixels inside
+ * its bounding box stay put.
+ */
+function liftSelection(engine, selection) {
+  const lifted = new PixelEngine(engine.width, engine.height);
+  lifted.data.set(engine.data);
+  for (let i = 0; i < selection.mask.length; i++) {
+    if (!selection.mask[i]) lifted.data.fill(0, i * 4, i * 4 + 4);
+  }
+  return lifted;
+}
+
+/**
+ * Runs `op(engine, rect)` (a lib/pixel-engine/transform.js region op) on
+ * the selected pixels only and on the mask itself, writes the result into
+ * `engine`, and returns the selection it now occupies (null if it left
+ * the canvas). Moved pixels replace what's under them, as a rect Move does.
+ */
+function transformSelection(engine, selection, op) {
+  const { width, height } = engine;
+  const lifted = liftSelection(engine, selection);
+  const maskEngine = new PixelEngine(width, height);
+  maskEngine.data.set(selectionToRGBA(selection));
+  op(lifted, selection);
+  op(maskEngine, selection);
+  const next = alphaSelection(maskEngine.data, width, height);
+  for (let i = 0; i < selection.mask.length; i++) {
+    if (selection.mask[i]) engine.data.fill(0, i * 4, i * 4 + 4);
+  }
+  for (let i = 0; i < width * height; i++) {
+    if (next?.mask[i] || lifted.data[i * 4 + 3]) engine.data.set(lifted.data.subarray(i * 4, i * 4 + 4), i * 4);
+  }
+  return next;
 }
 
 /**
@@ -128,7 +153,8 @@ function squareDragCurrent(start, current) {
  * #square-constraint-toggle). Either one is enough.
  */
 function isSquareConstrained() {
-  return shiftHeld || state.squareConstraint;
+  // Shift held as a select drag started means Add, not 1:1.
+  return (shiftHeld && !state.shiftStartedAdd) || state.squareConstraint;
 }
 
 // computeLayerMarkState (Layers panel multi-select marking, for
@@ -174,10 +200,13 @@ let colorPickerEscapeHandler = null;
 // released mid-drag - the Rectangle and Selection tools check this on
 // every move.
 let shiftHeld = false;
+let altHeld = false;
 // Layers panel marking (markedLayerIds/lastMarkClickedLayerId/
 // clearLayerMarks) lives in js/layers-ui.js, alongside the rest of the
 // Layers panel.
 let squareConstraintPanel = null;
+let selectionModePanel = null;
+let selectionModeButtons = [];
 let squareConstraintToggle = null;
 let exportControls = null;
 let toolButtons = null;
@@ -457,7 +486,7 @@ export function updateSelectionControls() {
     index,
     hasSelection: true,
     hasContent: true,
-    selectionHasContent: !!contentBounds(layer.engine, state.selection),
+    selectionHasContent: !!contentBounds(liftSelection(layer.engine, state.selection), state.selection),
   });
   state.selectionCutButton.disabled = s.cut.disabled;
   state.selectionCopyButton.disabled = s.copy.disabled;
@@ -480,6 +509,56 @@ function followSelection(next) {
   state.selection = next;
   state.canvasView.setSelectionRect(next);
   updateSelectionControls();
+}
+
+/**
+ * The shape the current select-tool gesture outlines, as a selection:
+ * Rectangle/Ellipse Select between dragStart and dragCurrent, Lasso
+ * through its traced points, Polygonal Lasso through its corners plus
+ * `extra` (the pointer, while placing the next corner).
+ */
+function selectToolShape(tool, extra = null) {
+  const { width, height } = state.layerStack;
+  if (tool === 'selection') return rectSelection(width, height, state.dragStart, state.dragCurrent);
+  if (tool === 'ellipse-select') return ellipseSelection(width, height, state.dragStart, state.dragCurrent);
+  if (tool === 'lasso') return polygonSelection(width, height, state.lassoPoints);
+  return polygonSelection(width, height, extra ? [...state.polygon.points, extra] : state.polygon.points);
+}
+
+/** Shows what the selection would become with `shape` applied by the gesture's mode. */
+function previewSelectShape(shape, mode) {
+  state.canvasView.setSelectionRect(combineSelections(state.selection, shape, mode));
+}
+
+/** New / Add / Subtract for a gesture starting now: Shift adds and Alt/Option subtracts, else the sticky mode. */
+function gestureSelectionMode() {
+  if (shiftHeld) return 'add';
+  if (altHeld) return 'subtract';
+  return state.selectionMode;
+}
+
+/** Closes the unfinished Polygonal Lasso shape into the selection. */
+function finishPolygon() {
+  if (!state.polygon) return;
+  const shape = selectToolShape('polygon-lasso');
+  const { mode } = state.polygon;
+  state.polygon = null;
+  setSelectionDrag(false);
+  followSelection(combineSelections(state.selection, shape, mode));
+}
+
+/** Drops an unfinished Polygonal Lasso shape; true if there was one. */
+function cancelPolygon() {
+  if (!state.polygon) return false;
+  state.polygon = null;
+  setSelectionDrag(false);
+  state.canvasView.setSelectionRect(state.selection);
+  return true;
+}
+
+function setSelectionMode(mode) {
+  state.selectionMode = mode;
+  for (const button of selectionModeButtons) button.classList.toggle('active', button.dataset.selectionMode === mode);
 }
 
 // buildLayerThumbnailCanvas/syncLayersPanelToolbar/syncLayersCollapse/
@@ -1364,8 +1443,10 @@ function applyToolScopedUI() {
   // 1:1 proportion toggle: Rectangle and Selection.
   squareConstraintPanel.classList.toggle(
     'hidden',
-    state.currentTool !== 'rectangle' && state.currentTool !== 'ellipse' && state.currentTool !== 'selection'
+    !['rectangle', 'ellipse', 'selection', 'ellipse-select'].includes(state.currentTool)
   );
+  selectionModePanel.classList.toggle('hidden', !SELECT_TOOLS.includes(state.currentTool));
+  if (state.currentTool !== 'polygon-lasso') cancelPolygon();
   // Rectangle/Ellipse Filled toggle (js/rectangle-fill-ui.js).
   syncRectangleFillTool(state.currentTool);
   // Floating tool-options bar (5d-tool-options-bar): CSS shows the bar's
@@ -1625,6 +1706,13 @@ function bindDomOnce() {
     state.squareConstraint = !state.squareConstraint;
     squareConstraintToggle.classList.toggle('active', state.squareConstraint);
   });
+
+  // New / Add / Subtract for the select tools - sticky, shared by all four.
+  selectionModePanel = root.querySelector('#selection-mode-options');
+  selectionModeButtons = [...selectionModePanel.querySelectorAll('[data-selection-mode]')];
+  for (const button of selectionModeButtons) {
+    button.addEventListener('click', () => setSelectionMode(button.dataset.selectionMode));
+  }
 
   renderPaletteRow();
 
@@ -1973,17 +2061,29 @@ function bindDomOnce() {
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
       if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
+      // An unfinished Polygonal Lasso shape is dropped first; the selection stays.
+      if (cancelPolygon()) return;
       clearSelection();
+    });
+
+    // Enter closes an unfinished Polygonal Lasso shape.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' || !state.polygon || isTextEntry(document.activeElement)) return;
+      e.preventDefault();
+      finishPolygon();
     });
 
     // Shift constrains the Rectangle tool to a square while held - tracked
     // independently since it can toggle mid-drag, read from onDrawMove.
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Shift') shiftHeld = true;
+      if (e.key === 'Alt') altHeld = true;
     });
     document.addEventListener('keyup', (e) => {
       if (e.key === 'Shift') shiftHeld = false;
+      if (e.key === 'Alt') altHeld = false;
     });
+    window.addEventListener('blur', () => { shiftHeld = false; altHeld = false; });
 
     // Bare-letter tool shortcuts (P/E/G/B/L/R/M/H — see each button's
     // data-shortcut), Figma/Photoshop-style: no modifier key, so they must
@@ -1993,7 +2093,7 @@ function bindDomOnce() {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
       if (isTextEntry(document.activeElement)) return;
-      const key = e.key.toLowerCase();
+      const key = (e.shiftKey ? 'shift+' : '') + e.key.toLowerCase();
       const button = [...toolButtons].find((b) => b.dataset.shortcut?.toLowerCase() === key);
       if (!button) return;
       e.preventDefault();
@@ -2067,6 +2167,7 @@ function resizeCanvas(width, height) {
   state.canvasView.render();
   // A resize invalidates any prior selection's coordinates.
   state.selection = null;
+  state.polygon = null;
   state.canvasView.setSelectionRect(null);
   updateSelectionControls();
   commit();
@@ -2077,6 +2178,7 @@ function rotateCanvas(direction) {
   state.canvasView.resetView();
   state.canvasView.render();
   state.selection = null;
+  state.polygon = null;
   state.canvasView.setSelectionRect(null);
   updateSelectionControls();
   commit();
@@ -2146,7 +2248,8 @@ export function getTransformTarget() {
   const engine = layer.engine;
   const rect = state.selection ?? { x: 0, y: 0, width: engine.width, height: engine.height };
   const disabled = layer.isReferenceImage || !!layer.locked;
-  const alignDisabled = disabled || (!state.selection && layer.isBackground) || !contentBounds(engine, rect);
+  const content = state.selection ? liftSelection(engine, state.selection) : engine;
+  const alignDisabled = disabled || (!state.selection && layer.isBackground) || !contentBounds(content, rect);
   return { kind: state.selection ? 'selection' : 'layer', disabled, alignDisabled };
 }
 
@@ -2163,18 +2266,20 @@ export function transformActiveLayer(op) {
   if (target.disabled) return;
   const engine = state.layerStack.getActiveLayer().engine;
   const rect = state.selection ?? { x: 0, y: 0, width: engine.width, height: engine.height };
-  let next = rect;
+  let run;
   if (op.kind === 'flip') {
-    flipRegion(engine, rect, op.axis);
+    run = (e, r) => flipRegion(e, r, op.axis);
   } else if (op.kind === 'rotate') {
-    next = rotateRegion(engine, rect, op.turn);
+    run = (e, r) => rotateRegion(e, r, op.turn);
   } else {
     if (target.alignDisabled) return;
-    const { dx, dy } = alignOffset(contentBounds(engine, rect), engine.width, engine.height, op.edge);
+    const content = state.selection ? liftSelection(engine, state.selection) : engine;
+    const { dx, dy } = alignOffset(contentBounds(content, rect), engine.width, engine.height, op.edge);
     if (!dx && !dy) return; // already there - no empty undo step
-    next = moveRegion(engine, rect, dx, dy);
+    run = (e, r) => moveRegion(e, r, dx, dy);
   }
-  if (state.selection) followSelection(next);
+  if (state.selection) followSelection(transformSelection(engine, state.selection, run));
+  else run(engine, rect);
   state.canvasView.render();
   commit();
 }
@@ -2203,8 +2308,8 @@ export function getSelection() {
 /** Clears the selection's pixels on the active layer - selection Delete and Cut. One undo step. */
 function deleteSelectionPixels() {
   if (!state.selection || !activeLayerEditable()) return false;
-  const { x, y, width, height } = state.selection;
-  state.layerStack.getActiveLayer().engine.clearRegion(x, y, width, height);
+  const { data } = state.layerStack.getActiveLayer().engine;
+  state.selection.mask.forEach((on, i) => { if (on) data.fill(0, i * 4, i * 4 + 4); });
   state.canvasView.render();
   commit(); // commit() calls renderLayersPanel() directly, so a stale Layers thumbnail always gets refreshed
   return true;
@@ -2222,7 +2327,9 @@ export function copyActive() {
   const layer = state.layerStack.getActiveLayer();
   if (!layer || layer.isReferenceImage) return false;
   const engine = layer.engine;
-  const region = cropToContent(engine, state.selection ?? { x: 0, y: 0, width: engine.width, height: engine.height });
+  const region = state.selection
+    ? cropToContent(liftSelection(engine, state.selection), state.selection)
+    : cropToContent(engine, { x: 0, y: 0, width: engine.width, height: engine.height });
   if (!region) return false;
   const record = state.selection
     ? { kind: 'selection', ...region }
@@ -2305,14 +2412,12 @@ function clipboardShortcutsApply() {
   return !window.getSelection?.()?.toString();
 }
 
-/** Select Content: the selection becomes the box around the active layer's pixels. */
+/** Select Content: the selection becomes exactly the active layer's non-transparent pixels. */
 export function selectActiveContent() {
   const engine = state.layerStack.getActiveLayer().engine;
-  const bounds = contentBounds(engine, { x: 0, y: 0, width: engine.width, height: engine.height });
-  if (!bounds) return false;
-  state.selection = bounds;
-  state.canvasView.setSelectionRect(bounds);
-  updateSelectionControls();
+  const selection = alphaSelection(engine.data, engine.width, engine.height);
+  if (!selection) return false;
+  followSelection(selection);
   return true;
 }
 
@@ -2347,9 +2452,9 @@ export function previewRotate(degrees, quality) {
   }
   const { engine, pixels, selection } = rotatePreview;
   engine.data.set(pixels);
-  const rect = selection ?? { x: 0, y: 0, width: engine.width, height: engine.height };
-  const next = rotateRegionFree(engine, rect, degrees, quality);
-  if (selection) followSelection(next);
+  const run = (e, r) => rotateRegionFree(e, r, degrees, quality);
+  if (selection) followSelection(transformSelection(engine, selection, run));
+  else run(engine, { x: 0, y: 0, width: engine.width, height: engine.height });
   state.canvasView.render();
 }
 
@@ -2527,6 +2632,21 @@ function redrawMovePreview() {
   if (state.moveContentEmpty) return;
   const dx = state.dragCurrent.x - state.dragStart.x;
   const dy = state.dragCurrent.y - state.dragStart.y;
+  if (state.moveRegion.mask) {
+    // A selection: only its pixels travel, so a lasso shape doesn't
+    // carry (or stamp) the unselected corners of its bounding box.
+    const { mask, canvasWidth: w, canvasHeight: h } = state.moveRegion;
+    const { data } = state.strokeEngine;
+    for (let i = 0; i < mask.length; i++) if (mask[i]) data.fill(0, i * 4, i * 4 + 4);
+    for (let i = 0; i < mask.length; i++) {
+      if (!mask[i]) continue;
+      const x = (i % w) + dx;
+      const y = Math.floor(i / w) + dy;
+      if (x < 0 || y < 0 || x >= w || y >= h) continue;
+      data.set(state.strokeBackup.subarray(i * 4, i * 4 + 4), (y * w + x) * 4);
+    }
+    return;
+  }
   const { x, y, width, height } = state.moveRegion;
   state.strokeEngine.clearRegion(x, y, width, height);
   state.strokeEngine.stampRegion(x + dx, y + dy, width, height, state.moveContent);
@@ -2608,6 +2728,11 @@ export function initWorkspace({
     squareConstraint: false,
     rightSidebarVisible: true,
     selection: null,
+    selectionMode: 'new', // New / Add / Subtract (#selection-mode-options)
+    selectMode: 'new', // the mode of the select gesture in progress
+    shiftStartedAdd: false,
+    lassoPoints: [],
+    polygon: null, // unfinished Polygonal Lasso shape: { points, mode }
     dragStart: null,
     dragCurrent: null,
     strokeEngine: null,
@@ -2745,17 +2870,42 @@ export function initWorkspace({
     onHover(point) {
       state.hoverPoint = point;
       refreshBrushCursor();
+      if (state.polygon && point && !state.dragStart) {
+        previewSelectShape(selectToolShape('polygon-lasso', point), state.polygon.mode);
+      }
     },
 
     onDrawStart(point) {
       const tool = state.currentTool;
-      if (tool === 'selection' || (tool === 'move' && state.selection)) setSelectionDrag(true);
+      if (SELECT_TOOLS.includes(tool) || (tool === 'move' && state.selection)) setSelectionDrag(true);
       if (isAutoHideTool(tool)) setStroking(true);
 
-      if (tool === 'selection') {
+      if (tool === 'polygon-lasso') {
+        // Each press places a corner (dragging moves it until release). A
+        // press on the first corner, or again on the last (a double-click),
+        // closes the shape.
+        if (!state.polygon) {
+          state.polygon = { points: [point], mode: gestureSelectionMode() };
+        } else {
+          const { points } = state.polygon;
+          const same = (p) => p.x === point.x && p.y === point.y;
+          if (points.length >= 2 && (same(points[0]) || same(points[points.length - 1]))) {
+            finishPolygon();
+            return;
+          }
+          points.push(point);
+        }
+        previewSelectShape(selectToolShape(tool), state.polygon.mode);
+        return;
+      }
+
+      if (SELECT_TOOLS.includes(tool)) {
         state.dragStart = point;
         state.dragCurrent = point;
-        state.canvasView.setSelectionRect(pointsToRect(point, point));
+        state.lassoPoints = [point];
+        state.selectMode = gestureSelectionMode();
+        state.shiftStartedAdd = shiftHeld;
+        previewSelectShape(selectToolShape(tool), state.selectMode);
         return;
       }
 
@@ -2829,8 +2979,7 @@ export function initWorkspace({
         // of where inside the canvas the drag starts (see design.md);
         // with none, the whole active layer's content moves.
         state.moveRegion = state.selection
-          ? { ...state.selection }
-          : { x: 0, y: 0, width: state.layerStack.width, height: state.layerStack.height };
+          ?? { x: 0, y: 0, width: state.layerStack.width, height: state.layerStack.height };
         // Extracted once, from the pristine pre-drag content - the
         // dragged content itself never changes during a drag, only its
         // on-canvas position does.
@@ -2847,7 +2996,9 @@ export function initWorkspace({
         // nothing but transparency to carry, Move is a no-op - it
         // doesn't clear the source (already blank) or touch the
         // destination at all.
-        state.moveContentEmpty = isRegionFullyTransparent(state.moveContent);
+        state.moveContentEmpty = state.selection
+          ? !state.selection.mask.some((on, i) => on && state.strokeBackup[i * 4 + 3])
+          : isRegionFullyTransparent(state.moveContent);
         redrawMovePreview();
         state.canvasView.render();
         return;
@@ -2867,10 +3018,24 @@ export function initWorkspace({
     onDrawMove(point) {
       const tool = state.currentTool;
 
-      if (tool === 'selection') {
+      if (tool === 'polygon-lasso') {
+        if (!state.polygon) return;
+        state.polygon.points[state.polygon.points.length - 1] = point;
+        previewSelectShape(selectToolShape(tool), state.polygon.mode);
+        return;
+      }
+
+      if (SELECT_TOOLS.includes(tool)) {
         if (!state.dragStart) return;
-        state.dragCurrent = isSquareConstrained() ? squareDragCurrent(state.dragStart, point) : point;
-        state.canvasView.setSelectionRect(pointsToRect(state.dragStart, state.dragCurrent));
+        if (tool === 'lasso') {
+          const last = state.lassoPoints[state.lassoPoints.length - 1];
+          if (last.x === point.x && last.y === point.y) return;
+          state.lassoPoints.push(point);
+          state.dragCurrent = point;
+        } else {
+          state.dragCurrent = isSquareConstrained() ? squareDragCurrent(state.dragStart, point) : point;
+        }
+        previewSelectShape(selectToolShape(tool), state.selectMode);
         return;
       }
 
@@ -2926,25 +3091,33 @@ export function initWorkspace({
       setSelectionDrag(false);
       setStroking(false);
 
-      if (tool === 'selection') {
+      if (tool === 'polygon-lasso') {
+        // The shape stays open between presses: keep the action bar hidden.
+        setSelectionDrag(!!state.polygon);
+        return;
+      }
+
+      if (SELECT_TOOLS.includes(tool)) {
         if (!state.dragStart) return;
-        const end = state.dragCurrent ?? state.dragStart;
-        const wasATap = end.x === state.dragStart.x && end.y === state.dragStart.y;
-        // A plain click (no drag) outside the current selection clears it,
-        // instead of replacing it with a degenerate 1x1 selection at the
-        // click point — the same effect as "Clear selection", reachable
-        // without hunting for that button. A drag always defines a new
-        // selection regardless of where it starts (existing behavior,
-        // unchanged), and a tap *inside* the current selection still just
-        // makes the usual 1x1 selection there.
-        if (wasATap && state.selection && !isPointInSelection(state.dragStart, state.selection)) {
+        const start = state.dragStart;
+        const end = state.dragCurrent ?? start;
+        const wasATap = tool === 'lasso' ? state.lassoPoints.length === 1 : end.x === start.x && end.y === start.y;
+        // A plain click (no drag) in New mode outside the current selection
+        // clears it, instead of making a 1x1 selection there - the same
+        // effect as "Clear selection". A Lasso click never makes a 1x1
+        // selection: it only clears (New mode) or does nothing.
+        if (wasATap && state.selectMode === 'new' && state.selection && !isPointInSelection(start, state.selection)) {
           state.selection = null;
-          state.canvasView.setSelectionRect(null);
-        } else {
-          state.selection = pointsToRect(state.dragStart, end);
+        } else if (!(wasATap && tool === 'lasso')) {
+          state.selection = combineSelections(state.selection, selectToolShape(tool), state.selectMode);
+        } else if (state.selectMode === 'new') {
+          state.selection = null;
         }
+        state.canvasView.setSelectionRect(state.selection);
         state.dragStart = null;
         state.dragCurrent = null;
+        state.lassoPoints = [];
+        state.shiftStartedAdd = false;
         updateSelectionControls();
         return;
       }
@@ -2958,8 +3131,7 @@ export function initWorkspace({
       if (tool === 'move' && state.selection) {
         const dx = state.dragCurrent.x - state.dragStart.x;
         const dy = state.dragCurrent.y - state.dragStart.y;
-        state.selection = { ...state.selection, x: state.selection.x + dx, y: state.selection.y + dy };
-        state.canvasView.setSelectionRect(state.selection);
+        followSelection(translateSelection(state.selection, dx, dy));
       }
 
       state.strokeEngine = null;
@@ -2984,9 +3156,16 @@ export function initWorkspace({
       setSelectionDrag(false);
       setStroking(false);
 
-      if (tool === 'selection') {
+      if (tool === 'polygon-lasso') {
+        cancelPolygon();
+        return;
+      }
+
+      if (SELECT_TOOLS.includes(tool)) {
         state.dragStart = null;
         state.dragCurrent = null;
+        state.lassoPoints = [];
+        state.shiftStartedAdd = false;
         // Revert the overlay to whatever selection was last committed (if any).
         state.canvasView.setSelectionRect(state.selection);
         return;

@@ -69,7 +69,7 @@ export function drawEllipse(engine, x0, y0, x1, y1, rgba) {
 }
 
 /** The outline pixels of drawEllipse's ellipse, as [x, y] pairs (may repeat). */
-function ellipseOutline(x0, y0, x1, y1) {
+export function ellipseOutline(x0, y0, x1, y1) {
   const points = [];
   const plot = (x, y) => points.push([x, y]);
   let a = Math.abs(x1 - x0);
@@ -107,7 +107,8 @@ function ellipseOutline(x0, y0, x1, y1) {
 }
 
 /**
- * Restores every pixel outside `selection` ({x, y, width, height}) on
+ * Restores every pixel outside `selection` ({x, y, width, height}, or a
+ * js/selection-mask.js selection, clipped to its exact mask) on
  * `engine` from `backup` (a Uint8ClampedArray matching engine.data's
  * layout) — undoes anything a draw operation wrote outside the selection,
  * without engine.js needing to know selections exist. A null selection is
@@ -119,7 +120,9 @@ export function clipToSelection(engine, backup, selection) {
 
   for (let y = 0; y < engine.height; y++) {
     for (let x = 0; x < engine.width; x++) {
-      const inSelection = x >= selX && x < selX + width && y >= selY && y < selY + height;
+      const inSelection = selection.mask
+        ? selection.mask[y * engine.width + x] === 1
+        : x >= selX && x < selX + width && y >= selY && y < selY + height;
       if (inSelection) continue;
       const i = (y * engine.width + x) * 4;
       engine.data[i] = backup[i];

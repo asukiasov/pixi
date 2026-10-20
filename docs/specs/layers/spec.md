@@ -755,14 +755,13 @@ layer's reorder lock.
 
 ### Requirement: Select Content
 The layer ⋯ menu SHALL offer Select Content, which sets the selection to
-the smallest rectangle around the layer's non-transparent pixels (Pixi's
-selection is rectangular, so this is not an exact outline). It SHALL be
-disabled on an empty layer and is not an undo step.
+exactly the layer's non-transparent pixels. It SHALL be disabled on an
+empty layer and is not an undo step.
 
 #### Scenario: Selecting a sprite
 - **WHEN** the active layer's only pixels fill x 2–4, y 3–4 and the user
   chooses Select Content
-- **THEN** the selection is x 2, y 3, 3 × 2
+- **THEN** exactly those 6 pixels are selected
 
 ### Requirement: Layer groups
 The user SHALL be able to put layers in groups, one level deep: from a

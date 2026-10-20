@@ -13,7 +13,7 @@
 // - Alt+Left/Right moves a favorite one place.
 // A polite status region says what changed.
 
-import { TOOL_IDS, TOOL_LABELS, overflowTools, insertTool, removeTool, isDefaultRail, dropIndex } from './rail-tools.js';
+import { TOOL_IDS, DEFAULT_RAIL_TOOLS, TOOL_LABELS, overflowTools, insertTool, removeTool, isDefaultRail, dropIndex } from './rail-tools.js';
 
 // How far a press moves before it is a drag rather than a tap.
 const DRAG_THRESHOLD = 6;
@@ -137,7 +137,7 @@ export function initCustomizeToolsSheet({ getPrefs, setPrefs, root = document })
   });
 
   resetButton.addEventListener('click', () => {
-    commit([...TOOL_IDS], 'Tool rail reset to every tool', 'done');
+    commit([...DEFAULT_RAIL_TOOLS], 'Tool rail reset to the default tools', 'done');
   });
 
   // ------------------------------------------------------------------

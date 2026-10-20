@@ -275,7 +275,9 @@ bottom centre: `#tool-options-bar` on top, then `.options-card`
 here since 5f; `display: contents` in the docked layout). The bar shows only the active tool's options: Pencil
 Size, Opacity, Pixel-perfect, Symmetry, Color Library sequence; Eraser
 the same without the sequence; Brush Spacing, Rotation, Symmetry,
-sequence; Rectangle Filled, 1:1; Select 1:1. It is hidden for Move,
+sequence; Rectangle Filled, 1:1; Rectangle and Ellipse Select New/Add/Subtract
+(proxies for `#selection-mode-options`) and 1:1; Lasso and Polygonal Lasso
+New/Add/Subtract. It is hidden for Move,
 Bucket, Line, Hand and Eyedropper, and showing, changing or hiding it
 never re-fits the canvas. Which groups show is CSS-only: each
 `.tool-options-group` lists its tools in `data-tools`, and
@@ -684,3 +686,14 @@ Pro for iPad style):
 - **No hover motion**: buttons and swatches don't move, scale or wiggle
   on hover or selection, on any platform (magnetic hover and the iOS
   hover "buzz" were removed on 2026-10-12, per feedback).
+
+**Select tools (lasso-selection).** Rectangle Select (`selection`, M,
+`crop_free`), Ellipse Select (`ellipse-select`, Shift+M, `blur_circular`),
+Lasso (`lasso`, Q, `lasso_select`) and Polygonal Lasso (`polygon-lasso`,
+Shift+Q, `pentagon`). The selection is a full-canvas pixel mask
+(`js/selection-mask.js`) whose bounding box is still its `x/y/width/height`.
+A rectangular one keeps the dashed-outline `.selection-overlay` box; any
+other shape adds `.is-shaped` and draws `.selection-shape`, an SVG of
+the selected pixels (accent-soft fill) and their edges (dashed accent,
+non-scaling stroke) over the same box. Move, Delete, Cut/Copy and
+the Align/Rotate popovers carry only the selected pixels.

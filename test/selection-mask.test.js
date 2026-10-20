@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   rectSelection, ellipseSelection, polygonSelection, combineSelections, isSelected,
-  isRectangular, translateSelection, alphaSelection, selectionToRGBA, selectionPaths,
+  isRectangular, translateSelection, alphaSelection, selectionToRGBA, selectionPaths, clampSelectionOffset,
 } from '../js/selection-mask.js';
 
 const p = (x, y) => ({ x, y });
@@ -94,5 +94,70 @@ describe('clipToSelection with a shaped selection', () => {
     clipToSelection(engine, backup, ellipseSelection(6, 6, p(0, 0), p(5, 5)));
     assert.deepEqual(engine.getPixel(0, 0), [0, 0, 0, 0]);
     assert.deepEqual(engine.getPixel(2, 2), [255, 0, 0, 255]);
+  });
+});
+
+describe('clampSelectionOffset', () => {
+  test('an offset that keeps a pixel on the canvas is left alone', () => {
+    const sel = rectSelection(16, 16, p(2, 2), p(4, 4));
+    assert.deepEqual(clampSelectionOffset(sel, 13, -4), { dx: 13, dy: -4 });
+  });
+
+  test('pushing the selection off the canvas stops with one row/column still on it', () => {
+    const sel = rectSelection(16, 16, p(2, 2), p(4, 4));
+    assert.deepEqual(clampSelectionOffset(sel, 20, -30), { dx: 13, dy: -4 });
+    assert.ok(translateSelection(sel, 13, -4));
+  });
+
+  test('a shaped selection keeps an actual selected pixel, not just its box corner', () => {
+    const sel = ellipseSelection(16, 16, p(0, 0), p(6, 6)); // (6, 6) itself is not selected
+    const { dx, dy } = clampSelectionOffset(sel, 15, 15);
+    assert.ok(translateSelection(sel, dx, dy));
+    assert.ok(dx <= 15 && dy <= 15);
+  });
+});
+
+describe('polygonSelection fill', () => {
+  // The traced outline plus the per-pixel non-zero winding rule, as a slow reference.
+  const reference = (w, h, pts) => {
+    const inside = new Set();
+    pts.forEach((a, i) => {
+      const b = pts[(i + 1) % pts.length];
+      let { x, y } = a;
+      const dx = Math.abs(b.x - x);
+      const dy = -Math.abs(b.y - y);
+      let err = dx + dy;
+      for (;;) {
+        if (x >= 0 && y >= 0 && x < w && y < h) inside.add(y * w + x);
+        if (x === b.x && y === b.y) break;
+        const e2 = 2 * err;
+        if (e2 >= dy) { err += dy; x += x < b.x ? 1 : -1; }
+        if (e2 <= dx) { err += dx; y += y < b.y ? 1 : -1; }
+      }
+    });
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let winding = 0;
+        for (let i = 0; i < pts.length; i++) {
+          const a = pts[i];
+          const b = pts[(i + 1) % pts.length];
+          const side = (b.x - a.x) * (y - a.y) - (x - a.x) * (b.y - a.y);
+          if (a.y <= y) { if (b.y > y && side > 0) winding++; } else if (b.y <= y && side < 0) winding--;
+        }
+        if (winding) inside.add(y * w + x);
+      }
+    }
+    return inside;
+  };
+
+  test('matches the winding rule for random self-crossing shapes, off-canvas corners included', () => {
+    let seed = 7;
+    const rand = (n) => { seed = (seed * 16807) % 2147483647; return seed % n; };
+    for (let round = 0; round < 40; round++) {
+      const pts = Array.from({ length: 3 + rand(12) }, () => p(rand(30) - 5, rand(26) - 5));
+      const sel = polygonSelection(20, 16, pts);
+      const expected = reference(20, 16, pts);
+      for (let i = 0; i < 20 * 16; i++) assert.equal(sel?.mask[i] ?? 0, expected.has(i) ? 1 : 0, `round ${round} pixel ${i}`);
+    }
   });
 });

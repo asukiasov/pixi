@@ -697,4 +697,6 @@ A rectangular one keeps the dashed-outline `.selection-overlay` box; any
 other shape adds `.is-shaped` and draws `.selection-shape`, an SVG of
 the selected pixels (accent-soft fill) and their edges (dashed accent,
 non-scaling stroke) over the same box. Move, Delete, Cut/Copy and
-the Align/Rotate popovers carry only the selected pixels.
+the Align/Rotate popovers carry only the selected pixels. The New/Add/Subtract buttons
+carry `aria-pressed`, and the embed markup (`lib/pixi.js`) has the same
+select tools, picker and Cut/Copy/Paste buttons as `index.html`.

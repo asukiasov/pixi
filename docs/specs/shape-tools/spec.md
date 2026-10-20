@@ -172,7 +172,8 @@ same way would cover; Lasso (Q) selects the freehand shape dragged, closed
 from the last point back to the first; Polygonal Lasso (Shift+Q) places a
 corner per click or tap (dragging moves the corner until release) and
 closes when the first corner is clicked again, the last corner is clicked
-again, or Enter is pressed. Escape drops an unfinished polygon without
+again, or Enter is pressed (Enter with only one corner places nothing and
+drops the polygon). Escape drops an unfinished polygon without
 clearing the selection, as does switching tool. A Lasso or polygon shape
 SHALL select every pixel its outline passes through plus every pixel
 inside it (both loops of a self-crossing shape). A selection is a pixel
@@ -201,6 +202,11 @@ With the Move tool active and the canvas or tool rail focused, the arrow
 keys SHALL nudge the selection's pixels (or, with no selection, the whole
 active layer) by 1 pixel, or 10 with Shift, one undo step per press, the
 same as a Move drag of that length.
+
+A Move drag or nudge SHALL stop where one selected pixel is still on the
+canvas, so the selection can't be pushed off it and lost. Undo and Redo
+of a Move, Align, flip or rotate SHALL put the selection outline back
+with the pixels, unless the selection was changed since.
 
 #### Scenario: Moving away and back
 - **WHEN** the user lassos part of a sprite, moves it right, then left
@@ -302,6 +308,16 @@ touches whatever is at the destination.
 - **WHEN** the user completes a Move drag and then triggers Undo
 - **THEN** the moved content and the source area both revert to their
   pre-move state in a single step
+
+#### Scenario: Undo puts a moved selection back
+- **WHEN** the user moves a selection twice and then undoes twice
+- **THEN** the pixels and the selection outline are both where they
+  started
+
+#### Scenario: Moving stops at the canvas edge
+- **WHEN** the user nudges a selection to the right past the canvas edge
+- **THEN** it stops with its left column on the canvas's last column, and
+  nudging back returns its pixels intact
 
 #### Scenario: Moving affects only the active layer
 - **WHEN** the user performs a Move drag

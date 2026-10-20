@@ -86,21 +86,25 @@ export function polygonSelection(w, h, points) {
   for (let i = 0; i < n; i++) {
     for (const [x, y] of linePoints(points[i], points[(i + 1) % n])) setIn(mask, w, h, x, y);
   }
+  // One scanline per row (fast enough to rerun on every Lasso pointermove):
+  // an edge crossing row y at xi winds +1 (upward) or -1 (downward) every
+  // pixel x < xi, so `cross[k]` collects the edges with ceil(xi) = k and a
+  // running sum from the right gives each pixel's winding number.
+  const cross = new Int32Array(w + 1);
   for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (mask[y * w + x]) continue;
-      let winding = 0;
-      for (let i = 0; i < n; i++) {
-        const p = points[i];
-        const q = points[(i + 1) % n];
-        const side = (q.x - p.x) * (y - p.y) - (x - p.x) * (q.y - p.y);
-        if (p.y <= y) {
-          if (q.y > y && side > 0) winding++;
-        } else if (q.y <= y && side < 0) {
-          winding--;
-        }
-      }
+    cross.fill(0);
+    for (let i = 0; i < n; i++) {
+      const p = points[i];
+      const q = points[(i + 1) % n];
+      const dir = p.y <= y && q.y > y ? 1 : p.y > y && q.y <= y ? -1 : 0;
+      if (!dir) continue;
+      const xi = p.x + ((y - p.y) * (q.x - p.x)) / (q.y - p.y);
+      cross[Math.min(Math.max(Math.ceil(xi), 0), w)] += dir;
+    }
+    let winding = cross[w];
+    for (let x = w - 1; x >= 0; x--) {
       if (winding) mask[y * w + x] = 1;
+      winding += cross[x];
     }
   }
   return maskSelection(mask, w, h);
@@ -142,6 +146,23 @@ export function translateSelection(selection, dx, dy) {
     for (let x = 0; x < w; x++) if (mask[y * w + x]) setIn(next, w, h, x + dx, y + dy);
   }
   return maskSelection(next, w, h);
+}
+
+/**
+ * (dx, dy) pulled back toward (0, 0) just enough that `selection` moved
+ * by it keeps at least one selected pixel on the canvas - a Move can't
+ * push it off entirely and lose it.
+ */
+export function clampSelectionOffset(selection, dx, dy) {
+  const { x, y, width, height, canvasWidth: w, canvasHeight: h } = selection;
+  dx = Math.min(Math.max(dx, -(x + width - 1)), w - 1 - x);
+  dy = Math.min(Math.max(dy, -(y + height - 1)), h - 1 - y);
+  // The box still touches the canvas; a shaped selection may not.
+  while (!translateSelection(selection, dx, dy)) {
+    dx -= Math.sign(dx);
+    dy -= Math.sign(dy);
+  }
+  return { dx, dy };
 }
 
 /** The pixels of `data` (RGBA, w*h) with any alpha, as a selection - Select Content, transformed masks. */

@@ -9,7 +9,7 @@ import { drawRectangle, drawEllipse, clipToSelection } from './shape-tools.js';
 import { cursorFootprint, footprintOutlinePath } from './brush-cursor.js';
 import { flipRegion, rotateRegion, rotateRegionFree, contentBounds, alignOffset, moveRegion } from '../lib/pixel-engine/transform.js';
 import { PixelEngine, bresenhamLine, strokeFreehandThick } from '../lib/pixel-engine/engine.js';
-import { rectSelection, ellipseSelection, polygonSelection, combineSelections, isSelected, translateSelection, alphaSelection, selectionToRGBA } from './selection-mask.js';
+import { rectSelection, ellipseSelection, polygonSelection, combineSelections, isSelected, translateSelection, clampSelectionOffset, alphaSelection, selectionToRGBA } from './selection-mask.js';
 import { confirmDialog } from './confirm-dialog.js';
 import { initSymmetry, applySymmetryTransform } from './symmetry-ui.js';
 import { initPixelPerfect } from './pixel-perfect-ui.js';
@@ -335,7 +335,7 @@ export function commit() {
   // Another edit landed mid-preview (a shortcut while the dial has
   // focus): the previewed rotation stays, as part of that edit.
   if (rotatePreview) endRotatePreview();
-  state.undoStack.push(state.layerStack.snapshot());
+  pushStep(state.layerStack.snapshot());
   updateUndoRedoButtons();
   autoSave();
   // drawing-timelapse-recording: appends a frame independent of and
@@ -363,6 +363,7 @@ function performUndo() {
   const snapshot = state.undoStack.undo();
   if (snapshot) {
     state.layerStack.restore(snapshot);
+    followStepSelection(snapshot, 'undo');
     state.canvasView.render();
     // performUndo/performRedo don't call commit() (they restore a
     // snapshot via autoSave directly) - restored indices may no longer
@@ -380,6 +381,7 @@ function performRedo() {
   const snapshot = state.undoStack.redo();
   if (snapshot) {
     state.layerStack.restore(snapshot);
+    followStepSelection(snapshot, 'redo');
     state.canvasView.render();
     clearLayerMarksAndRefresh();
     autoSave();
@@ -506,11 +508,47 @@ function clearSelection() {
   updateSelectionControls();
 }
 
-/** Moves the selection to `next` (null clears it) after a transform moved its content. */
+/** Shows `next` as the selection (null clears it). */
 function followSelection(next) {
   state.selection = next;
   state.canvasView.setSelectionRect(next);
   updateSelectionControls();
+}
+
+/**
+ * The selection that goes with each undo step: `before` as the step
+ * began and `after` as it was committed. They differ only for a Move or
+ * transform that carried the selection along (moveSelectionWith), so
+ * undoing it puts the outline back with the pixels.
+ */
+const stepSelections = new WeakMap();
+
+/** followSelection for a Move/transform that is about to commit(): undo moves the outline back. */
+function moveSelectionWith(next) {
+  if (state.selectionBefore === undefined) state.selectionBefore = state.selection;
+  followSelection(next);
+}
+
+/** Pushes `snapshot` as the current undo step, remembering the selection around it. */
+function pushStep(snapshot) {
+  const before = state.selectionBefore === undefined ? state.selection : state.selectionBefore;
+  stepSelections.set(snapshot, { before, after: state.selection });
+  state.selectionBefore = undefined;
+  state.currentStep = snapshot;
+  state.undoStack.push(snapshot);
+}
+
+/**
+ * Undo/redo moving from the current step to `snapshot`: the selection
+ * follows a step that moved it, unless it was changed since (a new
+ * selection drawn after a Move stays).
+ */
+function followStepSelection(snapshot, direction) {
+  const step = stepSelections.get(direction === 'undo' ? state.currentStep : snapshot);
+  state.currentStep = snapshot;
+  if (!step || step.before === step.after) return;
+  const [from, to] = direction === 'undo' ? [step.after, step.before] : [step.before, step.after];
+  if (state.selection === from) followSelection(to);
 }
 
 /**
@@ -542,6 +580,12 @@ function gestureSelectionMode() {
 /** Closes the unfinished Polygonal Lasso shape into the selection. */
 function finishPolygon() {
   if (!state.polygon) return;
+  // A single corner (Enter right after the first click) has no shape.
+  const [first] = state.polygon.points;
+  if (state.polygon.points.every((p) => p.x === first.x && p.y === first.y)) {
+    cancelPolygon();
+    return;
+  }
   const shape = selectToolShape('polygon-lasso');
   const { mode } = state.polygon;
   state.polygon = null;
@@ -560,7 +604,11 @@ function cancelPolygon() {
 
 function setSelectionMode(mode) {
   state.selectionMode = mode;
-  for (const button of selectionModeButtons) button.classList.toggle('active', button.dataset.selectionMode === mode);
+  for (const button of selectionModeButtons) {
+    const on = button.dataset.selectionMode === mode;
+    button.classList.toggle('active', on);
+    button.setAttribute('aria-pressed', String(on));
+  }
 }
 
 // buildLayerThumbnailCanvas/syncLayersPanelToolbar/syncLayersCollapse/
@@ -2297,7 +2345,7 @@ export function transformActiveLayer(op) {
     if (!dx && !dy) return; // already there - no empty undo step
     run = (e, r) => moveRegion(e, r, dx, dy);
   }
-  if (state.selection) followSelection(transformSelection(engine, state.selection, run));
+  if (state.selection) moveSelectionWith(transformSelection(engine, state.selection, run));
   else run(engine, rect);
   state.canvasView.render();
   commit();
@@ -2472,7 +2520,7 @@ export function previewRotate(degrees, quality) {
   const { engine, pixels, selection } = rotatePreview;
   engine.data.set(pixels);
   const run = (e, r) => rotateRegionFree(e, r, degrees, quality);
-  if (selection) followSelection(transformSelection(engine, selection, run));
+  if (selection) moveSelectionWith(transformSelection(engine, selection, run));
   else run(engine, { x: 0, y: 0, width: engine.width, height: engine.height });
   state.canvasView.render();
 }
@@ -2491,6 +2539,7 @@ export function cancelRotate() {
   const { engine, pixels, selection } = rotatePreview;
   engine.data.set(pixels);
   if (selection) followSelection(selection);
+  state.selectionBefore = undefined;
   state.canvasView.render();
   endRotatePreview();
 }
@@ -2699,11 +2748,13 @@ function nudgeMove(dx, dy) {
   if (state.selection) {
     floatSelection(engine);
     const f = state.float;
-    f.dx += dx;
-    f.dy += dy;
+    const next = clampSelectionOffset(f.origin, f.dx + dx, f.dy + dy);
+    if (next.dx === f.dx && next.dy === f.dy) return; // at the canvas edge - no empty undo step
+    f.dx = next.dx;
+    f.dy = next.dy;
     drawFloat(engine, f.dx, f.dy);
     f.selection = translateSelection(f.origin, f.dx, f.dy);
-    followSelection(f.selection);
+    moveSelectionWith(f.selection);
     f.after = engine.data.slice();
   } else {
     moveRegion(engine, { x: 0, y: 0, width: engine.width, height: engine.height }, dx, dy);
@@ -2720,7 +2771,9 @@ function redrawMovePreview() {
   if (state.moveRegion.mask) {
     // A selection: its floated pixels (see floatSelection) are drawn
     // over the layer as it was without them, at the total offset.
-    drawFloat(state.strokeEngine, state.float.dx + dx, state.float.dy + dy);
+    const f = state.float;
+    const total = clampSelectionOffset(f.origin, f.dx + dx, f.dy + dy);
+    drawFloat(state.strokeEngine, total.dx, total.dy);
     return;
   }
   const { x, y, width, height } = state.moveRegion;
@@ -2810,6 +2863,8 @@ export function initWorkspace({
     lassoPoints: [],
     polygon: null, // unfinished Polygonal Lasso shape: { points, mode }
     float: null, // the selection's pixels between Move drags (floatSelection)
+    selectionBefore: undefined, // the selection before a Move/transform moved it (moveSelectionWith)
+    currentStep: null, // the undo stack's current snapshot (pushStep)
     dragStart: null,
     dragCurrent: null,
     strokeEngine: null,
@@ -2919,13 +2974,15 @@ export function initWorkspace({
   canvasView.setSelectionRect(null);
   updateSelectionControls();
   setSelectionDrag(false);
+  // The picker shows this project's mode (New), not the last project's.
+  setSelectionMode(state.selectionMode);
   // No stroke carries over either, so hide-while-drawing (5g-prefs) can
   // never leave the interface faded on the next project.
   setStroking(false);
 
   // Baseline snapshot so the very first stroke can be undone back to
   // whatever state the project was in when opened.
-  state.undoStack.push(layerStack.snapshot());
+  pushStep(layerStack.snapshot());
   updateUndoRedoButtons();
 
   // Sync immediately: on the very first project opened in a session,
@@ -3211,10 +3268,9 @@ export function initWorkspace({
         const dx = state.dragCurrent.x - state.dragStart.x;
         const dy = state.dragCurrent.y - state.dragStart.y;
         const f = state.float;
-        f.dx += dx;
-        f.dy += dy;
+        ({ dx: f.dx, dy: f.dy } = clampSelectionOffset(f.origin, f.dx + dx, f.dy + dy));
         f.selection = translateSelection(f.origin, f.dx, f.dy);
-        followSelection(f.selection);
+        moveSelectionWith(f.selection);
         f.after = state.strokeEngine.data.slice();
       }
 

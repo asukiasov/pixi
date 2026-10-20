@@ -197,6 +197,11 @@ they covered SHALL reappear as they move on. Any other change to the
 layer or the selection ends this, and the next Move picks up what is then
 under the selection.
 
+With the Move tool active and the canvas or tool rail focused, the arrow
+keys SHALL nudge the selection's pixels (or, with no selection, the whole
+active layer) by 1 pixel, or 10 with Shift, one undo step per press, the
+same as a Move drag of that length.
+
 #### Scenario: Moving away and back
 - **WHEN** the user lassos part of a sprite, moves it right, then left
   by the same amount

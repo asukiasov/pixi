@@ -2068,6 +2068,22 @@ function bindDomOnce() {
       clearSelection();
     });
 
+    // Arrow keys nudge with the Move tool: 1 pixel, or 10 with Shift.
+    const NUDGE = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    document.addEventListener('keydown', (e) => {
+      const step = NUDGE[e.key];
+      if (!step || state.currentTool !== 'move' || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (root.querySelector('#screen-workspace').classList.contains('hidden')) return;
+      // Only from the canvas or the tool rail: menus, sliders and the
+      // rotate dial use the arrow keys themselves.
+      const focus = document.activeElement;
+      if (focus && focus !== document.body && !focus.closest('#tools-sidebar, .canvas-container, #workspace-canvas')) return;
+      if (state.strokeBackup || document.querySelector('dialog[open], .confirm-overlay:not(.hidden)')) return;
+      e.preventDefault();
+      const by = e.shiftKey ? 10 : 1;
+      nudgeMove(step[0] * by, step[1] * by);
+    });
+
     // Enter closes an unfinished Polygonal Lasso shape.
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' || !state.polygon || isTextEntry(document.activeElement)) return;
@@ -2657,6 +2673,45 @@ function floatSelection(engine) {
   };
 }
 
+/** Draws the float's pixels over its base on `engine`, offset by (offX, offY) from where they started. */
+function drawFloat(engine, offX, offY) {
+  const f = state.float;
+  const { width: w, height: h, data } = engine;
+  data.set(f.base);
+  for (let i = 0; i < w * h; i++) {
+    // Transparent pixels carry nothing - they don't erase what they land on.
+    if (!f.content[i * 4 + 3]) continue;
+    const x = (i % w) + offX;
+    const y = Math.floor(i / w) + offY;
+    if (x < 0 || y < 0 || x >= w || y >= h) continue;
+    data.set(f.content.subarray(i * 4, i * 4 + 4), (y * w + x) * 4);
+  }
+}
+
+/**
+ * Arrow-key nudge with the Move tool: moves the selection's pixels (as
+ * a Move drag would, floated) or, with no selection, the whole active
+ * layer by (dx, dy). One undo step per press.
+ */
+function nudgeMove(dx, dy) {
+  if (!activeLayerEditable()) return;
+  const engine = state.layerStack.getActiveLayer().engine;
+  if (state.selection) {
+    floatSelection(engine);
+    const f = state.float;
+    f.dx += dx;
+    f.dy += dy;
+    drawFloat(engine, f.dx, f.dy);
+    f.selection = translateSelection(f.origin, f.dx, f.dy);
+    followSelection(f.selection);
+    f.after = engine.data.slice();
+  } else {
+    moveRegion(engine, { x: 0, y: 0, width: engine.width, height: engine.height }, dx, dy);
+  }
+  state.canvasView.render();
+  commit();
+}
+
 function redrawMovePreview() {
   state.strokeEngine.data.set(state.strokeBackup);
   if (state.moveContentEmpty) return;
@@ -2665,18 +2720,7 @@ function redrawMovePreview() {
   if (state.moveRegion.mask) {
     // A selection: its floated pixels (see floatSelection) are drawn
     // over the layer as it was without them, at the total offset.
-    const f = state.float;
-    const { width: w, height: h } = state.strokeEngine;
-    const { data } = state.strokeEngine;
-    data.set(f.base);
-    for (let i = 0; i < w * h; i++) {
-      // Transparent pixels carry nothing - they don't erase what they land on.
-      if (!f.content[i * 4 + 3]) continue;
-      const x = (i % w) + f.dx + dx;
-      const y = Math.floor(i / w) + f.dy + dy;
-      if (x < 0 || y < 0 || x >= w || y >= h) continue;
-      data.set(f.content.subarray(i * 4, i * 4 + 4), (y * w + x) * 4);
-    }
+    drawFloat(state.strokeEngine, state.float.dx + dx, state.float.dy + dy);
     return;
   }
   const { x, y, width, height } = state.moveRegion;

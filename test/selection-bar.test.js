@@ -133,9 +133,9 @@ describe('placeSelectionBar', () => {
 describe('selection bar markup', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
   const bar = html.match(/<div id="selection-bar"[\s\S]*?<\/div>/)[0];
-  test('proxies are cut, copy, delete, clear - icon-only, labelled', () => {
+  test('proxies are cut, copy, paste, delete, clear - icon-only, labelled', () => {
     const forwards = [...bar.matchAll(/data-forward="([^"]+)"/g)].map((m) => m[1]);
-    assert.deepEqual(forwards, ['selection-cut-button', 'selection-copy-button', 'selection-delete-button', 'selection-clear-button']);
+    assert.deepEqual(forwards, ['selection-cut-button', 'selection-copy-button', 'selection-paste-button', 'selection-delete-button', 'selection-clear-button']);
     for (const btn of bar.match(/<button[\s\S]*?<\/button>/g)) {
       assert.match(btn, /aria-label="[^"]+"/);
       assert.match(btn, /icon-button/);

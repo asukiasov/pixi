@@ -112,7 +112,8 @@ function liftSelection(engine, selection) {
  * Runs `op(engine, rect)` (a lib/pixel-engine/transform.js region op) on
  * the selected pixels only and on the mask itself, writes the result into
  * `engine`, and returns the selection it now occupies (null if it left
- * the canvas). Moved pixels replace what's under them, as a rect Move does.
+ * the canvas). Moved pixels replace what's under them; transparent ones
+ * leave it, so empty corners of a shape don't erase what they land on.
  */
 function transformSelection(engine, selection, op) {
   const { width, height } = engine;
@@ -126,7 +127,7 @@ function transformSelection(engine, selection, op) {
     if (selection.mask[i]) engine.data.fill(0, i * 4, i * 4 + 4);
   }
   for (let i = 0; i < width * height; i++) {
-    if (next?.mask[i] || lifted.data[i * 4 + 3]) engine.data.set(lifted.data.subarray(i * 4, i * 4 + 4), i * 4);
+    if (lifted.data[i * 4 + 3]) engine.data.set(lifted.data.subarray(i * 4, i * 4 + 4), i * 4);
   }
   return next;
 }
@@ -490,6 +491,7 @@ export function updateSelectionControls() {
   });
   state.selectionCutButton.disabled = s.cut.disabled;
   state.selectionCopyButton.disabled = s.copy.disabled;
+  if (state.selectionPasteButton) state.selectionPasteButton.disabled = s.paste.disabled;
 }
 
 /**
@@ -2123,6 +2125,7 @@ function bindDomOnce() {
   // Synchronous: the clipboard write must start inside the click (clipboard.js's writeImage).
   state.selectionCutButton.addEventListener('click', () => cutActive());
   state.selectionCopyButton.addEventListener('click', () => copyActive());
+  state.selectionPasteButton?.addEventListener('click', () => pasteFromClipboard());
 
   // Restored merge-pixi-pro-into-standard features (symmetry, pixel-
   // perfect, Rectangle Filled, Pencil/Eraser Opacity, Brush import from
@@ -2627,23 +2630,52 @@ function isRegionFullyTransparent(buffer) {
  * over real content elsewhere would stamp transparency on top of it,
  * silently erasing it - a bug, not the intended "move nothing."
  */
+/**
+ * Floats the selection for Move, like Photoshop: consecutive Move drags
+ * carry the same pixels, and what was under them comes back when they
+ * move on. `state.float` holds the layer without the selection's pixels
+ * (`base`), those pixels at their original place (`content`), the
+ * original selection and the total offset. It is reused while the layer
+ * is exactly as the last Move left it, with the same selection; anything
+ * else (a stroke, undo, a new selection) starts a new float.
+ */
+function floatSelection(engine) {
+  const f = state.float;
+  const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+  if (f && f.engine === engine && f.selection === state.selection && same(f.after, engine.data)) return;
+  const base = engine.data.slice();
+  state.selection.mask.forEach((on, i) => { if (on) base.fill(0, i * 4, i * 4 + 4); });
+  state.float = {
+    engine,
+    base,
+    content: liftSelection(engine, state.selection).data,
+    origin: state.selection,
+    selection: state.selection,
+    dx: 0,
+    dy: 0,
+    after: null,
+  };
+}
+
 function redrawMovePreview() {
   state.strokeEngine.data.set(state.strokeBackup);
   if (state.moveContentEmpty) return;
   const dx = state.dragCurrent.x - state.dragStart.x;
   const dy = state.dragCurrent.y - state.dragStart.y;
   if (state.moveRegion.mask) {
-    // A selection: only its pixels travel, so a lasso shape doesn't
-    // carry (or stamp) the unselected corners of its bounding box.
-    const { mask, canvasWidth: w, canvasHeight: h } = state.moveRegion;
+    // A selection: its floated pixels (see floatSelection) are drawn
+    // over the layer as it was without them, at the total offset.
+    const f = state.float;
+    const { width: w, height: h } = state.strokeEngine;
     const { data } = state.strokeEngine;
-    for (let i = 0; i < mask.length; i++) if (mask[i]) data.fill(0, i * 4, i * 4 + 4);
-    for (let i = 0; i < mask.length; i++) {
-      if (!mask[i]) continue;
-      const x = (i % w) + dx;
-      const y = Math.floor(i / w) + dy;
+    data.set(f.base);
+    for (let i = 0; i < w * h; i++) {
+      // Transparent pixels carry nothing - they don't erase what they land on.
+      if (!f.content[i * 4 + 3]) continue;
+      const x = (i % w) + f.dx + dx;
+      const y = Math.floor(i / w) + f.dy + dy;
       if (x < 0 || y < 0 || x >= w || y >= h) continue;
-      data.set(state.strokeBackup.subarray(i * 4, i * 4 + 4), (y * w + x) * 4);
+      data.set(f.content.subarray(i * 4, i * 4 + 4), (y * w + x) * 4);
     }
     return;
   }
@@ -2733,6 +2765,7 @@ export function initWorkspace({
     shiftStartedAdd: false,
     lassoPoints: [],
     polygon: null, // unfinished Polygonal Lasso shape: { points, mode }
+    float: null, // the selection's pixels between Move drags (floatSelection)
     dragStart: null,
     dragCurrent: null,
     strokeEngine: null,
@@ -2749,6 +2782,7 @@ export function initWorkspace({
     selectionDeleteButton: root.querySelector('#selection-delete-button'),
     selectionCutButton: root.querySelector('#selection-cut-button'),
     selectionCopyButton: root.querySelector('#selection-copy-button'),
+    selectionPasteButton: root.querySelector('#selection-paste-button'),
   };
 
   if (domBoundRoot !== root) {
@@ -2996,8 +3030,9 @@ export function initWorkspace({
         // nothing but transparency to carry, Move is a no-op - it
         // doesn't clear the source (already blank) or touch the
         // destination at all.
+        if (state.selection) floatSelection(activeEngine);
         state.moveContentEmpty = state.selection
-          ? !state.selection.mask.some((on, i) => on && state.strokeBackup[i * 4 + 3])
+          ? !state.float.content.some((v, i) => i % 4 === 3 && v)
           : isRegionFullyTransparent(state.moveContent);
         redrawMovePreview();
         state.canvasView.render();
@@ -3131,7 +3166,12 @@ export function initWorkspace({
       if (tool === 'move' && state.selection) {
         const dx = state.dragCurrent.x - state.dragStart.x;
         const dy = state.dragCurrent.y - state.dragStart.y;
-        followSelection(translateSelection(state.selection, dx, dy));
+        const f = state.float;
+        f.dx += dx;
+        f.dy += dy;
+        f.selection = translateSelection(f.origin, f.dx, f.dy);
+        followSelection(f.selection);
+        f.after = state.strokeEngine.data.slice();
       }
 
       state.strokeEngine = null;

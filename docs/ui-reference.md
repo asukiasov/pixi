@@ -276,7 +276,8 @@ here since 5f; `display: contents` in the docked layout). The bar shows only the
 Size, Opacity, Pixel-perfect, Symmetry, Color Library sequence; Eraser
 the same without the sequence; Brush Spacing, Rotation, Symmetry,
 sequence; Rectangle Filled, 1:1; Rectangle and Ellipse Select New/Add/Subtract
-(proxies for `#selection-mode-options`) and 1:1; Lasso and Polygonal Lasso
+(icon-only proxies for `#selection-mode-options`: a filled square, two
+united squares, a square with a dashed bite out of it) and 1:1; Lasso and Polygonal Lasso
 New/Add/Subtract. It is hidden for Move,
 Bucket, Line, Hand and Eyedropper, and showing, changing or hiding it
 never re-fits the canvas. Which groups show is CSS-only: each
@@ -337,7 +338,7 @@ sidebar, its collapse-to-header and its top bar toggles are unchanged.
 **Floating selection action bar (5f-selection-action-bar).** In the
 floating layout Cut, Copy, Delete and Clear selection sit in
 `#selection-bar`, a small glass pill of icon-only buttons (content_cut,
-content_copy, a `.selection-bar-divider`, delete, deselect; tooltips carry
+content_copy, content_paste, a `.selection-bar-divider`, delete, deselect; tooltips carry
 the shortcuts) next to the selection instead of in the palette card (so
 the palette card no longer changes height). Its buttons are proxies
 (`data-forward`) for `#selection-cut-button`, `#selection-copy-button`,

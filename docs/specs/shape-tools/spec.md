@@ -189,6 +189,19 @@ in ⋯ More tools.
 - **WHEN** the user clicks with the Lasso without dragging, in New mode
 - **THEN** the selection is cleared and no 1x1 selection is made
 
+### Requirement: Moving a selection floats its pixels
+Moving a selection with the Move tool SHALL carry only its selected
+pixels; transparent ones SHALL NOT erase what they land on. Consecutive
+Move drags of the same selection SHALL carry the same pixels, and what
+they covered SHALL reappear as they move on. Any other change to the
+layer or the selection ends this, and the next Move picks up what is then
+under the selection.
+
+#### Scenario: Moving away and back
+- **WHEN** the user lassos part of a sprite, moves it right, then left
+  by the same amount
+- **THEN** the layer is exactly as it was before the first move
+
 ### Requirement: New, Add and Subtract
 The four select tools SHALL share a sticky New / Add / Subtract mode,
 shown in the tool-options bar while any of them is active. New replaces

@@ -712,12 +712,13 @@ faces the canvas, fully on screen.
 
 ### Requirement: Selection action bar
 In the floating layout the Workspace SHALL show a selection action bar: a
-floating card holding icon-only Cut, Copy, Delete and Clear selection, in
-that order, with a divider after Copy. Each SHALL have an accessible name
-and a tooltip with its shortcut ("Cut (⌘X)", "Copy (⌘C)", "Delete",
-"Clear selection (⌘D)"), and SHALL have exactly the effect of the existing
-control it replaces: Cut and Copy act as the clipboard spec's Cut and
-Copy, Clear selection removes the selection, and Delete makes the
+floating card holding icon-only Cut, Copy, Paste, Delete and Clear
+selection, in that order, with a divider after Paste. Each SHALL have an
+accessible name and a tooltip with its shortcut ("Cut (⌘X)", "Copy (⌘C)",
+"Paste (⌘V)", "Delete", "Clear selection (⌘D)"), and SHALL have exactly
+the effect of the existing control it replaces: Cut, Copy and Paste act
+as the clipboard spec's Cut, Copy and Paste (Paste disabled at the layer
+limit), Clear selection removes the selection, and Delete makes the
 selected pixels of the active layer transparent and keeps the selection.
 Cut and Copy SHALL be disabled when there are no pixels under the
 selection on the active layer, and Cut also on a locked layer. The bar SHALL be

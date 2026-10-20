@@ -1162,9 +1162,9 @@
           </div>
           <div class="tool-options-group" data-tools="selection ellipse-select lasso polygon-lasso" role="group" aria-label="Selection mode">
             <!-- Source: #selection-mode-options (js/workspace.js). -->
-            <button type="button" class="tool-button" data-forward="selection-mode-new" aria-pressed="true" aria-label="New selection" data-tooltip="New selection">New</button>
-            <button type="button" class="tool-button" data-forward="selection-mode-add" aria-pressed="false" aria-label="Add to selection" data-tooltip="Add to selection (hold Shift)">Add</button>
-            <button type="button" class="tool-button" data-forward="selection-mode-subtract" aria-pressed="false" aria-label="Subtract from selection" data-tooltip="Subtract from selection (hold Alt/Option)">Subtract</button>
+            <button type="button" class="tool-button icon-button" data-forward="selection-mode-new" aria-pressed="true" aria-label="New selection" data-tooltip="New selection"><svg class="selection-mode-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></button>
+            <button type="button" class="tool-button icon-button" data-forward="selection-mode-add" aria-pressed="false" aria-label="Add to selection" data-tooltip="Add to selection (hold Shift)"><svg class="selection-mode-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4h4a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-4H5a2 2 0 0 1-2-2z"/></svg></button>
+            <button type="button" class="tool-button icon-button" data-forward="selection-mode-subtract" aria-pressed="false" aria-label="Subtract from selection" data-tooltip="Subtract from selection (hold Alt/Option)"><svg class="selection-mode-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4h-4a2 2 0 0 0-2 2v4H5a2 2 0 0 1-2-2z"/><rect x="9.75" y="9.75" width="10.5" height="10.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 2"/></svg></button>
           </div>
           <div class="tool-options-group" data-tools="rectangle ellipse selection ellipse-select">
             <!-- Source: #square-constraint-toggle (js/workspace.js). -->
@@ -1220,6 +1220,7 @@
           <div id="selection-controls" class="selection-controls hidden">
             <button type="button" id="selection-cut-button" class="tool-button">Cut</button>
             <button type="button" id="selection-copy-button" class="tool-button">Copy</button>
+            <button type="button" id="selection-paste-button" class="tool-button">Paste</button>
             <button type="button" id="selection-clear-button" class="tool-button">Clear selection</button>
             <button type="button" id="selection-delete-button" class="tool-button">Delete</button>
           </div>
@@ -1259,6 +1260,7 @@
       <div id="selection-bar" class="selection-bar floating-only" role="group" aria-label="Selection actions">
         <button type="button" class="tool-button icon-button" data-forward="selection-cut-button" aria-label="Cut" data-tooltip="Cut (⌘X)"><span class="material-symbols-outlined" aria-hidden="true">content_cut</span></button>
         <button type="button" class="tool-button icon-button" data-forward="selection-copy-button" aria-label="Copy" data-tooltip="Copy (⌘C)"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button>
+        <button type="button" class="tool-button icon-button" data-forward="selection-paste-button" aria-label="Paste" data-tooltip="Paste (⌘V)"><span class="material-symbols-outlined" aria-hidden="true">content_paste</span></button>
         <span class="selection-bar-divider" aria-hidden="true"></span>
         <button type="button" class="tool-button icon-button" data-forward="selection-delete-button" aria-label="Delete" data-tooltip="Delete"><span class="material-symbols-outlined" aria-hidden="true">delete</span></button>
         <button type="button" class="tool-button icon-button" data-forward="selection-clear-button" aria-label="Clear selection" data-tooltip="Clear selection (⌘D)"><span class="material-symbols-outlined" aria-hidden="true">deselect</span></button>

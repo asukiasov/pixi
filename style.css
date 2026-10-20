@@ -1378,6 +1378,12 @@ textarea,
   display: block;
 }
 
+.selection-mode-icon {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
 .selection-shape-fill {
   fill: var(--color-accent-soft);
 }
